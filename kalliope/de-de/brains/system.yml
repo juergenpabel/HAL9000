@@ -1,0 +1,18 @@
+---
+
+  - name: "system-shutdown"
+    signals:
+      - order: "Gute Nacht"
+      - order: "Fahre runter"
+    neurons:
+      - script:
+          path: "resources/scripts/system-shutdown.sh"
+
+  - name: "system-reboot"
+    signals:
+      - order: "Starte dich neu"
+      - order: "Neustart"
+    neurons:
+      - script:
+          path: "resources/scripts/system-reboot.sh"
+

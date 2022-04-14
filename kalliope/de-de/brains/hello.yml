@@ -1,0 +1,7 @@
+---
+  - name: "say-hello"
+    signals:
+      - order: "Hallo"
+    neurons:
+      - say:
+          message: "Hallo, Dave"
