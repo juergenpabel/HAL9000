@@ -1,0 +1,49 @@
+{% set day_of_week = {
+    "0": "Sunday",
+    "1": "Monday",
+    "2": "Tuesday",
+    "3": "Wednesday",
+    "4": "Thursday",
+    "5": "Friday",
+    "6": "Saturday"
+    }[weekday] | default("")
+-%}
+
+{% set month_word = {"01": "January", "02": "February", "03": "March", "04": "April", "05": "May", "06": "June", "07": "July", "08": "August", "09": "September", "10": "October", "11": "November", "12": "December"}[month] | default("") -%}
+
+{% set day_month_formated = {
+    "01": "first",
+    "02": "second",
+    "03": "third",
+    "04": "fourth",
+    "05": "fifth",
+    "06": "sixth",
+    "07": "seventh",
+    "08": "eightth",
+    "09": "nineth",
+    "10": "tenth",
+    "11": "eleventh",
+    "12": "twelveth",
+    "13": "thirteenth",
+    "14": "fourteenth",
+    "15": "fiveteenth",
+    "16": "sixteenth",
+    "17": "seventeenth",
+    "18": "eightteenth",
+    "19": "nineteenth",
+    "20": "twentieth",
+    "21": "twenty first",
+    "22": "twenty second",
+    "23": "twenty third",
+    "24": "twenty forth",
+    "25": "twenty fifth",
+    "26": "twenty sixth",
+    "27": "twenty seventh",
+    "28": "twenty eightth",
+    "29": "twenty nineth",
+    "30": "thirthieth",
+    "31": "thirthy first",
+
+}[day_month] | default("") -%}
+
+It is {{ day_of_week }} the {{ day_month_formated }} of {{ month_word }} {{ year }}
