@@ -17,16 +17,31 @@ for i in 3_*.bmp ; do mv $i ${i:4} ; done
 cd ..
 
 
+rm -rf "init" >> /dev/null
+mkdir "init" >> /dev/null
+cd "init"
+for i in {0..9} ; do convert "../active/0${i}.bmp" -fill black -colorize $((90-i*10)) "0${i}.bmp" ; done
+cd ..
+
+
 rm -rf "wakeup" >> /dev/null
 mkdir "wakeup" >> /dev/null
 cd "wakeup"
-for i in {0..9} ; do convert "../active/0$i.bmp" -fill black -colorize $((90-i*10)) 0$i.bmp ; done
+for i in {0..9} ; do convert "../active/0${i}.bmp" -fill black -colorize $((90-i*10)) "0${i}.bmp" ; done
+cd ..
+
+
+rm -rf "wait" >> /dev/null
+mkdir "wait" >> /dev/null
+cd "wait"
+convert "../active/00.bmp" -alpha on -background none \( +clone -channel A -evaluate multiply 0 +channel -fill white -draw "ellipse 118,117 15,15 0,360" \) -compose DstIn -composite "00.bmp"
+mogrify -background '#000000' -flatten "00.bmp"
 cd ..
 
 
 rm -rf "sleep" >> /dev/null
 mkdir "sleep" >> /dev/null
 cd "sleep"
-for i in {0..9} ; do convert "../active/0$i.bmp" -fill black -colorize $((i*10+10)) 0$i.bmp ; done
+for i in {0..9} ; do convert "../active/0${i}.bmp" -fill black -colorize $((i*10+10)) "0${i}.bmp" ; done
 cd ..
 
