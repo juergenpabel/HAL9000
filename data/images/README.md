@@ -17,3 +17,11 @@ for different animation sequences.
 - sleep: fades from image to black
 The BMPs are numbered and stored in corresponding subdirectories.
 
+The following modifications of the original image are implemented by
+the script:
+- separate GIF animation into individual images
+- cut out only the (red'ish) eye (without the silver frame)
+- mirror the bottom half to the top in order to remove the reflections
+  (because the enclosure features a fisheye dome, this adds reflections
+  "naturally")
+
