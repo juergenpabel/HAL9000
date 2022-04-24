@@ -23,6 +23,8 @@ chown root.hal9000 /opt/hal9000
 chmod 750          /opt/hal9000
 
 cp -r --dereference ../../../enclosure/src /opt/hal9000/enclosure
+chown -R root.hal9000 /opt/hal9000/enclosure
+chmor -R 750          /opt/hal9000/enclosure
 cat conf/uwsgi/enclosure.ini \
 	| sed 's#/data/git/HAL9000-kalliope/enclosure/src#/opt/hal9000/enclosure#g' \
 	| sed 's#/data/git/HAL9000-kalliope/kalliope/src#/opt/hal9000/kalliope#g' \
@@ -31,7 +33,7 @@ cat conf/uwsgi/enclosure.ini \
 	> /etc/uwsgi/apps-enabled/hal9000-enclosure.ini
 systemctl restart uwsgi
 
-#mkdir -p /opt/hal9000/kalliope
-#chown root.hal9000 /opt/hal9000/kalliope
-#chmod 750          /opt/hal9000/kalliope
+mkdir -p /opt/hal9000/kalliope
+chown root.hal9000 /opt/hal9000/kalliope
+chmod 750          /opt/hal9000/kalliope
 

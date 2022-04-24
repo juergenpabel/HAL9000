@@ -1,2 +1,2 @@
-kalliope ALL=(ALL) NOPASSWD: ALL
+kalliope ALL=(ALL) NOPASSWD: /usr/sbin/shutdown
 
