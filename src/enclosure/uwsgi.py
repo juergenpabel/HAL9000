@@ -3,9 +3,9 @@
 import os
 import sys
 import time
-from hal9000 import HAL9000
-
+from uwsgi import accepting
 from paho.mqtt import client as mqtt_client
+from hal9000 import HAL9000
 
 
 def on_message(client, hal9000, msg):
@@ -33,12 +33,14 @@ def on_message(client, hal9000, msg):
 
 hal9000 = HAL9000()
 
-mqtt = mqtt_client.Client('hal9000-mqtt.py', userdata=hal9000)
+mqtt = mqtt_client.Client('hal9000-enclosure', userdata=hal9000)
 mqtt.on_message = on_message
 mqtt.connect("127.0.0.1", 1883)
 mqtt.subscribe("hal9000/status")
 mqtt.subscribe("hal9000/volume")
 mqtt.loop_start()
+
+accepting()
 
 hal9000.loop()
 
