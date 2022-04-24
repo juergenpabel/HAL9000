@@ -1,0 +1,21 @@
+- Raspberry Pi Zero 2
+- Respeaker 2-Mic HAT
+- Adafruit FT232h with USB-C (required for display)
+- Waveshare 240x240 1.28" round display
+- Optional: Adafruit PCF8591 ADC+DAC (only required if analog buttons are to be installed)
+- Optional: Adafruit MCP23017 GPIO expander (only required if rotary encoders are to be installed)
+- IDC/40pin extender cable 25-30cm
+- 90° angled GPIO headers for Pi 
+- 90° angled pin headers for FT232h
+- Optional: 
+- 1.8" fisheye dome
+- Visaton K20.40
+- wire mesh (90x50mm)
+- Various M2.5 standoffs and screws
+- right angled Micro-USB to left angled USB-C cable (15-25cm)
+- left angled Micro-USB power cable
+- Optional: black 50mm diameter heat-shrink tube for enclosing the ReSpeaker as a visual improvement to better hide the Respeaker behind the mesh
+
+- 3D printed: hal9000-part*.scad in resources/openscad
+- CNC: Black acryl faceplate 185x90x3mm with 50mm cutout (resources/openscad/acryl-faceplate.scad)
+
