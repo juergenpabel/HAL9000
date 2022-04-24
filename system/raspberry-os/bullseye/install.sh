@@ -6,7 +6,7 @@ apt update
 apt upgrade -y
 apt install -y python3 python3-pip mosquitto uwsgi uwsgi-plugin-python3 python3-uwsgidecorators python3-paho-mqtt python3-willow python3-numpy
 
-pip3 install -r ../../../src/enclosure/requirements.txt
+pip3 install -r ../../../enclosure/src/requirements.txt
 
 groupadd --system --force hal9000
 useradd --home-dir / -g hal9000 -G plugdev,i2c,spi,gpio -M -N -r -s /bin/false hal9000-enclosure
@@ -22,9 +22,10 @@ mkdir -p /opt/hal9000
 chown root.hal9000 /opt/hal9000
 chmod 750          /opt/hal9000
 
-cp -r --dereference ../../../src/enclosure /opt/hal9000/
+cp -r --dereference ../../../enclosure/src /opt/hal9000/enclosure
 cat ../../../conf/uwsgi/enclosure.ini \
-	| sed 's#/data/git/HAL9000-kalliope/src/#/opt/hal9000/#g' \
+	| sed 's#/data/git/HAL9000-kalliope/src/enclosure#/opt/hal9000/enclosure#g' \
+	| sed 's#/data/git/HAL9000-kalliope/src/kalliope#/opt/hal9000/kalliope#g' \
 	| sed 's#/data/git/HAL9000-kalliope/resources/images#/opt/hal9000/enclosure/images#g' \
 	| sed 's#app/enclosure/dummy#app/hal9000-enclosure/dummy#g' \
 	> /etc/uwsgi/apps-enabled/hal9000-enclosure.ini
