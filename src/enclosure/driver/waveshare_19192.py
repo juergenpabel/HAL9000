@@ -88,3 +88,5 @@ class Waveshare_19192(displayio.Display):
         init_sequence = _INIT_SEQUENCE
         super().__init__(bus, init_sequence, **kwargs)
 
+    def _release(self):
+        pass

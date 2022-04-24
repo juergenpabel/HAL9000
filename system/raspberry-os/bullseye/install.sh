@@ -1,12 +1,16 @@
-#!/bin/sh
+#!/bin/bash
+
+cd `dirname "${BASH_SOURCE[0]}"`
 
 apt update
 apt upgrade -y
-apt install -y python3 python3-pip mosquitto uwsgi uwsgi-plugin-python3 python3-uwsgidecorators python3-paho-mqtt
+apt install -y python3 python3-pip mosquitto uwsgi uwsgi-plugin-python3 python3-uwsgidecorators python3-paho-mqtt python3-willow python3-numpy
+
+pip3 install -r ../../../src/enclosure/requirements.txt
 
 groupadd --system --force hal9000
-useradd --home-dir / -g hal9000 -G i2c,spi,gpio -M -N -r -s /bin/false hal9000-enclosure
-useradd --home-dir / -g hal9000 -G sudo         -M -N -r -s /bin/false hal9000-kalliope
+useradd --home-dir / -g hal9000 -G plugdev,i2c,spi,gpio -M -N -r -s /bin/false hal9000-enclosure
+useradd --home-dir / -g hal9000 -G sudo                 -M -N -r -s /bin/false hal9000-kalliope
 
 cat ../../../conf/sudo/sudoers.d/100_kalliope | sed 's#kalliope#hal9000-kalliope#g' > /etc/sudoers.d/100_hal9000-kalliope
 
@@ -14,18 +18,19 @@ cp ../../../conf/mosquitto/conf.d/enclosure.conf /etc/mosquitto/conf.d/hal9000-e
 systemctl restart mosquitto
 
 
-mkdir /opt/hal9000
+mkdir -p /opt/hal9000
 chown root.hal9000 /opt/hal9000
 chmod 750          /opt/hal9000
 
-mkdir /opt/hal9000/enclosure
-chown root.hal9000 /opt/hal9000/enclosure
-chmod 750          /opt/hal9000/enclosure
-cp -r ../../../src/enclosure /opt/hal9000/enclosure
-cat ../../../conf/uwsgi/enclosure.ini | sed 's#/data/git/HAL9000-kalliope/#/opt/hal9000/#g' > /etc/uwsgi/apps-enabled/hal9000-enclosure.ini
+cp -r --dereference ../../../src/enclosure /opt/hal9000/
+cat ../../../conf/uwsgi/enclosure.ini \
+	| sed 's#/data/git/HAL9000-kalliope/src/#/opt/hal9000/#g' \
+	| sed 's#/data/git/HAL9000-kalliope/data/images#/opt/hal9000/enclosure/images#g' \
+	| sed 's#app/enclosure/dummy#app/hal9000-enclosure/dummy#g' \
+	> /etc/uwsgi/apps-enabled/hal9000-enclosure.ini
 systemctl restart uwsgi
 
-mkdir /opt/hal9000/kalliope
-chown root.hal9000 /opt/hal9000/kalliope
-chmod 750          /opt/hal9000/kalliope
+#mkdir -p /opt/hal9000/kalliope
+#chown root.hal9000 /opt/hal9000/kalliope
+#chmod 750          /opt/hal9000/kalliope
 
