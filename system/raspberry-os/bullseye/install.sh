@@ -12,9 +12,9 @@ groupadd --system --force hal9000
 useradd --home-dir / -g hal9000 -G plugdev,i2c,spi,gpio -M -N -r -s /bin/false hal9000-enclosure
 useradd --home-dir / -g hal9000 -G sudo                 -M -N -r -s /bin/false hal9000-kalliope
 
-cat ../../../conf/sudo/sudoers.d/100_kalliope | sed 's#kalliope#hal9000-kalliope#g' > /etc/sudoers.d/100_hal9000-kalliope
+cat conf/sudo/sudoers.d/100_kalliope | sed 's#kalliope#hal9000-kalliope#g' > /etc/sudoers.d/100_hal9000-kalliope
 
-cp ../../../conf/mosquitto/conf.d/enclosure.conf /etc/mosquitto/conf.d/hal9000-enclosure.conf
+cp conf/mosquitto/conf.d/enclosure.conf /etc/mosquitto/conf.d/hal9000-enclosure.conf
 systemctl restart mosquitto
 
 
@@ -23,9 +23,9 @@ chown root.hal9000 /opt/hal9000
 chmod 750          /opt/hal9000
 
 cp -r --dereference ../../../enclosure/src /opt/hal9000/enclosure
-cat ../../../conf/uwsgi/enclosure.ini \
-	| sed 's#/data/git/HAL9000-kalliope/src/enclosure#/opt/hal9000/enclosure#g' \
-	| sed 's#/data/git/HAL9000-kalliope/src/kalliope#/opt/hal9000/kalliope#g' \
+cat conf/uwsgi/enclosure.ini \
+	| sed 's#/data/git/HAL9000-kalliope/enclosure/src#/opt/hal9000/enclosure#g' \
+	| sed 's#/data/git/HAL9000-kalliope/kalliope/src#/opt/hal9000/kalliope#g' \
 	| sed 's#/data/git/HAL9000-kalliope/resources/images#/opt/hal9000/enclosure/images#g' \
 	| sed 's#app/enclosure/dummy#app/hal9000-enclosure/dummy#g' \
 	> /etc/uwsgi/apps-enabled/hal9000-enclosure.ini
