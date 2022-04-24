@@ -25,7 +25,7 @@ chmod 750          /opt/hal9000
 cp -r --dereference ../../../src/enclosure /opt/hal9000/
 cat ../../../conf/uwsgi/enclosure.ini \
 	| sed 's#/data/git/HAL9000-kalliope/src/#/opt/hal9000/#g' \
-	| sed 's#/data/git/HAL9000-kalliope/data/images#/opt/hal9000/enclosure/images#g' \
+	| sed 's#/data/git/HAL9000-kalliope/resources/images#/opt/hal9000/enclosure/images#g' \
 	| sed 's#app/enclosure/dummy#app/hal9000-enclosure/dummy#g' \
 	> /etc/uwsgi/apps-enabled/hal9000-enclosure.ini
 systemctl restart uwsgi
