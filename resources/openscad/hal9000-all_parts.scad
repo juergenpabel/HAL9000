@@ -1,6 +1,5 @@
-use <hal9000.scad>
+include <hal9000.scad>
 
-$fn=120;
 conf_rfid = false;
 conf_rotary = false;
 conf_button = false;
