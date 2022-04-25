@@ -9,9 +9,6 @@
   - name: "on-start"
     signals: []
     neurons:
-      - script:
-          path: "resources/scripts/hal9000/daemon.py"
-          async: true
       - play:
           filename: "resources/signal/dong.wav"
       - mqtt_publisher:

@@ -1,0 +1,3 @@
+kalliope
+vosk
+soco
