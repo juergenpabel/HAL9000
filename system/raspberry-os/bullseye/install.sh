@@ -2,9 +2,11 @@
 
 cd `dirname "${BASH_SOURCE[0]}"`
 
+cp conf/modprobe.d/* /etc/modprobe.d/
+
 apt update
 apt upgrade -y
-apt install -y python3 python3-pip mosquitto uwsgi uwsgi-plugin-python3 python3-uwsgidecorators python3-paho-mqtt python3-willow python3-numpy
+apt install -y python3 python3-pip mosquitto uwsgi uwsgi-plugin-python3 python3-uwsgidecorators python3-paho-mqtt python3-willow python3-numpy libportaudio2
 
 systemctl stop uwsgi
 systemctl enable uwsgi
@@ -31,17 +33,33 @@ cat conf/uwsgi/enclosure.ini \
 
 
 ### kalliope ###
-useradd --home-dir / -g hal9000 -G sudo                 -M -N -r -s /bin/false hal9000-kalliope
+useradd --home-dir / -g hal9000 -G audio,sudo -M -N -r -s /bin/false hal9000-kalliope
 cat conf/sudo/sudoers.d/100_kalliope | sed 's#kalliope#hal9000-kalliope#g' > /etc/sudoers.d/100_hal9000-kalliope
 
 pip3 install -r ../../../kalliope/src/requirements.txt
 cp -r --dereference ../../../kalliope/src /opt/hal9000/kalliope
+cp -r --dereference ../../../kalliope/brains /opt/hal9000/kalliope/
+cp -r --dereference ../../../kalliope/scripts /opt/hal9000/kalliope/
 chown -R root.hal9000 /opt/hal9000/kalliope
-chmod -R 750          /opt/hal9000/kalliope
+chmod -R 770          /opt/hal9000/kalliope
 cat conf/uwsgi/kalliope.ini \
 	| sed 's#/data/git/HAL9000-kalliope/kalliope/src#/opt/hal9000/kalliope#g' \
+	| sed 's#/data/git/HAL9000-kalliope/kalliope/brains#/opt/hal9000/kalliope/brains#g' \
 	| sed 's#app/kalliope/dummy#app/hal9000-kalliope/dummy#g' \
 	> /etc/uwsgi/apps-enabled/hal9000-kalliope.ini
 
-systemctl start uwsgi
+echo -n "List of preconfigured brain languages: "
+( cd /opt/hal9000/kalliope/brains/ ; ls -d *-* )
+read -p "Please enter language: " BRAIN
+ln -s /opt/hal9000/kalliope/brains/"$BRAIN" /opt/hal9000/kalliope/brains/active
+
+cd /opt/hal9000/kalliope/brains/active/
+kalliope install --git-url https://github.com/kalliope-project/kalliope_trigger_porcupine.git
+kalliope install --git-url https://github.com/juergenpabel/kalliope_stt_vosk.git
+kalliope install --git-url https://github.com/juergenpabel/kalliope_neuron_sonos.git
+
+rm -rf /tmp/kalliope
+
+echo "Please download a corresponding language model (small version) from https://alphacephei.com/vosk/models/ and extract it into /opt/hal9000/kalliope/brains/active/resources/data/vosk/"
+echo "Please verify installed configuration and reboot"
 

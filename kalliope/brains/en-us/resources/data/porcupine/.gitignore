@@ -2,6 +2,4 @@
 *
 # Except this file
 !.gitignore
-!porcupine
-!vosk
-!dong.wav
+!ok-hal_raspberry-pi.ppn

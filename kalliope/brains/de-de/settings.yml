@@ -3,13 +3,13 @@ triggers:
   - porcupine:
       keywords:
         - keyword:
-            ppn_file: "resources/data/porcupine/alexa_linux.ppn"
+            ppn_file: "resources/data/porcupine/ok-hal_raspberry-pi.ppn"
             sensitivity: 0.3
 
 default_speech_to_text: "vosk"
 speech_to_text:
   - vosk:
-      model_path: "resources/data/vosk-model-small-de-0.15"
+      model_path: "resources/data/vosk/vosk-model-small-de-0.15"
       sample_frequency: 16000
 
 
@@ -68,8 +68,6 @@ var_files:
 options:
   recognizer_recording_timeout: 7.5
   recognizer_recording_timeout_with_silence: 1.5
-  deaf: True
-  mute: True
 
 
 send_anonymous_usage_stats: False

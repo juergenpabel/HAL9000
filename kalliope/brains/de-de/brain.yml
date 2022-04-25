@@ -10,7 +10,7 @@
     signals: []
     neurons:
       - play:
-          filename: "resources/signal/dong.wav"
+          filename: "resources/data/dong.wav"
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
           topic: "hal9000/status"
@@ -29,7 +29,7 @@
     signals: []
     neurons:
       - play:
-          filename: "resources/signal/dong.wav"
+          filename: "resources/data/dong.wav"
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
           topic: "hal9000/status"
