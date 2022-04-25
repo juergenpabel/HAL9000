@@ -1,10 +1,9 @@
-default_trigger: "porcupine"
+default_trigger: "precise"
 triggers:
-  - porcupine:
-      keywords:
-        - keyword:
-            ppn_file: "resources/data/porcupine/ok-hal_raspberry-pi.ppn"
-            sensitivity: 0.3
+  - precise:
+      pb_file: "resources/data/precise/computer-en.pb"
+      sensitivity: 0.5
+
 
 default_speech_to_text: "vosk"
 speech_to_text:

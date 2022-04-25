@@ -2,6 +2,6 @@
 *
 # Except this file
 !.gitignore
-!porcupine
-!vosk
+!/precise/
+!/vosk/
 !dong.wav
