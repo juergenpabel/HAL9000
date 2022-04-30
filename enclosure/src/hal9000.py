@@ -19,7 +19,6 @@ from pyftdi.spi import SpiController
 from PIL import Image,ImageDraw,ImageFont
 
 from driver.waveshare_19192 import *
-from driver.apa102 import *
 
 class HAL9000:
 	def __init__(self):
