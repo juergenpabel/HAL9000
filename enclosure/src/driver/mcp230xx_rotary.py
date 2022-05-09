@@ -15,7 +15,8 @@ class MCP230XX_Rotary():
 
 	def __init__(self,
 		     dio_rot_GND: DigitalInOut, dio_rot_sigA: DigitalInOut, dio_rot_sigB: DigitalInOut,
-		     dio_btn_GND: DigitalInOut = None, dio_btn_sigX: DigitalInOut = None
+		     dio_btn_GND: DigitalInOut = None, dio_btn_sigX: DigitalInOut = None,
+		     dio_irq: DigitalInOut = None
 		    ) -> None:
 		Thread.__init__(self)
 		self.dio_rot_GND = dio_rot_GND
@@ -23,6 +24,7 @@ class MCP230XX_Rotary():
 		self.dio_rot_sigB = dio_rot_sigB
 		self.dio_btn_GND = dio_btn_GND
 		self.dio_btn_sigX = dio_btn_sigX
+		self.dio_irq = dio_irq
 
 		for pin in [self.dio_rot_GND, self.dio_btn_GND]:
 			if pin is not None:
@@ -54,12 +56,8 @@ class MCP230XX_Rotary():
 		self.button['status'] = button_status
 
 
-	def loop(self, interval_ms: int = 1, callback_rotary = None, callback_button = None):
-		if self.thread is None:
-			self.thread = False
-		while self.thread is not None:
-			if self.thread is False:
-				self.thread = None
+	def do_loop(self, callback_rotary = None, callback_button = None):
+		if self.dio_irq is None or self.dio_irq.value is False:
 			if self.dio_rot_sigA is not None and self.dio_rot_sigB is not None:
 				rotary_pos = self.calculate_rotary(self.dio_rot_sigA.value, self.dio_rot_sigB.value)
 			if self.dio_btn_sigX is not None:
@@ -72,6 +70,15 @@ class MCP230XX_Rotary():
 				self.button['status'] = button_status
 				if callback_button is not None:
 					callback_button(self.status)
+
+
+	def loop(self, interval_ms: int = 1, callback_rotary = None, callback_button = None):
+		if self.thread is None:
+			self.thread = False
+		while self.thread is not None:
+			if self.thread is False:
+				self.thread = None
+			self.do_loop(callback_rotary, callback_button)
 			if self.thread is not None:
 				if interval_ms > 0:
 					time.sleep(float(interval_ms) / 1000)
@@ -153,31 +160,31 @@ def print_button(position: int):
 
 i2c = busio.I2C(board.SCL, board.SDA)
 mcp = MCP23017(i2c, address=0x20)
+
 pin_rot_sigA = mcp.get_pin(5)
 pin_rot_gnd = mcp.get_pin(6)
 pin_rot_sigB = mcp.get_pin(7)
 pin_btn_gnd = mcp.get_pin(3)
 pin_btn_sigX = mcp.get_pin(4)
-mcp230xx = MCP230XX_Rotary(pin_rot_gnd, pin_rot_sigA, pin_rot_sigB, pin_btn_gnd, pin_btn_sigX)
-mcp230xx.configure(50, 0, 100, False)
-mcp230xx.loop_start(1, print_rotary, print_button)
-
+mcp230xx_a = MCP230XX_Rotary(pin_rot_gnd, pin_rot_sigA, pin_rot_sigB, pin_btn_gnd, pin_btn_sigX)
+mcp230xx_a.configure(50, 0, 100, False)
 
 pin_rot_sigA = mcp.get_pin(10)
 pin_rot_gnd = mcp.get_pin(9)
 pin_rot_sigB = mcp.get_pin(8)
 pin_btn_gnd = mcp.get_pin(12)
 pin_btn_sigX = mcp.get_pin(11)
-mcp230xx = MCP230XX_Rotary(pin_rot_gnd, pin_rot_sigA, pin_rot_sigB, pin_btn_gnd, pin_btn_sigX)
-mcp230xx.configure(50, 0, 100, False)
-mcp230xx.loop_start(1, print_rotary, print_button)
+mcp230xx_b = MCP230XX_Rotary(pin_rot_gnd, pin_rot_sigA, pin_rot_sigB, pin_btn_gnd, pin_btn_sigX)
+mcp230xx_b.configure(50, 0, 100, False)
 
-
+irq_a = digitalio.DigitalInOut(board.D12)
+irq_b = digitalio.DigitalInOut(board.D13)
 while True:
-	time.sleep(1)
-
-
-#while True:
-#	mcp230xx.loop(0, print_rotary, print_button)
-#	time.sleep(0.001)
+	if not irq_a.value:
+		mcp.clear_inta()
+		mcp230xx_a.do_loop(print_rotary, print_button)
+	if not irq_b.value:
+		mcp.clear_intb()
+		mcp230xx_b.do_loop(print_rotary, print_button)
+	time.sleep(0.001)
 
