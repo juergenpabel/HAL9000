@@ -20,7 +20,7 @@ from PIL import Image,ImageDraw,ImageFont
 
 from driver.waveshare_19192 import *
 
-class HAL9000:
+class Display:
 	def __init__(self):
 		spi = busio.SPI(None)
 		self.display = Waveshare_19192(displayio.FourWire(spi,baudrate=320000000,command=board.D5,chip_select=board.D4,reset=board.D6),width=240,height=240,backlight_pin=None,auto_refresh=False)

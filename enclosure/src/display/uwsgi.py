@@ -3,44 +3,46 @@
 import os
 import sys
 import time
+
 from uwsgi import accepting
 from paho.mqtt import client as mqtt_client
-from hal9000 import HAL9000
+
+from display import Display
 
 
-def on_message(client, hal9000, msg):
-	if msg.topic == "hal9000/status":
+def on_message(client, display, msg):
+	if msg.topic == "hal9000/display/control":
 		if msg.payload.decode('utf-8') == "init":
 			print("init")
-			hal9000.on_init()
+			display.on_init()
 		if msg.payload.decode('utf-8') == "wakeup":
 			print("wakeup")
-			hal9000.on_wakeup()
+			display.on_wakeup()
 		if msg.payload.decode('utf-8') == "active":
 			print("active")
-			hal9000.on_active()
+			display.on_active()
 		if msg.payload.decode('utf-8') == "wait":
-			hal9000.on_wait()
+			display.on_wait()
 		if msg.payload.decode('utf-8') == "sleep":
-			hal9000.on_sleep()
-	if msg.topic == "hal9000/volume":
+			display.on_sleep()
+	if msg.topic == "hal9000/display/overlay/volume":
 		if msg.payload.decode('utf-8') == "show":
-			hal9000.on_volume_show()
+			display.on_volume_show()
 		if msg.payload.decode('utf-8') == "hide":
-			hal9000.on_volume_hide()
+			display.on_volume_hide()
 
 
 
-hal9000 = HAL9000()
-mqtt = mqtt_client.Client('hal9000-enclosure', userdata=hal9000)
+display = Display()
+mqtt = mqtt_client.Client('hal9000-enclosure-display', userdata=display)
 mqtt.on_message = on_message
 mqtt.connect("127.0.0.1", 1883)
-mqtt.subscribe("hal9000/status")
-mqtt.subscribe("hal9000/volume")
-hal9000.configure()
+mqtt.subscribe("hal9000/display/control")
+mqtt.subscribe("hal9000/display/overlay/volume")
+display.configure()
 
 accepting()
 
 mqtt.loop_start()
-hal9000.loop()
+display.loop()
 
