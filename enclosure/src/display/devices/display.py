@@ -18,7 +18,7 @@ from adafruit_display_shapes.circle import Circle
 from pyftdi.spi import SpiController
 from PIL import Image,ImageDraw,ImageFont
 
-from driver.waveshare_19192 import *
+from drivers.waveshare_19192 import *
 
 class Display:
 	def __init__(self):
@@ -116,6 +116,7 @@ class Display:
 					for frame in range(0,len(state)):
 						self.display.show(state[frame])
 						self.display.refresh()
+						time.sleep(0.05)
 					if state == self.state_wakeup:
 						self.state = self.state_active
 					if state == self.state_wait:
@@ -126,7 +127,7 @@ class Display:
 						self.state = self.state_wait
 					if state == self.state_sleep:
 						self.display.brightness = 0
-				time.sleep(0.05)
+				time.sleep(0.1)
 		except KeyboardInterrupt:
 			displayio.release_displays()
 
