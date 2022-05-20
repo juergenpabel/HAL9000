@@ -7,7 +7,9 @@ import time
 from uwsgi import accepting
 from paho.mqtt import client as mqtt_client
 
-from devices import *
+from devices.rfidreader import HAL9000_RFIDReader
+from devices.rotaries import HAL9000_Rotaries
+from devices.buttons import HAL9000_Buttons
 
 
 mqtt = mqtt_client.Client('hal9000-enclosure-peripherals')
@@ -21,9 +23,9 @@ devices['buttons'] = HAL9000_Buttons()
 
 accepting()
 
-peripherals.loop()
-
+for name, device in devices.items():
+	device.configure()
 while True:
 	for name, device in devices.items():
 		device.do_loop()
-	time.sleep()
+	time.sleep(0.001)

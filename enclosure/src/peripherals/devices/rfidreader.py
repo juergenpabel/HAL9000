@@ -8,15 +8,18 @@ import busio
 import digitalio
 
 from . import HAL9000_Device
-
+from drivers.mfrc522_i2c import *
 
 class HAL9000_RFIDReader(HAL9000_Device):
+
 	def __init__(self):
-		HAL9000_Device.__init__(self, "rfid-reader")
-		i2c = busio.I2C(board.SCL, board.SDA)
+		HAL9000_Device.__init__(self, "RFIDReader")
+		self.mfrc522 = MFRC522(self.i2c, 0x28)
 
 
 	def configure(self):
+		version = self.mfrc522.getReaderVersion()
+		print(f'MFRC522 Software Version: {version}')
 		pass
 
 

@@ -4,21 +4,27 @@ import os
 import time
 
 from configparser import ConfigParser
-
-from .rfidreader import HAL9000_RFIDReader
-from .rotaries import HAL9000_Rotaries
-from .buttons import HAL9000_Buttons
+from board import *
+from busio import I2C
 
 class HAL9000_Device:
+
+	singleton_i2c: I2C = None
 
 	def __init__(self, name: str):
 		self.name = name
 		self.config = None
 
 
+	@property
+	def i2c(self) -> I2C:
+		if HAL9000_Device.singleton_i2c is None:
+			HAL9000_Device.singleton_i2c = I2C(SCL, SDA)
+		return HAL9000_Device.singleton_i2c
+
+
 	def configure(self, config: ConfigParser):
 		self.config = config
-		pass
 
 
 	def do_loop(self):

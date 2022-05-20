@@ -7,10 +7,11 @@ import board
 import busio
 import digitalio
 
+from . import HAL9000_Device
 
-class HAL9000_Buttons:
+class HAL9000_Buttons(HAL9000_Device):
 	def __init__(self):
-		i2c = busio.I2C(board.SCL, board.SDA)
+		HAL9000_Device.__init__(self, 'Buttons')
 		#todo: pcf8951
 
 
@@ -18,9 +19,8 @@ class HAL9000_Buttons:
 		pass
 
 
-	def loop(self):
-		while True:
-			time.sleep(0.0025)
+	def do_loop(self):
+		pass
 
 
 	def on_button_pressed(self, value: float):

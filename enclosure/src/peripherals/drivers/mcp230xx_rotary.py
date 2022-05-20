@@ -53,7 +53,7 @@ class MCP230XX_Rotary(Thread):
 		self.rotary['state']['data'] = 0x00
 		self.rotary['state']['direction'] = 0
 		self.button = dict()
-		self.button['status'] = True
+		self.button['status'] = False
 
 		self.thread = None
 
@@ -167,27 +167,4 @@ class MCP230XX_Rotary(Thread):
 
 	def bank_b_pin(self, pin: int) -> int:
 		return (pin + 8) & 0x0f
-
-
-
-def print_rotary(position: int):
-	print("Rotary: pos={}".format(position))
-
-
-def print_button(position: int):
-	print("Button: status={}".format(position))
-
-
-i2c = busio.I2C(board.SCL, board.SDA)
-mcp = MCP23017(i2c, address=0x20)
-mcp230xx_a = MCP230XX_Rotary(mcp, 'A', 5, 6, 7, 3, 4, board.D12)
-mcp230xx_b = MCP230XX_Rotary(mcp, 'B', 0, 1, 2, 3, 4, board.D13)
-mcp230xx_a.configure(5, 0, 10, False)
-mcp230xx_b.configure(5, 0, 10, False)
-mcp230xx_a.loop_start(2.5, print_rotary, print_button)
-mcp230xx_b.loop_start(2.5, print_rotary, print_button)
-while True:
-#	mcp230xx_a.do_loop(print_rotary, print_button)
-#	mcp230xx_b.do_loop(print_rotary, print_button)
-	time.sleep(0.0025)
 

@@ -7,7 +7,7 @@ import time
 from uwsgi import accepting
 from paho.mqtt import client as mqtt_client
 
-from display import Display
+from devices.display import Display
 
 
 def on_message(client, display, msg):

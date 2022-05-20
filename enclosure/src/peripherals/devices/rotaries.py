@@ -13,13 +13,14 @@ importlib.reload(busio)
 importlib.reload(digitalio)
 importlib.reload(adafruit_bus_device)
 
+from . import HAL9000_Device
 from adafruit_mcp230xx.mcp23017 import MCP23017
-from driver.mcp230xx_rotary import MCP230XX_Rotary
+from drivers.mcp230xx_rotary import MCP230XX_Rotary
 
-class HAL9000_Rotaries:
+class HAL9000_Rotaries(HAL9000_Device):
 	def __init__(self):
-		i2c = busio.I2C(board.SCL, board.SDA)
-		mcp = MCP23017(i2c, address=0x20)
+		HAL9000_Device.__init__(self, 'Rotaries')
+		mcp = MCP23017(self.i2c, address=0x20)
 		self.rotary_r = MCP230XX_Rotary(mcp, 'A', 5, 6, 7, 3, 4, board.D12)
 		self.rotary_l = MCP230XX_Rotary(mcp, 'B', 0, 1, 2, 3, 4, board.D13)
 
@@ -29,11 +30,9 @@ class HAL9000_Rotaries:
 		self.rotary_l.configure(0, 0, 3, False)
 
 
-	def loop(self):
-		while True:
-			self.rotary_r.do_loop(self.on_volume, self.on_mute)
-			self.rotary_l.do_loop(self.on_control, self.on_power)
-			time.sleep(0.0025)
+	def do_loop(self):
+		self.rotary_r.do_loop(self.on_volume, self.on_mute)
+		self.rotary_l.do_loop(self.on_control, self.on_power)
 
 
 	def on_volume(self, value: int):
