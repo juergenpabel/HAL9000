@@ -593,13 +593,11 @@ class MFRC522:
         cmd = address.to_bytes(1,'little')
         data = bytearray(1)
         self.i2c.write_then_readinto(cmd, data)
-        #print('<'+str(data))
         return data[0]
 
     def __MFRC522_write(self, address, value):
         """ Write data on an address on the i2c bus """
         data = address.to_bytes(1,'little') + value.to_bytes(1,'little')
-        #print('>'+str(data))
         self.i2c.write(data)
 
     def __MFRC522_setBitMask(self, address, mask):

@@ -6,38 +6,43 @@ import sys
 import time
 os.environ["BLINKA_FT232H"] = "1"
 
-import asyncio
+from configparser import ConfigParser
 import board
 import busio
-import terminalio
 import displayio
-import digitalio
-from digitalio import *
 from adafruit_display_text import label
 from adafruit_display_shapes.circle import Circle
-from pyftdi.spi import SpiController
-from PIL import Image,ImageDraw,ImageFont
 
-from drivers.waveshare_19192 import *
+from driver import Driver as Waveshare_19192
+from hal9000.device import HAL9000_Device as HAL9000
 
-class Display:
-	def __init__(self):
+class Device(HAL9000):
+
+	def __init__(self) -> None:
+		HAL9000.__init__(self, 'display')
 		spi = busio.SPI(None)
 		self.display = Waveshare_19192(displayio.FourWire(spi,baudrate=320000000,command=board.D5,chip_select=board.D4,reset=board.D6),width=240,height=240,backlight_pin=None,auto_refresh=False)
 		self.state = None
 		self.overlay = None
 
-	def configure(self):
+
+	def configure(self, config: ConfigParser) -> None:
+		images = None
+		if config:
+			images = config['display']['images']
+		else:
+			images = sys.argv[1]
 		self.overlay_volume = displayio.Group()
 		self.overlay_volume.append(Circle(120,120,90,fill=None,outline=0xffffff,stroke=1))
 		self.overlay_volume.append(Circle(120,120,115,fill=None,outline=0xffffff,stroke=1))
 
-		self.state_init   = self.load_images(sys.argv[1] + "/init/")
-		self.state_wakeup = self.load_images(sys.argv[1] + "/wakeup/")
-		self.state_active = self.load_images(sys.argv[1] + "/active/")
-		self.state_wait   = self.load_images(sys.argv[1] + "/wait/")
-		self.state_sleep  = self.load_images(sys.argv[1] + "/sleep/")
+		self.state_init   = self.load_images(images + "/init/")
+		self.state_wakeup = self.load_images(images + "/wakeup/")
+		self.state_active = self.load_images(images + "/active/")
+		self.state_wait   = self.load_images(images + "/wait/")
+		self.state_sleep  = self.load_images(images + "/sleep/")
 		self.display.brightness = 0
+
 
 	def load_images(self, path):
 		frames = displayio.Group()
@@ -51,8 +56,10 @@ class Display:
 					frames.append(layers)
 		return frames
 
+
 	def on_init(self):
 		self.state = self.state_init
+
 
 	def on_wakeup(self):
 		if self.state == self.state_sleep or self.state == self.state_init:
@@ -60,22 +67,28 @@ class Display:
 		else:
 			self.state = self.state_active
 
+
 	def on_active(self):
 		if self.state != self.state_wakeup:
 			self.state = self.state_active
+
 
 	def on_wait(self):
 		if self.state == self.state_active:
 			self.state = self.state_wait
 
+
 	def on_sleep(self):
 		self.state = self.state_sleep
+
 
 	def on_volume_show(self):
 		return self.on_overlay_show(self.overlay_volume)
 
+
 	def on_volume_hide(self):
 		return self.on_overlay_hide(self.overlay_volume)
+
 
 	def on_overlay_show(self, overlay):
 		if self.overlay == overlay:
@@ -87,6 +100,7 @@ class Display:
 			for j in range(0,len(self.overlay_volume)):
 				self.state[i].append(self.overlay_volume[j])
 
+
 	def on_overlay_hide(self, overlay):
 		if self.overlay != overlay:
 			return
@@ -95,7 +109,8 @@ class Display:
 				self.state[i].pop()
 		self.overlay = None
 
-	def loop(self):
+
+	def do_loop(self) -> bool: # TODO refactor as do_loop
 		try:
 			state = None
 			while self.state is None:
@@ -130,5 +145,6 @@ class Display:
 				time.sleep(0.1)
 		except KeyboardInterrupt:
 			displayio.release_displays()
+		return False
 
 

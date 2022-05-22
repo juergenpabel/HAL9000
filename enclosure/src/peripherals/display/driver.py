@@ -81,7 +81,7 @@ _INIT_SEQUENCE = bytearray(
 )
 
 # pylint: disable=too-few-public-methods
-class Waveshare_19192(displayio.Display):
+class Driver(displayio.Display):
     """GC9A01 based displayio driver for Waveshare 1.28inch LCD"""
 
     def __init__(self, bus, **kwargs):
@@ -90,3 +90,4 @@ class Waveshare_19192(displayio.Display):
 
     def _release(self):
         pass
+
