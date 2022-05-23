@@ -7,11 +7,11 @@ import board
 import busio
 import digitalio
 
-from . import HAL9000_Device
+from hal9000.device import HAL9000_Device as HAL9000
 
-class HAL9000_Buttons(HAL9000_Device):
+class Buttons(HAL9000):
 	def __init__(self):
-		HAL9000_Device.__init__(self, 'Buttons')
+		HAL9000.__init__(self, 'Buttons')
 		#todo: pcf8951
 
 
