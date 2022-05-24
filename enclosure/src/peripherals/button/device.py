@@ -1,32 +1,51 @@
 #!/usr/bin/python3
 
-import os
-import time
 
-import board
-import busio
-import digitalio
+from configparser import ConfigParser
+from gpiozero import InputDevice
 
 from hal9000.device import HAL9000_Device as HAL9000
 
-class Buttons(HAL9000):
-	def __init__(self):
-		HAL9000.__init__(self, 'Buttons')
-		#todo: pcf8951
+from hal9000.driver.pcf8591 import PCF8591 as Driver
 
 
-	def configure(self):
-		pass
+class Device(HAL9000):
+
+	def __init__(self, name: str):
+		HAL9000.__init__(self, 'button:{}'.format(name))
+		self.button = dict()
 
 
-	def do_loop(self):
-		pass
+	def configure(self, configuration: ConfigParser):
+		HAL9000.configure(self, configuration)
+		peripheral, device = str(self).split(':')
+		self.button['enabled'] = configuration.getboolean(str(self), 'button-enabled', fallback=True)
+		if self.button['enabled']:
+			self.button['status'] = [ False, False, False, False ] # list size is len(pins-sig)
+
+		self.driver = Driver('{}:{}'.format(configuration.get(str(self), 'driver'), device))
+		self.driver.configure(configuration)
+#TODO		if self.button['enabled']:
+#TODO			for pin in self.button['pins-sig']:
+#TODO				#TODO:self.driver.setup(pin, Driver.IN, Driver.HIGH, Driver.NONINVERT, True, True, True)
+#TODO			for pin in self.button['pins-gnd']:
+#TODO				#TODO:self.driver.setup(pin, Driver.OUT, Driver.LOW)
 
 
-	def on_button_pressed(self, value: float):
-		print("Button={}".format(value))
+	def do_loop(self, callback_event = None) -> bool:
+		peripheral, device = str(self).split(':')
+#TODO		if self.button['enabled']:
+#TODO			for pin in self.button['pins-sig']:
+#TODO				value = self.driver.input(pin)
+#TODO				button_status = self.calculate_button(value)
+#TODO				if button_status != self.button['status']:
+#TODO					self.button['status'] = button_status
+#TODO					if callback_event is not None:
+#TODO						callback_event(peripheral, device, 'button', str(int(button_status)))
+		return True
 
 
-	def on_button_released(self, value: float):
-		print("Button={}".format(value))
+	def calculate_button(self, value: float) -> bool:
+		#TODO
+		return value
 
