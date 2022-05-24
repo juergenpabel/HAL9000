@@ -4,36 +4,73 @@ import os
 import sys
 import time
 
+from configparser import ConfigParser
 from paho.mqtt import client as mqtt_client
 
-class HAL9000_Daemon:
+from . import HAL9000_Base
+
+class HAL9000_Daemon(HAL9000_Base):
+
+	STATUS_INIT = "init"
+	STATUS_READY = "ready"
+	STATUS_ACTIVE = "active"
+	STATUS_PAUSED = "paused"
+	STATUS_VALID = (STATUS_ACTIVE, STATUS_PAUSED)
+
 
 	def __init__(self, name: str) -> None:
-		self.device_name = name
-		self.device_control = "active"
+		HAL9000_Base.__init__(self, name)
+		self.config = dict()
+		self.mqtt = None
+		self._status = HAL9000_Daemon.STATUS_INIT
 
 
-	def configure(self, filename = None) -> None:
-		self.mqtt = mqtt_client.Client("hal9000-peripheral-{}".format(self.device_name))
-		self.mqtt.on_message = self.on_message
-		self.mqtt.connect("127.0.0.1", 1883)
-		self.mqtt.subscribe("hal9000/{}/control".format(self.device_name))
+	def load(self, filename: str) -> None:
+		if self.status == HAL9000_Daemon.STATUS_INIT:
+			configuration = ConfigParser(delimiters='=', converters={'list': lambda list: [item.strip() for item in list.split(',')]})
+			configuration.read(filename)
+			self.configure(configuration)
+			self._status = HAL9000_Daemon.STATUS_READY
+
+
+	def configure(self, configuration: ConfigParser) -> None:
+		if self.status == HAL9000_Daemon.STATUS_INIT:
+			HAL9000_Base.configure(self, configuration)
+			self.config['daemon-delay-active'] = configuration.getfloat('daemon', 'delay-active', fallback=0.001)
+			self.config['daemon-delay-paused'] = configuration.getfloat('daemon', 'delay-paused', fallback=0.100)
+			self.config['mqtt-enabled'] = configuration.getboolean('daemon', 'mqtt-enabled', fallback=True)
+			self.config['mqtt-client'] = configuration.get('mqtt', 'client', fallback="hal9000-daemon-{}".format(str(self)))
+			self.config['mqtt-server'] = configuration.get('mqtt', 'server', fallback="127.0.0.1")
+			self.config['mqtt-port'] = configuration.getint('mqtt', 'port', fallback=1883)
+			self.config['mqtt-topic-prefix'] = configuration.get('mqtt', 'topic-prefix', fallback="hal9000/{}".format(str(self)))
+
 
 
 	def loop(self) -> None:
-		self.mqtt.loop_start()
-		while self.do_loop() is True:
-			while self.device_control != "active":
-				time.sleep(0.1)
-			time.sleep(0.001)
-
-
-	def do_loop(self) -> bool:
-		return False
+		if self.config['mqtt-enabled']:
+			self.mqtt = mqtt_client.Client(self.config['mqtt-client'])
+			self.mqtt.connect(self.config['mqtt-server'], self.config['mqtt-port'])
+			self.mqtt.subscribe("{}/control".format(self.config['mqtt-topic-prefix']))
+			self.mqtt.on_message = self.on_message
+			self.mqtt.loop_start()
+		while self.do_loop():
+			while self.status == HAL9000_Daemon.STATUS_PAUSED:
+				time.sleep(self.config['daemon-delay-paused'])
+			time.sleep(self.config['daemon-delay-active'])
 
 
 	def on_message(self, client, userdata, message) -> None:
-		if message.topic == "hal9000/{}/control".format(self.device_name):
-			self.device_control = message.payload.decode('utf-8')
+		if message.topic == "hal9000/{}/control".format(str(self)):
+			self.status = message.payload.decode('utf-8')
 
+
+	@property
+	def status(self):
+		return self._status
+
+
+	@status.setter
+	def status(self, value):
+		if value in STATUS_VALID:
+			self._status = value
 
