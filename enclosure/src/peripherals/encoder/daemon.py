@@ -38,7 +38,7 @@ class Daemon(HAL9000):
 
 
 if __name__ == "__main__":
-	daemon = Daemon('rfid')
+	daemon = Daemon('encoder')
 	daemon.load(sys.argv[1])
 	daemon.loop()
 

@@ -42,7 +42,7 @@ class HAL9000_Daemon(HAL9000_Base):
 			self.config['mqtt-client'] = configuration.get('mqtt', 'client', fallback="hal9000-daemon-{}".format(str(self)))
 			self.config['mqtt-server'] = configuration.get('mqtt', 'server', fallback="127.0.0.1")
 			self.config['mqtt-port'] = configuration.getint('mqtt', 'port', fallback=1883)
-			self.config['mqtt-topic-prefix'] = configuration.get('mqtt', 'topic-prefix', fallback="hal9000/{}".format(str(self)))
+			self.config['mqtt-topic-base'] = configuration.get('mqtt', 'topic-base', fallback="hal9000/peripheral")
 
 
 
@@ -50,7 +50,7 @@ class HAL9000_Daemon(HAL9000_Base):
 		if self.config['mqtt-enabled']:
 			self.mqtt = mqtt_client.Client(self.config['mqtt-client'])
 			self.mqtt.connect(self.config['mqtt-server'], self.config['mqtt-port'])
-			self.mqtt.subscribe("{}/control".format(self.config['mqtt-topic-prefix']))
+			self.mqtt.subscribe("{}/control".format(self.config['mqtt-topic-base']))
 			self.mqtt.on_message = self.on_message
 			self.mqtt.loop_start()
 		while self.do_loop():

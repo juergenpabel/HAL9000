@@ -16,8 +16,7 @@ class Device(HAL9000):
 	ROTARY_MODES = [ ROTARY_MODE_POSITION, ROTARY_MODE_DELTA ]
 
 	def __init__(self, name: str):
-		HAL9000.__init__(self, 'rotary:{}'.format(name))
-		self.driver = Driver('mcp23017:{}'.format(name))
+		HAL9000.__init__(self, 'encoder:{}'.format(name))
 		self.button = dict()
 		self.rotary = dict()
 		self.rotary['internal'] = dict()
@@ -29,6 +28,7 @@ class Device(HAL9000):
 
 	def configure(self, configuration: ConfigParser):
 		HAL9000.configure(self, configuration)
+		peripheral, device = str(self).split(':')
 		self.rotary['enabled'] = configuration.getboolean(str(self), 'rotary-enabled', fallback=True)
 		if self.rotary['enabled']:
 			self.rotary['pins-sig'] = configuration.getlist(str(self), 'mcp23017-rotary-signal-pins')
@@ -48,6 +48,8 @@ class Device(HAL9000):
 		if pin > 0:
 			self.gpio['irq-pullup'] = configuration.getboolean(str(self), 'gpio-irq-pullup', fallback=True)
 			self.gpio['irq'] = InputDevice(pin=pin, pull_up=self.gpio['irq-pullup'])
+
+		self.driver = Driver('{}:{}'.format(configuration.get(str(self), 'driver'), device))
 		self.driver.configure(configuration)
 		if self.rotary['enabled']:
 			for pin in self.rotary['pins-sig']:
@@ -61,19 +63,19 @@ class Device(HAL9000):
 				self.driver.setup(pin, Driver.OUT, Driver.LOW)
 
 
-	def do_loop(self, callback_rotary = None, callback_button = None) -> bool:
+	def do_loop(self, callback_event = None) -> bool:
+		peripheral, device = str(self).split(':')
 		irq = self.gpio['irq']
 		if irq is None or irq.value != self.gpio['irq-pullup']:
 			if self.rotary['enabled']:
 				pin1, pin2 = self.rotary['pins-sig']
-				val1 = self.driver.input(pin1)
-				val2 = self.driver.input(pin2)
-				rotary_delta = self.calculate_rotary(val1, val2)
+				value1 = self.driver.input(pin1)
+				value2 = self.driver.input(pin2)
+				rotary_delta = self.calculate_rotary(value1, value2)
 				if rotary_delta != 0:
 					if self.rotary['mode'] == Device.ROTARY_MODE_DELTA:
-						if callback_rotary is not None:
-							callback_rotary(rotary_delta)
-					else:
+						rotary_pos = rotary_delta
+					elif self.rotary['mode'] == Device.ROTARY_MODE_POSITION:
 						rotary_pos = self.rotary['pos'] + (rotary_delta * self.rotary['step'])
 						if rotary_pos < self.rotary['min']:
 							rotary_pos = self.rotary['min']
@@ -81,16 +83,17 @@ class Device(HAL9000):
 							rotary_pos = self.rotary['max']
 						if rotary_pos != self.rotary['pos']:
 							self.rotary['pos'] = rotary_pos
-							if callback_rotary is not None:
-								callback_rotary(rotary_pos)
+					if callback_event is not None:
+						callback_event(peripheral, device, 'rotary', str(rotary_pos))
 			if self.button['enabled']:
 				button_status = False
 				for pin in self.button['pins-sig']:
-					button_status |= bool(not(self.driver.input(pin)))
+					value = self.driver.input(pin)
+					button_status |= self.calculate_button(value)
 				if button_status != self.button['status']:
 					self.button['status'] = button_status
-					if callback_button is not None:
-						callback_button(self.button['status'])
+					if callback_event is not None:
+						callback_event(peripheral, device, 'button', str(int(button_status)))
 		return True
 
 
@@ -128,4 +131,8 @@ class Device(HAL9000):
 			self.rotary['internal']['data'] = rotary_state_data
 			return rotary_delta
 		return 0
+
+
+	def calculate_button(self, value: int) -> bool:
+		return bool(not(value))
 

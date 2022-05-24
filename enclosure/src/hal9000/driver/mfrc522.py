@@ -115,7 +115,6 @@ class MFRC522(HAL9000):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
-		print(str(self))
 		self.config['i2c-bus'] = int(configuration.get(str(self), 'i2c-bus', fallback="1"), 16)
 		self.config['i2c-address'] = int(configuration.get(str(self), 'i2c-address', fallback="0x28"), 16)
 		self.smbus = SMBus(self.config['i2c-bus'])

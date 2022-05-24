@@ -10,15 +10,16 @@ class Device(HAL9000):
 
 	def __init__(self, name: str) -> None:
 		HAL9000.__init__(self, 'rfid:{}'.format(name))
-		self.driver = Driver('mfrc522:{}'.format(name))
 		self.config = dict()
 		self.current_uid = None
  
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
+		peripheral, device = str(self).split(':')
 		self.config['enabled'] = configuration.getboolean(str(self), 'rfid-enabled', fallback=True)
 		if self.config['enabled']:
+			self.driver = Driver('{}:{}'.format(configuration.get(str(self), 'driver'), device))
 			self.driver.configure(configuration)
 			if self.driver.getReaderVersion() is None:
 				self.driver = None
@@ -26,18 +27,20 @@ class Device(HAL9000):
 			self.driver = None
 
 
-	def do_loop(self, callback_enter = None, callback_leave = None) -> bool:
-		if self.driver is None:
-			return False
-		if self.driver.do_loop() is False:
-			return False
-		if self.current_uid != self.driver.current_uid:
-			if self.current_uid is not None:
-				if callback_leave is not None:
-					callback_leave(self.current_uid)
-			self.current_uid = self.driver.current_uid
-			if self.current_uid is not None:
-				if callback_enter is not None:
-					callback_enter(self.current_uid)
-		return True
+	def do_loop(self, callback_event = None) -> bool:
+		result = False
+		if self.config['enabled']:
+			if self.driver.do_loop():
+				result = True
+				previous_uid = self.current_uid
+				current_uid = self.driver.current_uid
+				if previous_uid != current_uid:
+					self.current_uid = current_uid
+					if callback_event is not None:
+						peripheral, device = str(self).split(':')
+						if previous_uid is not None:
+							callback_event(peripheral, device, 'leave', previous_uid)
+						if current_uid is not None:
+							callback_event(peripheral, device, 'enter', current_uid)
+		return result
 
