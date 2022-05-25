@@ -1,11 +1,11 @@
 #!/usr/bin/python3
 
 import sys
+import imp
 
 from configparser import ConfigParser
 
 from hal9000.daemon import HAL9000_Daemon as HAL9000
-from device import Device
 
 
 class Daemon(HAL9000):
@@ -17,9 +17,16 @@ class Daemon(HAL9000):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
-		for name in configuration.getlist('peripheral:{}'.format(self), 'devices'):
-			self.devices[name] = Device(name)
-			self.devices[name].configure(configuration)
+		module_name = str(self)
+		module_path = "hal9000/device/{}.py".format(module_name)
+		Device = None
+		with open(module_path, 'rb') as module_file:
+			module = imp.load_module(module_name, module_file, module_path, ('py', 'r', imp.PY_SOURCE))
+			Device = getattr(module, 'Device')
+		if Device is not None:
+			for name in configuration.getlist('peripheral:{}'.format(self), 'devices'):
+				self.devices[name] = Device(name)
+				self.devices[name].configure(configuration)
 
 
 	def do_loop(self) -> bool:
@@ -28,9 +35,4 @@ class Daemon(HAL9000):
 			result &= device.do_loop(self.on_event)
 		return result
 
-
-if __name__ == "__main__":
-	daemon = Daemon('button')
-	daemon.load(sys.argv[1])
-	daemon.loop()
 

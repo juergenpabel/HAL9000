@@ -1,9 +1,10 @@
 #!/usr/bin/python3
 
+import sys
 from configparser import ConfigParser
 
 from hal9000.device import HAL9000_Device as HAL9000
-from driver import Driver
+from hal9000.driver.mfrc522 import MFRC522 as Driver
 
 
 class Device(HAL9000):

@@ -7,7 +7,7 @@ import time
 from configparser import ConfigParser
 from paho.mqtt import client as mqtt_client
 
-from . import HAL9000_Base
+from .. import HAL9000_Base
 
 class HAL9000_Daemon(HAL9000_Base):
 
