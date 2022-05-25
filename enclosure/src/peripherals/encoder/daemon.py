@@ -29,14 +29,6 @@ class Daemon(HAL9000):
 		return result
 
 
-	def on_event(self, peripheral: str, device: str, event: str, value: str) -> None:
-		event = '{}:{} {}={}'.format(peripheral, device, event, value)
-		print(event)
-		if self.mqtt:
-			self.mqtt.publish('{}/event'.format(self.config['mqtt-topic-base']), event)
-
-
-
 if __name__ == "__main__":
 	daemon = Daemon('encoder')
 	daemon.load(sys.argv[1])

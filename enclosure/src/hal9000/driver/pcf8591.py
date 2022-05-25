@@ -8,11 +8,6 @@ from . import HAL9000_Driver as HAL9000
 
 class PCF8591(HAL9000):
 
-	CHANNEL_A0 = 0x00
-	CHANNEL_A1 = 0x01
-	CHANNEL_A2 = 0x02
-	CHANNEL_A3 = 0x03
-
 	CHANNEL_OUT = 0x40
 
 	def __init__(self, name: str, debug=False):
@@ -27,25 +22,25 @@ class PCF8591(HAL9000):
 		HAL9000.configure(self, configuration)
 		self.config['i2c-bus'] = int(configuration.get(str(self), 'i2c-bus', fallback="1"), 16)
 		self.config['i2c-address'] = int(configuration.get(str(self), 'i2c-address', fallback="0x48"), 16)
-		self.config['enable-out'] = configuration.getboolean(str(self), 'enable-out', True)
+		self.config['enable-out'] = configuration.getboolean(str(self), 'enable-out', fallback=True)
 		self.smbus = SMBus(self.config['i2c-bus'])
 		self.device = self.config['i2c-address']
 		out_level = 0x00
 		if self.config['enable-out']:
 			out_level = 0xff
 		self.write(PCF8591.CHANNEL_OUT, out_level)
-		self.cache = array()
-		for channel in range(0, 3):
-			self.cache[channel] = 0
+		self.cache = list()
+		for channel in range(0, 4):
+			self.cache.append(0)
 
 
 	def do_loop(self, callback_event = None) -> bool:
-		for channel in range(0, 3):
+		for channel in range(0, 4):
 			self.cache[channel] = self.read(channel)
 		return True
 
 
-	def read(self, channel: byte) -> byte:
+	def read(self, channel: int) -> int:
 		write_channel = 0x00
 		write_command = 0x00
 		if self.config['enable-out']:
@@ -60,11 +55,11 @@ class PCF8591(HAL9000):
 		return result
 
 
-	def write(self, channel: byte, command: byte) -> None:
+	def write(self, channel: int, command: int) -> int:
 		self.smbus.write_byte_data(self.device, channel, command)
-		self.smbus.read_byte(self.device, channel)
+		return self.smbus.read_byte(self.device)
 
 
-	def value(self, channel) -> byte:
+	def channel(self, channel) -> int:
 		return self.cache[channel]
 

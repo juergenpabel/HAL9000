@@ -22,25 +22,36 @@ class Device(HAL9000):
 		peripheral, device = str(self).split(':')
 		self.button['enabled'] = configuration.getboolean(str(self), 'button-enabled', fallback=True)
 		if self.button['enabled']:
-			self.button['status'] = array()
-			for button in range(0, 3):
-				self.button['status'][button] = False
+			self.button['status'] = list()
+			for button in range(0, 4):
+				self.button['status'].append(False)
+			self.button['name'] = list()
+			for button in range(0, 4):
+				key = 'button.{}'.format(button)
+				self.button['name'].append(configuration.get(str(self), key, fallback=key))
 			self.driver = Driver('{}:{}'.format(configuration.get(str(self), 'driver'), device))
 			self.driver.configure(configuration)
 
 
 	def do_loop(self, callback_event = None) -> bool:
 		if self.driver is not None:
-			peripheral, device = str(self).split(':')
 			self.driver.do_loop()
-			for button in range(0, 3):
-				level = self.driver.channel(button)
-				self.button['status'][button] = self.calculate_button(level)
-		return True
-
-
-	def calculate_button(self, value: byte) -> bool:
-		if value > 0:
+			if callback_event is not None:
+				peripheral, device = str(self).split(':')
+				for number in range(0, 4):
+					button_old = self.button['status'][number]
+					button_new = self.calculate_button(self.driver.channel(number))
+					if button_new is not None and button_old != button_new:
+						self.button['status'][number] = button_new
+						callback_event(peripheral, device, self.button['name'][number], int(button_new))
 			return True
 		return False
+
+
+	def calculate_button(self, value: int) -> bool:
+		if value < 64:
+			return True
+		if value > 192:
+			return False
+		return None
 
