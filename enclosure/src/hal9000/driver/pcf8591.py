@@ -8,6 +8,13 @@ from . import HAL9000_Driver as HAL9000
 
 class PCF8591(HAL9000):
 
+	CHANNEL_A0 = 0x00
+	CHANNEL_A1 = 0x01
+	CHANNEL_A2 = 0x02
+	CHANNEL_A3 = 0x03
+
+	CHANNEL_OUT = 0x40
+
 	def __init__(self, name: str, debug=False):
 		HAL9000.__init__(self, name)
 		self.config = dict()
@@ -20,12 +27,44 @@ class PCF8591(HAL9000):
 		HAL9000.configure(self, configuration)
 		self.config['i2c-bus'] = int(configuration.get(str(self), 'i2c-bus', fallback="1"), 16)
 		self.config['i2c-address'] = int(configuration.get(str(self), 'i2c-address', fallback="0x48"), 16)
-		self.config['pins-sig'] = configuration.getlist(str(self), 'pins-signal')
-		self.config['pins-gnd'] = configuration.getlist(str(self), 'pins-ground')
+		self.config['enable-out'] = configuration.getboolean(str(self), 'enable-out', True)
 		self.smbus = SMBus(self.config['i2c-bus'])
 		self.device = self.config['i2c-address']
+		out_level = 0x00
+		if self.config['enable-out']:
+			out_level = 0xff
+		self.write(PCF8591.CHANNEL_OUT, out_level)
+		self.cache = array()
+		for channel in range(0, 3):
+			self.cache[channel] = 0
 
 
-	def do_loop(self, callback_rotary = None, callback_button = None) -> bool:
+	def do_loop(self, callback_event = None) -> bool:
+		for channel in range(0, 3):
+			self.cache[channel] = self.read(channel)
 		return True
+
+
+	def read(self, channel: byte) -> byte:
+		write_channel = 0x00
+		write_command = 0x00
+		if self.config['enable-out']:
+			write_channel = PCF8591.CHANNEL_OUT
+			write_command = 0xff
+		write_channel |= channel & 0x03
+		result = self.write(write_channel, write_command)
+		# i2c reads are started on the ACK of the WRITE and
+		# not returned until the read after the _next_ WRITE
+		# so we have to do it twice to get the actual value
+		result = self.write(write_channel, write_command)
+		return result
+
+
+	def write(self, channel: byte, command: byte) -> None:
+		self.smbus.write_byte_data(self.device, channel, command)
+		self.smbus.read_byte(self.device, channel)
+
+
+	def value(self, channel) -> byte:
+		return self.cache[channel]
 

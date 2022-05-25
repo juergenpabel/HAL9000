@@ -14,6 +14,7 @@ class Device(HAL9000):
 	def __init__(self, name: str):
 		HAL9000.__init__(self, 'button:{}'.format(name))
 		self.button = dict()
+		self.driver = None
 
 
 	def configure(self, configuration: ConfigParser):
@@ -21,31 +22,25 @@ class Device(HAL9000):
 		peripheral, device = str(self).split(':')
 		self.button['enabled'] = configuration.getboolean(str(self), 'button-enabled', fallback=True)
 		if self.button['enabled']:
-			self.button['status'] = [ False, False, False, False ] # list size is len(pins-sig)
-
-		self.driver = Driver('{}:{}'.format(configuration.get(str(self), 'driver'), device))
-		self.driver.configure(configuration)
-#TODO		if self.button['enabled']:
-#TODO			for pin in self.button['pins-sig']:
-#TODO				#TODO:self.driver.setup(pin, Driver.IN, Driver.HIGH, Driver.NONINVERT, True, True, True)
-#TODO			for pin in self.button['pins-gnd']:
-#TODO				#TODO:self.driver.setup(pin, Driver.OUT, Driver.LOW)
+			self.button['status'] = array()
+			for button in range(0, 3):
+				self.button['status'][button] = False
+			self.driver = Driver('{}:{}'.format(configuration.get(str(self), 'driver'), device))
+			self.driver.configure(configuration)
 
 
 	def do_loop(self, callback_event = None) -> bool:
-		peripheral, device = str(self).split(':')
-#TODO		if self.button['enabled']:
-#TODO			for pin in self.button['pins-sig']:
-#TODO				value = self.driver.input(pin)
-#TODO				button_status = self.calculate_button(value)
-#TODO				if button_status != self.button['status']:
-#TODO					self.button['status'] = button_status
-#TODO					if callback_event is not None:
-#TODO						callback_event(peripheral, device, 'button', str(int(button_status)))
+		if self.driver is not None:
+			peripheral, device = str(self).split(':')
+			self.driver.do_loop()
+			for button in range(0, 3):
+				level = self.driver.channel(button)
+				self.button['status'][button] = self.calculate_button(level)
 		return True
 
 
-	def calculate_button(self, value: float) -> bool:
-		#TODO
-		return value
+	def calculate_button(self, value: byte) -> bool:
+		if value > 0:
+			return True
+		return False
 
