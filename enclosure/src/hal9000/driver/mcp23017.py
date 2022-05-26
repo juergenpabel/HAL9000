@@ -4,10 +4,11 @@ import time
 from smbus import SMBus
 from configparser import ConfigParser
 from gpiozero import InputDevice
+
 from . import HAL9000_Driver as HAL9000
 
 
-class MCP23017(HAL9000):
+class Driver(HAL9000):
 
 	IN            = 1
 	OUT           = 0

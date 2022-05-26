@@ -6,7 +6,7 @@ from configparser import ConfigParser
 from . import HAL9000_Driver as HAL9000
 
 
-class PCF8591(HAL9000):
+class Driver(HAL9000):
 
 	CHANNEL_OUT = 0x40
 
@@ -28,7 +28,7 @@ class PCF8591(HAL9000):
 		out_level = 0x00
 		if self.config['enable-out']:
 			out_level = 0xff
-		self.write(PCF8591.CHANNEL_OUT, out_level)
+		self.write(Driver.CHANNEL_OUT, out_level)
 		self.cache = list()
 		for channel in range(0, 4):
 			self.cache.append(0)
@@ -44,7 +44,7 @@ class PCF8591(HAL9000):
 		write_channel = 0x00
 		write_command = 0x00
 		if self.config['enable-out']:
-			write_channel = PCF8591.CHANNEL_OUT
+			write_channel = Driver.CHANNEL_OUT
 			write_command = 0xff
 		write_channel |= channel & 0x03
 		result = self.write(write_channel, write_command)

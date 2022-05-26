@@ -1,7 +1,6 @@
 #!/usr/bin/python3
 
 import sys
-import imp
 
 from configparser import ConfigParser
 
@@ -17,16 +16,13 @@ class Daemon(HAL9000):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
-		module_name = str(self)
-		module_path = "hal9000/device/{}.py".format(module_name)
-		Device = None
-		with open(module_path, 'rb') as module_file:
-			module = imp.load_module(module_name, module_file, module_path, ('py', 'r', imp.PY_SOURCE))
-			Device = getattr(module, 'Device')
-		if Device is not None:
-			for name in configuration.getlist('peripheral:{}'.format(self), 'devices'):
-				self.devices[name] = Device(name)
-				self.devices[name].configure(configuration)
+		Device = self.load_device(str(self))
+		if Device is None:
+			print("FATAL: loading of device '{}' failed".format(str(self)))
+			sys.exit(-1)
+		for name in configuration.getlist('peripheral:{}'.format(self), 'devices'):
+			self.devices[name] = Device(name)
+			self.devices[name].configure(configuration)
 
 
 	def do_loop(self) -> bool:

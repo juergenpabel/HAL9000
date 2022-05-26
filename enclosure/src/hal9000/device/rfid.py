@@ -4,7 +4,6 @@ import sys
 from configparser import ConfigParser
 
 from hal9000.device import HAL9000_Device as HAL9000
-from hal9000.driver.mfrc522 import MFRC522 as Driver
 
 
 class Device(HAL9000):
@@ -12,6 +11,7 @@ class Device(HAL9000):
 	def __init__(self, name: str) -> None:
 		HAL9000.__init__(self, 'rfid:{}'.format(name))
 		self.config = dict()
+		self.driver = None
 		self.current_uid = None
  
 
@@ -20,12 +20,11 @@ class Device(HAL9000):
 		peripheral, device = str(self).split(':')
 		self.config['enabled'] = configuration.getboolean(str(self), 'rfid-enabled', fallback=True)
 		if self.config['enabled']:
+			Driver = self.load_driver(configuration.get(str(self), 'driver'))
 			self.driver = Driver('{}:{}'.format(configuration.get(str(self), 'driver'), device))
 			self.driver.configure(configuration)
 			if self.driver.getReaderVersion() is None:
 				self.driver = None
-		else:
-			self.driver = None
 
 
 	def do_loop(self, callback_event = None) -> bool:

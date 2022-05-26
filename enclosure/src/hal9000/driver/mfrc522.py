@@ -6,7 +6,7 @@ from smbus import SMBus
 from . import HAL9000_Driver as HAL9000
 
 
-class MFRC522(HAL9000):
+class Driver(HAL9000):
 
 	COMMANDREG = 0x01  # Start and stops command execution
 	COMIENREG = 0x02  # Enable and disable interrupt request control bits
@@ -125,11 +125,11 @@ class MFRC522(HAL9000):
 	def do_loop(self) -> bool:
 		if self.current_uid is None:
 			(status, backData, tagType) = self.scan()
-			if status != MFRC522.MIFARE_OK:
+			if status != Driver.MIFARE_OK:
 				return True
 		(status, current_uid, backBits) = self.identify()
 		current_uid = ''.join(format(x, '02x') for x in current_uid)
-		if status == MFRC522.MIFARE_OK:
+		if status == Driver.MIFARE_OK:
 			self.current_uid = current_uid
 		else:
 			self.current_uid = None
