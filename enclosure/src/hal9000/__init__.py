@@ -17,11 +17,11 @@ class HAL9000_Base(HAL9000_Abstract):
 
 	def __init__(self, name: str) -> None:
 		self._name = name
-		self._module_paths = None
+		self._module_paths = list()
 
 
 	def configure(self, configuration: ConfigParser) -> None:
-		self._module_paths = configuration.getlist('daemon', 'module_paths', fallback=['hal9000'])
+		self._module_paths = configuration.getlist('python', 'module_paths', fallback=['.'])
 
 
 	def do_loop(self) -> bool:
@@ -41,7 +41,8 @@ class HAL9000_Base(HAL9000_Abstract):
 			return None
 		module_package = "hal9000.{}.{}".format(class_type.lower(), class_name.lower())
 		for module_path in self._module_paths:
-			module_filename = "{}/{}/{}.py".format(module_path, class_type.lower(), class_name.lower())
+			module_path = module_path.strip('"').strip("'")
+			module_filename = "{}/hal9000/{}/{}.py".format(module_path, class_type.lower(), class_name.lower())
 			if os.path.isfile(module_filename):
 				module_spec = importlib.util.spec_from_file_location(module_package, module_filename)
 				module = importlib.util.module_from_spec(module_spec)
