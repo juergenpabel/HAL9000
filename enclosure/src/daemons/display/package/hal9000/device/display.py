@@ -4,7 +4,7 @@ import os
 import os.path
 import sys
 import time
-os.environ["BLINKA_FT232H"] = "1"
+#os.environ["BLINKA_FT232H"] = "1"
 
 from configparser import ConfigParser
 import board
@@ -13,35 +13,36 @@ import displayio
 from adafruit_display_text import label
 from adafruit_display_shapes.circle import Circle
 
-from driver import Driver as Waveshare_19192
 from hal9000.device import HAL9000_Device as HAL9000
+
 
 class Device(HAL9000):
 
-	def __init__(self) -> None:
-		HAL9000.__init__(self, 'display')
-		spi = busio.SPI(None)
-		self.display = Waveshare_19192(displayio.FourWire(spi,baudrate=320000000,command=board.D5,chip_select=board.D4,reset=board.D6),width=240,height=240,backlight_pin=None,auto_refresh=False)
+	def __init__(self, name: str) -> None:
+		HAL9000.__init__(self, name)
 		self.state = None
 		self.overlay = None
 
 
-	def configure(self, config: ConfigParser) -> None:
-		images = None
-		if config:
-			images = config['display']['images']
+	def configure(self, configuration: ConfigParser) -> None:
+		HAL9000.configure(self, configuration)
+		Driver = self.load_driver('gc9a01')
+		self.driver = Driver(str(self))
+		image_path = None
+		if configuration:
+			image_path = configuration.get('daemon:display', 'images').strip('"').strip("'")
 		else:
-			images = sys.argv[1]
+			image_path = sys.argv[1]
 		self.overlay_volume = displayio.Group()
 		self.overlay_volume.append(Circle(120,120,90,fill=None,outline=0xffffff,stroke=1))
 		self.overlay_volume.append(Circle(120,120,115,fill=None,outline=0xffffff,stroke=1))
 
-		self.state_init   = self.load_images(images + "/init/")
-		self.state_wakeup = self.load_images(images + "/wakeup/")
-		self.state_active = self.load_images(images + "/active/")
-		self.state_wait   = self.load_images(images + "/wait/")
-		self.state_sleep  = self.load_images(images + "/sleep/")
-		self.display.brightness = 0
+		self.state_init   = self.load_images(image_path + "/init/")
+		self.state_wakeup = self.load_images(image_path + "/wakeup/")
+		self.state_active = self.load_images(image_path + "/active/")
+		self.state_wait   = self.load_images(image_path + "/wait/")
+		self.state_sleep  = self.load_images(image_path + "/sleep/")
+		self.driver.brightness = 0
 
 
 	def load_images(self, path):
@@ -110,12 +111,12 @@ class Device(HAL9000):
 		self.overlay = None
 
 
-	def do_loop(self) -> bool: # TODO refactor as do_loop
+	def do_loop(self, callback) -> bool: # TODO refactor as do_loop
 		try:
 			state = None
 			while self.state is None:
 				time.sleep(0.1)
-			self.display.brightness = 1
+			self.driver.brightness = 1
 			wait_timeout = 0
 			while True:
 				changed = False
@@ -123,14 +124,14 @@ class Device(HAL9000):
 					changed = True
 					state = self.state
 					if state == self.state_wakeup:
-						self.display.brightness = 1
+						self.driver.brightness = 1
 					wait_timeout = 0
 					if state == self.state_wait:
 						wait_timeout = time.time() + 5
 				if changed is True or state == self.state_active or state == self.state_wait:
 					for frame in range(0,len(state)):
-						self.display.show(state[frame])
-						self.display.refresh()
+						self.driver.show(state[frame])
+						self.driver.refresh()
 						time.sleep(0.05)
 					if state == self.state_wakeup:
 						self.state = self.state_active
@@ -141,7 +142,7 @@ class Device(HAL9000):
 					if state == self.state_init:
 						self.state = self.state_wait
 					if state == self.state_sleep:
-						self.display.brightness = 0
+						self.driver.brightness = 0
 				time.sleep(0.1)
 		except KeyboardInterrupt:
 			displayio.release_displays()

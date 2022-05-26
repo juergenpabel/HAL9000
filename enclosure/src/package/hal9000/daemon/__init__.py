@@ -43,7 +43,7 @@ class HAL9000_Daemon(HAL9000_Base):
 			self.config['mqtt-client'] = configuration.get('mqtt', 'client', fallback="hal9000-daemon-{}".format(str(self)))
 			self.config['mqtt-server'] = configuration.get('mqtt', 'server', fallback="127.0.0.1")
 			self.config['mqtt-port'] = configuration.getint('mqtt', 'port', fallback=1883)
-			self.config['mqtt-topic-base'] = configuration.get('mqtt', 'topic-base', fallback="hal9000/peripheral")
+			self.config['mqtt-topic-base'] = configuration.get('mqtt', 'topic-base', fallback="hal9000")
 
 
 
@@ -51,7 +51,7 @@ class HAL9000_Daemon(HAL9000_Base):
 		if self.config['mqtt-enabled']:
 			self.mqtt = mqtt_client.Client(self.config['mqtt-client'])
 			self.mqtt.connect(self.config['mqtt-server'], self.config['mqtt-port'])
-			self.mqtt.subscribe("{}/control".format(self.config['mqtt-topic-base']))
+			self.mqtt.subscribe("{}/{}/control".format(self.config['mqtt-topic-base'], str(self)))
 			self.mqtt.on_message = self.on_mqtt
 			self.mqtt.loop_start()
 		delay_active = self.config['loop-delay-active']
@@ -63,12 +63,14 @@ class HAL9000_Daemon(HAL9000_Base):
 
 
 	def on_mqtt(self, client, userdata, message) -> None:
+		print("base:on_mqtt")
+		mqtt_base = self.config['mqtt-topic-base']
 		mqtt_topic = message.topic
 		mqtt_payload = message.payload.decode('utf-8')
 		if self.config['verbosity'] > 0:
 			print('MQTT received: {} => {}'.format(mqtt_topic, mqtt_payload))
 		
-		if topic == "hal9000/{}/control".format(str(self)):
+		if message.topic == "{}/{}/control".format(mqtt_base, str(self)):
 			self.status = mqtt_payload
 
 
@@ -77,7 +79,8 @@ class HAL9000_Daemon(HAL9000_Base):
 		if self.config['verbosity'] > 0:
 			print('EVENT: {}'.format(payload))
 		if self.mqtt is not None:
-			mqtt_topic = '{}/event'.format(self.config['mqtt-topic-base'])
+			mqtt_base = self.config['mqtt-topic-base']
+			mqtt_topic = '{}/{}/event'.format(mqtt_base, str(self))
 			if self.config['verbosity'] > 1:
 				print('MQTT published: {} => {}'.format(mqtt_topic, payload))
 			self.mqtt.publish(mqtt_topic, payload)
@@ -91,6 +94,6 @@ class HAL9000_Daemon(HAL9000_Base):
 
 	@status.setter
 	def status(self, value):
-		if value in STATUS_VALID:
+		if value in HAL9000_Daemon.STATUS_VALID:
 			self._status = value
 

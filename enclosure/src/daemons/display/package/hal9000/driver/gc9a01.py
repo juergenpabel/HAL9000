@@ -24,8 +24,14 @@ Implementation Notes
 
 __version__ = "1.0.0"
 __repo__ = "https://github.com/tylercrumpton/CircuitPython_Waveshare_19192.git"
+import board
+import busio
 
-import displayio
+from displayio import Display, FourWire
+from configparser import ConfigParser
+
+from hal9000.driver import HAL9000_Driver as HAL9000
+
 
 _INIT_SEQUENCE = bytearray(
 	b"\xEF\x00"
@@ -80,14 +86,19 @@ _INIT_SEQUENCE = bytearray(
 	b"\x29\x80\x14"
 )
 
-# pylint: disable=too-few-public-methods
-class Driver(displayio.Display):
-    """GC9A01 based displayio driver for Waveshare 1.28inch LCD"""
 
-    def __init__(self, bus, **kwargs):
-        init_sequence = _INIT_SEQUENCE
-        super().__init__(bus, init_sequence, **kwargs)
+class Driver(HAL9000, Display):
 
-    def _release(self):
-        pass
+	def __init__(self, name: str):
+		HAL9000.__init__(self, name)
+		Display.__init__(self, FourWire(busio.SPI(None),baudrate=320000000,command=board.D5,chip_select=board.D4,reset=board.D6), _INIT_SEQUENCE, width=240,height=240,backlight_pin=None,auto_refresh=False)
+		self.config = dict()
+
+
+	def configure(self, configuration: ConfigParser):
+		HAL9000.configure(self, configuration)
+
+
+	def _release(self):
+	    pass
 

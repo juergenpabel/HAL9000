@@ -1,54 +1,60 @@
 #!/usr/bin/python3
 
-#import os
+import os
 import sys
-#import time
 
-#from paho.mqtt import client as mqtt_client
+from configparser import ConfigParser
 
-from device import Device as Display
 from hal9000.daemon import HAL9000_Daemon as HAL9000
+
 
 class Daemon(HAL9000):
 
 	def __init__(self):
 		HAL9000.__init__(self, 'display')
-		self.display = Display()
+		os.environ["BLINKA_FT232H"] = "1"
 
 
-	def configure(self, filename: str):
-		HAL9000.configure(self, None)
-		self.mqtt.subscribe("hal9000/display/overlay/volume")
-		self.display.configure(None)
+	def configure(self, configuration: ConfigParser) -> None:
+		HAL9000.configure(self, configuration)
+		Device = self.load_device('display')
+		self.device = Device('eye')
+		self.device.configure(configuration)
+#TODO		self.mqtt.subscribe('{}/{}/screen'.format(self.config['mqtt-topic-base'], str(self)))
+#TODO		self.mqtt.subscribe('{}/{}/overlay/volume'.format(self.config['mqtt-topic-base'], str(self)))
 
 
 	def do_loop(self) -> bool:
-		return self.display.do_loop()
+		return self.device.do_loop(None)
+
 	
-	def on_message(self, client, userdata, message):
-		if message.topic == "hal9000/display/control":
+	def on_mqtt(self, client, userdata, message):
+		print("on_mqtt")
+		HAL9000.on_mqtt(self, client, userdata, message)
+		mqtt_base = self.config['mqtt-topic-base']
+		if message.topic == '{}/{}/control'.format(mqtt_base, str(self)):
 			if message.payload.decode('utf-8') == "init":
 				print("init")
-				self.display.on_init()
+				self.device.on_init()
 			if message.payload.decode('utf-8') == "wakeup":
 				print("wakeup")
-				self.display.on_wakeup()
+				self.device.on_wakeup()
 			if message.payload.decode('utf-8') == "active":
 				print("active")
-				self.display.on_active()
+				self.device.on_active()
 			if message.payload.decode('utf-8') == "wait":
-				self.display.on_wait()
+				self.device.on_wait()
 			if message.payload.decode('utf-8') == "sleep":
-				self.display.on_sleep()
-		if message.topic == "hal9000/display/overlay/volume":
+				self.device.on_sleep()
+		if message.topic == '{}/{}/overlay/volume'.format(mqtt_base, str(self)):
 			if message.payload.decode('utf-8') == "show":
-				self.display.on_volume_show()
+				self.device.on_volume_show()
 			if message.payload.decode('utf-8') == "hide":
-				self.display.on_volume_hide()
+				self.device.on_volume_hide()
 
 
 if __name__ == "__main__":
 	daemon = Daemon()
-	daemon.configure('../../../../resources/images/')
+	daemon.load(sys.argv[1])
 	daemon.loop()
 
