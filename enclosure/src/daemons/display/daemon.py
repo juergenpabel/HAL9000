@@ -29,7 +29,6 @@ class Daemon(HAL9000):
 
 	
 	def on_mqtt(self, client, userdata, message):
-		print("on_mqtt")
 		HAL9000.on_mqtt(self, client, userdata, message)
 		mqtt_base = self.config['mqtt-topic-base']
 		if message.topic == '{}/{}/control'.format(mqtt_base, str(self)):

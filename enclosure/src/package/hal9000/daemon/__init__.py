@@ -15,7 +15,6 @@ class HAL9000_Daemon(HAL9000_Base):
 	STATUS_READY = "ready"
 	STATUS_ACTIVE = "active"
 	STATUS_PAUSED = "paused"
-	STATUS_VALID = (STATUS_ACTIVE, STATUS_PAUSED)
 
 
 	def __init__(self, name: str) -> None:
@@ -44,18 +43,20 @@ class HAL9000_Daemon(HAL9000_Base):
 			self.config['mqtt-server'] = configuration.get('mqtt', 'server', fallback="127.0.0.1")
 			self.config['mqtt-port'] = configuration.getint('mqtt', 'port', fallback=1883)
 			self.config['mqtt-topic-base'] = configuration.get('mqtt', 'topic-base', fallback="hal9000")
+			if self.config['mqtt-enabled']:
+				self.mqtt = mqtt_client.Client(self.config['mqtt-client'])
+				self.mqtt.connect(self.config['mqtt-server'], self.config['mqtt-port'])
+				self.mqtt.subscribe("{}/{}/control".format(self.config['mqtt-topic-base'], str(self)))
+				self.mqtt.on_message = self.on_mqtt
 
 
 
 	def loop(self) -> None:
 		if self.config['mqtt-enabled']:
-			self.mqtt = mqtt_client.Client(self.config['mqtt-client'])
-			self.mqtt.connect(self.config['mqtt-server'], self.config['mqtt-port'])
-			self.mqtt.subscribe("{}/{}/control".format(self.config['mqtt-topic-base'], str(self)))
-			self.mqtt.on_message = self.on_mqtt
 			self.mqtt.loop_start()
 		delay_active = self.config['loop-delay-active']
 		delay_paused = self.config['loop-delay-paused']
+		self._status = HAL9000_Daemon.STATUS_ACTIVE
 		while self.do_loop():
 			while self.status == HAL9000_Daemon.STATUS_PAUSED:
 				time.sleep(delay_paused)
@@ -94,6 +95,6 @@ class HAL9000_Daemon(HAL9000_Base):
 
 	@status.setter
 	def status(self, value):
-		if value in HAL9000_Daemon.STATUS_VALID:
+		if value in [HAL9000_Daemon.STATUS_ACTIVE, HAL9000_Daemon.STATUS_PAUSED]:
 			self._status = value
 
