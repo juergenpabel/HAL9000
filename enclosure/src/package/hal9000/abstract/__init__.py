@@ -7,16 +7,24 @@ import importlib.util
 
 from configparser import ConfigParser
 
-class HAL9000_Abstract:
-	pass
-
-
-class HAL9000_Base(HAL9000_Abstract):
-
-	MODULE_TYPES = ['Daemon', 'Device', 'Driver']
+class HAL9000_Type:
 
 	def __init__(self, name: str) -> None:
 		self._name = name
+
+
+	def __str__(self):
+		return self._name
+
+
+
+class HAL9000_Abstract(HAL9000_Type):
+
+	MODULE_TYPES = ['Daemon', 'Device', 'Driver']
+
+
+	def __init__(self, name: str) -> None:
+		HAL9000_Type.__init__(self, name)
 		self._module_paths = list()
 
 
@@ -28,16 +36,16 @@ class HAL9000_Base(HAL9000_Abstract):
 		return False
 
 
-	def load_device(self, name:str) -> HAL9000_Abstract:
+	def load_device(self, name:str) -> HAL9000_Type:
 		return self.__load_class('Device', name)
 
 
-	def load_driver(self, name:str) -> HAL9000_Abstract:
+	def load_driver(self, name:str) -> HAL9000_Type:
 		return self.__load_class('Driver', name)
 
 
-	def __load_class(self, class_type: str, class_name:str) -> HAL9000_Abstract:
-		if class_type not in HAL9000_Base.MODULE_TYPES:
+	def __load_class(self, class_type: str, class_name:str) -> HAL9000_Type:
+		if class_type not in HAL9000_Abstract.MODULE_TYPES:
 			return None
 		module_package = "hal9000.{}.{}".format(class_type.lower(), class_name.lower())
 		for module_path in self._module_paths:
@@ -50,8 +58,4 @@ class HAL9000_Base(HAL9000_Abstract):
 					module_spec.loader.exec_module(module)
 					return getattr(module, class_type)
 		return None
-
-
-	def __str__(self):
-		return self._name
 

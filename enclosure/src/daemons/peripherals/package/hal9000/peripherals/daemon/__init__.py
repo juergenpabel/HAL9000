@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!iusr/bin/python3
 
 import sys
 
@@ -16,6 +16,7 @@ class Daemon(HAL9000):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
+		self.config['mqtt-topic-base'] = configuration.get('mqtt', 'topic-base', fallback="hal9000/enclosure")
 		Device = self.load_device(str(self))
 		if Device is None:
 			print("FATAL: loading of device '{}' failed".format(str(self)))
@@ -31,4 +32,15 @@ class Daemon(HAL9000):
 			result &= device.do_loop(self.on_event)
 		return result
 
+
+	def on_event(self, peripheral: str, device: str, event: str, value: str) -> None:
+		payload = '{}:{} {}={}'.format(peripheral, device, event, value)
+		if self.config['verbosity'] > 0:
+			print('EVENT: {}'.format(payload))
+		if self.mqtt is not None:
+			mqtt_base = self.config['mqtt-topic-base']
+			mqtt_topic = '{}/{}/event'.format(mqtt_base, str(self))
+			if self.config['verbosity'] > 1:
+				print('MQTT published: {} => {}'.format(mqtt_topic, payload))
+			self.mqtt.publish(mqtt_topic, payload)
 

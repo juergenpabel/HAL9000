@@ -7,9 +7,10 @@ import time
 from configparser import ConfigParser
 from paho.mqtt import client as mqtt_client
 
-from .. import HAL9000_Base
+from hal9000.abstract import HAL9000_Abstract
 
-class HAL9000_Daemon(HAL9000_Base):
+
+class HAL9000_Daemon(HAL9000_Abstract):
 
 	STATUS_INIT = "init"
 	STATUS_READY = "ready"
@@ -18,7 +19,7 @@ class HAL9000_Daemon(HAL9000_Base):
 
 
 	def __init__(self, name: str) -> None:
-		HAL9000_Base.__init__(self, name)
+		HAL9000_Abstract.__init__(self, name)
 		self.config = dict()
 		self.mqtt = None
 		self._status = HAL9000_Daemon.STATUS_INIT
@@ -34,7 +35,7 @@ class HAL9000_Daemon(HAL9000_Base):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		if self.status == HAL9000_Daemon.STATUS_INIT:
-			HAL9000_Base.configure(self, configuration)
+			HAL9000_Abstract.configure(self, configuration)
 			self.config['loop-delay-active'] = configuration.getfloat('daemon:{}'.format(str(self)), 'loop-delay-active', fallback=0.001)
 			self.config['loop-delay-paused'] = configuration.getfloat('daemon:{}'.format(str(self)), 'loop-delay-paused', fallback=0.100)
 			self.config['verbosity'] = configuration.getint('daemon:{}'.format(str(self)), 'verbosity', fallback=1)
@@ -73,19 +74,6 @@ class HAL9000_Daemon(HAL9000_Base):
 		
 		if message.topic == "{}/{}/control".format(mqtt_base, str(self)):
 			self.status = mqtt_payload
-
-
-	def on_event(self, peripheral: str, device: str, event: str, value: str) -> None:
-		payload = '{}:{} {}={}'.format(peripheral, device, event, value)
-		if self.config['verbosity'] > 0:
-			print('EVENT: {}'.format(payload))
-		if self.mqtt is not None:
-			mqtt_base = self.config['mqtt-topic-base']
-			mqtt_topic = '{}/{}/event'.format(mqtt_base, str(self))
-			if self.config['verbosity'] > 1:
-				print('MQTT published: {} => {}'.format(mqtt_topic, payload))
-			self.mqtt.publish(mqtt_topic, payload)
-
 
 
 	@property

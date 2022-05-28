@@ -12,13 +12,14 @@ class Daemon(HAL9000):
 
 	def __init__(self):
 		HAL9000.__init__(self, 'display')
-		os.environ["BLINKA_FT232H"] = "1"
 
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
-		Device = self.load_device('display')
-		self.device = Device('eye')
+		#TODO get env from config
+		os.environ["BLINKA_FT232H"] = "1"
+		Device = self.load_device('displayio')
+		self.device = Device('waveshare-19192')
 		self.device.configure(configuration)
 #TODO		self.mqtt.subscribe('{}/{}/screen'.format(self.config['mqtt-topic-base'], str(self)))
 #TODO		self.mqtt.subscribe('{}/{}/overlay/volume'.format(self.config['mqtt-topic-base'], str(self)))

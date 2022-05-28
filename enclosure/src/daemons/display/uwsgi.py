@@ -16,7 +16,7 @@ for module_path in module_paths:
 	sys.path.append(module_path.strip('"').strip("'"))
 
 
-from daemon import Daemon
+from hal9000.display import Daemon
 
 
 daemon = Daemon()

@@ -128,7 +128,7 @@ class Driver(HAL9000):
 			if status != Driver.MIFARE_OK:
 				return True
 		(status, current_uid, backBits) = self.identify()
-		current_uid = ''.join(format(x, '02x') for x in current_uid)
+		current_uid = ''.join(format(x, '02x') for x in current_uid[:-1])
 		if status == Driver.MIFARE_OK:
 			self.current_uid = current_uid
 		else:

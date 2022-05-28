@@ -4,7 +4,6 @@ import os
 import os.path
 import sys
 import time
-#os.environ["BLINKA_FT232H"] = "1"
 
 from configparser import ConfigParser
 import board
@@ -30,7 +29,7 @@ class Device(HAL9000):
 		self.driver = Driver(str(self))
 		image_path = None
 		if configuration:
-			image_path = configuration.get('daemon:display', 'images').strip('"').strip("'")
+			image_path = configuration.get('daemon:display', 'images-directory').strip('"').strip("'")
 		else:
 			image_path = sys.argv[1]
 		self.overlay_volume = displayio.Group()

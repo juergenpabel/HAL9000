@@ -14,20 +14,14 @@ config.read(sys.argv[1])
 module_paths = config.getlist('python', 'module_paths', fallback=['.'])
 for module_path in module_paths:
 	sys.path.append(module_path.strip('"').strip("'"))
-print(sys.path)
 
 
-from hal9000.peripherals.daemon import Daemon
+from hal9000.brain import Daemon
 
-
-peripherals = config.getlist('daemon', 'peripherals')
-for peripheral in peripherals:
-	daemon = Daemon(peripheral)
-	daemon.load(sys.argv[1])
-	Thread(target=daemon.loop).start()
+daemon = Daemon()
+daemon.load(sys.argv[1])
 
 #accepting()
-
 while True:
-	time.sleep(1)
+	daemon.loop()
 

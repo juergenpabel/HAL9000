@@ -42,5 +42,6 @@ class Device(HAL9000):
 							callback_event(peripheral, device, 'leave', previous_uid)
 						if current_uid is not None:
 							callback_event(peripheral, device, 'enter', current_uid)
+ 
 		return result
 
