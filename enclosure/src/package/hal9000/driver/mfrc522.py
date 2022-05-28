@@ -115,8 +115,8 @@ class Driver(HAL9000):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
-		self.config['i2c-bus'] = int(configuration.get(str(self), 'i2c-bus', fallback="1"), 16)
-		self.config['i2c-address'] = int(configuration.get(str(self), 'i2c-address', fallback="0x28"), 16)
+		self.config['i2c-bus'] = int(configuration.getstring(str(self), 'i2c-bus', fallback="1"), 16)
+		self.config['i2c-address'] = int(configuration.getstring(str(self), 'i2c-address', fallback="0x28"), 16)
 		self.smbus = SMBus(self.config['i2c-bus'])
 		self.device = self.config['i2c-address']
 		self.__MFRC522_init()

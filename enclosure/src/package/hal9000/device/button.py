@@ -22,8 +22,8 @@ class Device(HAL9000):
 		self.config['enabled'] = configuration.getboolean(str(self), 'enabled', fallback=True)
 		self.config['count'] = configuration.getint(str(self), 'count', fallback=1)
 		if self.config['enabled']:
-			Driver = self.load_driver(configuration.get(str(self), 'driver'))
-			self.driver = Driver('{}:{}'.format(configuration.get(str(self), 'driver'), device))
+			Driver = self.load_driver(configuration.getstring(str(self), 'driver'))
+			self.driver = Driver('{}:{}'.format(configuration.getstring(str(self), 'driver'), device))
 			self.driver.configure(configuration)
 
 			self.device['status'] = list()
@@ -32,7 +32,7 @@ class Device(HAL9000):
 			self.device['name'] = list()
 			for button in range(0, self.config['count']):
 				key = 'button.{}'.format(button)
-				self.device['name'].append(configuration.get(str(self), key, fallback=key))
+				self.device['name'].append(configuration.getstring(str(self), key, fallback=key))
 
 
 	def do_loop(self, callback_event = None) -> bool:

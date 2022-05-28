@@ -29,7 +29,7 @@ class Device(HAL9000):
 		self.driver = Driver(str(self))
 		image_path = None
 		if configuration:
-			image_path = configuration.get('daemon:display', 'images-directory').strip('"').strip("'")
+			image_path = configuration.getstring('daemon:display', 'images-directory')
 		else:
 			image_path = sys.argv[1]
 		self.overlay_volume = displayio.Group()

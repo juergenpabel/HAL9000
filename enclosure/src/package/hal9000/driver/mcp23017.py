@@ -68,8 +68,8 @@ class Driver(HAL9000):
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
 		#TODO: smbus singleton per bus
-		self.config['i2c-bus'] = int(configuration.get(str(self), 'i2c-bus', fallback="1"), 16)
-		self.config['i2c-address'] = int(configuration.get(str(self), 'i2c-address', fallback="0x20"), 16)
+		self.config['i2c-bus'] = int(configuration.getstring(str(self), 'i2c-bus', fallback="1"), 16)
+		self.config['i2c-address'] = int(configuration.getstring(str(self), 'i2c-address', fallback="0x20"), 16)
 		self.data['smbus'] = SMBus(self.config['i2c-bus'])
 		self.data['smbus-device'] = self.config['i2c-address']
 		for device in configuration.getlist(str(self), 'devices', fallback=['button','rotary']):

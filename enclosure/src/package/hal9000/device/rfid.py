@@ -20,8 +20,8 @@ class Device(HAL9000):
 		peripheral, device = str(self).split(':')
 		self.config['enabled'] = configuration.getboolean(str(self), 'rfid-enabled', fallback=True)
 		if self.config['enabled']:
-			Driver = self.load_driver(configuration.get(str(self), 'driver'))
-			self.driver = Driver('{}:{}'.format(configuration.get(str(self), 'driver'), device))
+			Driver = self.load_driver(configuration.getstring(str(self), 'driver'))
+			self.driver = Driver('{}:{}'.format(configuration.getstring(str(self), 'driver'), device))
 			self.driver.configure(configuration)
 			if self.driver.getReaderVersion() is None:
 				self.driver = None

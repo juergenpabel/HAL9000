@@ -16,7 +16,7 @@ class Daemon(HAL9000):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
-		self.config['mqtt-topic-base'] = configuration.get('mqtt', 'topic-base', fallback="hal9000/enclosure")
+		self.config['mqtt-topic-base'] = configuration.getstring('mqtt', 'topic-base', fallback="hal9000/enclosure")
 		Device = self.load_device(str(self))
 		if Device is None:
 			print("FATAL: loading of device '{}' failed".format(str(self)))

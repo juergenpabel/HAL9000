@@ -27,7 +27,8 @@ class HAL9000_Daemon(HAL9000_Abstract):
 
 	def load(self, filename: str) -> None:
 		if self.status == HAL9000_Daemon.STATUS_INIT:
-			configuration = ConfigParser(delimiters='=', converters={'list': lambda list: [item.strip() for item in list.split(',')]})
+			configuration = ConfigParser(delimiters='=', converters={'list': lambda list: [item.strip().strip('"').strip("'") for item in list.split(',')],
+			                                                         'string': lambda string: string.strip('"').strip("'")})
 			configuration.read(filename)
 			self.configure(configuration)
 			self._status = HAL9000_Daemon.STATUS_READY
@@ -40,10 +41,10 @@ class HAL9000_Daemon(HAL9000_Abstract):
 			self.config['loop-delay-paused'] = configuration.getfloat('daemon:{}'.format(str(self)), 'loop-delay-paused', fallback=0.100)
 			self.config['verbosity'] = configuration.getint('daemon:{}'.format(str(self)), 'verbosity', fallback=1)
 			self.config['mqtt-enabled'] = configuration.getboolean('daemon:{}'.format(str(self)), 'mqtt-enabled', fallback=True)
-			self.config['mqtt-client'] = configuration.get('mqtt', 'client', fallback="hal9000-daemon-{}".format(str(self)))
-			self.config['mqtt-server'] = configuration.get('mqtt', 'server', fallback="127.0.0.1")
+			self.config['mqtt-client'] = configuration.getstring('mqtt', 'client', fallback="hal9000-daemon-{}".format(str(self)))
+			self.config['mqtt-server'] = configuration.getstring('mqtt', 'server', fallback="127.0.0.1")
 			self.config['mqtt-port'] = configuration.getint('mqtt', 'port', fallback=1883)
-			self.config['mqtt-topic-base'] = configuration.get('mqtt', 'topic-base', fallback="hal9000")
+			self.config['mqtt-topic-base'] = configuration.getstring('mqtt', 'topic-base', fallback="hal9000")
 			if self.config['mqtt-enabled']:
 				self.mqtt = mqtt_client.Client(self.config['mqtt-client'])
 				self.mqtt.connect(self.config['mqtt-server'], self.config['mqtt-port'])

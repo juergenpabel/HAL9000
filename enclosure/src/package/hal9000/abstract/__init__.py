@@ -49,7 +49,6 @@ class HAL9000_Abstract(HAL9000_Type):
 			return None
 		module_package = "hal9000.{}.{}".format(class_type.lower(), class_name.lower())
 		for module_path in self._module_paths:
-			module_path = module_path.strip('"').strip("'")
 			module_filename = "{}/hal9000/{}/{}.py".format(module_path, class_type.lower(), class_name.lower())
 			if os.path.isfile(module_filename):
 				module_spec = importlib.util.spec_from_file_location(module_package, module_filename)

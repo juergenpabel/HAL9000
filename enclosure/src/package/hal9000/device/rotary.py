@@ -29,7 +29,7 @@ class Device(HAL9000):
 		peripheral, device = str(self).split(':')
 		self.config['enabled'] = configuration.getboolean(str(self), 'enabled', fallback=True)
 		if self.config['enabled']:
-			event_data = configuration.get(str(self), 'event-data', fallback=Device.ROTARY_MODE_POSITION)
+			event_data = configuration.getstring(str(self), 'event-data', fallback=Device.ROTARY_MODE_POSITION)
 			if event_data == Device.ROTARY_MODE_POSITION:
 				self.config['event-data'] = Device.ROTARY_MODE_POSITION
 				self.device['position'] = configuration.getint(str(self), 'position-initial', fallback=0)
@@ -42,8 +42,8 @@ class Device(HAL9000):
 				#TODO error msg
 				self.config['enabled'] = False
 		if self.config['enabled']:
-			Driver = self.load_driver(configuration.get(str(self), 'driver'))
-			self.driver = Driver('{}:{}'.format(configuration.get(str(self), 'driver'), device))
+			Driver = self.load_driver(configuration.getstring(str(self), 'driver'))
+			self.driver = Driver('{}:{}'.format(configuration.getstring(str(self), 'driver'), device))
 			self.driver.configure(configuration)
 
 			driver_irq_pin = configuration.getint(str(self), 'driver-irq-pin', fallback=0)

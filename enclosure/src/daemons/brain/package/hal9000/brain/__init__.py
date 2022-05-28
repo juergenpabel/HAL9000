@@ -8,18 +8,37 @@ from configparser import ConfigParser
 
 from paho.mqtt.publish import single as mqtt_publish_message
 from hal9000.daemon import HAL9000_Daemon as HAL9000
+from hal9000.abstract.plugin import HAL9000_PluginManager as PluginManager
 
 
 class Daemon(HAL9000):
 
 	def __init__(self):
 		HAL9000.__init__(self, 'brain')
+		self.plugin_manager = PluginManager()
+		self.mqtt_callbacks = dict()
+		self.actions = dict()
+		self.triggers = dict()
 
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
-		self.config['payload-regex'] = configuration.get('mqtt:rfid-enter', 'payload-regex').strip('"').strip("'")
-		self.mqtt.subscribe("{}/enclosure/rfid/event".format(self.config['mqtt-topic-base']))
+		for section_name in configuration.sections():
+			module_name = configuration.getstring(section_name, 'module', fallback=None)
+			if module_name is not None:
+				section_type, section_id = section_name.lower().split(':',1)
+				if section_type == 'action':
+					action = self.plugin_manager.load_action(module_name)
+					action.configure(configuration, section_name)
+					self.actions[module_name] = action
+				if section_type == 'trigger':
+					trigger = self.plugin_manager.load_trigger(module_name)
+					trigger.configure(configuration, section_name)
+					for mqtt_topic in trigger.callbacks():
+						self.mqtt.subscribe(mqtt_topic)
+						self.mqtt_callbacks[mqtt_topic] = trigger.handle
+					self.triggers[module_name] = trigger
+			
 
 
 	def do_loop(self) -> bool:
@@ -27,19 +46,11 @@ class Daemon(HAL9000):
 
 	
 	def on_mqtt(self, client, userdata, message):
+		print("yeay")
 		HAL9000.on_mqtt(self, client, userdata, message)
-		mqtt_base = self.config['mqtt-topic-base']
-		if message.topic == '{}/enclosure/rfid/event'.format(mqtt_base):
-			payload = message.payload.decode('utf-8')
-			data = re.search(self.config['payload-regex'], payload)
-			if data is not None:
-				reader_instance = data.group(1)
-				card_uid = data.group(2)
-				mqtt_publish_message('brickies/reader/hal9000/%s/event' % (reader_instance),
-				    '{"reader":{"service":"hal9000","name":"%s"},'
-				    ' "card":{"event":"%s","uid":"%s"}}' % (reader_instance, "removed", card_uid),
-				    hostname="192.168.4.1", port=1883,
-				    client_id="brickies_reader_hal9000-{}".format(reader_instance))
+		if message.topic in self.mqtt_callbacks:
+			callback = self.mqtt_callbacks[message.topic]
+			data = callback(message)
 
 
 
