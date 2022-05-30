@@ -33,8 +33,10 @@ class Daemon(HAL9000):
 		return result
 
 
-	def on_event(self, peripheral: str, device: str, event: str, value: str) -> None:
-		payload = '{}:{} {}={}'.format(peripheral, device, event, value)
+	def on_event(self, peripheral: str, device: str, component: str, event: str, value: str) -> None:
+		if component is None:
+			component = 'default'
+		payload = '{}:{}:{} {}={}'.format(peripheral, device, component, event, value)
 		if self.config['verbosity'] > 0:
 			print('EVENT: {}'.format(payload))
 		if self.mqtt is not None:

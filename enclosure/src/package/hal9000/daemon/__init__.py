@@ -66,7 +66,6 @@ class HAL9000_Daemon(HAL9000_Abstract):
 
 
 	def on_mqtt(self, client, userdata, message) -> None:
-		print("base:on_mqtt")
 		mqtt_base = self.config['mqtt-topic-base']
 		mqtt_topic = message.topic
 		mqtt_payload = message.payload.decode('utf-8')

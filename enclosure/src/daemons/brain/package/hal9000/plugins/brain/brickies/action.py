@@ -5,15 +5,14 @@ from configparser import ConfigParser
 
 
 class Action(HAL9000):
-	def __init__(self) -> None:
-		HAL9000.__init__(self, 'brickies')
-		print('action:brickies.init()')
+	def __init__(self, action_name: str) -> None:
+		HAL9000.__init__(self, 'brickies', action_name)
 
 
-	def configure(self, configuration: ConfigParser, section: str) -> None:
-		print('action:brickies.config()')
+	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+		print('TODO:action:brickies.config()')
 
 
-	def process(self, data: dict) -> None:
-		print('action:brickies.process()')
+	def process(self, synapse_data: dict, brain_data: dict) -> None:
+		print('TODO:action:brickies.process()')
 

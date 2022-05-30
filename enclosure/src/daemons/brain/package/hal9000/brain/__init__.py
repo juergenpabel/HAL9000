@@ -16,9 +16,10 @@ class Daemon(HAL9000):
 	def __init__(self):
 		HAL9000.__init__(self, 'brain')
 		self.plugin_manager = PluginManager()
-		self.mqtt_callbacks = dict()
 		self.actions = dict()
 		self.triggers = dict()
+		self.synapses = dict()
+		self.callbacks = dict()
 
 
 	def configure(self, configuration: ConfigParser) -> None:
@@ -28,16 +29,31 @@ class Daemon(HAL9000):
 			if module_name is not None:
 				section_type, section_id = section_name.lower().split(':',1)
 				if section_type == 'action':
-					action = self.plugin_manager.load_action(module_name)
+					action = self.plugin_manager.load_action(module_name, section_id)
 					action.configure(configuration, section_name)
-					self.actions[module_name] = action
+					self.actions[section_id] = action
 				if section_type == 'trigger':
-					trigger = self.plugin_manager.load_trigger(module_name)
+					trigger = self.plugin_manager.load_trigger(module_name, section_id)
 					trigger.configure(configuration, section_name)
-					for mqtt_topic in trigger.callbacks():
+					self.triggers[section_id] = trigger
+		for synapse_name in configuration.options('synapses'):
+			self.synapses[synapse_name] = list()
+			actions = configuration.getlist('synapses', synapse_name)
+			for action in actions:
+				self.synapses[synapse_name].append(action)
+		for trigger_id in self.triggers.keys():
+			trigger = self.triggers[trigger_id]
+			callbacks = trigger.callbacks()
+			for callback_type in callbacks.keys():
+				if callback_type.lower() == 'mqtt':
+					callback_list = callbacks[callback_type]
+					for mqtt_topic in callback_list:
 						self.mqtt.subscribe(mqtt_topic)
-						self.mqtt_callbacks[mqtt_topic] = trigger.handle
-					self.triggers[module_name] = trigger
+						if 'mqtt' not in self.callbacks:
+							self.callbacks['mqtt'] = dict()
+						if mqtt_topic not in self.callbacks['mqtt']:
+							self.callbacks['mqtt'][mqtt_topic] = list()
+						self.callbacks['mqtt'][mqtt_topic].append(trigger)
 			
 
 
@@ -46,12 +62,24 @@ class Daemon(HAL9000):
 
 	
 	def on_mqtt(self, client, userdata, message):
-		print("yeay")
 		HAL9000.on_mqtt(self, client, userdata, message)
-		if message.topic in self.mqtt_callbacks:
-			callback = self.mqtt_callbacks[message.topic]
-			data = callback(message)
-
+		if 'mqtt' in self.callbacks:
+			if message.topic in self.callbacks['mqtt']:
+				brain_data = dict()
+				synapse_data = dict()
+				for trigger in self.callbacks['mqtt'][message.topic]:
+					trigger_id = str(trigger).split(':', 2)[2]
+					trigger_data = trigger.handle(message)
+					if trigger_data is not None:
+						synapse_data[trigger_id] = trigger_data
+						brain_data |= trigger_data
+				for trigger_id in synapse_data.keys():
+					trigger_data = synapse_data[trigger_id]
+					for action_id in self.synapses[trigger_id]:
+						trigger = self.triggers[trigger_id]
+						action = self.actions[action_id]
+						print("{} => {} / {} => {}".format(str(trigger),trigger_data,brain_data,str(action)))
+						action.process(trigger_data, brain_data)
 
 
 if __name__ == "__main__":

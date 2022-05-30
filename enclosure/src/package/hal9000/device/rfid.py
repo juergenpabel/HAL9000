@@ -29,7 +29,7 @@ class Device(HAL9000):
 
 	def do_loop(self, callback_event = None) -> bool:
 		result = False
-		if self.config['enabled']:
+		if self.driver is not None:
 			if self.driver.do_loop():
 				result = True
 				previous_uid = self.current_uid
@@ -37,11 +37,12 @@ class Device(HAL9000):
 				if previous_uid != current_uid:
 					self.current_uid = current_uid
 					if callback_event is not None:
-						peripheral, device = str(self).split(':')
+						peripheral, device = str(self).split(':',1)
+						component, dummy = str(self.driver).split(':',1)
 						if previous_uid is not None:
-							callback_event(peripheral, device, 'leave', previous_uid)
+							callback_event(peripheral, device, component, 'leave', previous_uid)
 						if current_uid is not None:
-							callback_event(peripheral, device, 'enter', current_uid)
+							callback_event(peripheral, device, component, 'enter', current_uid)
  
 		return result
 

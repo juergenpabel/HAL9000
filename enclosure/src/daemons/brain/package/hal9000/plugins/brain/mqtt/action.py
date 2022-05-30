@@ -5,15 +5,14 @@ from configparser import ConfigParser
 
 
 class Action(HAL9000):
-	def __init__(self) -> None:
-		HAL9000.__init__(self, 'mqtt')
-		print('action:mqtt.init()')
+	def __init__(self, action_name: str) -> None:
+		HAL9000.__init__(self, 'mqtt', action_name)
 
 
-	def configure(self, configuration: ConfigParser, section: str) -> None:
-		print('action:mqtt.config()')
+	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+		print('TODO:action:mqtt.config()')
 
 
-	def process(self, data: dict) -> None:
-		print('action:mqtt.process()')
+	def process(self, synapse_data: dict, brain_data: dict) -> None:
+		print('TODO:action:mqtt.process()')
 

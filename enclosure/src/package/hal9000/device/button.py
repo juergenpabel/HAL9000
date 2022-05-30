@@ -46,7 +46,7 @@ class Device(HAL9000):
 					button_new = self.calculate_button(driver_data[button_number])
 					if button_new is not None and button_old != button_new:
 						self.device['status'][button_number] = button_new
-						callback_event(peripheral, device, self.device['name'][button_number], int(button_new))
+						callback_event(peripheral, device, self.device['name'][button_number], 'status', int(button_new))
 			return True
 		return False
 
