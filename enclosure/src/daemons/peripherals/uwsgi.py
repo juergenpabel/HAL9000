@@ -9,19 +9,12 @@ from configparser import ConfigParser
 #from uwsgi import accepting
 
 
-config = ConfigParser(delimiters='=', converters={'list': lambda list: [item.strip().strip('"').strip("'") for item in list.split(',')]})
-config.read(sys.argv[1])
-module_paths = config.getlist('python', 'module_paths', fallback=['.'])
-for module_path in module_paths:
-	sys.path.append(module_path)
+from hal9000.daemon import DaemonLoader
 
-
-from hal9000.peripherals.daemon import Daemon
-
-
-peripherals = config.getlist('daemon', 'peripherals')
-for peripheral in peripherals:
-	daemon = Daemon(peripheral)
+loader = DaemonLoader(sys.argv[1])
+Daemon = loader.import_daemon('hal9000.peripherals.daemon')
+for name in loader.get_daemon_threads():
+	daemon = Daemon(name)
 	daemon.load(sys.argv[1])
 	Thread(target=daemon.loop).start()
 

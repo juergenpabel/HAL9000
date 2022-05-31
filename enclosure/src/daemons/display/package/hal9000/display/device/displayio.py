@@ -12,21 +12,21 @@ import displayio
 from adafruit_display_text import label
 from adafruit_display_shapes.circle import Circle
 
-from hal9000.device import HAL9000_Device as HAL9000
+from hal9000.peripherals.device import HAL9000_Device
+from hal9000.peripherals.driver import HAL9000_Driver
 
 
-class Device(HAL9000):
+class Device(HAL9000_Device):
 
-	def __init__(self, name: str) -> None:
-		HAL9000.__init__(self, name)
+	def __init__(self, name: str, Driver: HAL9000_Driver) -> None:
+		HAL9000_Device.__init__(self, name, Driver)
 		self.state = None
 		self.overlay = None
 
 
-	def configure(self, configuration: ConfigParser) -> None:
-		HAL9000.configure(self, configuration)
-		Driver = self.load_driver('gc9a01')
-		self.driver = Driver(str(self))
+	def configure(self, configuration: ConfigParser, section_name: str = None) -> None:
+		HAL9000_Device.configure(self, configuration)
+		self.driver = self.Driver(str(self))
 		image_path = None
 		if configuration:
 			image_path = configuration.getstring('daemon:display', 'images-directory')

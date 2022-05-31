@@ -65,7 +65,7 @@ class Driver(HAL9000):
 		self.debug = False
 
 
-	def configure(self, configuration: ConfigParser) -> None:
+	def configure(self, configuration: ConfigParser, section_name: str = None) -> None:
 		HAL9000.configure(self, configuration)
 		#TODO: smbus singleton per bus
 		self.config['i2c-bus'] = int(configuration.getstring(str(self), 'i2c-bus', fallback="1"), 16)

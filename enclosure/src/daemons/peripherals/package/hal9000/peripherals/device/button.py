@@ -4,27 +4,27 @@
 from configparser import ConfigParser
 from gpiozero import InputDevice
 
-from hal9000.device import HAL9000_Device as HAL9000
+from hal9000.peripherals.device import HAL9000_Device
+from hal9000.peripherals.driver import HAL9000_Driver
 
 
-class Device(HAL9000):
+class Device(HAL9000_Device):
 
-	def __init__(self, name: str):
-		HAL9000.__init__(self, 'button:{}'.format(name))
+	def __init__(self, name: str, Driver: HAL9000_Driver):
+		HAL9000_Device.__init__(self, 'button:{}'.format(name), Driver)
 		self.config = dict()
 		self.device = dict()
 		self.driver = None
 
 
-	def configure(self, configuration: ConfigParser):
-		HAL9000.configure(self, configuration)
+	def configure(self, configuration: ConfigParser, section_name: str = None):
+		HAL9000_Device.configure(self, configuration, section_name)
 		peripheral, device = str(self).split(':')
 		self.config['enabled'] = configuration.getboolean(str(self), 'enabled', fallback=True)
 		self.config['count'] = configuration.getint(str(self), 'count', fallback=1)
 		if self.config['enabled']:
-			Driver = self.load_driver(configuration.getstring(str(self), 'driver'))
-			self.driver = Driver('{}:{}'.format(configuration.getstring(str(self), 'driver'), device))
-			self.driver.configure(configuration)
+			self.driver = self.Driver('{}:{}'.format(configuration.getstring(str(self), 'driver'), device))
+			self.driver.configure(configuration, section_name)
 
 			self.device['status'] = list()
 			for button in range(0, self.config['count']):

@@ -1,15 +1,15 @@
 #!/usr/bin/python3
 
 import re
-from paho.mqtt.publish import single as mqtt_publish_message
-from hal9000.abstract.plugin import HAL9000_Trigger as HAL9000
 from configparser import ConfigParser
 
+from hal9000.brain import HAL9000_Trigger
 
-class Trigger(HAL9000):
+
+class Trigger(HAL9000_Trigger):
 
 	def __init__(self, trigger_name: str) -> None:
-		HAL9000.__init__(self, 'mqtt', trigger_name)
+		HAL9000_Trigger.__init__(self, 'mqtt', trigger_name)
 		self.config = dict()
 
 

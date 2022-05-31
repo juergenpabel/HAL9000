@@ -30,7 +30,7 @@ import busio
 from displayio import Display, FourWire
 from configparser import ConfigParser
 
-from hal9000.driver import HAL9000_Driver as HAL9000
+from hal9000.peripherals.driver import HAL9000_Driver
 
 
 _INIT_SEQUENCE = bytearray(
@@ -87,16 +87,16 @@ _INIT_SEQUENCE = bytearray(
 )
 
 
-class Driver(HAL9000, Display):
+class Driver(HAL9000_Driver, Display):
 
 	def __init__(self, name: str):
-		HAL9000.__init__(self, name)
+		HAL9000_Driver.__init__(self, name)
 		Display.__init__(self, FourWire(busio.SPI(None),baudrate=320000000,command=board.D5,chip_select=board.D4,reset=board.D6), _INIT_SEQUENCE, width=240,height=240,backlight_pin=None,auto_refresh=False)
 		self.config = dict()
 
 
-	def configure(self, configuration: ConfigParser):
-		HAL9000.configure(self, configuration)
+	def configure(self, configuration: ConfigParser, section_name: str = None):
+		HAL9000_Driver.configure(self, configuration, section_name)
 
 
 	def _release(self):

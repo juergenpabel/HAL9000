@@ -3,25 +3,25 @@
 import sys
 from configparser import ConfigParser
 
-from hal9000.device import HAL9000_Device as HAL9000
+from hal9000.peripherals.device import HAL9000_Device
+from hal9000.peripherals.driver import HAL9000_Driver
 
 
-class Device(HAL9000):
+class Device(HAL9000_Device):
 
-	def __init__(self, name: str) -> None:
-		HAL9000.__init__(self, 'rfid:{}'.format(name))
+	def __init__(self, name: str, Driver: HAL9000_Driver) -> None:
+		HAL9000_Device.__init__(self, 'rfid:{}'.format(name), Driver)
 		self.config = dict()
 		self.driver = None
 		self.current_uid = None
  
 
-	def configure(self, configuration: ConfigParser) -> None:
-		HAL9000.configure(self, configuration)
+	def configure(self, configuration: ConfigParser, section_name: str = None) -> None:
+		HAL9000_Device.configure(self, configuration)
 		peripheral, device = str(self).split(':')
 		self.config['enabled'] = configuration.getboolean(str(self), 'rfid-enabled', fallback=True)
 		if self.config['enabled']:
-			Driver = self.load_driver(configuration.getstring(str(self), 'driver'))
-			self.driver = Driver('{}:{}'.format(configuration.getstring(str(self), 'driver'), device))
+			self.driver = self.Driver('{}:{}'.format(configuration.getstring(str(self), 'driver'), device))
 			self.driver.configure(configuration)
 			if self.driver.getReaderVersion() is None:
 				self.driver = None
