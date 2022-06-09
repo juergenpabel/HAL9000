@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 
 
-from hal9000.abstract.plugin import HAL9000_Plugin
+from hal9000.daemon.plugin import HAL9000_Plugin
 
 
 class HAL9000_Action(HAL9000_Plugin):

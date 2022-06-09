@@ -2,6 +2,7 @@
 
 import re
 import time
+import logging
 from smbus import SMBus
 from configparser import ConfigParser
 from gpiozero import InputDevice
@@ -56,13 +57,12 @@ class Driver(HAL9000):
 	button_data = DriverData()
 	rotary_data = DriverData()
 
-	def __init__(self, name: str, debug=False):
+	def __init__(self, name: str):
 		HAL9000.__init__(self, name)
 		self.config = dict()
 		self.data = dict()
 		self.data['smbus'] = None
 		self.data['smbus-device'] = None
-		self.debug = False
 
 
 	def configure(self, configuration: ConfigParser, section_name: str = None) -> None:
@@ -96,10 +96,10 @@ class Driver(HAL9000):
 		if pin[0].upper() == 'B':
 			offset = 1
 		if offset < 0:
-			print("ERROR invalid pin bank")
+			logging.getLogger(str(self)).error("invalid pin bank '{}'".format(pin[0]))
 			return -1
 		if int(pin[1]) not in range(0,8):
-			print("ERROR invalid pin number")
+			logging.getLogger(str(self)).error("invalid pin number '{}'".format(int(pin[1])))
 			return -1
 		return offset
 
@@ -118,10 +118,8 @@ class Driver(HAL9000):
 			elif (in_polarity == self.NONINVERT):
 				polarity_data = read_polarity & ( 0xFF - (1 << int(pin[1])) )
 			else:
-				print("ERROR in_polarity must be either 1 for invert or 0 for noninvert")
+				logging.getLogger(str(self)).error("in_polarity must be either 1 for invert or 0 for noninvert")
 				return -1
-			if (self.debug == True):
-				print("Write address 0x{:02x} with data 0x{:02x}".format(self.IPOLA[0] + offset, polarity_data))
 			self.data['smbus'].write_byte_data(self.data['smbus-device'], self.IPOLA[0] + offset, polarity_data)
 			#set or clear pullup
 			read_pullup = self.data['smbus'].read_byte_data(self.data['smbus-device'], self.GPPUA[0] + offset)
@@ -129,8 +127,6 @@ class Driver(HAL9000):
 				pullup_data = read_pullup | (1 << int(pin[1]))
 			else:
 				pullup_data = read_pullup & ( 0xFF - (1 << int(pin[1])) )
-			if (self.debug == True):
-				print("Write address 0x{:02x} with data 0x{:02x}".format(self.GPPUA[0] + offset, pullup_data))
 			self.data['smbus'].write_byte_data(self.data['smbus-device'], self.GPPUA[0] + offset, pullup_data)
 			#set interupt enable and interrupt type
 			read_int_en = self.data['smbus'].read_byte_data(self.data['smbus-device'], self.GPINTENA[0] + offset)
@@ -148,18 +144,12 @@ class Driver(HAL9000):
 					elif (int_defval == self.LOW):
 						defval_data = read_defval & ( 0xFF - (1 << int(pin[1])) )
 					else:
-						print("ERROR defval must be either 1 for high or 0 for low")
+						logging.getLogger(str(self)).error("defval must be either 1 for high or 0 for low")
 						return -1
-					if (self.debug == True):
-						print("Write address 0x{:02x} with data 0x{:02x}".format(self.DEFVALA[0] + offset, defval_data))
 					self.data['smbus'].write_byte_data(self.data['smbus-device'], self.DEFVALA[0] + offset, defval_data)
-				if (self.debug == True):
-					print("Write address 0x{:02x} with data 0x{:02x}".format(self.INTCONA[0] + offset, int_on_change_data))
 				self.data['smbus'].write_byte_data(self.data['smbus-device'], self.INTCONA[0] + offset, int_on_change_data)
 			else:
 				int_en_data = read_int_en & ( 0xFF - (1 << int(pin[1])) )
-			if (self.debug == True):
-				print("Write address 0x{:02x} with data 0x{:02x}".format(self.GPINTENA[0] + offset, int_en_data))
 			self.data['smbus'].write_byte_data(self.data['smbus-device'], self.GPINTENA[0] + offset, int_en_data)
 		#check and set output direction
 		elif (direction == self.OUT):
@@ -171,16 +161,12 @@ class Driver(HAL9000):
 			elif (value == self.LOW):
 				out_val_data = read_out_val & ( 0xFF - (1 << int(pin[1])) )
 			else:
-				print("ERROR out_val must be either 1 for high or 0 for low")
+				logging.getLogger(str(self)).error("out_val must be either 1 for high or 0 for low")
 				return -1
-			if (self.debug == True):
-				print("Write address 0x{:02x} with data 0x{:02x}".format(self.OLATA[0] + offset, out_val_data))
 			self.data['smbus'].write_byte_data(self.data['smbus-device'], self.OLATA[0] + offset, out_val_data)
 		else:
-			print("ERROR direction must be either 1 for input or 0 for output")
+			logging.getLogger(str(self)).error("direction must be either 1 for input or 0 for output")
 			return -1
-		if (self.debug == True):
-			print("Write address 0x{:02x} with data 0x{:02x}".format(self.IODIRA[0] + offset, direction_data))
 		self.data['smbus'].write_byte_data(self.data['smbus-device'], self.IODIRA[0] + offset, direction_data)
 
 	
@@ -189,7 +175,7 @@ class Driver(HAL9000):
 		#check direction
 		read_direction = self.data['smbus'].read_byte_data(self.data['smbus-device'], self.IODIRA[0] + offset)
 		if ((read_direction >> int(pin[1])) & self.IN):
-			print("ERROR pin {:s} already configured as an input".format(pin))
+			logging.getLogger(str(self)).error("pin {:s} already configured as an input".format(pin))
 			return -1
 		read_out_val = self.data['smbus'].read_byte_data(self.data['smbus-device'], self.OLATA[0] + offset)
 		if (value == self.HIGH):
@@ -197,10 +183,8 @@ class Driver(HAL9000):
 		elif (value == self.LOW):
 			out_val_data = read_out_val & ( 0xFF - (1 << int(pin[1])) )
 		else:
-			print("ERROR value must be either 1 for high or 0 for low")
+			logging.getLogger(str(self)).error("value must be either 1 for high or 0 for low")
 			return -1
-		if (self.debug == True):
-			print("Write address 0x{:02x} with data 0x{:02x}".format(self.OLATA[0] + offset, out_val_data))
 		self.data['smbus'].write_byte_data(self.data['smbus-device'], self.OLATA[0] + offset, out_val_data)
 
 
@@ -210,7 +194,7 @@ class Driver(HAL9000):
 		#check direction
 		read_direction = self.data['smbus'].read_byte_data(self.data['smbus-device'], self.IODIRA[0] + offset)
 		if ((read_direction >> int(pin[1])) & self.IN != True):
-			print("ERROR pin {:s} already configured as an output".format(pin))
+			logging.getLogger(str(self)).error("pin {:s} already configured as an output".format(pin))
 			return -1
 		read_gpio = self.data['smbus'].read_byte_data(self.data['smbus-device'], self.GPIOA[0] + offset)
 		if ((read_gpio >> int(pin[1])) & self.HIGH):
@@ -224,6 +208,4 @@ class Driver(HAL9000):
 			if reg[2] == 'RW':
 				self.data['smbus'].write_byte_data(self.data['smbus-device'], reg[0] + 0, reg[1])
 				self.data['smbus'].write_byte_data(self.data['smbus-device'], reg[0] + 1, reg[1])
-				if self.debug:
-					print("Write to {:s}A and {:s}B value 0x{:02x}".format(reg[3], reg[3], reg[1]))
 

@@ -3,7 +3,7 @@
 
 from configparser import ConfigParser
 
-from . import HAL9000_Abstract
+from hal9000.abstract import HAL9000_Abstract
 
 
 class HAL9000_Plugin(HAL9000_Abstract):

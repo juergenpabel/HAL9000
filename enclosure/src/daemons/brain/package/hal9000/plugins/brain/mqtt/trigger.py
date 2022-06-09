@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import re
+import json
 from configparser import ConfigParser
 
 from hal9000.brain import HAL9000_Trigger
@@ -16,6 +17,7 @@ class Trigger(HAL9000_Trigger):
 	def configure(self, configuration: ConfigParser, section_name: str) -> None:
 		self.config['topic'] = configuration.getstring(section_name, 'mqtt-topic', fallback=None)
 		self.config['payload-regex'] = configuration.getstring(section_name, 'mqtt-payload-regex', fallback=None)
+		self.config['neuron-json-formatter'] = configuration.getstring(section_name, 'neuron-json-formatter', fallback=None)
 
 
 	def callbacks(self) -> dict:
@@ -28,8 +30,12 @@ class Trigger(HAL9000_Trigger):
 
 
 	def handle(self, message) -> dict:
+		neuron = None
 		matches = re.match(self.config['payload-regex'], message.payload.decode('utf-8'))
 		if matches is not None:
-			return matches.groupdict()
-		return None
+			neuron = matches.groupdict()
+			formatter = self.config['neuron-json-formatter']
+			if formatter is not None:
+				neuron = json.loads(formatter % neuron)
+		return neuron
 

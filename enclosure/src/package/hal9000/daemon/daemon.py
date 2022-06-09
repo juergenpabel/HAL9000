@@ -2,12 +2,14 @@
 
 import time
 import importlib
+import logging
+import logging.config
 
 from configparser import ConfigParser
 from paho.mqtt import client as mqtt_client
 
 from hal9000.abstract import HAL9000_Abstract
-from hal9000.abstract.plugin import HAL9000_Plugin
+from hal9000.daemon.plugin import HAL9000_Plugin
 
 
 class HAL9000_Daemon(HAL9000_Abstract):
@@ -28,17 +30,20 @@ class HAL9000_Daemon(HAL9000_Abstract):
 	def load(self, filename: str) -> None:
 		if self.status == HAL9000_Daemon.STATUS_INIT:
 			configuration = ConfigParser(delimiters='=', converters={'list': lambda list: [item.strip().strip('"').strip("'") for item in list.split(',')],
-			                                                         'string': lambda string: string.strip('"').strip("'")})
+			                                                         'string': lambda string: string.strip('"').strip("'")}, interpolation=None)
+			logging.config.fileConfig(filename)
+			self.logger = logging.getLogger(str(self))
+			self.logger.info('LOADING CONFIGURATION ({})'.format(filename))
 			configuration.read(filename)
 			self.configure(configuration)
 			self._status = HAL9000_Daemon.STATUS_READY
+			('READY')
 
 
 	def configure(self, configuration: ConfigParser) -> None:
 		if self.status == HAL9000_Daemon.STATUS_INIT:
 			self.config['loop-delay-active'] = configuration.getfloat('daemon:{}'.format(str(self)), 'loop-delay-active', fallback=0.001)
 			self.config['loop-delay-paused'] = configuration.getfloat('daemon:{}'.format(str(self)), 'loop-delay-paused', fallback=0.100)
-			self.config['verbosity'] = configuration.getint('daemon:{}'.format(str(self)), 'verbosity', fallback=1)
 			self.config['mqtt-enabled'] = configuration.getboolean('daemon:{}'.format(str(self)), 'mqtt-enabled', fallback=True)
 			self.config['mqtt-client'] = configuration.getstring('mqtt', 'client', fallback="hal9000-daemon-{}".format(str(self)))
 			self.config['mqtt-server'] = configuration.getstring('mqtt', 'server', fallback="127.0.0.1")
@@ -47,7 +52,7 @@ class HAL9000_Daemon(HAL9000_Abstract):
 			if self.config['mqtt-enabled']:
 				self.mqtt = mqtt_client.Client(self.config['mqtt-client'])
 				self.mqtt.connect(self.config['mqtt-server'], self.config['mqtt-port'])
-				self.mqtt.subscribe("{}/{}/control".format(self.config['mqtt-topic-base'], str(self)))
+				self.mqtt.subscribe("{}/enclosure/{}/control".format(self.config['mqtt-topic-base'], str(self)))
 				self.mqtt.on_message = self.on_mqtt
 
 
@@ -59,26 +64,26 @@ class HAL9000_Daemon(HAL9000_Abstract):
 
 
 	def loop(self) -> None:
-		if self.config['mqtt-enabled']:
-			self.mqtt.loop_start()
-		delay_active = self.config['loop-delay-active']
-		delay_paused = self.config['loop-delay-paused']
-		self._status = HAL9000_Daemon.STATUS_ACTIVE
-		while self.do_loop():
-			while self.status == HAL9000_Daemon.STATUS_PAUSED:
-				time.sleep(delay_paused)
-			time.sleep(delay_active)
+		if self.status == HAL9000_Daemon.STATUS_READY:
+			if self.config['mqtt-enabled']:
+				self.mqtt.loop_start()
+			delay_active = self.config['loop-delay-active']
+			delay_paused = self.config['loop-delay-paused']
+			self.status = HAL9000_Daemon.STATUS_ACTIVE
+			self.logger.debug('LOOP')
+			while self.do_loop():
+				while self.status == HAL9000_Daemon.STATUS_PAUSED:
+					time.sleep(delay_paused)
+				time.sleep(delay_active)
 
 
 	def on_mqtt(self, client, userdata, message) -> None:
-		mqtt_base = self.config['mqtt-topic-base']
-		mqtt_topic = message.topic
-		mqtt_payload = message.payload.decode('utf-8')
-		if self.config['verbosity'] > 0:
-			print('MQTT received: {} => {}'.format(mqtt_topic, mqtt_payload))
+		topic = message.topic
+		payload = message.payload.decode('utf-8')
+		self.logger.debug('MQTT received: {} => {}'.format(topic, payload))
 		
-		if message.topic == "{}/{}/control".format(mqtt_base, str(self)):
-			self.status = mqtt_payload
+		if topic == "{}/enclosure/{}/control".format(self.config['mqtt-topic-base'], str(self)):
+			self.status = payload
 
 
 	@property

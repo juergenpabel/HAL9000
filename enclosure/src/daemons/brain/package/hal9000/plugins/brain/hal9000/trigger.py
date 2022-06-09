@@ -1,14 +1,15 @@
 #!/usr/bin/python3
 
-import platform
-from hal9000.brain import HAL9000_Trigger
 from configparser import ConfigParser
+
+from hal9000.brain import HAL9000_Trigger
+from hal9000.brain.daemon import Daemon
 
 
 class Trigger(HAL9000_Trigger):
 
 	def __init__(self, trigger_name: str) -> None:
-		HAL9000_Trigger.__init__(self, 'hal9000', platform.node())
+		HAL9000_Trigger.__init__(self, 'hal9000', 'self')
 		self.config = dict()
 
 

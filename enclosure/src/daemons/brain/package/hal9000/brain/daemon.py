@@ -4,6 +4,7 @@ import os
 import sys
 import re
 
+from datetime import datetime, timedelta
 from configparser import ConfigParser
 
 from paho.mqtt.publish import single as mqtt_publish_message
@@ -12,12 +13,20 @@ from hal9000.daemon import HAL9000_Daemon
 
 class Daemon(HAL9000_Daemon):
 
+	CONSCIOUSNESS_AWAKE = 'awake'
+	CONSCIOUSNESS_ASLEEP = 'asleep'
+	CONSCIOUSNESS_VALID = [CONSCIOUSNESS_AWAKE, CONSCIOUSNESS_ASLEEP]
+
 	def __init__(self):
 		HAL9000_Daemon.__init__(self, 'brain')
+		self.cortex = dict()
+		self.cortex['consciousness'] = Daemon.CONSCIOUSNESS_AWAKE
+		self.cortex['enclosure-rfid'] = None
 		self.actions = dict()
 		self.triggers = dict()
 		self.synapses = dict()
 		self.callbacks = dict()
+		self.timeouts = dict()
 
 
 	def configure(self, configuration: ConfigParser) -> None:
@@ -58,29 +67,66 @@ class Daemon(HAL9000_Daemon):
 						self.callbacks['mqtt'][mqtt_topic].append(trigger)
 
 
+	def loop(self) -> None:
+		self.set_display_status('init')
+		#TODO: signal ready
+		HAL9000_Daemon.loop(self)
+
+	
 	def do_loop(self) -> bool:
+		for key in self.timeouts.copy().keys():
+			timeout, data = self.timeouts[key]
+			if datetime.now() > timeout:
+#				if key == 'fsm:wakeup':
+#					self.do_wakeup(data)
+#				if key == 'fsm:sleep':
+#					self.do_sleep(data)
+				if key == 'overlay':
+					self.hide_display_overlay(data)
+				del self.timeouts[key]
 		return True
 
 	
 	def on_mqtt(self, client, userdata, message):
 		HAL9000_Daemon.on_mqtt(self, client, userdata, message)
+		synapse_data = dict()
+		brain_data = dict()
+		brain_data['cortex'] = self.cortex.copy()
+		brain_data['daemon'] = None
 		if 'mqtt' in self.callbacks:
 			if message.topic in self.callbacks['mqtt']:
-				brain_data = dict()
-				synapse_data = dict()
 				for trigger in self.callbacks['mqtt'][message.topic]:
 					trigger_id = str(trigger).split(':', 2)[2]
 					trigger_data = trigger.handle(message)
 					if trigger_data is not None:
 						synapse_data[trigger_id] = trigger_data
 						brain_data |= trigger_data
+				self.logger.debug("brain = {}".format(brain_data))
 				for trigger_id in synapse_data.keys():
 					trigger_data = synapse_data[trigger_id]
 					for action_id in self.synapses[trigger_id]:
-						trigger = self.triggers[trigger_id]
 						action = self.actions[action_id]
-						print("{} => {} / {} => {}".format(str(trigger),trigger_data,brain_data,str(action)))
+						if str(action) == 'action:hal9000:self':
+							brain_data['daemon'] = self
 						action.process(trigger_data, brain_data)
+						if str(action) == 'action:hal9000:self':
+							brain_data['daemon'] = None
+
+
+	def show_display_overlay(self, overlay) -> None:
+		self.set_display_overlay(overlay, 'show')
+
+
+	def hide_display_overlay(self, overlay) -> None:
+		self.set_display_overlay(overlay, 'hide')
+
+
+	def set_display_overlay(self, overlay, status) -> None:
+		mqtt_publish_message('{}/enclosure/display/overlay/{}'.format(self.config['mqtt-topic-base'], overlay), status)
+
+
+	def set_display_status(self, status) -> None:
+		mqtt_publish_message('{}/enclosure/display/control'.format(self.config['mqtt-topic-base']), status)
 
 
 if __name__ == "__main__":

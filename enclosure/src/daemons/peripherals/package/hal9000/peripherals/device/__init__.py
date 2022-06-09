@@ -2,7 +2,7 @@
 
 from configparser import ConfigParser
 
-from hal9000.abstract.plugin import HAL9000_Plugin
+from hal9000.daemon.plugin import HAL9000_Plugin
 from hal9000.peripherals.driver import HAL9000_Driver
 
 class HAL9000_Device(HAL9000_Plugin):

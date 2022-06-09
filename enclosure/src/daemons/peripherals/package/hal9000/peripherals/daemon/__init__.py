@@ -5,7 +5,7 @@ import sys
 from configparser import ConfigParser
 
 from hal9000.daemon import HAL9000_Daemon as HAL9000
-from hal9000.abstract.plugin import HAL9000_Plugin
+from hal9000.daemon.plugin import HAL9000_Plugin
 
 
 class Daemon(HAL9000):
@@ -20,7 +20,7 @@ class Daemon(HAL9000):
 		self.config['mqtt-topic-base'] = configuration.getstring('mqtt', 'topic-base', fallback="hal9000/enclosure")
 		Device = self.import_device('hal9000.peripherals.device.{}'.format(self))
 		if Device is None:
-			print("FATAL: loading of device '{}' failed".format(str(self)))
+			self.logger.critical("loading of device '{}' failed".format(str(self)))
 			sys.exit(-1)
 		for device_name in configuration.getlist('peripheral:{}'.format(self), 'devices'):
 			driver_name = configuration.getstring('{}:{}'.format(self,device_name), 'driver')
@@ -40,14 +40,12 @@ class Daemon(HAL9000):
 		if component is None:
 			component = 'default'
 		payload = '{}:{}:{} {}={}'.format(peripheral, device, component, event, value)
-		if self.config['verbosity'] > 0:
-			print('EVENT: {}'.format(payload))
+		self.logger.debug('EVENT: {}'.format(payload))
 		if self.mqtt is not None:
 			mqtt_base = self.config['mqtt-topic-base']
 			mqtt_topic = '{}/{}/event'.format(mqtt_base, str(self))
-			if self.config['verbosity'] > 1:
-				print('MQTT published: {} => {}'.format(mqtt_topic, payload))
 			self.mqtt.publish(mqtt_topic, payload)
+			self.logger.debug('MQTT published: {} => {}'.format(mqtt_topic, payload))
 
 
 	def import_device(self, module_name:str) -> HAL9000_Plugin:
