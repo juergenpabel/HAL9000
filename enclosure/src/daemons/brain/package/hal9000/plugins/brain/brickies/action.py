@@ -36,10 +36,10 @@ class Action(HAL9000_Action):
 				self.dict[parameter_name] = parameter_value
 
 
-	def process(self, synapse_data: dict, brain_data: dict) -> None:
+	def process(self, signal: dict, cortex: dict) -> None:
 		data = dict()
-		data['synapse'] = synapse_data
-		data['brain'] = brain_data
+		data['signal'] = signal
+		data['cortex'] = cortex
 		data['result'] = dict()
 		for parameter_name in Action.BRICKIES_PARAMETERS:
 			parameter_value = self.dict[parameter_name]
@@ -93,12 +93,13 @@ class Action(HAL9000_Action):
 						if os.path.exists(filename_jpg):
 							os.symlink(filename_jpg, filename_uid)
 				filename_cover = filename_uid
-				brain_data['cortex']['enclosure-rfid'] = card_uid
+				data['cortex']['enclosure']['rfid']['uid'] = card_uid
 			if card_event == 'removed':
 				filename_cover = ""
-				brain_data['cortex']['enclosure-rfid'] = None
+				data['cortex']['enclosure']['rfid']['uid'] = None
 			mqtt_publish_message("hal9000/enclosure/display/splash/image", filename_cover, hostname=self.config['hal9000-mqtt-server'], port=self.config['hal9000-mqtt-port'])
 
 		requests.put('{}/reader/{}/{}/{}/{}'.format(self.config['base-url'], reader_service, reader_name, card_event, card_uid))
+		return data['cortex']
  
 

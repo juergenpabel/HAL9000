@@ -13,6 +13,7 @@ class Action(HAL9000_Action):
 		print('TODO:action:mqtt.config()')
 
 
-	def process(self, synapse_data: dict, brain_data: dict) -> None:
+	def process(self, synapse_data: dict, brain_data: dict) -> dict:
 		print('TODO:action:mqtt.process()')
+		return dict()
 

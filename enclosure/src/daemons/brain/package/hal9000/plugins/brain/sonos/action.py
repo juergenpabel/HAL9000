@@ -5,6 +5,7 @@ from paho.mqtt.publish import single as mqtt_publish_message
 
 from hal9000.brain import HAL9000_Action
 from configparser import ConfigParser
+from soco import SoCo
 
 
 class Action(HAL9000_Action):
@@ -17,9 +18,10 @@ class Action(HAL9000_Action):
 		print('TODO:action:sonos.config()')
 
 
-	def process(self, synapse_data: dict, brain_data: dict) -> None:
-		if brain_data['cortex']['enclosure-rfid'] is not None:
-			print('action:sonos.process({})'.format(synapse_data))
- 
- 
+	def process(self, signal: dict, cortex: dict) -> dict:
+		if 'rfid' in cortex['enclosure'] and cortex['enclosure']['rfid']['uid'] is not None:
+			print('action:sonos.process({})'.format(signal))
+			player = SoCo('192.168.3.30')
+			player.volume += int(signal['volume']['delta'])
+		return None
 

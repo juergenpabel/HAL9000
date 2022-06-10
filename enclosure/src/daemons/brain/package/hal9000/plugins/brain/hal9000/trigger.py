@@ -27,9 +27,9 @@ class Trigger(HAL9000_Trigger):
 
 
 	def handle(self, message) -> dict:
-		print('TODO:trigger:hal9000.handle() => {}'.format(message.topic))
 		matches = re.match(self.config['payload-regex'], message.payload.decode('utf-8'))
 		if matches is not None:
+			print('TODO:trigger:hal9000.handle({})'.format(matches))
 			return matches.groupdict()
 		return None
 

@@ -20,8 +20,27 @@ class Daemon(HAL9000_Daemon):
 	def __init__(self):
 		HAL9000_Daemon.__init__(self, 'brain')
 		self.cortex = dict()
-		self.cortex['consciousness'] = Daemon.CONSCIOUSNESS_AWAKE
-		self.cortex['enclosure-rfid'] = None
+
+		self.cortex['daemon'] = dict()
+		self.cortex['daemon']['consciousness'] = Daemon.CONSCIOUSNESS_AWAKE
+
+		self.cortex['enclosure'] = dict()
+		#TODO check if rfid installed
+		self.cortex['enclosure']['rfid'] = dict()
+		self.cortex['enclosure']['rfid']['uid'] = None
+		#TODO check if volume rotary installed
+		self.cortex['enclosure']['volume'] = dict()
+		self.cortex['enclosure']['volume']['uid'] = None
+		#TODO check if control rotary installed
+		self.cortex['enclosure']['control'] = dict()
+		self.cortex['enclosure']['control']['uid'] = None
+		#TODO check if button installed
+		self.cortex['enclosure']['button'] = dict()
+		self.cortex['enclosure']['button']['status'] = 0
+		#TODO check if motion installed
+		self.cortex['enclosure']['motion'] = dict()
+		self.cortex['enclosure']['motion']['status'] = False
+
 		self.actions = dict()
 		self.triggers = dict()
 		self.synapses = dict()
@@ -59,12 +78,12 @@ class Daemon(HAL9000_Daemon):
 				if callback_type.lower() == 'mqtt':
 					callback_list = callbacks[callback_type]
 					for mqtt_topic in callback_list:
-						self.mqtt.subscribe(mqtt_topic)
 						if 'mqtt' not in self.callbacks:
 							self.callbacks['mqtt'] = dict()
 						if mqtt_topic not in self.callbacks['mqtt']:
 							self.callbacks['mqtt'][mqtt_topic] = list()
 						self.callbacks['mqtt'][mqtt_topic].append(trigger)
+						self.mqtt.subscribe(mqtt_topic)
 
 
 	def loop(self) -> None:
@@ -89,28 +108,29 @@ class Daemon(HAL9000_Daemon):
 	
 	def on_mqtt(self, client, userdata, message):
 		HAL9000_Daemon.on_mqtt(self, client, userdata, message)
-		synapse_data = dict()
-		brain_data = dict()
-		brain_data['cortex'] = self.cortex.copy()
-		brain_data['daemon'] = None
+		signals = dict()
+		cortex = self.cortex.copy()
 		if 'mqtt' in self.callbacks:
 			if message.topic in self.callbacks['mqtt']:
+				self.logger.info("SYNAPSES fired: {}".format(', '.join(str(x).split(':',2)[2] for x in self.callbacks['mqtt'][message.topic])))
+				self.logger.debug("CORTEX before triggers = {}".format(self.cortex))
 				for trigger in self.callbacks['mqtt'][message.topic]:
-					trigger_id = str(trigger).split(':', 2)[2]
-					trigger_data = trigger.handle(message)
-					if trigger_data is not None:
-						synapse_data[trigger_id] = trigger_data
-						brain_data |= trigger_data
-				self.logger.debug("brain = {}".format(brain_data))
-				for trigger_id in synapse_data.keys():
-					trigger_data = synapse_data[trigger_id]
-					for action_id in self.synapses[trigger_id]:
-						action = self.actions[action_id]
+					signal = trigger.handle(message)
+					if signal is not None:
+						synapse_name = str(trigger).split(':', 2)[2]
+						signals[synapse_name] = signal
+				for synapse_name in signals.keys():
+					signal = signals[synapse_name]
+					for action_name in self.synapses[synapse_name]:
+						action = self.actions[action_name]
 						if str(action) == 'action:hal9000:self':
-							brain_data['daemon'] = self
-						action.process(trigger_data, brain_data)
+							signal['daemon'] = self
+						memory = action.process(signal, cortex)
 						if str(action) == 'action:hal9000:self':
-							brain_data['daemon'] = None
+							del signal['daemon']
+						if memory is not None:
+							self.cortex |= memory
+				self.logger.debug("CORTEX after actions = {}".format(self.cortex))
 
 
 	def show_display_overlay(self, overlay) -> None:
