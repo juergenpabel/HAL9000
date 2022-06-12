@@ -54,8 +54,8 @@ class Driver(HAL9000):
 	list_of_regs = [IODIRA, IPOLA, GPINTENA, DEFVALA, INTCONA, IOCON, 
 	                GPPUA,  INTFA, INTCAPA,  GPIOA,   OLATA]
 
-	button_data = DriverData()
 	rotary_data = DriverData()
+	switch_data = DriverData()
 
 	def __init__(self, name: str):
 		HAL9000.__init__(self, name)
@@ -63,6 +63,7 @@ class Driver(HAL9000):
 		self.data = dict()
 		self.data['smbus'] = None
 		self.data['smbus-device'] = None
+		self.logger = logging.getLogger()
 
 
 	def configure(self, configuration: ConfigParser, section_name: str = None) -> None:
@@ -72,7 +73,7 @@ class Driver(HAL9000):
 		self.config['i2c-address'] = int(configuration.getstring(str(self), 'i2c-address', fallback="0x20"), 16)
 		self.data['smbus'] = SMBus(self.config['i2c-bus'])
 		self.data['smbus-device'] = self.config['i2c-address']
-		for device in configuration.getlist(str(self), 'devices', fallback=['button','rotary']):
+		for device in configuration.getlist(str(self), 'devices', fallback=['rotary','switch']):
 			device = re.sub('[\W_]+', '', device)
 			if len(device) > 0:
 				key = '{}-pins'.format(device)
@@ -80,28 +81,27 @@ class Driver(HAL9000):
 				if len(pins) > 0:
 					self.data[key] = pins
 					for pin in pins:
+						self.logger.debug('{}: setting up pin {} for device {}'.format(str(self),pin,device))
 						self.setup(pin, Driver.IN, Driver.LOW, Driver.NONINVERT, True, True, True)
 				#TODO setattr(klass, '{}_data'.format(device), DriverData())
 
 
-	def do_loop(self, callback_rotary = None, callback_button = None) -> bool:
+	def do_loop(self, callback_rotary = None, callback_switch = None) -> bool:
 		#todo check and callbacks
 		return True
 
 
 	def check_valid_pin(self, pin):
-		offset = -1
-		if pin[0].upper() == 'A':
-			offset = 0
-		if pin[0].upper() == 'B':
-			offset = 1
-		if offset < 0:
-			logging.getLogger(str(self)).error("invalid pin bank '{}'".format(pin[0]))
+		if len(pin) != 2:
+			self.logger.error("invalid pin '{}', length must be 2 and of regex [AB][0-7]".format(pin))
 			return -1
 		if int(pin[1]) not in range(0,8):
-			logging.getLogger(str(self)).error("invalid pin number '{}'".format(int(pin[1])))
+			self.logger.error("invalid pin number '{}'".format(int(pin[1])))
 			return -1
-		return offset
+		if pin[0].upper() not in ['A','B']:
+			self.logger.error("invalid pin bank '{}'".format(pin[0]))
+			return -1
+		return ord(pin[0].upper()) - ord('A')
 
 
 	# all parameters are POR values
@@ -118,7 +118,7 @@ class Driver(HAL9000):
 			elif (in_polarity == self.NONINVERT):
 				polarity_data = read_polarity & ( 0xFF - (1 << int(pin[1])) )
 			else:
-				logging.getLogger(str(self)).error("in_polarity must be either 1 for invert or 0 for noninvert")
+				self.logger.error("in_polarity must be either 1 for invert or 0 for noninvert")
 				return -1
 			self.data['smbus'].write_byte_data(self.data['smbus-device'], self.IPOLA[0] + offset, polarity_data)
 			#set or clear pullup
@@ -144,7 +144,7 @@ class Driver(HAL9000):
 					elif (int_defval == self.LOW):
 						defval_data = read_defval & ( 0xFF - (1 << int(pin[1])) )
 					else:
-						logging.getLogger(str(self)).error("defval must be either 1 for high or 0 for low")
+						self.logger.error("defval must be either 1 for high or 0 for low")
 						return -1
 					self.data['smbus'].write_byte_data(self.data['smbus-device'], self.DEFVALA[0] + offset, defval_data)
 				self.data['smbus'].write_byte_data(self.data['smbus-device'], self.INTCONA[0] + offset, int_on_change_data)
@@ -161,11 +161,11 @@ class Driver(HAL9000):
 			elif (value == self.LOW):
 				out_val_data = read_out_val & ( 0xFF - (1 << int(pin[1])) )
 			else:
-				logging.getLogger(str(self)).error("out_val must be either 1 for high or 0 for low")
+				self.logger.error("out_val must be either 1 for high or 0 for low")
 				return -1
 			self.data['smbus'].write_byte_data(self.data['smbus-device'], self.OLATA[0] + offset, out_val_data)
 		else:
-			logging.getLogger(str(self)).error("direction must be either 1 for input or 0 for output")
+			self.logger.error("direction must be either 1 for input or 0 for output")
 			return -1
 		self.data['smbus'].write_byte_data(self.data['smbus-device'], self.IODIRA[0] + offset, direction_data)
 
@@ -175,7 +175,7 @@ class Driver(HAL9000):
 		#check direction
 		read_direction = self.data['smbus'].read_byte_data(self.data['smbus-device'], self.IODIRA[0] + offset)
 		if ((read_direction >> int(pin[1])) & self.IN):
-			logging.getLogger(str(self)).error("pin {:s} already configured as an input".format(pin))
+			self.logger.error("pin {:s} already configured as an input".format(pin))
 			return -1
 		read_out_val = self.data['smbus'].read_byte_data(self.data['smbus-device'], self.OLATA[0] + offset)
 		if (value == self.HIGH):
@@ -183,7 +183,7 @@ class Driver(HAL9000):
 		elif (value == self.LOW):
 			out_val_data = read_out_val & ( 0xFF - (1 << int(pin[1])) )
 		else:
-			logging.getLogger(str(self)).error("value must be either 1 for high or 0 for low")
+			self.logger.error("value must be either 1 for high or 0 for low")
 			return -1
 		self.data['smbus'].write_byte_data(self.data['smbus-device'], self.OLATA[0] + offset, out_val_data)
 
@@ -194,7 +194,7 @@ class Driver(HAL9000):
 		#check direction
 		read_direction = self.data['smbus'].read_byte_data(self.data['smbus-device'], self.IODIRA[0] + offset)
 		if ((read_direction >> int(pin[1])) & self.IN != True):
-			logging.getLogger(str(self)).error("pin {:s} already configured as an output".format(pin))
+			self.logger.error("pin {:s} already configured as an output".format(pin))
 			return -1
 		read_gpio = self.data['smbus'].read_byte_data(self.data['smbus-device'], self.GPIOA[0] + offset)
 		if ((read_gpio >> int(pin[1])) & self.HIGH):

@@ -27,5 +27,7 @@ class DaemonLoader():
 			return getattr(module, class_name)
 		return None
 
+
 	def get_daemon_threads(self) -> list:
 		return self.daemon_threads
+

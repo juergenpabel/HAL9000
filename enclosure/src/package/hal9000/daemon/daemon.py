@@ -81,8 +81,7 @@ class HAL9000_Daemon(HAL9000_Abstract):
 		topic = message.topic
 		payload = message.payload.decode('utf-8')
 		self.logger.debug('MQTT received: {} => {}'.format(topic, payload))
-		
-		if topic == "{}/enclosure/{}/control".format(self.config['mqtt-topic-base'], str(self)):
+		if topic == "{}/{}/control".format(self.config['mqtt-topic-base'], self):
 			self.status = payload
 
 
@@ -95,4 +94,5 @@ class HAL9000_Daemon(HAL9000_Abstract):
 	def status(self, value):
 		if value in [HAL9000_Daemon.STATUS_ACTIVE, HAL9000_Daemon.STATUS_PAUSED]:
 			self._status = value
+			self.logger.debug("STATUS changed to '{}'".format(value))
 
