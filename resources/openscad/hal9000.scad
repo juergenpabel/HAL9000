@@ -5,13 +5,14 @@ $fn=120;
 conf_rfid = false;
 conf_rotary = false;
 conf_button = false;
+conf_motion = false;
 
 
 module hal9000_enclosure() {
 	color([0.625,0.625,0.625]) render()
 	difference() {
 		translate([+00.0,+00.0,+00.0]) cube([+95.0,+35.0,235.0]);
-		translate([+05.0,+05.0,+05.0]) cube([+85.0,+25.0,225.0]);
+		translate([+05.0,+05.0,+05.0]) cube([+85.0,+25,225.0]);
 		union(/*acryl-faceplate*/) {
 			translate([+05.0,+00.0,+50.0]) cube([+85.0,+01.5,180.0]);
 			translate([+02.0,+01.5,+47.0]) cube([+91.0,+03.5,186.0]);
@@ -22,9 +23,9 @@ module hal9000_enclosure() {
 			translate([+47.5,+18.5,232.5]) cube([+80.5,+23.0,+05.0], center=true);
 
 			union(/*enclosure panel screw holes*/) {
-				translate([+82.0,+35.0,225.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+02.0);
+				translate([+82.0,+35.0,225.0]) rotate([+90,+90,+00]) cylinder(d=+16.0,h=+02.0);
 				translate([+82.0,+35.0,225.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
-				translate([+13.0,+35.0,225.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+02.0);
+				translate([+13.0,+35.0,225.0]) rotate([+90,+90,+00]) cylinder(d=+16.0,h=+02.0);
 				translate([+13.0,+35.0,225.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
 			}
 		}
@@ -45,8 +46,16 @@ module hal9000_enclosure() {
 
 		union(/*raspberry pi zero*/) {
 			union(/*inlet:power cable*/) {
-				translate([+47.5,+32.5,150.0]) rotate([+90,+90,+00]) scale([+00.8,+00.5,+01.0]) cylinder(r=+10.0,h=+05.0, center=true);
+				translate([+47.5,+32.5,150.0]) rotate([+90,+90,+00]) cylinder(d=+10.0,h=+05.0, center=true);
+				translate([+47.5,+32.5,155.0]) rotate([+00,+00,+00]) cube([+10.0,+05.0,+10.0], center=true);
+				translate([+47.5,+32.5,160.0]) rotate([+90,+90,+00]) cylinder(d=+10.0,h=+05.0, center=true);
 				translate([+47.5,+34.0,117.5]) cube([+10.0,+02.0,235.0], center=true);
+			}
+			union(/*wall mount screw holes*/) {
+				translate([+47.5,+31.0,+30.0]) rotate([+90,+90,+00]) cylinder(d=+16.0,h=+02.0, center=true);
+				translate([+47.5,+32.5,+30.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+05.0, center=true);
+				translate([+47.5,+31.0,180.0]) rotate([+90,+90,+00]) cylinder(d=+16.0,h=+02.0, center=true);
+				translate([+47.5,+32.5,180.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+05.0, center=true);
 			}
 
 			//translate([93/2,30,195-58/2]) cube([30.0,5.0,65.0], center=true);
@@ -85,9 +94,9 @@ module hal9000_enclosure() {
 				translate([+09.0,+32.5,175.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0, center=true);
 			}
 			union(/*screws:respeaker 2-mic*/) {
-				translate([+47.5-58/2,+35.0,+40.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+02.0);
+				translate([+47.5-58/2,+35.0,+40.0]) rotate([+90,+90,+00]) cylinder(d=+16.0,h=+02.0);
 				translate([+47.5-58/2,+35.0,+40.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
-				translate([+47.5+58/2,+35.0,+40.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+02.0);
+				translate([+47.5+58/2,+35.0,+40.0]) rotate([+90,+90,+00]) cylinder(d=+16.0,h=+02.0);
 				translate([+47.5+58/2,+35.0,+40.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
 			}
 		}
@@ -153,8 +162,8 @@ module hal9000_enclosure_panel() {
 				translate([+31.0,+03.5,+07.5]) cube([+18.0,+15.5,+15.0], center=true);
 			}
 		}
-		translate([+34.5,-09.0,+10.0]) rotate([-90,+90,+00]) cylinder(d1=+03.0,d2=+02.5,h=+04.5, center=true);
-		translate([-34.5,-09.0,+10.0]) rotate([-90,+90,+00]) cylinder(d1=+03.0,d2=+02.5,h=+04.5, center=true);
+		translate([+34.5,-09.0,+10.0]) rotate([-90,+90,+00]) cylinder(d1=+03.0,d2=+02.0,h=+04.5, center=true);
+		translate([-34.5,-09.0,+10.0]) rotate([-90,+90,+00]) cylinder(d1=+03.0,d2=+02.0,h=+04.5, center=true);
 		if (conf_rfid == true) union() {
 			translate([+00.0,-09.0,+17.0]) cube([+56.0,+01.5,+34.0], center=true);
 		}
@@ -175,22 +184,37 @@ module hal9000_enclosure_panel() {
 			translate([+24.0,+03.5,+12.0]) cube([+02.0,+02.5,+02.0], center=true);
 		}
 	}
+}
 
-	if (conf_rfid == true) translate([+00.0,+20.0,+00.0]) difference(/*card holder*/) {
+module hal9000_enclosure_panel_addons() {
+	if (conf_rfid == true) color([0.625,0.625,0.625]) render() translate([+00.0,+15.0,+00.0]) difference(/*card holder*/) {
 		union() {
 			translate([+00.0,+15.0,+01.0]) cube([+59.0,+30.0,+02.0], center=true);
 			translate([+00.0,+05.0,+01.0]) cube([+80.0,+10.0,+02.0], center=true);
 		}
-		translate([-34.5,+05.0,+01.0]) cylinder(d=3.0,h=2.0, center=true);
-		translate([+34.5,+05.0,+01.0]) cylinder(d=3.0,h=2.0, center=true);
+//		translate([-34.5,+05.0,+01.0]) cylinder(d=3.0,h=2.0, center=true);
+//		translate([+34.5,+05.0,+01.0]) cylinder(d=3.0,h=2.0, center=true);
+        translate([-34.5,+05.0,+01.0]) cube([+06.5,+06.5,+02.0], center=true);
+        translate([+34.5,+05.0,+01.0]) cube([+06.5,+06.5,+02.0], center=true);
 		difference() {
 			translate([+00.0,+11.5,+01.0]) cube([+31.0,+21.0,+02.0], center=true);
 			translate([+00.0,+21.5,+00.4]) cube([+31.0,+01.0,+00.8], center=true);
 			translate([+00.0,+01.5,+00.4]) cube([+31.0,+01.0,+00.8], center=true);
 		}
 	}
-}
+	if (conf_motion == true) color([0.625,0.625,0.625]) render() translate([+00.0,+60.0,+00.0]) difference(/*card holder*/) {
+        translate([+00.0,+00.0,+05.0]) cube([+84.0,+25.0,+10.0], center=true);
+        translate([+00.0,-07.0,+05.5]) cube([+80.0,+11.0,+09.0], center=true);
 
+        translate([+00.0,-00.5,+06.0]) cube([+80.0,+02.0,+08.0], center=true);
+
+        translate([+00.0,-00.5,+05.5]) cube([+34.0,+24.0,+09.0], center=true);
+        translate([+00.0,-00.5,+05.5]) cube([+34.0,+24.0,+09.0], center=true);
+        
+        translate([-30.0,+06.5,+05.0]) cube([+24.0,+12.0,+10.0], center=true);
+        translate([+30.0,+06.5,+05.0]) cube([+24.0,+12.0,+10.0], center=true);
+    }
+}
 
 module hal9000_component_display_frame_top() {
 	color([0,0,0]) render()
@@ -203,26 +227,31 @@ module hal9000_component_display_frame_top() {
 			translate([+00.0,+00.0,+01.0]) cylinder(d=+55.5,h=+02.0, center=true);
 			translate([+00.0,+00.0,+01.0]) cylinder(d=+41.3,h=+02.0, center=true);
 		}
-		union(/*waveshare 1.8" tft inlet*/) { //TODO: 6.0mm oder 5.5mm??
+		union(/*waveshare or roundypi display inlet*/) {
 			translate([+00.0,+00.0,+01.5]) cylinder(d=+33.0,h=+03.0, center=true);
 			hull() {
-				translate([+00.0,+00.0,+05.5]) cylinder(d=+40.0,h=+06.0, center=true);
-				translate([+00.0,+17.5,+05.5]) cube([+20.0,+10.0,+06.0], center=true);
+				translate([+00.0,+00.0,+06.0]) cylinder(d=+40.0,h=+06.0, center=true);
+				translate([+00.0,+21.0,+06.0]) cube([+20.0,+10.0,+06.0], center=true);
 			}
-			translate([+00.0,-25.0,+08.0]) cube([+22.5,+20.0,+04.0], center=true);
+			translate([+00.0,-25.0,+07.0]) cube([+16.0,+20.0,+06.0], center=true);
 		}
 		union(/*frame cover inlet*/) {
 			hull() {
-				translate([+00.0,+00.0,+09.0]) cylinder(d=+52.0,h=+02.0, center=true);
-				translate([+00.0,+20.0,+09.0]) cube([+26.0,+17.0,+02.0], center=true);
+				translate([+00.0,+00.0,+09.5]) cylinder(d=+52.0,h=+01.0, center=true);
+				translate([+00.0,+25.0,+09.5]) cube([+26.0,+17.0,+01.0], center=true);
 			}
 		}
 		union(/*screw holes*/) {
-			translate([-13.5,-18.0,+06.0]) cylinder(d=+02.0,h=+05.0, center=true);
-			translate([+13.5,-18.0,+06.0]) cylinder(d=+02.0,h=+05.0, center=true);
-			translate([-09.0,+25.0,+06.0]) cylinder(d=+02.0,h=+05.0, center=true);
-			translate([+09.0,+25.0,+06.0]) cylinder(d=+02.0,h=+05.0, center=true);
+			translate([-11.0,-20.5,+07.0]) cylinder(d2=+02.0,d1=+01.5,h=+06.0, center=true);
+			translate([+11.0,-20.5,+07.0]) cylinder(d2=+02.0,d1=+01.5,h=+06.0, center=true);
+			translate([-11.0,+29.5,+07.0]) cylinder(d2=+02.0,d1=+01.5,h=+06.0, center=true);
+			translate([+11.0,+29.5,+07.0]) cylinder(d2=+02.0,d1=+01.5,h=+06.0, center=true);
 		}
+        union(/*rpi sd card overhang / gpio cable*/) {
+            translate([+00.0,-33.5,+06.0]) cube([+55.5,+03.0,+08.0], center=true);
+            translate([+00.0,+33.5,+06.0]) cube([+55.5,+03.0,+08.0], center=true);
+        }
+
 	}
 }
 
@@ -249,49 +278,42 @@ module hal9000_component_display_frame_bottom() {
 module hal9000_component_display_cover(){
 	color([0,0,0]) render()
 	union() {
+		
+
 		difference() {
-			hull() {
-				translate([+00.0,+00.0,+01.0]) cylinder(d=+50.0,h=+02.0, center=true);
-				translate([+00.0,+20.0,+01.0]) cube([+25.0,+15.0,+02.0], center=true);
+            union() {
+                hull() {
+                    translate([+00.0,+00.0,+01.0]) cylinder(d=+50.0,h=+02.0, center=true);
+                    translate([+00.0,+25.0,+01.0]) cube([+25.0,+15.0,+02.0], center=true);
+                }
+                translate([+00.0,-26.0,+03.5]) cube([+15.5,+16.5,+07.0], center=true);
 			}
-			translate([+00.0,-15.0,+01.0]) cube([+22.5,+25.0,+02.0], center=true);
 			union(/*frame screw holes*/) {
-				translate([-13.5,-18.0,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
-				translate([+13.5,-18.0,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
-				translate([-09.0,+25.0,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
-				translate([+09.0,+25.0,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
+				translate([-11.0,-20.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
+				translate([+11.0,-20.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
+				translate([-11.0,+29.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
+				translate([+11.0,+29.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
 			}
-			union(/*waveshare 1.8" tft screw holes*/) {
+            if(false)
+			union(/*waveshare 1.8" tft cable header & screw holes*/) {
+                translate([+00.0,-10.0,+01.0]) cube([+21.0,+12.5,+02.0], center=true);
+                translate([+00.0,-20.0,+01.0]) cube([+16.0,+10.0,+02.0], center=true);
 				translate([-13.2,-09.3,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
 				translate([+13.2,-09.3,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
 				translate([-13.2,+09.3,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
 				translate([+13.2,+09.3,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
 			}
-		}
-		difference(/*mount for PCF8591 for (analog) buttons*/) {
-			union() {
-				translate([-09.0,+04.5,+02.5]) cylinder(d=+04.0,h=+01.0, center=true);
-				translate([+09.0,+04.5,+02.5]) cylinder(d=+04.0,h=+01.0, center=true);
-				translate([-09.0,+25.0,+02.5]) cylinder(d=+04.0,h=+01.0, center=true);
-				translate([+09.0,+25.0,+02.5]) cylinder(d=+04.0,h=+01.0, center=true);
-
-				translate([-09.0,+04.5,+03.5]) cylinder(d=+02.0,h=+01.0, center=true);
-				translate([+09.0,+04.5,+03.5]) cylinder(d=+02.0,h=+01.0, center=true);
-			}
-			union() {
-				translate([-09.0,+25.0,+02.5]) cylinder(d=+02.0,h=+01.0, center=true);
-				translate([+09.0,+25.0,+02.5]) cylinder(d=+02.0,h=+01.0, center=true);
-			}
-		}
-		difference(/*screw hole raiser*/) {
-			union() { 
-				translate([-13.5,-18.0,+02.5]) cylinder(d=+04.0,h=+01.0, center=true);
-				translate([+13.5,-18.0,+02.5]) cylinder(d=+04.0,h=+01.0, center=true);
-			}
-			union() { 
-				translate([-13.5,-18.0,+02.5]) cylinder(d=+02.0,h=+01.0, center=true);
-				translate([+13.5,-18.0,+02.5]) cylinder(d=+02.0,h=+01.0, center=true);
-			}
+            union(/*roundypi gpio header & boot button*/) {
+                translate([+00.0,-27.5,+03.5]) cube([+11.5,+20.0,+07.0], center=true);
+                
+                
+                translate([+00.0,+24.0,+01.0]) cube([+14.0,+01.0,+02.0], center=true);
+				translate([-14.0,+05.0,+01.0]) scale([+01.2,+01.6,+01.0]) cylinder(d=+05.0,h=+02.0, center=true);
+            }
+            union(/*rpi sd card overhang*/) {
+                translate([+00.0,-33.5,+03.5]) cube([+55.5,+03.5,+07.0], center=true);
+                translate([+00.0,+33.5,+01.0]) cube([+55.5,+03.5,+02.0], center=true);
+            }
 		}
 	}
 }
@@ -336,4 +358,3 @@ module hal9000_material_wiremesh() {
 		translate([+00.0,+00.0,+00.5]) cube([+90.0,+45.0,+01.0], center=true);
 	}
 }
-
