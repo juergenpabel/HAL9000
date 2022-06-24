@@ -192,10 +192,13 @@ module hal9000_enclosure_panel_addons() {
 			translate([+00.0,+15.0,+01.0]) cube([+59.0,+30.0,+02.0], center=true);
 			translate([+00.0,+05.0,+01.0]) cube([+80.0,+10.0,+02.0], center=true);
 		}
-//		translate([-34.5,+05.0,+01.0]) cylinder(d=3.0,h=2.0, center=true);
-//		translate([+34.5,+05.0,+01.0]) cylinder(d=3.0,h=2.0, center=true);
-        translate([-34.5,+05.0,+01.0]) cube([+06.5,+06.5,+02.0], center=true);
-        translate([+34.5,+05.0,+01.0]) cube([+06.5,+06.5,+02.0], center=true);
+		union() {
+            translate([-34.5,+05.0,+01.2]) cube([+06.0,+06.0,+01.6], center=true);
+            translate([+34.5,+05.0,+01.2]) cube([+06.0,+06.0,+01.6], center=true);
+            translate([-34.5,+05.0,+01.0]) cylinder(d=+03.5,h=+02.0, center=true);
+            translate([+34.5,+05.0,+01.0]) cylinder(d=+03.5,h=+02.0, center=true);
+
+        }
 		difference() {
 			translate([+00.0,+11.5,+01.0]) cube([+31.0,+21.0,+02.0], center=true);
 			translate([+00.0,+21.5,+00.4]) cube([+31.0,+01.0,+00.8], center=true);
@@ -248,8 +251,8 @@ module hal9000_component_display_frame_top() {
 			translate([+11.0,+29.5,+07.0]) cylinder(d2=+02.0,d1=+01.5,h=+06.0, center=true);
 		}
         union(/*rpi sd card overhang / gpio cable*/) {
-            translate([+00.0,-33.5,+06.0]) cube([+55.5,+03.0,+08.0], center=true);
-            translate([+00.0,+33.5,+06.0]) cube([+55.5,+03.0,+08.0], center=true);
+            translate([+00.0,-33.5,+06.0]) cube([+70.0,+03.0,+08.0], center=true);
+            translate([+00.0,+33.5,+06.0]) cube([+70.0,+03.0,+08.0], center=true);
         }
 
 	}
@@ -278,15 +281,13 @@ module hal9000_component_display_frame_bottom() {
 module hal9000_component_display_cover(){
 	color([0,0,0]) render()
 	union() {
-		
-
 		difference() {
             union() {
                 hull() {
                     translate([+00.0,+00.0,+01.0]) cylinder(d=+50.0,h=+02.0, center=true);
                     translate([+00.0,+25.0,+01.0]) cube([+25.0,+15.0,+02.0], center=true);
                 }
-                translate([+00.0,-26.0,+03.5]) cube([+15.5,+16.5,+07.0], center=true);
+                //translate([+00.0,-26.0,+03.5]) cube([+15.5,+16.5,+07.0], center=true);
 			}
 			union(/*frame screw holes*/) {
 				translate([-11.0,-20.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
@@ -311,8 +312,8 @@ module hal9000_component_display_cover(){
 				translate([-14.0,+05.0,+01.0]) scale([+01.2,+01.6,+01.0]) cylinder(d=+05.0,h=+02.0, center=true);
             }
             union(/*rpi sd card overhang*/) {
-                translate([+00.0,-33.5,+03.5]) cube([+55.5,+03.5,+07.0], center=true);
-                translate([+00.0,+33.5,+01.0]) cube([+55.5,+03.5,+02.0], center=true);
+                //translate([+00.0,-33.5,+03.5]) cube([+70.0,+03.5,+07.0], center=true);
+                translate([+00.0,+33.5,+01.0]) cube([+70.0,+03.5,+02.0], center=true);
             }
 		}
 	}
