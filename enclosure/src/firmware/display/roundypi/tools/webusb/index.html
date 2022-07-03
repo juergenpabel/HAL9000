@@ -13,6 +13,8 @@
 <button onclick="set_sequences_go2sleep()">sleep</button>
 <button onclick="set_sequence_timeout()">timeout=10</button>
 <button onclick="add_sequence_timeout()">timeout+=10</button>
+<button onclick="bl_on()">BL=ON</button>
+<button onclick="bl_off()">BL=OFF</button>
 <script type="text/javascript">
     const connection = SimpleSerial.connect({
         requestButton: "permissionElement"
@@ -32,6 +34,12 @@
     }
     async function add_sequence_timeout() {
         connection.send('sequence:timeout', { action: 'add', seconds: 10 } )
+    }
+    async function bl_on() {
+        connection.send('display:backlight', { action: 'set', status: 0 } )
+    }
+    async function bl_off() {
+        connection.send('display:backlight', { action: 'set', status: 1 } )
     }
 </script>
 <p id="explanation">

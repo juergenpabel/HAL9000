@@ -11,7 +11,7 @@ ser.stopbits = serial.STOPBITS_ONE
 
 time.sleep(1)
 
-ser.write('["sequences",{"action":"add","sequence":{"name":"wakeup","timeout":0,"next":{"name":"active","timeout":10,"next":{"name":"sleep","timeout":0,"next":{"name":"standby","timeout":0}}}}}]\n'.encode('utf-8'))
+ser.write('["display:backlight", { "action": "set", "status": false } ]\n'.encode('utf-8'))
 
 while True:
 	print(ser.readline().decode('utf-8').strip())
