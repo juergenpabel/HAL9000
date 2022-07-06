@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys
+import logging
 from configparser import ConfigParser
 
 from hal9000.peripherals.device import HAL9000_Device
@@ -13,6 +14,7 @@ class Device(HAL9000_Device):
 		HAL9000_Device.__init__(self, 'rfid:{}'.format(name), Driver)
 		self.config = dict()
 		self.driver = None
+		self.logger = logging.getLogger()
 		self.current_uid = None
  
 
@@ -33,15 +35,17 @@ class Device(HAL9000_Device):
 			if self.driver.do_loop():
 				result = True
 				previous_uid = self.current_uid
-				current_uid = self.driver.current_uid
+				current_uid = self.driver.status['uid']
 				if previous_uid != current_uid:
 					self.current_uid = current_uid
 					if callback_event is not None:
 						peripheral, device = str(self).split(':',1)
 						component, dummy = str(self.driver).split(':',1)
 						if previous_uid is not None:
+							self.logger.debug('device:{} => tag with uid "{}" absent'.format(self, previous_uid))
 							callback_event(peripheral, device, component, 'leave', previous_uid)
 						if current_uid is not None:
+							self.logger.debug('device:{} => tag with uid "{}" detected'.format(self, current_uid))
 							callback_event(peripheral, device, component, 'enter', current_uid)
  
 		return result

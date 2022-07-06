@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import logging
 from configparser import ConfigParser
 from smbus import SMBus
 
@@ -110,7 +111,9 @@ class Driver(HAL9000):
 	def __init__(self, name: str):
 		HAL9000.__init__(self, name)
 		self.config = dict()
-		self.current_uid = None
+		self.status = dict()
+		self.status['uid'] = None
+		self.logger = logging.getLogger()
 
 
 	def configure(self, configuration: ConfigParser) -> None:
@@ -120,19 +123,19 @@ class Driver(HAL9000):
 		self.smbus = SMBus(self.config['i2c-bus'])
 		self.device = self.config['i2c-address']
 		self.__MFRC522_init()
+		self.logger.debug('driver:{} => configured and ready'.format(str(self)))
 
 
 	def do_loop(self) -> bool:
-		if self.current_uid is None:
+		if self.status['uid'] is None:
 			(status, backData, tagType) = self.scan()
 			if status != Driver.MIFARE_OK:
 				return True
 		(status, current_uid, backBits) = self.identify()
-		current_uid = ''.join(format(x, '02x') for x in current_uid[:-1])
 		if status == Driver.MIFARE_OK:
-			self.current_uid = current_uid
+			self.status['uid'] = ''.join(format(x, '02x') for x in current_uid[:-1])
 		else:
-			self.current_uid = None
+			self.status['uid'] = None
 		return True
 
 

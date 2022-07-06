@@ -81,7 +81,7 @@ class Driver(HAL9000):
 				if len(pins) > 0:
 					self.data[key] = pins
 					for pin in pins:
-						self.logger.debug('{}: setting up pin {} for device {}'.format(str(self),pin,device))
+						self.logger.debug('driver:{} => setting up pin {} for device {}'.format(str(self),pin,device))
 						self.setup(pin, Driver.IN, Driver.LOW, Driver.NONINVERT, True, True, True)
 				#TODO setattr(klass, '{}_data'.format(device), DriverData())
 

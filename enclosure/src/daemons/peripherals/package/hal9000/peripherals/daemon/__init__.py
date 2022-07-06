@@ -38,14 +38,14 @@ class Daemon(HAL9000):
 		return result
 
 
-	def on_event(self, peripheral: str, device: str, component: str, event: str, value: str) -> None:
+	def on_event(self, peripheral: str, device: str, component: str, event: str, value: str=None) -> None:
 		if component is None:
 			component = 'default'
 		payload = '{}:{}:{} {}={}'.format(peripheral, device, component, event, value)
-		self.logger.debug('EVENT: {}'.format(payload))
+		self.logger.info('EVENT: {}'.format(payload))
 		if self.mqtt is not None:
 			mqtt_base = self.config['mqtt-topic-base']
-			mqtt_topic = '{}/{}/event'.format(mqtt_base, str(self))
+			mqtt_topic = '{}/{}/event'.format(mqtt_base, str(device))
 			self.mqtt.publish(mqtt_topic, payload)
 			self.logger.debug('MQTT published: {} => {}'.format(mqtt_topic, payload))
 

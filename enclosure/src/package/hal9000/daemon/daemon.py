@@ -24,6 +24,7 @@ class HAL9000_Daemon(HAL9000_Abstract):
 		HAL9000_Abstract.__init__(self, name)
 		self.config = dict()
 		self.mqtt = None
+		self.logger = logging.getLogger()
 		self._status = HAL9000_Daemon.STATUS_INIT
 
 
@@ -32,7 +33,7 @@ class HAL9000_Daemon(HAL9000_Abstract):
 			configuration = ConfigParser(delimiters='=', converters={'list': lambda list: [item.strip().strip('"').strip("'") for item in list.split(',')],
 			                                                         'string': lambda string: string.strip('"').strip("'")}, interpolation=None)
 			logging.config.fileConfig(filename)
-			self.logger = logging.getLogger(str(self))
+			self.logger = logging.getLogger() #TODO (str(self))
 			self.logger.info('LOADING CONFIGURATION ({})'.format(filename))
 			configuration.read(filename)
 			self.configure(configuration)

@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-
+import logging
 from configparser import ConfigParser
 from gpiozero import InputDevice
 
@@ -19,15 +19,33 @@ class Device(HAL9000_Device):
 		self.device['encoder']['direction'] = 0
 		self.device['irq'] = None
 		self.driver = None
+		self.logger = logging.getLogger()
 
 
 	def configure(self, configuration: ConfigParser, section_name: str = None):
 		HAL9000_Device.configure(self, configuration, section_name)
 		peripheral, device = str(self).split(':')
 		self.config['enabled'] = configuration.getboolean(str(self), 'enabled', fallback=True)
+		self.config['count'] = 1 # TODO support multiple rotaries per device
 		if self.config['enabled']:
 			self.driver = self.Driver('{}:{}'.format(configuration.getstring(str(self), 'driver'), device))
 			self.driver.configure(configuration, section_name)
+
+			for number in range(0, self.config['count']):
+				key = 'rotary.{}'.format(number)
+				config = configuration.getlist(str(self), key, fallback=[key])
+				self.config[key] = dict()
+				self.config[key]['name'] = config[0].strip()
+				self.config[key]['delta'] = 1
+				self.config[key]['debounce'] = 0
+				for option in config[1:]:
+					option_key, option_value = option.split('=',1)
+					option_key = option_key.strip().lower()
+					option_value = option_value.strip().lower()
+					if option_key == 'delta':
+						self.config[key]['delta'] = int(option_value)
+					if option_key == 'debounce':
+						self.config[key]['debounce'] = float(option_value)
 
 			driver_irq_pin = configuration.getint(str(self), 'driver-irq-pin', fallback=0)
 			if driver_irq_pin > 0:
@@ -42,6 +60,8 @@ class Device(HAL9000_Device):
 				#TODO: reset irq on driver
 				rotary_direction = self.calculate_direction(self.driver.rotary_data)
 				if rotary_direction != 0:
+					key = 'rotary.{}'.format(0)
+					self.logger.debug('device:{} => rotary with label "{}" moved to {}'.format(self, self.config[key]['name'], rotary_direction))
 					if callback_event is not None:
 						callback_event(peripheral, device, None, 'status', '{0:+}'.format(rotary_direction))
 			return True

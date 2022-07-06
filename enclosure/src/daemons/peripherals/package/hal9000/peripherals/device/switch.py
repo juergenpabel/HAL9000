@@ -59,8 +59,8 @@ class Device(HAL9000_Device):
 					switch_new = self.calculate_status(switch_number, driver_data[switch_number])
 					if switch_new is not None and switch_old != switch_new:
 						key = 'switch.{}'.format(switch_number)
-						self.logger.debug('{}: switch with label "{}" changed from {} to {}'.format(self,self.config[key]['name'], switch_old, switch_new))
 						self.switch[switch_number]['status'] = switch_new
+						self.logger.debug('device:{} => switch with label "{}" changed to status={}'.format(self, self.config[key]['name'], switch_new))
 						callback_event(peripheral, device, self.config[key]['name'], 'status', int(switch_new))
 			return True
 		return False
@@ -77,7 +77,7 @@ class Device(HAL9000_Device):
 		if self.switch[switch_number]['debounce'] is None:
 			if self.config[key]['debounce'] > 0:
 				if switch_value != self.switch[switch_number]['status']:
-					self.logger.debug("debouncing switch '{}' for {} milliseconds...".format(self.config[key]['name'], self.config[key]['debounce']))
+					self.logger.debug("device:{} => debouncing switch '{}' for {} milliseconds...".format(self, self.config[key]['name'], self.config[key]['debounce']))
 					self.switch[switch_number]['debounce'] = now + timedelta(milliseconds=self.config[key]['debounce'])
 					return None
 		self.switch[switch_number]['debounce'] = None
