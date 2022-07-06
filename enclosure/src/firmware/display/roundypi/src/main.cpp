@@ -1,285 +1,76 @@
+#include "defines.h"
 #include <TimeLib.h>
 #include <TFT_eSPI.h>
 #include <LittleFS.h>
 #include <pngle.h>
 #include <SPI.h>
-#include <SdFat.h>
+#include <FS.h>
+//include <SdFat.h>
 #include <SimpleWebSerial.h>
 
-#define SPI_SPEED SD_SCK_MHZ(32)
+#include "types.h"
+#include "display.h"
+#include "jpeg.h"
+#include "time.h"
 
-#define SCK 18
-#define SS 17
-#define SDCARD_SS_PIN 17
-#define SD_CS_PIN 17
-#define MISO 16
-#define MOSI 19
-
-#define FRAMES_PNG_MAX 64
-#define SEQUENCES_MAX 8
-
-static TFT_eSPI        g_tft = TFT_eSPI();
-static SimpleWebSerial g_websocket;
-
-
-typedef struct sequence sequence_t;
-typedef struct sequence {
-char        type;
-char        name[256];
-uint32_t    timeout;
-sequence_t* next;
-} sequence_t;
-
-
-typedef struct {
-char     type;
-uint16_t size;
-uint8_t* data;
-} png_t;
-
-
-static sequence_t* g_sequence = NULL;
-static sequence_t  g_sequences_queue[SEQUENCES_MAX] = {0};
-static png_t       g_frames_png[FRAMES_PNG_MAX] = {0};
-static uint16_t    g_image_565[240][240] = {0};
-
-
-void pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4]) {
-uint16_t pixel565 = 0;
-uint8_t* frame_png = NULL;
-
-pixel565 = g_tft.color565(rgba[0], rgba[1], rgba[2]);
-
-g_image_565[  0 + y][  0 + x] = pixel565;
-g_image_565[239 - x][  0 + y] = pixel565;
-g_image_565[239 - y][239 - x] = pixel565;
-g_image_565[  0 + x][239 - y] = pixel565;
+extern "C" char* sbrk(int incr);
+int freeRam() {
+  char top;
+  return &top - reinterpret_cast<char*>(sbrk(0));
 }
 
-
-void pngle_draw(uint8_t* png, uint16_t png_size) {
-pngle_t* pngle = NULL;
-
-pngle = pngle_new();
-if(pngle == NULL) {
-	Serial.printf("pngle_new() failed\n");
-	return;
-}
-pngle_set_draw_callback(pngle, pngle_on_draw);
-if(pngle_feed(pngle, png, png_size) != png_size) {
-	Serial.printf("pngle_feed() failed\n");
-	pngle_destroy(pngle);
-	return;
-}
-pngle_destroy(pngle);
-g_tft.pushImage(0, 0, 240, 240, (uint16_t*)g_image_565);
-}
+TFT_eSPI        g_tft = TFT_eSPI();
+SimpleWebSerial g_webserial;
 
 
-void draw_quarter_frame(uint8_t frame) {
-uint8_t* png_data = NULL;
-uint16_t png_size = 0;
-//uint32_t time_start = 0;
+sequence_t* g_sequence = NULL;
+sequence_t  g_sequences_queue[SEQUENCES_MAX] = {0};
+png_t       g_frames_png[FRAMES_PNG_MAX] = {0};
+uint16_t    g_image_565[240][240] = {0};
 
-//time_start = millis();
-memset(g_image_565, '\0', sizeof(g_image_565));
-if(frame >= FRAMES_PNG_MAX) {
-	Serial.printf("invalid frame number %d", frame);
-	return;
-}
-png_data = g_frames_png[frame].data;
-png_size = g_frames_png[frame].size;
-if(png_data==NULL || png_size==0) {
-	return;
-}
-pngle_draw(png_data, png_size);
-//Serial.printf("Frame generated and drawn in %d ms\n", millis() - time_start);
-}
-
-
-void draw_frames() {
-for(int i=0; i<FRAMES_PNG_MAX; i++) {
-	if(g_frames_png[i].type != '\0') {
-		switch(g_frames_png[i].type) {
-			case 'F':
-				//TODO:draw_full_frame(i);
-				break;
-			case 'Q':
-				draw_quarter_frame(i);
-				break;
-			default:
-				Serial.printf("invalid frame type '%c'\n", g_frames_png[i].type);
-		};
-	}
-}
-}
-
-
-void load_quarter_frames(const char* path) {
-char     filename[256] = {0};
-File     file = {0};
-uint32_t time_start = 0;
-
-time_start = millis();
-for(int i=0; i<FRAMES_PNG_MAX; i++) {
-	if(g_frames_png[i].data != NULL) {
-		free(g_frames_png[i].data);
-		g_frames_png[i].data = NULL;
-		g_frames_png[i].size = 0;
-		g_frames_png[i].type = '\0';
-	}
-}
-for(int i=0; i<FRAMES_PNG_MAX; i++) {
-	snprintf(filename, sizeof(filename)-1, "%s/%.2d.png", path, i);
-	file = LittleFS.open(filename, "r");
-	if(file) {
-		g_frames_png[i].data = (uint8_t*)malloc(file.size());
-		if(g_frames_png[i].data == NULL) {
-			Serial.printf("malloc() failed for png '%s' with size=%d", filename, file.size());
-			file.close();
-			return;
-		}
-		g_frames_png[i].size = file.size();
-		g_frames_png[i].type = 'Q';
-		file.read(g_frames_png[i].data, g_frames_png[i].size);
-		file.close();
-	}
-}
-Serial.printf("Quarter frames loaded from littlefs:'%s' in %d ms\n", path, millis() - time_start);
-}
-
-
-void load_hal_frames(const char* name) {
-char  path[256] = {0};
-
-snprintf(path, sizeof(path)-1, "/images/eye/%s", name);
-load_quarter_frames(path);
-}
-
-
-void on_hal_sequence_timeout(JSONVar parameter) {
-if(strncmp("set", (const char*)parameter["action"], 4) == 0) {
-	g_sequence->timeout = now() + (long)parameter["timeout"];
-}
-if(strncmp("add", (const char*)parameter["action"], 4) == 0) {
-	g_sequence->timeout += (long)parameter["timeout"];
-}
-}
-
-
-void on_hal_sequences(JSONVar parameter) {
-uint8_t     target_offset = 0;
-sequence_t* target_sequence = NULL;
-
-//if(strncmp("set", (const char*)parameter["action"], 4) == 0) {
-//}
-if(1) { //if(strncmp("add", (const char*)parameter["action"], 4) == 0) {
-	if(parameter.hasOwnProperty("sequence")) {
-		parameter = parameter["sequence"];
-	}
-	while(target_offset<SEQUENCES_MAX && g_sequences_queue[target_offset].type!='\0') {
-		target_offset++;
-	}
-	if(target_offset==SEQUENCES_MAX) {
-		Serial.printf("Sequences queue already full\n");
-		return;
-	}
-	Serial.printf("Adding sequence '%s' to queue at pos=%d with timeout=%d and next=%d\n",(const char*)parameter["name"], target_offset, (long)parameter["timeout"], parameter.hasOwnProperty("next"));
-
-	target_sequence = g_sequence;
-	while(target_sequence->next != NULL) {
-		target_sequence = target_sequence->next;
-	}
-	target_sequence->next = &g_sequences_queue[target_offset];
-	target_sequence = target_sequence->next;
-	target_sequence->type = 'Q';
-	strncpy(target_sequence->name, parameter["name"], sizeof(target_sequence->name)-1);
-	target_sequence->timeout = (long)parameter["timeout"];
-	target_sequence->next = NULL;
-}
-
-if(parameter.hasOwnProperty("next")) {
-	on_hal_sequences(parameter["next"]);
-}
-	digitalWrite(TFT_BL, HIGH);
-}
-
-
-void on_hal_display_backlight(JSONVar parameter) {
-bool status;
-
-status = (bool)parameter["status"];
-if(strncmp("set", (const char*)parameter["action"], 4) == 0) {
-	digitalWrite(TFT_BL, status ? LOW : HIGH);
-		Serial.printf("BL=%d\n", status);
-	}
-}
-
-
-static volatile int  g_sync_tz = 0;
-static volatile long g_sync_secs = 0;
-
-time_t time_sync() {
-	uint32_t time_start = 0;
-	time_t result = 0;
-
-	g_sync_secs = 0;
-	g_websocket.sendEvent("time:sync");
-	time_start = millis();
-	while(g_sync_secs == 0 && (time_start + 1000) > millis()) {
-		g_websocket.check();
-		delay(10);
-	}
-	if(g_sync_secs > 0) {
-		result = g_sync_secs + (g_sync_tz * SECS_PER_HOUR);
-	}
-	g_websocket.send("time:synced", (long)result);
-	return result;
-}
-
-
-void on_time_sync(JSONVar parameter) {
-	g_sync_tz = parameter["timezone-offset"];
-	g_sync_secs = parameter["epoch-seconds"];
-}
 
 
 void setup() {
 	Serial.begin(115200);
-	delay(3000);
-	Serial.printf("\nRoundyPI\n");
-
-	g_tft.begin();
-	g_tft.setRotation(2);
-	g_tft.fillScreen(TFT_BLACK);
-	g_tft.setSwapBytes(true);
-	Serial.printf("TFT ready\n");
-
+	delay(1000);
+	g_webserial.send("RoundyPI", "setup()");
 	pinMode(TFT_BL, OUTPUT);
 	digitalWrite(TFT_BL, LOW);
 
+	g_tft.begin();
+	//g_tft.setSwapBytes(true);
+	g_tft.setRotation(2);
+	g_tft.fillScreen(TFT_BLACK);
+	g_tft.setTextColor(TFT_WHITE, TFT_BLACK);
+	g_tft.setTextFont(1);
+	g_tft.setTextDatum(4);
+	g_tft.setTextSize(3);
+	digitalWrite(TFT_BL, HIGH);
+	g_tft.drawString("ready", 120, 120);
+	g_webserial.send("RoundyPI", "TFT ready");
 
 	if(!LittleFS.begin()) {
-		Serial.printf("LittleFS error, halting\n");
+		g_webserial.warn("LittleFS error, halting");
 		while(1) delay(1);
 	}
-	Serial.printf("LittleFS ready\n");
+	g_webserial.send("RoundyPI", "LittleFS ready");
 
 	g_sequences_queue[0].type = 'Q';
 	strncpy(g_sequences_queue[0].name, "init", sizeof(g_sequences_queue[0].name)-1);
 	g_sequences_queue[0].timeout = 0;
 	g_sequences_queue[0].next = NULL;
 	g_sequence = &g_sequences_queue[0];
-	Serial.printf("Sequences ready\n");
+	g_webserial.send("RoundyPI", "Sequences ready");
 
-	g_websocket.on("time:sync", on_time_sync);
-	g_websocket.on("sequences", on_hal_sequences);
-	g_websocket.on("sequence:timeout", on_hal_sequence_timeout);
-	g_websocket.on("display:backlight", on_hal_display_backlight);
-	Serial.printf("Webserial ready\n");
+	g_webserial.on("time:sync", on_time_sync);
+	g_webserial.on("splash:jpeg", on_splash_jpeg);
+	g_webserial.on("sequences", on_hal_sequences);
+	g_webserial.on("sequence:timeout", on_hal_sequence_timeout);
+	g_webserial.on("display:backlight", on_hal_display_backlight);
+	g_webserial.send("RoundyPI", "Webserial ready");
 
-	setSyncInterval(15);
-	setSyncProvider(time_sync);
+	g_webserial.send("RoundyPI", "loop()");
+	g_webserial.send("FreeRAM", String(freeRam(), DEC));
 }
 
 
@@ -288,7 +79,7 @@ void loop() {
 	volatile time_t currently = now();
 
 	draw_frames();
-	g_websocket.check();
+	g_webserial.check();
 	delay(10);
 
 	sequence_t* last_sequence = g_sequence;
@@ -307,20 +98,17 @@ void loop() {
 			if(next_sequence->type == 'Q') {
 				load_hal_frames(next_sequence->name);
 			}
+g_webserial.send("FreeRAM", String(freeRam(), DEC));
 			g_sequence = next_sequence;
 //			if(g_sequence->timeout > 0) {
 				g_sequence->timeout += now();
 //			}
 		} else {
-			if(numberOfSeconds(currently) == 0 && minute(currently) != minute(previously)) {
+			if(minute(currently) != minute(previously)) {
 				char clock[6] = {0};
 
 				previously = currently;
 				digitalWrite(TFT_BL, HIGH);
-				g_tft.setTextFont(1);
-				g_tft.setTextDatum(4);
-				g_tft.setTextSize(3);
-				g_tft.setTextColor(TFT_WHITE, TFT_BLACK);
 				snprintf(clock, sizeof(clock), "%02d:%02d", hour(currently), minute(currently));
 				g_tft.drawString(clock, 120, 120);
 			}
