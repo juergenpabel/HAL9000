@@ -1,2 +1,2 @@
-void on_splash_jpeg(JSONVar parameter);
+void splash_jpeg(const char* filename);
 

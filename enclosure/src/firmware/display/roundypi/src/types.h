@@ -5,7 +5,6 @@
 
 typedef struct sequence sequence_t;
 typedef struct sequence {
-	char        type;
 	char        name[32];
 	uint32_t    timeout;
 	sequence_t* next;
@@ -13,8 +12,7 @@ typedef struct sequence {
 
 
 typedef struct {
-	char     type;
 	uint16_t size;
-	uint8_t  data[5120-3];
+	uint8_t  data[5120-2];
 } png_t;
 

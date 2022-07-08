@@ -1,12 +1,8 @@
 #include <stddef.h>
 
-#define FRAMES_PNG_MAX 16
+#define FRAMES_PNG_MAX 10
 #define SEQUENCES_MAX 8
 
-
-#define MaximumNumberOfEvents 32
-#define MaximumEventNameLength 32
-#define BufferSize 4096
 
 //define SPI_SPEED SD_SCK_MHZ(32)
 

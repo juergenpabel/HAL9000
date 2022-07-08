@@ -1,7 +1,7 @@
-void on_hal_sequences(JSONVar parameter);
-void on_hal_sequence_timeout(JSONVar parameter);
-void on_hal_display_backlight(JSONVar parameter);
+void on_display_backlight(JSONVar parameter);
+void on_display_sequence(JSONVar parameter);
+void on_display_splash(JSONVar parameter);
 
-void draw_frames();
-void load_hal_frames(const char* name);
+void display_frames_load(const char* name);
+void display_show();
 

@@ -6,6 +6,7 @@
 //include <SdFat.h>
 #include <JPEGDEC.h>
 #include <SimpleWebSerial.h>
+#include "jpeg.h"
 
 
 int draw_jpeg(JPEGDRAW *pDraw) {
@@ -16,10 +17,16 @@ int draw_jpeg(JPEGDRAW *pDraw) {
 
 void on_splash_jpeg(JSONVar parameter) {
 	char     filename[256] = {0};
+
+	snprintf(filename, sizeof(filename)-1, "%s/%s", "/images/splash", (const char*)parameter["filename"]);
+	splash_jpeg(filename);
+}
+
+
+void splash_jpeg(const char* filename) {
 	File     file = {0};
 	JPEGDEC  jpeg;
 
-	snprintf(filename, sizeof(filename)-1, "%s/%s", "/images/splash", (const char*)parameter["filename"]);
 	file = LittleFS.open(filename, "r");
 	if(jpeg.open(file, draw_jpeg) < 0) {
 		g_webserial.warn("show_splash_jpeg() -> jpeg.open() failed");
