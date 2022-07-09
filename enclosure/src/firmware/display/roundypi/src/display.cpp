@@ -4,16 +4,19 @@
 
 #include <string.h>
 #include <TimeLib.h>
-#include <pngle.h>
 #include <LittleFS.h>
 //include <SdFat.h>
 #include <SimpleWebSerial.h>
 #include "display.h"
+#include "frame.h"
 #include "jpeg.h"
-#include "png.h"
+
+static png_t g_frames_png[FRAMES_PNG_MAX] = {0};
+static void  add_sequence_recursively(JSONVar data, uint8_t offset);
 
 
-static void add_sequence_recursively(JSONVar data, uint8_t offset);
+sequence_t*     g_current_sequence = &g_sequences_queue[0];
+sequence_t      g_sequences_queue[SEQUENCES_MAX] = {0};
 
 
 void on_display_backlight(JSONVar parameter) {
@@ -119,8 +122,7 @@ void display_show() {
 		clock_previously = 0;
 		for(int i=0; i<FRAMES_PNG_MAX; i++) {
 			if(g_frames_png[i].size > 0) {
-				memset(g_image_565, '\0', sizeof(g_image_565));
-				pngle_draw(g_frames_png[i].data, g_frames_png[i].size);
+				frame_png_draw(g_frames_png[i].data, g_frames_png[i].size);
 			}
 		}
 	} else {

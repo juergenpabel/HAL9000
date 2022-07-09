@@ -24,13 +24,6 @@ TFT_eSPI        g_tft = TFT_eSPI();
 SimpleWebSerial g_webserial;
 
 
-sequence_t* g_current_sequence = &g_sequences_queue[0];
-sequence_t  g_sequences_queue[SEQUENCES_MAX] = {0};
-png_t       g_frames_png[FRAMES_PNG_MAX] = {0};
-uint16_t    g_image_565[240][240] = {0};
-
-
-
 void setup() {
 	Serial.begin(115200);
 	g_tft.begin();

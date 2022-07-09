@@ -6,6 +6,7 @@
 #include <SimpleWebSerial.h>
 
 static pngle_t* g_pngle = pngle_new();
+static uint16_t g_image_565[240][240] = {0};
 
 
 void pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4]) {
@@ -22,7 +23,7 @@ void pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t 
 }
 
 
-void pngle_draw(uint8_t* png, uint16_t png_size) {
+void frame_png_draw(uint8_t* png, uint16_t png_size) {
 	pngle_reset(g_pngle);
 	pngle_set_draw_callback(g_pngle, pngle_on_draw);
 	if(pngle_feed(g_pngle, png, png_size) != png_size) {

@@ -2,24 +2,14 @@
 #include "types.h"
 #include "globals.h"
 
-//include <FS.h>
-//include <SdFat.h>
 #include <JPEGDEC.h>
 #include <SimpleWebSerial.h>
 #include "jpeg.h"
 
 
-int draw_jpeg(JPEGDRAW *pDraw) {
+static int draw_jpeg(JPEGDRAW *pDraw) {
 	g_tft.pushRect(pDraw->x, pDraw->y, pDraw->iWidth, pDraw->iHeight, pDraw->pPixels);
 	return 1;
-}
-
-
-void on_splash_jpeg(JSONVar parameter) {
-	char     filename[256] = {0};
-
-	snprintf(filename, sizeof(filename)-1, "%s/%s", "/images/splash", (const char*)parameter["filename"]);
-	splash_jpeg(filename);
 }
 
 
