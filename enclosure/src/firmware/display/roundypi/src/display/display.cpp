@@ -1,5 +1,3 @@
-#include "defines.h"
-#include "types.h"
 #include "globals.h"
 
 #include <string.h>
@@ -11,12 +9,26 @@
 #include "frame.h"
 #include "jpeg.h"
 
-static png_t g_frames_png[FRAMES_PNG_MAX] = {0};
+
+typedef struct {
+	uint16_t size;
+	uint8_t  data[5120-2];
+} png_t;
+
+typedef struct sequence sequence_t;
+typedef struct sequence {
+	char        name[32];
+	uint32_t    timeout;
+	sequence_t* next;
+} sequence_t;
+
+
+static png_t g_frames_png[DISPLAY_SEQUENCE_FRAMES_MAX] = {0};
 static void  add_sequence_recursively(JSONVar data, uint8_t offset);
 
 
+sequence_t      g_sequences_queue[DISPLAY_SEQUENCES_MAX] = {0};
 sequence_t*     g_current_sequence = &g_sequences_queue[0];
-sequence_t      g_sequences_queue[SEQUENCES_MAX] = {0};
 
 
 void on_display_backlight(JSONVar parameter) {
@@ -57,15 +69,18 @@ static void add_sequence_recursively(JSONVar data, uint8_t offset) {
 	uint8_t     target_offset = 0;
 	sequence_t* target_sequence = NULL;
 
-	while(target_offset<SEQUENCES_MAX && g_sequences_queue[target_offset].name[0]!='\0') {
+	while(target_offset<DISPLAY_SEQUENCES_MAX && g_sequences_queue[target_offset].name[0]!='\0') {
 		target_offset++;
 	}
-	if(target_offset>=SEQUENCES_MAX) {
+	if(target_offset>=DISPLAY_SEQUENCES_MAX) {
 		g_webserial.send("RoundyPI", "Sequences queue already full");
 		return;
 	}
 	target_sequence = g_current_sequence;
 	while(target_sequence->next != target_sequence) {
+		if(target_sequence->next == NULL) {
+			target_sequence->next = target_sequence;
+		}
 		target_sequence = target_sequence->next;
 	}
 	target_sequence->next = &g_sequences_queue[target_offset];
@@ -98,11 +113,11 @@ void display_frames_load(const char* name) {
 	char     filename[256] = {0};
 	File     file = {0};
 
-	for(int i=0; i<FRAMES_PNG_MAX; i++) {
+	for(int i=0; i<DISPLAY_SEQUENCE_FRAMES_MAX; i++) {
 		g_frames_png[i].size = 0;
 	}
 	snprintf(directory, sizeof(directory)-1, "/images/sequences/%s", name);
-	for(int i=0; i<FRAMES_PNG_MAX; i++) {
+	for(int i=0; i<DISPLAY_SEQUENCE_FRAMES_MAX; i++) {
 		snprintf(filename, sizeof(filename)-1, "%s/%.2d.png", directory, i);
 		file = LittleFS.open(filename, "r");
 		if(file) {
@@ -115,12 +130,12 @@ void display_frames_load(const char* name) {
 }
 
 
-void display_show() {
+void display_update() {
 	static time_t clock_previously = 0;
 
 	if(g_current_sequence->name[0] != '\0') {
 		clock_previously = 0;
-		for(int i=0; i<FRAMES_PNG_MAX; i++) {
+		for(int i=0; i<DISPLAY_SEQUENCE_FRAMES_MAX; i++) {
 			if(g_frames_png[i].size > 0) {
 				frame_png_draw(g_frames_png[i].data, g_frames_png[i].size);
 			}
@@ -141,5 +156,30 @@ void display_show() {
 			}
 		}
 	}
+	if(g_current_sequence->name[0] != '\0') {
+		if(g_current_sequence->timeout > 0) {
+			time_t currently = now();
+
+			if(currently > g_current_sequence->timeout) {
+				g_current_sequence->timeout = 0;
+			}
+		}
+		if(g_current_sequence->timeout == 0) {
+			g_current_sequence->name[0] = '\0';
+			if(g_current_sequence->next == NULL) {
+				g_current_sequence->next = g_current_sequence;
+			}
+			if(g_current_sequence->next != g_current_sequence) {
+				g_current_sequence = g_current_sequence->next;
+				display_frames_load(g_current_sequence->name);
+				if(g_current_sequence->timeout > 0) {
+					g_current_sequence->timeout += now();
+				}
+			} else {
+				g_tft.fillScreen(TFT_BLACK);
+			}
+		}
+	}
+
 }
 

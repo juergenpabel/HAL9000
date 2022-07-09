@@ -1,12 +1,10 @@
-#include "defines.h"
-#include "types.h"
 #include "globals.h"
 
 #include <pngle.h>
 #include <SimpleWebSerial.h>
 
 static pngle_t* g_pngle = pngle_new();
-static uint16_t g_image_565[240][240] = {0};
+static uint16_t g_image_565[TFT_WIDTH][TFT_HEIGHT] = {0};
 
 
 void pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t h, uint8_t rgba[4]) {
@@ -31,6 +29,6 @@ void frame_png_draw(uint8_t* png, uint16_t png_size) {
 		pngle_reset(g_pngle);
 		return;
 	}
-	g_tft.pushImage(0, 0, 240, 240, (uint16_t*)g_image_565);
+	g_tft.pushImage(0, 0, TFT_WIDTH, TFT_HEIGHT, (uint16_t*)g_image_565);
 }
 

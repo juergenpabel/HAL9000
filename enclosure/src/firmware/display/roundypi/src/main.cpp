@@ -1,4 +1,3 @@
-#include "defines.h"
 #include <TimeLib.h>
 #include <TFT_eSPI.h>
 #include <LittleFS.h>
@@ -8,11 +7,12 @@
 //include <SdFat.h>
 #include <SimpleWebSerial.h>
 
-#include "types.h"
 #include "globals.h"
-#include "display.h"
-#include "jpeg.h"
-#include "system.h"
+#include "system/system.h"
+#include "system/filesystem.h"
+#include "display/display.h"
+#include "display/jpeg.h"
+#include "display/png.h"
 
 extern "C" char* sbrk(int incr);
 int freeRam() {
@@ -55,12 +55,12 @@ void setup() {
 	}
 	g_webserial.send("RoundyPI", "setup()");
 	digitalWrite(TFT_BL, HIGH);
-	for(int i=0; i<SEQUENCES_MAX; i++) {
-		g_sequences_queue[i].next = &g_sequences_queue[i];
-	}
 	g_webserial.on("system:reset", on_system_reset);
 	g_webserial.on("system:flash", on_system_flash);
+	g_webserial.on("system:config", on_system_config);
 	g_webserial.on("system:time", on_system_time);
+	g_webserial.on("filesystem:flash", on_filesystem_flash);
+	g_webserial.on("filesystem:sdcard", on_filesystem_sdcard);
 	g_webserial.on("display:backlight", on_display_backlight);
 	g_webserial.on("display:sequence", on_display_sequence);
 	g_webserial.on("display:splash", on_display_splash);
@@ -76,28 +76,7 @@ void loop() {
 		system_reset(0);
 	}
 	g_webserial.check();
-	display_show();
-	if(g_current_sequence->name[0] != '\0') {
-		if(g_current_sequence->timeout > 0) {
-			time_t currently = now();
-
-			if(currently > g_current_sequence->timeout) {
-				g_current_sequence->timeout = 0;
-			}
-		}
-		if(g_current_sequence->timeout == 0) {
-			g_current_sequence->name[0] = '\0';
-			if(g_current_sequence->next != g_current_sequence) {
-				g_current_sequence = g_current_sequence->next;
-				display_frames_load(g_current_sequence->name);
-				if(g_current_sequence->timeout > 0) {
-					g_current_sequence->timeout += now();
-				}
-			} else {
-				g_tft.fillScreen(TFT_BLACK);
-			}
-		}
-	}
+	display_update();
 	delay(10);
 }
 

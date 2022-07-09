@@ -1,5 +1,3 @@
-#include "defines.h"
-#include "types.h"
 #include "globals.h"
 #include <TimeLib.h>
 #include <hardware/watchdog.h>
@@ -7,6 +5,11 @@
 #include "system.h"
 
 static volatile long g_sync_secs = -1;
+
+
+void on_system_config(JSONVar parameter) {
+	//TODO
+}
 
 
 time_t time_sync() {

@@ -1,5 +1,3 @@
-#include "defines.h"
-#include "types.h"
 #include "globals.h"
 
 #include <JPEGDEC.h>
