@@ -9,5 +9,5 @@ if len(sys.argv) > 2:
 
 roundypi = webserial()
 roundypi.connect()
-roundypi.send('["display:splash:jpeg", {"filename": "%s"}]' % (filename))
+roundypi.send('["gui:splash", {"filename": "%s"}]' % (filename))
 roundypi.run()

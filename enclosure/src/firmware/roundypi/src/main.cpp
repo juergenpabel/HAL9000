@@ -8,11 +8,14 @@
 #include <SimpleWebSerial.h>
 
 #include "globals.h"
+#include "system/webserial.h"
+#include "filesystem/webserial.h"
+#include "display/webserial.h"
+#include "gui/webserial.h"
 #include "system/system.h"
-#include "system/filesystem.h"
-#include "display/display.h"
-#include "display/jpeg.h"
-#include "display/png.h"
+#include "gui/gui.h"
+#include "gui/jpeg.h"
+
 
 extern "C" char* sbrk(int incr);
 int freeRam() {
@@ -53,8 +56,8 @@ void setup() {
 		g_tft.fillScreen(TFT_BLACK);
 		digitalWrite(TFT_BL, LOW);
 	}
-	g_webserial.send("RoundyPI", "setup()");
 	digitalWrite(TFT_BL, HIGH);
+	g_webserial.send("RoundyPI", "setup()");
 	g_webserial.on("system:reset", on_system_reset);
 	g_webserial.on("system:flash", on_system_flash);
 	g_webserial.on("system:config", on_system_config);
@@ -62,8 +65,8 @@ void setup() {
 	g_webserial.on("filesystem:flash", on_filesystem_flash);
 	g_webserial.on("filesystem:sdcard", on_filesystem_sdcard);
 	g_webserial.on("display:backlight", on_display_backlight);
-	g_webserial.on("display:sequence", on_display_sequence);
-	g_webserial.on("display:splash", on_display_splash);
+	g_webserial.on("gui:sequence", on_gui_sequence);
+	g_webserial.on("gui:splash", on_gui_splash);
 	g_webserial.send("RoundyPI", "Webserial ready");
 	delay(10);
 	g_webserial.send("RoundyPI", "loop()");
@@ -76,7 +79,7 @@ void loop() {
 		system_reset(0);
 	}
 	g_webserial.check();
-	display_update();
+	gui_update(NULL);
 	delay(10);
 }
 

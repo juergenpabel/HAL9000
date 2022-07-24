@@ -16,7 +16,7 @@ class webserial:
 		self.serial = None
 		while self.serial is None:
 			try:
-				self.serial = serial.Serial(port=self.device, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
+				self.serial = serial.Serial(port=self.device, timeout=1, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
 			except:
 				time.sleep(0.1)
 		print("Connected")
@@ -26,8 +26,14 @@ class webserial:
 
 
 	def receive(self):
-		line = self.serial.readline().decode('utf-8').strip()
-		print("USB(D->H): {}".format(line))
+		line = ""
+		data = self.serial.readline().decode('utf-8')
+		while len(data) and '\n' not in data:
+			line += data
+			data = self.serial.readline().decode('utf-8')
+		line += data.strip()
+		if len(line):
+			print("USB(D->H): {}".format(line))
 		return line
 
 
