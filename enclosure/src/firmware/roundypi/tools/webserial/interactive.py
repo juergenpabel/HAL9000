@@ -8,8 +8,9 @@ from datetime import datetime, timezone
 
 menu = dict()
 menu['1'] = ['Wakeup sequence', '["gui:sequence", {"action": "add", "sequence": [{"name": "wakeup", "timeout": 0}, {"name": "active", "timeout": 10}, {"name": "sleep", "timeout": 0}]}]']
-menu['2'] = ['Splash JPG', '["gui:splash", {"filename": "error.jpg"}]']
-menu['3'] = ['Splash PNG', '["gui:splash", {"filename": "error.png"}]']
+menu['2'] = ['Splash JPG (timeout=3)', '["gui:splash", {"filename": "error.jpg", "timeout": 3}]']
+menu['3'] = ['Splash PNG (timeout=3)', '["gui:splash", {"filename": "error.png", "timeout": 3}]']
+
 
 def handler(self, line: str):
 	if len(line):

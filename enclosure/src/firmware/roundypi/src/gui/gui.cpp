@@ -9,18 +9,23 @@
 #include "jpeg.h"
 
 
-static void (*current_update_func)() = gui_update_idle;
+static gui_update_func current_update_func = gui_update_idle;
 static time_t clock_previously = 0;
 
-void gui_update(void (*new_update_func)()) {
+
+gui_update_func gui_update(gui_update_func new_update_func) {
+	gui_update_func previous_update_func = NULL;
+
 	if(new_update_func != NULL) {
 		if(new_update_func == gui_update_idle) {
 			clock_previously = 0;
 		}
+		previous_update_func = current_update_func;
 		current_update_func = new_update_func;
 	} else {
 		current_update_func();
 	}
+	return previous_update_func;
 }
 
 
@@ -30,6 +35,7 @@ void gui_update_idle() {
 	if(year(clock_currently) >= 2001) {
 		if(clock_previously == 0) {
 			g_webserial.send("RoundyPI", "Showing clock while idle");
+			g_tft.fillScreen(TFT_BLACK);
 		}
 		if(clock_previously == 0 || hour(clock_currently) != hour(clock_previously) || minute(clock_currently) != minute(clock_previously)) {
 			char clock[6] = {0};

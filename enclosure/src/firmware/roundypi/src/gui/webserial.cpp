@@ -2,7 +2,6 @@
 
 #include <string.h>
 #include <TimeLib.h>
-#include <LittleFS.h>
 #include <SimpleWebSerial.h>
 #include "gui.h"
 #include "sequence.h"
@@ -36,8 +35,9 @@ void on_gui_splash(JSONVar parameter) {
 	char*    extension = NULL;
 
 	if(parameter.hasOwnProperty("filename")) {
+		g_splash_timeout = 0;
 		if(parameter.hasOwnProperty("timeout")) {
-			//TODO
+			g_splash_timeout = (long)parameter["timeout"] + now();
 		}
 		snprintf(filename, sizeof(filename)-1, "/images/splash/%s", (const char*)parameter["filename"]);
 		extension = strrchr(filename, '.');
@@ -47,7 +47,7 @@ void on_gui_splash(JSONVar parameter) {
 		if(extension != NULL && strncmp(extension, ".png", 5) == 0) {
 			splash_png(filename);
 		}
-		gui_update(gui_update_splash);
+		g_previous_gui = gui_update(gui_update_splash);
 	}
 }
 
