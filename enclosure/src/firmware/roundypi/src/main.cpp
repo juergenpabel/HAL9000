@@ -4,15 +4,16 @@
 #include <pngle.h>
 #include <SPI.h>
 #include <FS.h>
-//include <SdFat.h>
 #include <SimpleWebSerial.h>
 
 #include "globals.h"
 #include "system/webserial.h"
 #include "filesystem/webserial.h"
+#include "mcp23017/webserial.h"
 #include "display/webserial.h"
 #include "gui/webserial.h"
 #include "system/system.h"
+#include "mcp23017/mcp23017.h"
 #include "gui/gui.h"
 #include "gui/jpeg.h"
 
@@ -56,6 +57,7 @@ void setup() {
 		g_tft.fillScreen(TFT_BLACK);
 		digitalWrite(TFT_BL, LOW);
 	}
+
 	digitalWrite(TFT_BL, HIGH);
 	g_webserial.send("RoundyPI", "setup()");
 	g_webserial.on("system:reset", on_system_reset);
@@ -65,6 +67,8 @@ void setup() {
 	g_webserial.on("filesystem:flash", on_filesystem_flash);
 	g_webserial.on("filesystem:sdcard", on_filesystem_sdcard);
 	g_webserial.on("display:backlight", on_display_backlight);
+	g_webserial.on("mcp23017:begin", on_mcp23017_begin);
+	g_webserial.on("mcp23017:config", on_mcp23017_config);
 	g_webserial.on("gui:sequence", on_gui_sequence);
 	g_webserial.on("gui:splash", on_gui_splash);
 	g_webserial.send("RoundyPI", "Webserial ready");
@@ -79,6 +83,7 @@ void loop() {
 		system_reset(0);
 	}
 	g_webserial.check();
+	mcp23017_check();
 	gui_update(NULL);
 	delay(10);
 }
