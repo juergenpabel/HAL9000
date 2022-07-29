@@ -1,5 +1,5 @@
 #include <JSONVar.h>
 
-void on_mcp23017_begin(JSONVar parameter);
-void on_mcp23017_config(JSONVar parameter);
+void on_mcp23017_setup(JSONVar parameter);
+void on_mcp23017_loop(JSONVar parameter);
 

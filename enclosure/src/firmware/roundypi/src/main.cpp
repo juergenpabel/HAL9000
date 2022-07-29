@@ -67,8 +67,8 @@ void setup() {
 	g_webserial.on("filesystem:flash", on_filesystem_flash);
 	g_webserial.on("filesystem:sdcard", on_filesystem_sdcard);
 	g_webserial.on("display:backlight", on_display_backlight);
-	g_webserial.on("mcp23017:begin", on_mcp23017_begin);
-	g_webserial.on("mcp23017:config", on_mcp23017_config);
+	g_webserial.on("mcp23017:setup", on_mcp23017_setup);
+	g_webserial.on("mcp23017:loop", on_mcp23017_loop);
 	g_webserial.on("gui:sequence", on_gui_sequence);
 	g_webserial.on("gui:splash", on_gui_splash);
 	g_webserial.send("RoundyPI", "Webserial ready");
@@ -83,8 +83,18 @@ void loop() {
 		system_reset(0);
 	}
 	g_webserial.check();
-	mcp23017_check();
+	mcp23017_check(1);
 	gui_update(NULL);
 	delay(10);
+}
+
+
+void setup1() {
+}
+
+
+void loop1() {
+	mcp23017_check(2);
+	delay(1);
 }
 
