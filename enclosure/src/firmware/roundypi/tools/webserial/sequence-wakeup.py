@@ -9,6 +9,6 @@ def handler(self, line: str):
 roundypi = webserial()
 roundypi.connect()
 roundypi.send('["system:time", {"interval": 60}]')
-roundypi.send('["gui:sequence", {"action": "add", "sequence": [{"name": "wakeup", "timeout": 0}, {"name": "active", "timeout": 10}, {"name": "sleep", "timeout": 0}, {"name": "standby", "timeout": 0}]}]')
+roundypi.send('["screen:sequence", {"action": "add", "sequence": [{"name": "wakeup", "timeout": 0}, {"name": "active", "timeout": 10}, {"name": "sleep", "timeout": 0}, {"name": "standby", "timeout": 0}]}]')
 roundypi.run(handler)
 

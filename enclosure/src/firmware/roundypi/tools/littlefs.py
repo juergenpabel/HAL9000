@@ -16,7 +16,7 @@ if os.path.exists(DST_BASEDIR) is False:
 			print(BMP)
 			PNG = "{}/{}/{}".format(DST_BASEDIR, DIR, os.path.basename(BMP).replace(".bmp", ".png"))
 			print(PNG)
-			subprocess.run(["convert", BMP, "-resize", "120x120", "-scale", "240x240", PNG])
+			subprocess.run(["convert", BMP, "-quality", "75%", "-resize", "120x120", "-scale", "240x240", PNG])
 			subprocess.run(["mogrify", "-crop", "120x120+0+0", PNG])
 
 

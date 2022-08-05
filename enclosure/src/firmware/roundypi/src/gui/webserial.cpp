@@ -3,7 +3,7 @@
 #include <string.h>
 #include <TimeLib.h>
 #include <SimpleWebSerial.h>
-#include "gui.h"
+#include "screen.h"
 #include "sequence.h"
 #include "splash.h"
 #include "frame.h"
@@ -11,26 +11,15 @@
 #include "png.h"
 
 
-void on_gui_sequence(JSONVar parameter) {
-//	if(strncmp("set", (const char*)parameter["action"], 4) == 0) {
-//		g_current_sequence->timeout = now() + (long)parameter["timeout"];
-//	}
-//	if(strncmp("add", (const char*)parameter["action"], 4) == 0) {
-//		g_current_sequence->timeout += (long)parameter["timeout"];
-//	}
-
-	//if(strncmp("set", (const char*)parameter["action"], 4) == 0) {
-	//}
-	if(1) { //if(strncmp("add", (const char*)parameter["action"], 4) == 0) {
-		if(parameter.hasOwnProperty("sequence")) {
-			sequence_add(parameter["sequence"]);
-			gui_update(gui_update_sequence);
-		}
+void on_screen_sequence(JSONVar parameter) {
+	if(parameter.hasOwnProperty("sequence")) {
+		sequence_add(parameter["sequence"]);
+		screen_update(screen_update_sequence, false);
 	}
 }
 
 
-void on_gui_splash(JSONVar parameter) {
+void on_screen_splash(JSONVar parameter) {
 	char     filename[256] = {0};
 	char*    extension = NULL;
 
@@ -47,7 +36,7 @@ void on_gui_splash(JSONVar parameter) {
 		if(extension != NULL && strncmp(extension, ".png", 5) == 0) {
 			splash_png(filename);
 		}
-		g_previous_gui = gui_update(gui_update_splash);
+		g_previous_screen = screen_update(screen_update_splash, false);
 	}
 }
 

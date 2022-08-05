@@ -1,6 +1,8 @@
 #include "globals.h"
 
+#include <TFT_eSPI.h>
 #include <pngle.h>
+#include "gui/overlay.h"
 #include <SimpleWebSerial.h>
 
 static pngle_t* g_pngle = pngle_new();
@@ -16,13 +18,12 @@ void pngle_on_draw(pngle_t *pngle, uint32_t x, uint32_t y, uint32_t w, uint32_t 
 
 	g_image_565[0 + y][  0 + x] = pixel565;
 	g_image_565[0 + y][239 - x] = pixel565;
-//	g_image_565[239 - y][239 - x] = pixel565;
-//	g_image_565[  0 + x][239 - y] = pixel565;
 }
 
 
 void frame_png_draw(uint8_t* png, uint16_t png_size) {
-	uint16_t swap[TFT_WIDTH] = {0};
+	static uint16_t  swap[TFT_WIDTH] = {0};
+	       uint16_t  overlay_pixel = 0;
 
 	pngle_reset(g_pngle);
 	pngle_set_draw_callback(g_pngle, pngle_on_draw);
@@ -36,6 +37,14 @@ void frame_png_draw(uint8_t* png, uint16_t png_size) {
 		memcpy(swap, &g_image_565[i][0], sizeof(uint16_t)*TFT_WIDTH);
 		memcpy(&g_image_565[i][0], &g_image_565[119-i][0], sizeof(uint16_t)*TFT_WIDTH);
 		memcpy(&g_image_565[119-i][0], swap, sizeof(uint16_t)*TFT_WIDTH);
+	}
+	for(int y=0; y<g_tft_overlay.height(); y++) {
+		for(int x=0; x<g_tft_overlay.width(); x++) {
+			overlay_pixel = g_tft_overlay.readPixel(x, y);
+			if(overlay_pixel != TFT_TRANSPARENT) {
+				g_image_565[(TFT_HEIGHT/4*3)-(g_tft_overlay.height()/2)-(TFT_HEIGHT/2)+y][(TFT_WIDTH/2)-(g_tft_overlay.width()/2)+x] = overlay_pixel;
+			}
+		}
 	}
 	g_tft.pushImage(0, 120, TFT_WIDTH, TFT_HEIGHT/2, (uint16_t*)g_image_565);
 }

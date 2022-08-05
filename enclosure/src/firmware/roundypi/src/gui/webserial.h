@@ -1,2 +1,2 @@
-void on_gui_sequence(JSONVar parameter);
-void on_gui_splash(JSONVar parameter);
+void on_screen_sequence(JSONVar parameter);
+void on_screen_splash(JSONVar parameter);

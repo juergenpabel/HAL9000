@@ -5,14 +5,15 @@
 #include <LittleFS.h>
 //include <SdFat.h>
 #include <SimpleWebSerial.h>
-#include "gui.h"
+#include "screen.h"
+#include "overlay.h"
 #include "frame.h"
 #include "jpeg.h"
 
 
 typedef struct {
 	uint16_t size;
-	uint8_t  data[5120-2];
+	uint8_t  data[4096+512-2];
 } png_t;
 
 typedef struct sequence sequence_t;
@@ -30,7 +31,7 @@ void  add_sequence_recursively(JSONVar data, uint8_t offset);
 sequence_t      g_sequences_queue[DISPLAY_SEQUENCES_MAX] = {0};
 sequence_t*     g_current_sequence = &g_sequences_queue[0];
 
-void gui_update_sequence() {
+void screen_update_sequence(bool refresh) {
 	for(int i=0; i<DISPLAY_SEQUENCE_FRAMES_MAX; i++) {
 		if(g_frames_png[i].size > 0) {
 			frame_png_draw(g_frames_png[i].data, g_frames_png[i].size);
@@ -40,13 +41,13 @@ void gui_update_sequence() {
 		g_current_sequence->name[0] = '\0';
 		g_current_sequence = g_current_sequence->next;
 		if(g_current_sequence->name[0] != '\0') {
-			gui_frames_load(g_current_sequence->name);
+			screen_frames_load(g_current_sequence->name);
 			if(g_current_sequence->timeout > 0) {
 				g_current_sequence->timeout += now();
 			}
 		} else {
 			g_webserial.send("RoundyPI", "Sequences queue empty, activating idle handler");
-			gui_update(gui_update_idle);
+			screen_update(screen_update_idle, false);
 		}
 	}
 }
@@ -54,7 +55,7 @@ void gui_update_sequence() {
 void sequence_add(JSONVar sequence) {
 	if(sequence.length() > 0) {
 		add_sequence_recursively(sequence, 0);
-		gui_frames_load(g_current_sequence->name);
+		screen_frames_load(g_current_sequence->name);
 	}
 }
 
@@ -98,7 +99,7 @@ void add_sequence_recursively(JSONVar data, uint8_t offset) {
 }
 
 
-void gui_frames_load(const char* name) {
+void screen_frames_load(const char* name) {
 	char     directory[256] = {0};
 	char     filename[256] = {0};
 	File     file = {0};
