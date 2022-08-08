@@ -47,6 +47,8 @@ JSONVar MCP23X17_Device::process(const char* pin, const char* pin_value) {
 }
 
 
+// Rotary decoder ripped from https://github.com/brianlow/Rotary/
+
 #define R_START     0x00
 #define R_CW_FINAL  0x01
 #define R_CW_BEGIN  0x02

@@ -1,8 +1,8 @@
-#include "globals.h"
-
 #include <PNGdec.h>
 #include <SimpleWebSerial.h>
-#include "png.h"
+#include "gui/screen/splash/png.h"
+#include "globals.h"
+
 
 
 static void draw_png(PNGDRAW *pDraw) {
@@ -54,7 +54,7 @@ static void littlefs_close(void* handle) {
 
 
 void splash_png(const char* filename) {
-	PNG  png;
+	static PNG  png;  //static because of ~40kb data, too much for rp2040 stack (when using both cores)
 
 	if(png.open(filename, littlefs_open, littlefs_close, littlefs_read, littlefs_seek, draw_png) != PNG_SUCCESS) {
 		g_webserial.send("syslog", "splash_png() -> png.open() failed");

@@ -2,7 +2,7 @@
 
 #include <JPEGDEC.h>
 #include <SimpleWebSerial.h>
-#include "jpeg.h"
+#include "gui/screen/splash/jpeg.h"
 
 
 static int draw_jpeg(JPEGDRAW *pDraw) {
