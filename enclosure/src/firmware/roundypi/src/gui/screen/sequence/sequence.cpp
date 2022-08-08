@@ -1,14 +1,11 @@
-#include "globals.h"
-
 #include <string.h>
 #include <TimeLib.h>
 #include <LittleFS.h>
-//include <SdFat.h>
 #include <SimpleWebSerial.h>
-#include "screen.h"
-#include "overlay.h"
-#include "frame.h"
-#include "jpeg.h"
+#include "gui/screen/screen.h"
+#include "gui/screen/sequence/frame.h"
+#include "gui/screen/splash/jpeg.h"
+#include "globals.h"
 
 
 typedef struct {
@@ -46,7 +43,7 @@ void screen_update_sequence(bool refresh) {
 				g_current_sequence->timeout += now();
 			}
 		} else {
-			g_webserial.send("RoundyPI", "Sequences queue empty, activating idle handler");
+			g_webserial.send("syslog", "Sequences queue empty, activating idle handler");
 			screen_update(screen_update_idle, false);
 		}
 	}
@@ -68,7 +65,7 @@ void add_sequence_recursively(JSONVar data, uint8_t offset) {
 		target_offset++;
 	}
 	if(target_offset>=DISPLAY_SEQUENCES_MAX) {
-		g_webserial.send("RoundyPI", "Sequences queue already full");
+		g_webserial.send("syslog", "Sequences queue already full");
 		return;
 	}
 	target_sequence = g_current_sequence;
@@ -92,7 +89,7 @@ void add_sequence_recursively(JSONVar data, uint8_t offset) {
 	strncpy(target_sequence->name, data[offset]["name"], sizeof(target_sequence->name)-1);
 	target_sequence->timeout = (long)data[offset]["timeout"];
 	target_sequence->next = target_sequence;
-	g_webserial.send("RoundyPI", String("Added sequence '") + (const char*)data[offset]["name"] + "' at pos=" + target_offset + " with timeout=" + (long)data[offset]["timeout"]);
+	g_webserial.send("syslog", String("Added sequence '") + (const char*)data[offset]["name"] + "' at pos=" + target_offset + " with timeout=" + (long)data[offset]["timeout"]);
 	if(offset+1 < data.length()) {
 		add_sequence_recursively(data, offset+1);
 	}
@@ -117,6 +114,6 @@ void screen_frames_load(const char* name) {
 			file.close();
 		}
 	}
-	g_webserial.send("RoundyPI", String("Sequence '") + name + "' loaded from littlefs:" + directory);
+	g_webserial.send("syslog", String("Sequence '") + name + "' loaded from littlefs:" + directory);
 }
 

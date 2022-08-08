@@ -11,7 +11,7 @@ static void draw_png(PNGDRAW *pDraw) {
 
 	png = (PNG*)pDraw->pUser;
 	if(png == NULL ) {
-		g_webserial.warn("draw_png(): no png handle");
+		g_webserial.send("syslog", "draw_png(): no png handle");
 		return;
 	}
 	png->getLineAsRGB565(pDraw, pixels, PNG_RGB565_BIG_ENDIAN, 0xffffffff);
@@ -20,13 +20,13 @@ static void draw_png(PNGDRAW *pDraw) {
 
 
 static void* littlefs_open(const char *filename, int32_t *size) {
-	File* file = NULL;
+	File*  file = NULL;
 
 	file = new File();
 	*file = LittleFS.open(filename, "r");
 	if(*file == false) {
-		g_webserial.warn("littlefs_open(): file not found");
-		g_webserial.warn(filename);
+		g_webserial.send("syslog", "littlefs_open(): file not found");
+		g_webserial.send("syslog", filename);
 		return NULL;
 	}
 	*size = file->size();
@@ -45,7 +45,7 @@ static int32_t littlefs_seek(PNGFILE *handle, int32_t position) {
 
 
 static void littlefs_close(void* handle) {
-	File* file = NULL;
+	File*  file = NULL;
 
 	file = (File*)handle;
 	file->close();
@@ -54,10 +54,10 @@ static void littlefs_close(void* handle) {
 
 
 void splash_png(const char* filename) {
-	static PNG png; //static because of stack memory pressure
+	PNG  png;
 
 	if(png.open(filename, littlefs_open, littlefs_close, littlefs_read, littlefs_seek, draw_png) != PNG_SUCCESS) {
-		g_webserial.warn("splash_png() -> png.open() failed");
+		g_webserial.send("syslog", "splash_png() -> png.open() failed");
 		return;
 	}
 	png.decode(&png, 0);

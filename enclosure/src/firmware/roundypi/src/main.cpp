@@ -10,16 +10,14 @@
 
 #include "globals.h"
 #include "system/webserial.h"
-#include "filesystem/webserial.h"
-#include "mcp23X17/webserial.h"
-#include "display/webserial.h"
+#include "device/webserial.h"
 #include "gui/webserial.h"
+
 #include "system/rp2040.h"
 #include "system/settings.h"
-#include "mcp23X17/mcp23X17.h"
-#include "gui/screen.h"
-#include "gui/overlay.h"
-#include "gui/jpeg.h"
+#include "device/mcp23X17/mcp23X17.h"
+#include "gui/screen/screen.h"
+#include "gui/screen/splash/jpeg.h"
 
 
 TFT_eSPI        g_tft = TFT_eSPI();
@@ -48,16 +46,12 @@ void setup() {
 
 	if(LittleFS.begin() == false) {
 		while(1) {
-			g_webserial.warn("LittleFS error, halting");
+			g_webserial.send("syslog", "LittleFS error, halting");
 			sleep_ms(1000);
 		}
 	}
 	if(g_settings.load("/system/configuration.bson") == false) {
-		g_settings["arduino:loop-sleep_ms"] =  "0";
-		g_settings["audio:volume-mute"] =  "FALSE";
-		g_settings["audio:volume-minimum"] =   "0";
-		g_settings["audio:volume-current"] =  "50";
-		g_settings["audio:volume-maximum"] = "100";
+		LittleFS.remove("/system/configuration.bson");
 	}
 	if(!Serial) {
 		splash_jpeg("/images/splash/error.jpg");
@@ -68,19 +62,18 @@ void setup() {
 		g_tft.fillScreen(TFT_BLACK);
 		digitalWrite(TFT_BL, LOW);
 	}
-	g_webserial.send("RoundyPI", "setup()");
-	g_webserial.on("system:reset", on_system_reset);
-	g_webserial.on("system:settings", on_system_settings);
-	g_webserial.on("system:time", on_system_time);
-	g_webserial.on("filesystem:flash", on_filesystem_flash);
-	g_webserial.on("filesystem:sdcard", on_filesystem_sdcard);
-	g_webserial.on("display:backlight", on_display_backlight);
-	g_webserial.on("mcp23X17:setup", on_mcp23X17_setup);
-	g_webserial.on("mcp23X17:loop", on_mcp23X17_loop);
-	g_webserial.on("screen:sequence", on_screen_sequence);
-	g_webserial.on("screen:splash", on_screen_splash);
-	g_webserial.send("RoundyPI", "Webserial ready");
-	g_webserial.send("RoundyPI", "loop()");
+	g_webserial.send("syslog", "setup()");
+	g_webserial.on("system/reset", on_system_reset);
+	g_webserial.on("system/settings", on_system_settings);
+	g_webserial.on("system/time", on_system_time);
+	g_webserial.on("device/sdcard", on_device_sdcard);
+	g_webserial.on("device/mcp23X17", on_device_mcp23X17);
+	g_webserial.on("device/display", on_device_display);
+	g_webserial.on("gui/screen", on_gui_screen);
+	g_webserial.on("gui/overlay", on_gui_overlay);
+	g_webserial.send("syslog", "loop()");
+
+	digitalWrite(TFT_BL, HIGH); //TODO:backlighting off logic
 }
 
 

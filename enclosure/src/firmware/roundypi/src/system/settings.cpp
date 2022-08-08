@@ -7,6 +7,11 @@ static uint8_t  bson_buffer[SETTINGS_SIZE];
 
 
 Settings::Settings() {
+	this->insert({"arduino:loop-sleep_ms", "1"});
+	this->insert({"i2c0:sda", "0"});
+	this->insert({"i2c0:scl", "1"});
+	this->insert({"i2c-address:mcp23X17", "32"});
+	this->insert({"audio:volume", "50"});
 }
 
 

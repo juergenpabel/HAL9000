@@ -17,7 +17,7 @@ void splash_jpeg(const char* filename) {
 
 	file = LittleFS.open(filename, "r");
 	if(jpeg.open(file, draw_jpeg) < 0) {
-		g_webserial.warn("show_splash_jpeg() -> jpeg.open() failed");
+		g_webserial.send("syslog", "show_splash_jpeg() -> jpeg.open() failed");
 		return;
 	}
 	jpeg.setPixelType(RGB565_BIG_ENDIAN);

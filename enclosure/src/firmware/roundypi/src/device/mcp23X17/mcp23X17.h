@@ -16,12 +16,14 @@ class MCP23X17 {
 		uint16_t           mcp23X17_gpio_values;
 	public:
 		MCP23X17();
-		void config_i2c(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl);
+		void init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl);
 		void config_inputs(const char* event_name, const char* device_type, JSONVar& inputs, JSONVar& actions);
 		void config_outputs(const char* event_name, const char* device_type, JSONVar& outputs);
 
 		void start();
 		void check();
+	protected:
+		static void loop();
 };
 
 #endif

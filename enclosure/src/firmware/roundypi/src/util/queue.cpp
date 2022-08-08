@@ -2,7 +2,7 @@
 #include <RingBuf.h>
 #include <pico/mutex.h> 
 
-#include "webserial/queue.h"
+#include "util/queue.h"
 #include "globals.h"
 
 
@@ -21,7 +21,7 @@ bool WebSerialQueue::pushMessage(String topic, JSONVar& data) {
 	bool  result = false;
 
 	mutex_enter_blocking(&this->mutex);
-	if(!this->isFull()) {
+	if(this->isFull() == false) {
 		WebSerialMessage  message;
 
 		message.topic = topic;
@@ -37,14 +37,14 @@ bool WebSerialQueue::sendMessages() {
 	bool result = false;
 
 	if(mutex_try_enter(&this->mutex, NULL)) {
-		while(!this->isEmpty()) {
+		while(this->isEmpty() == false) {
 			WebSerialMessage message;
 
 			if(RingBuf::pop(message)) {
 				if(message.topic.length() > 0) {
 					g_webserial.send(message.topic.c_str(), message.data);
 				} else {
-					g_webserial.warn(message.data);
+					g_webserial.send("syslog", message.data);
 				}
 			}
 		}

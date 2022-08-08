@@ -29,4 +29,11 @@ if os.path.exists(DST_BASEDIR) is False:
 		JPG = "{}/{}".format(DST_BASEDIR, os.path.basename(BMP).replace(".bmp", ".jpg"))
 		print(JPG)
 		subprocess.run(["convert", BMP, "-resize", "240x240", JPG])
+		PNG = "{}/{}".format(DST_BASEDIR, os.path.basename(BMP).replace(".bmp", ".png"))
+		print(PNG)
+		subprocess.run(["convert", BMP, "-resize", "240x240", PNG])
+
+
+if os.path.exists("./data/system") is False:
+	os.makedirs("./data/system")
 

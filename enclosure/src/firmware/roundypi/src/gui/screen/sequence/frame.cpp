@@ -1,9 +1,8 @@
-#include "globals.h"
-
+#include <SimpleWebSerial.h>
 #include <TFT_eSPI.h>
 #include <pngle.h>
-#include "gui/overlay.h"
-#include <SimpleWebSerial.h>
+#include "gui/overlay/overlay.h"
+#include "globals.h"
 
 static pngle_t* g_pngle = pngle_new();
 static uint16_t g_image_565[TFT_HEIGHT/2][TFT_WIDTH] = {0};
@@ -28,7 +27,7 @@ void frame_png_draw(uint8_t* png, uint16_t png_size) {
 	pngle_reset(g_pngle);
 	pngle_set_draw_callback(g_pngle, pngle_on_draw);
 	if(pngle_feed(g_pngle, png, png_size) != png_size) {
-		g_webserial.warn("pngle_feed() failed");
+		g_webserial.send("syslog", "pngle_feed() failed");
 		pngle_reset(g_pngle);
 		return;
 	}

@@ -1,13 +1,13 @@
-#include "globals.h"
-
 #include <string.h>
 #include <TimeLib.h>
 #include <LittleFS.h>
 #include <SimpleWebSerial.h>
-#include "screen.h"
-#include "overlay.h"
-#include "frame.h"
-#include "jpeg.h"
+#include "gui/screen/screen.h"
+#include "gui/overlay/overlay.h"
+#include "gui/screen/sequence/frame.h"
+#include "gui/screen/splash/jpeg.h"
+
+#include "globals.h"
 
 
 static screen_update_func current_update_func = screen_update_idle;
@@ -39,6 +39,7 @@ screen_update_func screen_update(screen_update_func new_update_func, bool force_
 	if(force_refresh || new_update_func == NULL) {
 		overlay_update(NULL);
 		current_update_func(force_refresh);
+		g_tft_overlay.pushSprite(TFT_WIDTH/2-g_tft_overlay.width()/2, TFT_HEIGHT/4*3-g_tft_overlay.height()/2, TFT_TRANSPARENT);
 	}
 	return previous_update_func;
 }
@@ -56,7 +57,7 @@ void screen_update_idle(bool force_refresh) {
 	}
 	if(year(clock_currently) >= 2001) {
 		if(clock_previously == 0) {
-			g_webserial.send("RoundyPI", "Showing clock while idle");
+			g_webserial.send("syslog", "showing clock while idle");
 			g_tft.fillScreen(TFT_BLACK);
 		}
 		if(force_refresh || clock_previously == 0 || hour(clock_currently) != hour(clock_previously) || minute(clock_currently) != minute(clock_previously)) {
@@ -67,6 +68,5 @@ void screen_update_idle(bool force_refresh) {
 			g_tft.drawString(clock, 120, 120);
 		}
 	}
-	g_tft_overlay.pushSprite(TFT_WIDTH/2-g_tft_overlay.width()/2, TFT_HEIGHT/4*3-g_tft_overlay.height()/2, TFT_TRANSPARENT);
 }
 

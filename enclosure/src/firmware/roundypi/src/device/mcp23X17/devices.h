@@ -18,7 +18,7 @@ class MCP23X17_Device {
 		virtual bool isConfigured() { return this->name[0] != '\0'; };
 		virtual bool configure(const char* name, Adafruit_MCP23X17* mcp23X17, JSONVar& inputs, JSONVar& actions);
 		const char* getName() { return this->name; };
-		virtual JSONVar process(const char* pin, const char* pin_value) = 0;
+		virtual JSONVar process(const char* pin, const char* pin_value);
 };
 
 

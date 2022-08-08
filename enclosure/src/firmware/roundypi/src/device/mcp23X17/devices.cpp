@@ -15,9 +15,9 @@ bool MCP23X17_Device::configure(const char* name, Adafruit_MCP23X17* mcp23X17, J
 	bool  result = false;
 
 	if(this->name[0] != '\0') {
-		g_webserial.warn("MCP23X17_Device::configure(): instance already configured");
-		g_webserial.warn(this->type);
-		g_webserial.warn(this->name);
+		g_webserial.send("syslog", "MCP23X17_Device::configure(): instance already configured");
+		g_webserial.send("syslog", this->type);
+		g_webserial.send("syslog", this->name);
 		return false;
 	}
 	strncpy(this->name, name, MaximumKeyNameLength-1);
@@ -27,6 +27,22 @@ bool MCP23X17_Device::configure(const char* name, Adafruit_MCP23X17* mcp23X17, J
 			result = true;
 		}
 	}
+	return result;
+}
+
+
+JSONVar MCP23X17_Device::process(const char* pin, const char* pin_value) {
+	JSONVar result;
+
+	result["device"] = JSONVar();
+	result["device"]["type"] = this->type;
+	result["device"]["name"] = this->name;
+	result["input"] = JSONVar();
+	if(pin != NULL && pin_value != NULL) {
+		result["input"]["pin"] = pin;
+		result["input"]["value"] = pin_value;
+	}
+	result["event"] = JSONVar();
 	return result;
 }
 
@@ -45,19 +61,12 @@ bool MCP23X17_Device::configure(const char* name, Adafruit_MCP23X17* mcp23X17, J
 #define DIR_MASK    0x30
 
 static const unsigned char ttable[7][4] = {
-  // R_START
   {R_START,    R_CW_BEGIN,  R_CCW_BEGIN, R_START},
-  // R_CW_FINAL
   {R_CW_NEXT,  R_START,     R_CW_FINAL,  R_START | DIR_CW},
-  // R_CW_BEGIN
   {R_CW_NEXT,  R_CW_BEGIN,  R_START,     R_START},
-  // R_CW_NEXT
   {R_CW_NEXT,  R_CW_BEGIN,  R_CW_FINAL,  R_START},
-  // R_CCW_BEGIN
   {R_CCW_NEXT, R_START,     R_CCW_BEGIN, R_START},
-  // R_CCW_FINAL
   {R_CCW_NEXT, R_CCW_FINAL, R_START,     R_START | DIR_CCW},
-  // R_CCW_NEXT
   {R_CCW_NEXT, R_CCW_FINAL, R_CCW_BEGIN, R_START},
 };
 
@@ -68,15 +77,15 @@ bool MCP23X17_Rotary::configure(const char* name, Adafruit_MCP23X17* mcp23X17, J
 	this->rotary_state = R_START;
 	result = MCP23X17_Device::configure(name, mcp23X17, inputs, actions);
 	if(result == false) {
-		g_webserial.warn("MCP23X17_Device::configure() failed");
+		g_webserial.send("syslog", "MCP23X17_Device::configure() failed");
 		return false;
 	}
 	if(inputs.length() < 2) {
-		g_webserial.warn("MCP23X17_Switch::configure() => inputs not a list (or empty/missing/incomplete)");
+		g_webserial.send("syslog", "MCP23X17_Switch::configure() => inputs not a list (or empty/missing/incomplete)");
 		return false;
 	}
 	if(inputs.length() > 2) {
-		g_webserial.warn("MCP23X17_Switch::configure() => inputs contains more than two entries, using only first two");
+		g_webserial.send("syslog", "MCP23X17_Switch::configure() => inputs contains more than two entries, using only first two");
 	}
 	for(uint8_t i=0; i<2; i++) {
 		const char*  pin;
@@ -84,14 +93,14 @@ bool MCP23X17_Rotary::configure(const char* name, Adafruit_MCP23X17* mcp23X17, J
 
 		pin = NULL;
 		if(inputs[i].hasOwnProperty("pin") == false || inputs[i].hasOwnProperty("label") == false) {
-			g_webserial.warn("MCP23X17_Device::configure(): incomplete pin configuration");
-			g_webserial.warn(inputs[i]);
+			g_webserial.send("syslog", "MCP23X17_Device::configure(): incomplete pin configuration");
+			g_webserial.send("syslog", inputs[i]);
 			return false;
 		}
 		pin = inputs[i]["pin"];
 		if(pin == NULL || (pin[0] != 'A' && pin[0] != 'B') || pin[1] < 0x30 || pin[1] > 0x39) {
-			g_webserial.warn("MCP23X17_Device::configure(): invalid pin in inputs (A0-A7,B0-B7)");
-			g_webserial.warn(pin);
+			g_webserial.send("syslog", "MCP23X17_Device::configure(): invalid pin in inputs (A0-A7,B0-B7)");
+			g_webserial.send("syslog", pin);
 			return false;
 		}
 		gpio = (pin[0]-'A')*8 + pin[1]-'0';
@@ -118,19 +127,14 @@ JSONVar MCP23X17_Rotary::process(const char* pin, const char* pin_value) {
 		}
 	}
 	this->rotary_state = ttable[this->rotary_state & 0x0f][((this->pins_state[1]) << 1) | ((this->pins_state[0]) << 0)];
-	switch(this->rotary_state & DIR_MASK) {
-		case DIR_NONE:
-			break;
-		case DIR_CW:
-			result["delta"] = "+1";
-			break;
-		case DIR_CCW:
-			result["delta"] = "-1";
-			break;
-		default:
-			result["error:state"] = this->rotary_state;
-
-	};
+	if(this->rotary_state & DIR_MASK) {
+		result = MCP23X17_Device::process(NULL, NULL);
+		if((this->rotary_state & DIR_MASK) == DIR_CW) {
+			result["event"]["delta"] = "+1";
+		} else {
+			result["event"]["delta"] = "-1";
+		}
+	}
 	return result;
 }
 
@@ -140,11 +144,11 @@ bool MCP23X17_Switch::configure(const char* name, Adafruit_MCP23X17* mcp23X17, J
 
 	result = MCP23X17_Device::configure(name, mcp23X17, inputs, actions);
 	if(inputs.length() == 0) {
-		g_webserial.warn("MCP23X17_Switch::configure() => inputs not a list (or empty/missing)");
+		g_webserial.send("syslog", "MCP23X17_Switch::configure() => inputs not a list (or empty/missing)");
 		return false;
 	}
 	if(inputs.length() > 1) {
-		g_webserial.warn("MCP23X17_Switch::configure() => inputs contains more than one entry, using only first one");
+		g_webserial.send("syslog", "MCP23X17_Switch::configure() => inputs contains more than one entry, using only first one");
 	}
 	if(result) {
 		const char*  pin;
@@ -153,14 +157,14 @@ bool MCP23X17_Switch::configure(const char* name, Adafruit_MCP23X17* mcp23X17, J
 
 		pin = NULL;
 		if(inputs[0].hasOwnProperty("pin") == false || inputs[0].hasOwnProperty("label") == false) {
-			g_webserial.warn("MCP23X17_Device::configure(): incomplete pin configuration");
-			g_webserial.warn(inputs[0]);
+			g_webserial.send("syslog", "MCP23X17_Device::configure(): incomplete pin configuration");
+			g_webserial.send("syslog", inputs[0]);
 			return false;
 		}
 		pin = inputs[0]["pin"];
 		if(pin == NULL || (pin[0] != 'A' && pin[0] != 'B') || pin[1] < 0x30 || pin[1] > 0x39) {
-			g_webserial.warn("MCP23X17_Device::configure(): invalid pin in inputs (A0-A7,B0-B7)");
-			g_webserial.warn(pin);
+			g_webserial.send("syslog", "MCP23X17_Device::configure(): invalid pin in inputs (A0-A7,B0-B7)");
+			g_webserial.send("syslog", pin);
 			return false;
 		}
 		if(inputs[0].hasOwnProperty("pullup")) {
@@ -179,7 +183,8 @@ JSONVar MCP23X17_Switch::process(const char* pin, const char* pin_value) {
 	JSONVar result;
 
 	if(this->pin == pin || strncmp(this->pin, pin, MaximumKeyNameLength) == 0) {
-		result[pin] = pin_value;
+		result = MCP23X17_Device::process(pin, pin_value);
+		result["event"]["status"] = pin_value;
 	}
 	return result;
 }
@@ -198,7 +203,8 @@ JSONVar MCP23X17_Button::process(const char* pin, const char* pin_value) {
 
 	if(this->pin == pin || strncmp(this->pin, pin, MaximumKeyNameLength) == 0) {
 		if(strncmp(pin_value, MCP23X17::PIN_VALUES[1], MaximumKeyNameLength) == 0) {
-			result["status"] = "clicked";
+			result = MCP23X17_Device::process(pin, pin_value);
+			result["event"]["status"] = "clicked";
 		}
 	}
 	return result;
@@ -225,8 +231,9 @@ JSONVar MCP23X17_Toggle::process(const char* pin, const char* pin_value) {
 
 	if(this->pin == pin || strncmp(this->pin, pin, MaximumKeyNameLength) == 0) {
 		if(strncmp(pin_value, MCP23X17::PIN_VALUES[1], MaximumKeyNameLength) == 0) {
+			result = MCP23X17_Device::process(pin, pin_value);
 			this->state = !this->state;
-			result["status"] = this->state ? this->action_true : this->action_false;
+			result["event"]["status"] = this->state ? this->action_true : this->action_false;
 		}
 	}
 	return result;

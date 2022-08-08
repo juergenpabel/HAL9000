@@ -4,10 +4,8 @@
 #include <TFT_eSPI.h>
 #include <SimpleWebSerial.h>
 #include "system/settings.h"
-#include "webserial/queue.h"
-#include "mcp23X17/mcp23X17.h"
-
-
+#include "device/mcp23X17/mcp23X17.h"
+#include "util/queue.h"
 
 
 extern TFT_eSPI        g_tft;
