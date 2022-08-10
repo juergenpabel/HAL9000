@@ -25,7 +25,7 @@ class Action(HAL9000_Action):
 		self.dict = dict()
 
 
-	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict = None) -> None:
 		self.config['hal9000-mqtt-server'] = configuration.getstring('mqtt', 'server', fallback='127.0.0.1')
 		self.config['hal9000-mqtt-port'] = configuration.getint('mqtt', 'port', fallback=1883)
 		self.config['base-url'] = configuration.getstring(section_name, 'brickies-server-url', fallback=None)

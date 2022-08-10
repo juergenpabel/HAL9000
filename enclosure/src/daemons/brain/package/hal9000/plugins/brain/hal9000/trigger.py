@@ -13,8 +13,8 @@ class Trigger(HAL9000_Trigger):
 		self.config = dict()
 
 
-	def configure(self, configuration: ConfigParser, section_name: str) -> None:
-		pass
+	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict = None) -> None:
+		HAL9000_Trigger.configure(self, configuration, section_name)
 
 
 	def callbacks(self) -> dict:

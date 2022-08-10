@@ -14,7 +14,7 @@ class Action(HAL9000_Action):
 		HAL9000_Action.__init__(self, 'sonos', action_name)
 
 
-	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict = None) -> None:
 		print('TODO:action:sonos.config()')
 
 

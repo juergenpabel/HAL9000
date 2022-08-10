@@ -3,6 +3,7 @@
 import os
 import sys
 import re
+import json
 
 from datetime import datetime, timedelta
 from configparser import ConfigParser
@@ -29,17 +30,12 @@ class Daemon(HAL9000_Daemon):
 		self.cortex['enclosure']['rfid'] = dict()
 		self.cortex['enclosure']['rfid']['uid'] = None
 		#TODO check if volume rotary installed
-		self.cortex['enclosure']['volume'] = dict()
-		self.cortex['enclosure']['volume']['uid'] = None
 		#TODO check if control rotary installed
 		self.cortex['enclosure']['control'] = dict()
-		self.cortex['enclosure']['control']['uid'] = None
 		#TODO check if button installed
 		self.cortex['enclosure']['button'] = dict()
-		self.cortex['enclosure']['button']['status'] = 0
 		#TODO check if motion installed
 		self.cortex['enclosure']['motion'] = dict()
-		self.cortex['enclosure']['motion']['status'] = False
 
 		self.actions = dict()
 		self.triggers = dict()
@@ -58,7 +54,7 @@ class Daemon(HAL9000_Daemon):
 					Action = self.import_plugin(module_name, 'Action')
 					if Action is not None:
 						action = Action(section_id)
-						action.configure(configuration, section_name)
+						action.configure(configuration, section_name, self.cortex)
 						self.actions[section_id] = action
 				if section_type == 'trigger':
 					Trigger = self.import_plugin(module_name, 'Trigger')
@@ -133,20 +129,20 @@ class Daemon(HAL9000_Daemon):
 				self.logger.debug("CORTEX after actions = {}".format(self.cortex))
 
 
-	def show_display_overlay(self, overlay) -> None:
-		self.set_display_overlay(overlay, 'show')
+	def show_display_overlay(self, overlay, data = None) -> None:
+		self.set_display_overlay(overlay, 'show', data)
 
 
 	def hide_display_overlay(self, overlay) -> None:
-		self.set_display_overlay(overlay, 'hide')
+		self.set_display_overlay(overlay, 'hide', None)
 
 
-	def set_display_overlay(self, overlay, status) -> None:
-		mqtt_publish_message('{}/enclosure/display/overlay/{}'.format(self.config['mqtt-topic-base'], overlay), status)
+	def set_display_overlay(self, overlay, action, parameter) -> None:
+		mqtt_publish_message('{}/enclosure/gui/overlay'.format(self.config['mqtt-topic-base']), json.dumps({"overlay": {overlay: action, "data": parameter}}))
 
 
 	def set_display_status(self, status) -> None:
-		mqtt_publish_message('{}/enclosure/display/control'.format(self.config['mqtt-topic-base']), status)
+		mqtt_publish_message('{}/enclosure/device/display'.format(self.config['mqtt-topic-base']), status)
 
 
 if __name__ == "__main__":
