@@ -15,7 +15,7 @@ class Action(HAL9000_Action):
 		self.config['enclosure'] = dict()
 		self.config['enclosure']['volume'] = dict()
 		self.config['enclosure']['rfid'] = dict()
-		self.alsamixer = alsaaudio.Mixer('Speaker')
+#TODO		self.alsamixer = alsaaudio.Mixer('Speaker')
 
 
 	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict = None) -> None:
@@ -31,7 +31,7 @@ class Action(HAL9000_Action):
 				cortex['enclosure']['volume'] = dict()
 				cortex['enclosure']['volume']['level'] = self.config['enclosure']['volume']['initial-level']
 				cortex['enclosure']['volume']['mute'] = self.config['enclosure']['volume']['initial-mute']
-		self.alsamixer.setvolume(self.config['enclosure']['volume']['initial-level'])
+#TODO		self.alsamixer.setvolume(self.config['enclosure']['volume']['initial-level'])
 		#TODO:self.alsamixer.setmute(self.config['enclosure']['volume']['initial-mute'])
 
 
@@ -50,8 +50,8 @@ class Action(HAL9000_Action):
 							volume = self.config['enclosure']['volume']['minimum']
 						if volume > self.config['enclosure']['volume']['maximum']:
 							volume = self.config['enclosure']['volume']['maximum']
-						self.alsamixer.setvolume(volume)
-						cortex['enclosure']['volume']['level'] = self.alsamixer.getvolume()[0]
+#TODO						self.alsamixer.setvolume(volume)
+						cortex['enclosure']['volume']['level'] = volume
 						if daemon is not None:
 							daemon.show_display_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
 							daemon.timeouts['overlay'] = datetime.datetime.now()+datetime.timedelta(seconds=3), 'volume'

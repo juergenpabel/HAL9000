@@ -31,7 +31,8 @@ void setup() {
 	g_gui_tft.setTextFont(1);
 	g_gui_tft.setTextDatum(TC_DATUM);
 	g_gui_tft.setTextSize(3);
-	g_gui_tft_overlay.createSprite(160, 30);
+	g_gui_tft_overlay.setColorDepth(1);
+	g_gui_tft_overlay.createSprite(240, 240);
 	g_gui_tft_overlay.setTextFont(1);
 	g_gui_tft_overlay.setTextDatum(TC_DATUM);
 	g_gui_tft_overlay.setTextSize(2);

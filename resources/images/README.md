@@ -11,7 +11,7 @@ For some other HAL9000 fun, check out his HAL9000 interactive game:
 http://www.jcheudin.fr/playground/playground/hal9000/
 
 The script gif2bmp.sh converts the animated GIF into BMPs that are used
-for different animation sequences. 
+for different animation sequences (./frames/...). 
 - wakeup: fades from black to image
 - active: single images from original GIF (modified as described below), used in a loop while active
 - sleep: fades from image to black

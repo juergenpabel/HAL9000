@@ -104,7 +104,7 @@ void screen_frames_load(const char* name) {
 	for(int i=0; i<DISPLAY_SEQUENCE_FRAMES_MAX; i++) {
 		g_frames_png[i].size = 0;
 	}
-	snprintf(directory, sizeof(directory)-1, "/images/sequences/%s", name);
+	snprintf(directory, sizeof(directory)-1, "/images/frames/%s", name);
 	for(int i=0; i<DISPLAY_SEQUENCE_FRAMES_MAX; i++) {
 		snprintf(filename, sizeof(filename)-1, "%s/%.2d.png", directory, i);
 		file = LittleFS.open(filename, "r");
