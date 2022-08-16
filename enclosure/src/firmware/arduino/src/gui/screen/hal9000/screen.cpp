@@ -18,15 +18,17 @@ static jpg_t g_gui_screen_hal9000_frames[GUI_SEQUENCE_FRAMES_MAX] = {0};
 
 
 void gui_screen_hal9000(bool refresh) {
-	static uint8_t i=0;
+	static uint8_t last_frame = GUI_SEQUENCE_FRAMES_MAX-1;
+	       uint8_t next_frame;
 
-	if(i<GUI_SEQUENCE_FRAMES_MAX) {
-		if(g_gui_screen_hal9000_frames[i].size > 0) {
-			gui_screen_hal9000_frame_draw(g_gui_screen_hal9000_frames[i].data, g_gui_screen_hal9000_frames[i].size);
+	next_frame = (last_frame+1) % GUI_SEQUENCE_FRAMES_MAX;
+	while(next_frame != last_frame) {
+		if(g_gui_screen_hal9000_frames[next_frame].size > 0) {
+			gui_screen_hal9000_frame_draw(g_gui_screen_hal9000_frames[next_frame].data, g_gui_screen_hal9000_frames[next_frame].size);
+			last_frame = next_frame;
+			return;
 		}
-		i++;
-	} else {
-		i = 0;
+		next_frame = (next_frame+1) % GUI_SEQUENCE_FRAMES_MAX;
 	}
 }
 

@@ -9,7 +9,7 @@ static int hal9000_frame(JPEGDRAW *pDraw) {
 	uint16_t*  image565_data;
 
 	for(int y=0; y<pDraw->iHeight; y++) {
-		memcpy(&g_gui_tft_buffer[y*TFT_WIDTH+0], &pDraw->pPixels[y*pDraw->iWidth+0], pDraw->iWidth*sizeof(uint16_t));
+		memcpy(&g_gui_tft_buffer[(pDraw->y+y)*TFT_WIDTH+pDraw->x], &pDraw->pPixels[y*pDraw->iWidth+0], pDraw->iWidth*sizeof(uint16_t));
 	}
 	return true;
 }

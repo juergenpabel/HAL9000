@@ -50,9 +50,9 @@ void on_gui_overlay(JSONVar parameter) {
 				g_system_settings["audio:volume-mute"] = parameter["overlay"]["data"]["mute"];
 			}
 			if(String("show").equals(parameter["overlay"]["volume"])) {
-//if(screen_set(gui_screen_hal9000) != gui_screen_hal9000) {
-//gui_screen_hal9000_frames_load("active");
-//}
+if(screen_set(gui_screen_hal9000) != gui_screen_hal9000) {
+gui_screen_hal9000_frames_load("active");
+}
 				overlay_set(overlay_volume);
 			}
 			if(String("hide").equals(parameter["overlay"]["volume"])) {
