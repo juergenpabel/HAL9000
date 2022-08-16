@@ -1,6 +1,9 @@
-typedef void (*screen_update_func)(bool refresh);
+typedef void (*screen_func)(bool refresh);
 
-void screen_frames_load(const char* name);
-screen_update_func screen_update(screen_update_func, bool force_refresh);
-void screen_update_idle(bool force_refresh);
-void screen_update_noop(bool force_refresh);
+screen_func screen_get();
+screen_func screen_set(screen_func);
+
+void screen_update(bool force_refresh);
+
+void screen_idle(bool force_refresh);
+

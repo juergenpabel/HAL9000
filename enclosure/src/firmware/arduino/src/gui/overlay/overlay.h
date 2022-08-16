@@ -1,9 +1,11 @@
-typedef void (*overlay_update_func)();
+typedef void (*overlay_func)(bool force_refresh);
 
-overlay_update_func overlay_update(overlay_update_func);
+overlay_func overlay_get();
+overlay_func overlay_set(overlay_func);
 
-void overlay_update_noop();
-void overlay_update_none();
-void overlay_update_volume();
-void overlay_update_message();
+void overlay_update(bool force_refresh);
+
+void overlay_none(bool force_refresh);
+void overlay_volume(bool force_refresh);
+void overlay_message(bool force_refresh);
 

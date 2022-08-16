@@ -14,8 +14,8 @@ menu['3'] = ['Splash PNG (timeout=3)', '["gui/screen", {"splash": {"filename": "
 
 def handler(self, line: str):
 	if len(line):
-		if line.strip('"') == "system/time#sync":
-			self.send('["system/time", "sync": {"epoch-seconds": '+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
+		if line.strip('"') == "system/time":
+			self.send('["system/time", "sync":{"epoch":'+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
 	else:
 		if select.select([sys.stdin, ], [], [], 0.0)[0]:
 			choice = sys.stdin.read(1)

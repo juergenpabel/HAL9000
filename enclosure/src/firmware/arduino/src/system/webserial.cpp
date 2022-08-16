@@ -55,8 +55,8 @@ void on_system_settings(JSONVar parameter) {
 
 void on_system_time(JSONVar parameter) {
 	if(parameter.hasOwnProperty("sync")) {
-		if(parameter.hasOwnProperty("epoch-seconds")) {
-			rp2040_time_sync(parameter["epoch-seconds"]);
+		if(parameter["sync"].hasOwnProperty("epoch")) {
+			rp2040_time_sync(parameter["sync"]["epoch"]);
 		}
 	}
 	if(parameter.hasOwnProperty("config")) {

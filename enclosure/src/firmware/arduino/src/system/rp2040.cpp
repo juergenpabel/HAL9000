@@ -48,7 +48,7 @@ time_t rp2040_timelib_sync() {
 	request["sync"] = JSONVar();
 	request["sync"]["format"] = "epoch";
 
-	g_util_webserial.send("system/time#sync", request);
+	g_util_webserial.send("system/time", request);
         timeout = millis() + 1000;
         while(g_sync_epoch_secs == 0 && millis() < timeout) {
                 g_util_webserial.check();

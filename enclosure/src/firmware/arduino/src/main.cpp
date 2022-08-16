@@ -1,11 +1,5 @@
-#include <TimeLib.h>
-#include <TFT_eSPI.h>
 #include <LittleFS.h>
-#include <pngle.h>
-#include <SPI.h>
 #include <FS.h>
-#include <RingBuf.h>
-#include <SimpleWebSerial.h>
 #include <pico/stdlib.h>
 
 #include "globals.h"
@@ -27,15 +21,17 @@ void setup() {
 	g_gui_tft.begin();
 	g_gui_tft.setRotation(2);
 	g_gui_tft.fillScreen(TFT_BLACK);
-	g_gui_tft.setTextColor(TFT_WHITE, TFT_BLACK);
+	g_gui_tft.setTextColor(TFT_WHITE);
 	g_gui_tft.setTextFont(1);
-	g_gui_tft.setTextDatum(TC_DATUM);
 	g_gui_tft.setTextSize(3);
+	g_gui_tft.setTextDatum(TC_DATUM);
 	g_gui_tft_overlay.setColorDepth(1);
+	g_gui_tft_overlay.setBitmapColor(TFT_WHITE, TFT_BLACK);
 	g_gui_tft_overlay.createSprite(240, 240);
+	g_gui_tft_overlay.setTextColor(TFT_WHITE);
 	g_gui_tft_overlay.setTextFont(1);
-	g_gui_tft_overlay.setTextDatum(TC_DATUM);
 	g_gui_tft_overlay.setTextSize(2);
+	g_gui_tft_overlay.setTextDatum(TC_DATUM);
 
 	if(LittleFS.begin() == false) {
 		while(1) {
@@ -76,7 +72,7 @@ void loop() {
 	}
 	g_util_webserial_queue.sendMessages();
 	g_util_webserial.check();
-	screen_update(NULL, false);
+	screen_update(false);
 	sleep_ms(g_system_settings["arduino:loop-sleep_ms"].toInt());
 }
 

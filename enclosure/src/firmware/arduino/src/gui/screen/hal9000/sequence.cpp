@@ -3,15 +3,11 @@
 #include <LittleFS.h>
 #include <SimpleWebSerial.h>
 #include "gui/screen/screen.h"
-#include "gui/screen/sequence/frame.h"
-#include "gui/screen/splash/jpeg.h"
+#include "gui/screen/hal9000/screen.h"
+#include "gui/screen/hal9000/frame.h"
+#include "gui/screen/hal9000/sequence.h"
 #include "globals.h"
 
-
-typedef struct {
-	uint16_t size;
-	uint8_t  data[4096+512-2];
-} png_t;
 
 typedef struct sequence sequence_t;
 typedef struct sequence {
@@ -21,38 +17,38 @@ typedef struct sequence {
 } sequence_t;
 
 
-static png_t g_frames_png[DISPLAY_SEQUENCE_FRAMES_MAX] = {0};
 void  add_sequence_recursively(JSONVar data, uint8_t offset);
-
 
 sequence_t      g_sequences_queue[DISPLAY_SEQUENCES_MAX] = {0};
 sequence_t*     g_current_sequence = &g_sequences_queue[0];
 
-void screen_update_sequence(bool refresh) {
+void screen_sequence(bool refresh) {
+/*
 	for(int i=0; i<DISPLAY_SEQUENCE_FRAMES_MAX; i++) {
-		if(g_frames_png[i].size > 0) {
-			frame_png_draw(g_frames_png[i].data, g_frames_png[i].size);
+		if(g_frames_jpg[i].size > 0) {
+			frame_jpg_draw(g_frames_jpg[i].data, g_frames_jpg[i].size);
 		}
 	}
 	if(g_current_sequence->timeout == 0 || now() > g_current_sequence->timeout) {
 		g_current_sequence->name[0] = '\0';
 		g_current_sequence = g_current_sequence->next;
 		if(g_current_sequence->name[0] != '\0') {
-			screen_frames_load(g_current_sequence->name);
+			screen_hal9000_frames_load(g_current_sequence->name);
 			if(g_current_sequence->timeout > 0) {
 				g_current_sequence->timeout += now();
 			}
 		} else {
 			g_util_webserial.send("syslog", "Sequences queue empty, activating idle handler");
-			screen_update(screen_update_idle, false);
+			screen_set(screen_idle);
 		}
 	}
+*/
 }
 
 void sequence_add(JSONVar sequence) {
 	if(sequence.length() > 0) {
 		add_sequence_recursively(sequence, 0);
-		screen_frames_load(g_current_sequence->name);
+		screen_hal9000_frames_load(g_current_sequence->name);
 	}
 }
 
@@ -93,27 +89,5 @@ void add_sequence_recursively(JSONVar data, uint8_t offset) {
 	if(offset+1 < data.length()) {
 		add_sequence_recursively(data, offset+1);
 	}
-}
-
-
-void screen_frames_load(const char* name) {
-	char     directory[256] = {0};
-	char     filename[256] = {0};
-	File     file = {0};
-
-	for(int i=0; i<DISPLAY_SEQUENCE_FRAMES_MAX; i++) {
-		g_frames_png[i].size = 0;
-	}
-	snprintf(directory, sizeof(directory)-1, "/images/frames/%s", name);
-	for(int i=0; i<DISPLAY_SEQUENCE_FRAMES_MAX; i++) {
-		snprintf(filename, sizeof(filename)-1, "%s/%.2d.png", directory, i);
-		file = LittleFS.open(filename, "r");
-		if(file) {
-			g_frames_png[i].size = file.size();
-			file.read(g_frames_png[i].data, g_frames_png[i].size);
-			file.close();
-		}
-	}
-	g_util_webserial.send("syslog", String("Sequence '") + name + "' loaded from littlefs:" + directory);
 }
 

@@ -2,6 +2,8 @@
 
 import logging
 import time
+import json
+from datetime import datetime, timezone
 import serial
 from configparser import ConfigParser
 
@@ -43,6 +45,7 @@ class Driver(HAL9000):
 		if self.config['software'] in ["switch", "button", "toggle"]:
 			self.send('["device/mcp23X17", {"config": {"device": {"name": "%s",    "type": "%s", "inputs": [{"pin": "%s", "label": "sigX"}], "actions": {"true": "on", "false": "off"}}}}]' % (str(self).split(':')[1], self.config['software'], self.config['pins'][0]))
 		time.sleep(0.1)
+		self.send('["system/time", {"config": {"interval": 60}}]')
 		self.logger.debug('driver:{} => ...and configured'.format(str(self)))
 
 
@@ -70,7 +73,11 @@ class Driver(HAL9000):
 		if Driver.status['read'] is None:
 			self.send('["device/mcp23X17", {"start": true}]')
 		Driver.status['read'] = self.receive()
-#TODO		#readline with timeout
-#TODO		#if disconnect return false
+		if len(Driver.status['read']) > 0 and Driver.status['read'].startswith('['):
+			event, payload = json.loads(Driver.status['read'])
+			if event == "system/time":
+				if payload['sync']['format'] == "epoch":
+					self.send('["system/time",{"sync":{"epoch":'+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
+					Driver.status['read'] = ""
 		return True
 
