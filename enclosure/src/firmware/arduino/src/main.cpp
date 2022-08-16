@@ -43,7 +43,7 @@ void setup() {
 		LittleFS.remove("/system/configuration.bson");
 	}
 	if(!Serial) {
-		splash_jpeg("/images/splash/error.jpg");
+		gui_screen_splash_jpeg("/images/splash/error.jpg");
 		digitalWrite(TFT_BL, HIGH);
 		while(!Serial) {
 			sleep_ms(100);

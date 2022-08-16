@@ -1,7 +1,7 @@
 #include <string.h>
 #include "gui/screen/screen.h"
 #include "gui/overlay/overlay.h"
-#include "gui/util/jpeg.h"
+#include "util/jpeg.h"
 #include "globals.h"
 
 static uint16_t      g_overlay_icon[GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT];
@@ -10,6 +10,7 @@ static uint16_t      g_overlay_icon[GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIG
 #define CENTER_Y   (TFT_HEIGHT/2)
 #define RADIUS_MIN (TFT_WIDTH/2-15)
 #define RADIUS_MAX (TFT_WIDTH/2- 5)
+
 
 void overlay_volume(bool force_refresh) {
 	if(String("False").equals(g_system_settings["audio:volume-mute"])) {
@@ -28,11 +29,10 @@ void overlay_volume(bool force_refresh) {
 				g_gui_tft_overlay.drawLine(CENTER_X+(dx*RADIUS_MIN), CENTER_Y+(dy*RADIUS_MIN), CENTER_X+(dx*RADIUS_MAX), CENTER_Y+(dy*RADIUS_MAX), TFT_WHITE );
 			} else {
 				g_gui_tft_overlay.drawLine(CENTER_X+(dx*RADIUS_MIN), CENTER_Y+(dy*RADIUS_MIN), CENTER_X+(dx*RADIUS_MAX), CENTER_Y+(dy*RADIUS_MAX), TFT_BLACK );
-				g_gui_tft.drawLine        (CENTER_X+(dx*RADIUS_MIN), CENTER_Y+(dy*RADIUS_MIN), CENTER_X+(dx*RADIUS_MAX), CENTER_Y+(dy*RADIUS_MAX), TFT_BLACK );
+//TODO				g_gui_tft.drawLine        (CENTER_X+(dx*RADIUS_MIN), CENTER_Y+(dy*RADIUS_MIN), CENTER_X+(dx*RADIUS_MAX), CENTER_Y+(dy*RADIUS_MAX), TFT_BLACK );
 			}
 		}
-
-		util_jpeg_decode565_littlefs("/images/overlay/volume/speaker.jpg", GUI_OVERLAY_ICON_WIDTH, GUI_OVERLAY_ICON_HEIGHT, g_overlay_icon);
+//TODO		util_jpeg_decode565_littlefs("/images/overlay/volume/speaker.jpg", g_overlay_icon, GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT);
 		for(int y=0; y<GUI_OVERLAY_ICON_HEIGHT; y++) {
 			for(int x=0; x<GUI_OVERLAY_ICON_WIDTH; x++) {
 				if(g_overlay_icon[y*GUI_OVERLAY_ICON_WIDTH+x] != TFT_BLACK) {
@@ -42,7 +42,7 @@ void overlay_volume(bool force_refresh) {
 		}
 //		g_gui_tft_overlay.pushImage(CENTER_X-(GUI_OVERLAY_ICON_WIDTH/2), CENTER_Y+(CENTER_Y/2)-(GUI_OVERLAY_ICON_HEIGHT/2), GUI_OVERLAY_ICON_WIDTH, GUI_OVERLAY_ICON_HEIGHT, g_overlay_icon);
 	} else {
-		util_jpeg_decode565_littlefs("/images/overlay/volume/speaker-mute.jpg", GUI_OVERLAY_ICON_WIDTH, GUI_OVERLAY_ICON_HEIGHT, g_overlay_icon);
+		util_jpeg_decode565_littlefs("/images/overlay/volume/speaker-mute.jpg", g_overlay_icon, GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT);
 		for(int y=0; y<GUI_OVERLAY_ICON_HEIGHT; y++) {
 			for(int x=0; x<GUI_OVERLAY_ICON_WIDTH; x++) {
 				if(g_overlay_icon[y*GUI_OVERLAY_ICON_WIDTH+x] != TFT_BLACK) {

@@ -3,7 +3,9 @@
 #include <SimpleWebSerial.h>
 #include "gui/screen/screen.h"
 #include "gui/screen/hal9000/screen.h"
+#include "gui/screen/hal9000/sequence.h"
 #include "gui/screen/splash/screen.h"
+#include "gui/screen/splash/jpeg.h"
 #include "gui/overlay/overlay.h"
 #include "globals.h"
 
@@ -14,8 +16,8 @@ void on_gui_screen(JSONVar parameter) {
 
 	if(parameter.hasOwnProperty("hal9000")) {
 		if(parameter["hal9000"].hasOwnProperty("frames")) {
-			if(screen_set(screen_hal9000) != screen_hal9000) {
-				screen_hal9000_frames_load(parameter["hal9000"]["frames"]);
+			if(screen_set(gui_screen_hal9000) != gui_screen_hal9000) {
+				gui_screen_hal9000_frames_load(parameter["hal9000"]["frames"]);
 			}
 		}
 	}
@@ -23,10 +25,12 @@ void on_gui_screen(JSONVar parameter) {
 		if(parameter["splash"].hasOwnProperty("filename")) {
 			snprintf(filename, sizeof(filename)-1, "/images/splash/%s", (const char*)parameter["splash"]["filename"]);
 			extension = strrchr(filename, '.');
-			if(extension != NULL && strncmp(extension, ".jpg", 5) == 0) {
-				splash_jpeg(filename);
+			if(extension == NULL || strncmp(extension, ".jpg", 5) != 0) {
+				//TODO:error
+				return;
 			}
-			g_previous_screen = screen_set(screen_splash);
+			gui_screen_splash_jpeg(filename);
+			screen_set(screen_splash);
 		}
 	}
 	if(parameter.hasOwnProperty("sequence")) {
@@ -46,6 +50,9 @@ void on_gui_overlay(JSONVar parameter) {
 				g_system_settings["audio:volume-mute"] = parameter["overlay"]["data"]["mute"];
 			}
 			if(String("show").equals(parameter["overlay"]["volume"])) {
+//if(screen_set(gui_screen_hal9000) != gui_screen_hal9000) {
+//gui_screen_hal9000_frames_load("active");
+//}
 				overlay_set(overlay_volume);
 			}
 			if(String("hide").equals(parameter["overlay"]["volume"])) {

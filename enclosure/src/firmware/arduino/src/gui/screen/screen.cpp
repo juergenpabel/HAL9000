@@ -5,8 +5,6 @@
 #include "gui/screen/screen.h"
 #include "gui/overlay/overlay.h"
 #include "gui/screen/hal9000/frame.h"
-#include "gui/screen/splash/jpeg.h"
-
 #include "globals.h"
 
 

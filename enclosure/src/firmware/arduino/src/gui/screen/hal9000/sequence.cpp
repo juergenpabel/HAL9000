@@ -19,12 +19,12 @@ typedef struct sequence {
 
 void  add_sequence_recursively(JSONVar data, uint8_t offset);
 
-sequence_t      g_sequences_queue[DISPLAY_SEQUENCES_MAX] = {0};
+sequence_t      g_sequences_queue[GUI_SEQUENCES_MAX] = {0};
 sequence_t*     g_current_sequence = &g_sequences_queue[0];
 
 void screen_sequence(bool refresh) {
 /*
-	for(int i=0; i<DISPLAY_SEQUENCE_FRAMES_MAX; i++) {
+	for(int i=0; i<GUI_SEQUENCE_FRAMES_MAX; i++) {
 		if(g_frames_jpg[i].size > 0) {
 			frame_jpg_draw(g_frames_jpg[i].data, g_frames_jpg[i].size);
 		}
@@ -33,7 +33,7 @@ void screen_sequence(bool refresh) {
 		g_current_sequence->name[0] = '\0';
 		g_current_sequence = g_current_sequence->next;
 		if(g_current_sequence->name[0] != '\0') {
-			screen_hal9000_frames_load(g_current_sequence->name);
+			gui_screen_hal9000_frames_load(g_current_sequence->name);
 			if(g_current_sequence->timeout > 0) {
 				g_current_sequence->timeout += now();
 			}
@@ -48,7 +48,7 @@ void screen_sequence(bool refresh) {
 void sequence_add(JSONVar sequence) {
 	if(sequence.length() > 0) {
 		add_sequence_recursively(sequence, 0);
-		screen_hal9000_frames_load(g_current_sequence->name);
+		gui_screen_hal9000_frames_load(g_current_sequence->name);
 	}
 }
 
@@ -57,16 +57,16 @@ void add_sequence_recursively(JSONVar data, uint8_t offset) {
 	uint8_t     target_offset = 0;
 	sequence_t* target_sequence = NULL;
 
-	while(target_offset<DISPLAY_SEQUENCES_MAX && g_sequences_queue[target_offset].name[0]!='\0') {
+	while(target_offset<GUI_SEQUENCES_MAX && g_sequences_queue[target_offset].name[0]!='\0') {
 		target_offset++;
 	}
-	if(target_offset>=DISPLAY_SEQUENCES_MAX) {
+	if(target_offset>=GUI_SEQUENCES_MAX) {
 		g_util_webserial.send("syslog", "Sequences queue already full");
 		return;
 	}
 	target_sequence = g_current_sequence;
 	if(offset == 0) {
-		for(int i=0; i<DISPLAY_SEQUENCES_MAX; i++) {
+		for(int i=0; i<GUI_SEQUENCES_MAX; i++) {
 			if(target_sequence == &g_sequences_queue[i]) {
 				target_offset = i;
 			}
