@@ -14,10 +14,9 @@ def handler(self, line: str):
 		data = json.loads(line)[1]
 		if data["device"]["name"] == "volume":
 			self.volume += int(data["event"]["delta"])
-			roundypi.send('["system/settings", {"set": {"key": "audio/volume", "value": "%d"}}]' % (self.volume))
-			roundypi.send('["gui/overlay", {"show": "volume"}]')
+			roundypi.send('["gui/overlay", {"overlay": {"volume": "show", "data": {"level": "%s", "mute": "False"}}}]' % self.volume)
 		if data["device"]["name"] == "volume:mute":
-			roundypi.send('["gui/overlay", {"hide": "volume"}]')
+			roundypi.send('["gui/overlay", {"overlay": {"volume": "hide"}}]')
 
 roundypi = webserial()
 roundypi.volume = 50

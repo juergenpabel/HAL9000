@@ -14,6 +14,6 @@ def handler(self, line: str):
 
 roundypi = webserial()
 roundypi.connect()
-roundypi.send('["system/time", {"config":{"interval":60}}]')
+roundypi.send('["system/time", {"config":{"interval":10}}]')
 roundypi.run(handler)
 

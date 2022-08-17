@@ -51,6 +51,8 @@ void setup() {
 		g_gui_tft.fillScreen(TFT_BLACK);
 		digitalWrite(TFT_BL, LOW);
 	}
+	screen_set(screen_idle);
+
 	g_util_webserial.send("syslog", "setup()");
 	g_util_webserial.on("system/reset", on_system_reset);
 	g_util_webserial.on("system/settings", on_system_settings);

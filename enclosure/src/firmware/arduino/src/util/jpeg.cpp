@@ -33,7 +33,7 @@ void util_jpeg_decode565_ram(uint8_t* jpeg_data, uint32_t jpeg_size, uint16_t* i
 	}
 	g_util_jpeg.setPixelType(RGB565_BIG_ENDIAN);
 	g_util_jpeg.setUserPointer(image565_data);
-	g_util_jpeg.decode(0, 0, 0); //TODO:check
+	g_util_jpeg.decode(0, 0, 0);
 	g_util_jpeg.close();
 }
 
@@ -69,7 +69,7 @@ void util_jpeg_decode565_littlefs(const char* filename, uint16_t* image565_data,
 	}
 	g_util_jpeg.setPixelType(RGB565_BIG_ENDIAN);
 	g_util_jpeg.setUserPointer(image565_data);
-	g_util_jpeg.decode(0, 0, 0); //TODO:check
+	g_util_jpeg.decode(0, 0, 0);
 	g_util_jpeg.close();
 }
 

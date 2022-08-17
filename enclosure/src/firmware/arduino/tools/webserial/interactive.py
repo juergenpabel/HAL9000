@@ -9,7 +9,6 @@ from datetime import datetime, timezone
 menu = dict()
 menu['1'] = ['Wakeup sequence', '["gui/screen", {"sequence" :{"queue": [{"name": "wakeup", "timeout": 0}, {"name": "active", "timeout": 10}, {"name": "sleep", "timeout": 0}]}}]']
 menu['2'] = ['Splash JPG (timeout=3)', '["gui/screen", {"splash": {"filename": "error.jpg", "timeout": 3}}]']
-menu['3'] = ['Splash PNG (timeout=3)', '["gui/screen", {"splash": {"filename": "error.png", "timeout": 3}}]']
 
 
 def handler(self, line: str):

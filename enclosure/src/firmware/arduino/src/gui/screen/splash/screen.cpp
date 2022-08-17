@@ -7,10 +7,10 @@ screen_func  g_previous_screen = NULL;
 
 
 void screen_splash(bool force_refresh) {
-	if(false /*TODO*/) {
-		g_util_webserial.send("syslog", "screen_splash() reactivating previous screen");
-		screen_set(g_previous_screen);
-		g_previous_screen = NULL;
-	}
+//TODO	if(false /*TODO*/) {
+//TODO		g_util_webserial.send("syslog", "screen_splash() reactivating previous screen");
+//TODO		screen_set(g_previous_screen);
+//TODO		g_previous_screen = NULL;
+//TODO	}
 }
 

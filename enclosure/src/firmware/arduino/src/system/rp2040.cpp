@@ -52,7 +52,7 @@ time_t rp2040_timelib_sync() {
         timeout = millis() + 1000;
         while(g_sync_epoch_secs == 0 && millis() < timeout) {
                 g_util_webserial.check();
-                sleep_ms(10);
+                sleep_ms(100);
         }
         return g_sync_epoch_secs;
 }
