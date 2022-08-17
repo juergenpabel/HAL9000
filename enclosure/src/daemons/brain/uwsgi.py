@@ -6,7 +6,7 @@ import time
 from threading import Thread
 from configparser import ConfigParser
 
-#from uwsgi import accepting
+from uwsgi import accepting
 
 
 config = ConfigParser(delimiters='=', converters={'list': lambda list: [item.strip() for item in list.split(',')]})
@@ -21,7 +21,7 @@ from hal9000.brain.daemon import Daemon
 daemon = Daemon()
 daemon.load(sys.argv[1])
 
-#accepting()
+accepting()
 while True:
 	daemon.loop()
 
