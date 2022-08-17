@@ -1,3 +1,4 @@
+#include <string.h>
 #include <JSONVar.h>
 
 #include "globals.h"
@@ -7,7 +8,10 @@
 
 void on_device_display(JSONVar parameter) {
 	if(parameter.hasOwnProperty("backlight")) {
-		digitalWrite(TFT_BL, (bool)parameter["backlight"] ? HIGH : LOW);
+		bool  backlight;
+
+		backlight = String("on").equals(parameter["backlight"]);
+		digitalWrite(TFT_BL, backlight ? HIGH : LOW);
 	}
 }
 

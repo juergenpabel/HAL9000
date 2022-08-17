@@ -23,7 +23,7 @@ void setup() {
 	g_gui_tft.fillScreen(TFT_BLACK);
 	g_gui_tft.setTextColor(TFT_WHITE);
 	g_gui_tft.setTextFont(1);
-	g_gui_tft.setTextSize(3);
+	g_gui_tft.setTextSize(5);
 	g_gui_tft.setTextDatum(TC_DATUM);
 	g_gui_tft_overlay.setColorDepth(1);
 	g_gui_tft_overlay.setBitmapColor(TFT_WHITE, TFT_BLACK);

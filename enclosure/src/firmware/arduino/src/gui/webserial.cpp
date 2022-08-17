@@ -14,32 +14,42 @@ void on_gui_screen(JSONVar parameter) {
 	char     filename[256] = {0};
 	char*    extension = NULL;
 
-	if(parameter.hasOwnProperty("idle")) {
-		screen_set(screen_idle);
-	}
-	if(parameter.hasOwnProperty("hal9000")) {
-		if(parameter["hal9000"].hasOwnProperty("frames")) {
-			if(screen_set(gui_screen_hal9000) != gui_screen_hal9000) {
-				gui_screen_hal9000_frames_load(parameter["hal9000"]["frames"]);
+	if(parameter.hasOwnProperty("screen")) {
+		if(parameter["screen"].hasOwnProperty("idle")) {
+			if(String("show").equals(parameter["screen"]["idle"])) {
+				screen_set(screen_idle);
 			}
 		}
-	}
-	if(parameter.hasOwnProperty("splash")) {
-		if(parameter["splash"].hasOwnProperty("filename")) {
-			snprintf(filename, sizeof(filename)-1, "/images/splash/%s", (const char*)parameter["splash"]["filename"]);
-			extension = strrchr(filename, '.');
-			if(extension == NULL || strncmp(extension, ".jpg", 5) != 0) {
-				//TODO:error
-				return;
+		if(parameter["screen"].hasOwnProperty("hal9000")) {
+			if(String("show").equals(parameter["screen"]["hal9000"])) {
+				if(parameter["screen"]["data"].hasOwnProperty("frames")) {
+					if(screen_set(gui_screen_hal9000) != gui_screen_hal9000) {
+						gui_screen_hal9000_frames_load(parameter["screen"]["data"]["frames"]);
+					}
+				}
 			}
-			gui_screen_splash_jpeg(filename);
-			screen_set(screen_splash);
 		}
-	}
-	if(parameter.hasOwnProperty("sequence")) {
-		if(parameter["sequence"].hasOwnProperty("queue")) {
-			sequence_add(parameter["sequence"]["queue"]);
-			screen_set(screen_sequence);
+		if(parameter["screen"].hasOwnProperty("splash")) {
+			if(String("show").equals(parameter["screen"]["splash"])) {
+				if(parameter["screen"]["data"].hasOwnProperty("filename")) {
+					snprintf(filename, sizeof(filename)-1, "/images/splash/%s", (const char*)parameter["screen"]["data"]["filename"]);
+					extension = strrchr(filename, '.');
+					if(extension == NULL || strncmp(extension, ".jpg", 5) != 0) {
+						//TODO:error
+						return;
+					}
+					gui_screen_splash_jpeg(filename);
+					screen_set(screen_splash);
+				}
+			}
+		}
+		if(parameter["screen"].hasOwnProperty("sequence")) {
+			if(String("show").equals(parameter["screen"]["sequence"])) {
+				if(parameter["screen"]["data"].hasOwnProperty("queue")) {
+					sequence_add(parameter["screen"]["data"]["queue"]);
+					screen_set(screen_sequence);
+				}
+			}
 		}
 	}
 }

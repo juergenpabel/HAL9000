@@ -83,7 +83,7 @@ class Daemon(HAL9000_Daemon):
 
 
 	def loop(self) -> None:
-		self.set_display_status('init')
+		self.set_device_display({"backlight": "on"})
 		#TODO: signal ready
 		HAL9000_Daemon.loop(self)
 
@@ -92,12 +92,8 @@ class Daemon(HAL9000_Daemon):
 		for key in self.timeouts.copy().keys():
 			timeout, data = self.timeouts[key]
 			if datetime.now() > timeout:
-#				if key == 'fsm:wakeup':
-#					self.do_wakeup(data)
-#				if key == 'fsm:sleep':
-#					self.do_sleep(data)
 				if key == 'overlay':
-					self.hide_display_overlay(data)
+					self.hide_gui_overlay(data)
 				del self.timeouts[key]
 		return True
 
@@ -129,20 +125,20 @@ class Daemon(HAL9000_Daemon):
 				self.logger.debug("CORTEX after actions = {}".format(self.cortex))
 
 
-	def show_display_overlay(self, overlay, data = None) -> None:
-		self.set_display_overlay(overlay, 'show', data)
+	def set_gui_screen(self, screen, action = "show", parameter = None) -> None:
+		mqtt_publish_message('{}/enclosure/gui/screen'.format(self.config['mqtt-topic-base']), json.dumps({"screen": {screen: action, "data": parameter}}))
 
 
-	def hide_display_overlay(self, overlay) -> None:
-		self.set_display_overlay(overlay, 'hide', None)
+	def hide_gui_overlay(self, overlay) -> None:
+		self.set_gui_overlay(overlay, 'hide', None)
 
 
-	def set_display_overlay(self, overlay, action, parameter) -> None:
+	def set_gui_overlay(self, overlay, action, parameter) -> None:
 		mqtt_publish_message('{}/enclosure/gui/overlay'.format(self.config['mqtt-topic-base']), json.dumps({"overlay": {overlay: action, "data": parameter}}))
 
 
-	def set_display_status(self, status) -> None:
-		mqtt_publish_message('{}/enclosure/device/display'.format(self.config['mqtt-topic-base']), status)
+	def set_device_display(self, parameter) -> None:
+		mqtt_publish_message('{}/enclosure/device/display'.format(self.config['mqtt-topic-base']), json.dumps({"display": {"data": parameter}}))
 
 
 if __name__ == "__main__":

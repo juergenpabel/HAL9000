@@ -13,6 +13,11 @@ class Action(HAL9000_Action):
 		self.config = dict()
 		self.config['control'] = dict()
 		self.config['enclosure'] = dict()
+		self.config['enclosure']['control'] = dict()
+		self.config['enclosure']['control']['menu'] = list()
+		self.config['enclosure']['control']['menu'].append("HAL9000")
+		self.config['enclosure']['control']['menu'].append("Settings")
+		self.config['enclosure']['control']['menu'].append("System")
 		self.config['enclosure']['volume'] = dict()
 		self.config['enclosure']['rfid'] = dict()
 #TODO		self.alsamixer = alsaaudio.Mixer('Speaker')
@@ -27,6 +32,9 @@ class Action(HAL9000_Action):
 		self.config['enclosure']['volume']['initial-level'] = configuration.getint('settings', 'volume-level', fallback=int(default_volume))
 		self.config['enclosure']['volume']['initial-mute'] = configuration.getboolean('settings', 'volume-mute', fallback=False)
 		if cortex is not None:
+			if 'control' not in cortex['enclosure']:
+				cortex['enclosure']['control'] = dict()
+				cortex['enclosure']['control']['position'] = 0
 			if 'volume' not in cortex['enclosure']:
 				cortex['enclosure']['volume'] = dict()
 				cortex['enclosure']['volume']['level'] = self.config['enclosure']['volume']['initial-level']
@@ -40,8 +48,18 @@ class Action(HAL9000_Action):
 			#TODO error
 			return None
 		daemon = signal['daemon']
-		if 'rfid' not in cortex['enclosure'] or cortex['enclosure']['rfid']['uid'] is None:
-			if 'volume' in signal:
+		if 'control.select' in signal:
+			if cortex['enclosure']['control']['position'] == 0:
+				daemon.show_gui_screen('hal9000', {"frames": "active"})
+			else:
+				daemon.show_gui_screen('idle', {})
+		if 'control' in signal:
+			if 'delta' in signal['control']:
+				cortex['enclosure']['control']['position'] += int(signal['control']['delta'])
+				cortex['enclosure']['control']['position'] %= len(self.config['enclosure']['control']['menu'])
+				daemon.show_gui_overlay('message', {"text": self.config['enclosure']['control']['menu'][cortex['enclosure']['control']['position']]})
+		if 'volume' in signal:
+			if 'rfid' not in cortex['enclosure'] or cortex['enclosure']['rfid']['uid'] is None:
 				if 'delta' in signal['volume']:
 					if cortex['enclosure']['volume']['mute'] is False:
 						delta = int(signal['volume']['delta']) * self.config['enclosure']['volume']['step']
@@ -53,7 +71,7 @@ class Action(HAL9000_Action):
 #TODO						self.alsamixer.setvolume(volume)
 						cortex['enclosure']['volume']['level'] = volume
 						if daemon is not None:
-							daemon.show_display_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
+							daemon.show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
 							daemon.timeouts['overlay'] = datetime.datetime.now()+datetime.timedelta(seconds=3), 'volume'
 							daemon.logger.info('volume={}'.format(cortex['enclosure']['volume']['level']))
 				if 'mute' in signal['volume']:
@@ -64,9 +82,9 @@ class Action(HAL9000_Action):
 					#TODO:self.alsamixer.setmute(cortex['enclosure']['volume']['mute'])
 					if daemon is not None:
 						if signal['volume']['mute'] == "on":
-							daemon.show_display_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
+							daemon.show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
 						else:
-							daemon.hide_display_overlay('volume')
+							daemon.hide_gui_overlay('volume')
 						if 'overlay' in daemon.timeouts:
 							del daemon.timeouts['overlay']
 						daemon.logger.info('mute={}'.format(cortex['enclosure']['volume']['mute']))

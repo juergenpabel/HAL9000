@@ -18,6 +18,8 @@ class Daemon(HAL9000):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
+		self.mqtt.subscribe("{}/device/display".format(self.config['mqtt-topic-base']))
+		self.mqtt.subscribe("{}/gui/screen".format(self.config['mqtt-topic-base']))
 		self.mqtt.subscribe("{}/gui/overlay".format(self.config['mqtt-topic-base']))
 		self.logger.info("Attempting to load device '{}'".format(str(self)))
 		Device = self.import_device('hal9000.arduino.device.{}'.format(self))
@@ -55,6 +57,10 @@ class Daemon(HAL9000):
 		HAL9000.on_mqtt(self, client, userdata, message)
 		topic = message.topic
 		payload = message.payload.decode('utf-8')
+		if topic == "{}/device/display".format(self.config['mqtt-topic-base']):
+			self.devices["volume"].driver.send('["device/display", %s]' % payload)
+		if topic == "{}/gui/screen".format(self.config['mqtt-topic-base']):
+			self.devices["volume"].driver.send('["gui/screen", %s]' % payload)
 		if topic == "{}/gui/overlay".format(self.config['mqtt-topic-base']):
 			self.devices["volume"].driver.send('["gui/overlay", %s]' % payload)
 
