@@ -37,7 +37,7 @@ class Driver(HAL9000):
 				while "loop()" not in line:
 					line = self.receive()
 				self.logger.debug('driver:{} => ...waiting...'.format(str(self)))
-				self.send('["device/mcp23X17", {"init": {"i2c-address": 32, "pin-sda": 0, "pin-scl": 1}}]')
+				self.send('["device/mcp23X17", {"init": {}}]')
 			except:
 				time.sleep(0.1)
 		if self.config['software'] == "rotary":
@@ -73,7 +73,7 @@ class Driver(HAL9000):
 		if Driver.status['read'] is None:
 			self.send('["device/mcp23X17", {"start": true}]')
 		Driver.status['read'] = self.receive()
-		if len(Driver.status['read']) > 0 and Driver.status['read'].startswith('['):
+		if len(Driver.status['read']) > 0 and Driver.status['read'].startswith('[') and Driver.status['read'].endswith(']'):
 			event, payload = json.loads(Driver.status['read'])
 			if event == "system/time":
 				if payload['sync']['format'] == "epoch":

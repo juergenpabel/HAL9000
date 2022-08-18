@@ -25,11 +25,16 @@ screen_func screen_set(screen_func new_screen) {
 	if(new_screen != NULL) {
 		g_screen = new_screen;
 		g_screen_forced_refresh = true;
-		if(new_screen == screen_idle) {
+		if(previous_screen != new_screen && new_screen == screen_idle) {
 			g_clock_previously = 0;
 		}
 	}
 	return previous_screen;
+}
+
+
+void screen_set_refresh() {
+	g_screen_forced_refresh = true;
 }
 
 
@@ -47,18 +52,20 @@ void screen_update(bool force_refresh) {
 void screen_idle(bool force_refresh) {
 	time_t    clock_currently = now();
 
+	if(force_refresh) {
+		g_gui_tft.fillScreen(TFT_BLACK);
+	}
 	if(year(clock_currently) >= 2001) {
 		if(g_clock_previously == 0) {
 			g_util_webserial.send("syslog", "showing clock while idle");
-			g_gui_tft.fillScreen(TFT_BLACK);
 		}
 		if(force_refresh || g_clock_previously == 0 || hour(clock_currently) != hour(g_clock_previously) || minute(clock_currently) != minute(g_clock_previously)) {
 			char clock[6] = {0};
 
 			g_clock_previously = clock_currently;
 			snprintf(clock, sizeof(clock), "%02d:%02d", hour(clock_currently), minute(clock_currently));
-			g_gui_tft.fillScreen(TFT_BLACK);
-			g_gui_tft.drawString(clock, 120, 120-g_gui_tft.fontHeight()/2);
+			g_gui_tft.setTextColor(TFT_WHITE, TFT_BLACK, true);
+			g_gui_tft.drawString(clock, TFT_WIDTH/2, (TFT_WIDTH/2)-(g_gui_tft.fontHeight()/2));
 		}
 	}
 }

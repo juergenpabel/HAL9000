@@ -31,7 +31,6 @@ class Daemon(HAL9000_Daemon):
 		self.cortex['enclosure']['rfid']['uid'] = None
 		#TODO check if volume rotary installed
 		#TODO check if control rotary installed
-		self.cortex['enclosure']['control'] = dict()
 		#TODO check if button installed
 		self.cortex['enclosure']['button'] = dict()
 		#TODO check if motion installed
@@ -125,8 +124,16 @@ class Daemon(HAL9000_Daemon):
 				self.logger.debug("CORTEX after actions = {}".format(self.cortex))
 
 
-	def set_gui_screen(self, screen, action = "show", parameter = None) -> None:
+	def show_gui_screen(self, screen, parameter = None) -> None:
+		self.set_gui_screen(screen, 'show', parameter)
+
+
+	def set_gui_screen(self, screen, action, parameter = None) -> None:
 		mqtt_publish_message('{}/enclosure/gui/screen'.format(self.config['mqtt-topic-base']), json.dumps({"screen": {screen: action, "data": parameter}}))
+
+
+	def show_gui_overlay(self, overlay, parameter = None) -> None:
+		self.set_gui_overlay(overlay, 'show', parameter)
 
 
 	def hide_gui_overlay(self, overlay) -> None:

@@ -48,17 +48,33 @@ class Action(HAL9000_Action):
 			#TODO error
 			return None
 		daemon = signal['daemon']
-		if 'control.select' in signal:
-			if cortex['enclosure']['control']['position'] == 0:
-				daemon.show_gui_screen('hal9000', {"frames": "active"})
-			else:
-				daemon.show_gui_screen('idle', {})
 		if 'control' in signal:
+			if 'overlay' in daemon.timeouts:
+				timeout, overlay = daemon.timeouts['overlay']
+				if overlay != 'message':
+					del daemon.timeouts['overlay']
+					daemon.hide_gui_overlay(overlay)
 			if 'delta' in signal['control']:
 				cortex['enclosure']['control']['position'] += int(signal['control']['delta'])
 				cortex['enclosure']['control']['position'] %= len(self.config['enclosure']['control']['menu'])
 				daemon.show_gui_overlay('message', {"text": self.config['enclosure']['control']['menu'][cortex['enclosure']['control']['position']]})
+				daemon.timeouts['overlay'] = datetime.datetime.now()+datetime.timedelta(seconds=10), 'message'
+			if 'select' in signal['control']:
+				if 'overlay' in daemon.timeouts:
+					timeout, overlay = daemon.timeouts['overlay']
+					if overlay == 'message':
+						del daemon.timeouts['overlay']
+						daemon.hide_gui_overlay('message')
+					if cortex['enclosure']['control']['position'] == 0:
+						daemon.show_gui_screen('hal9000', {"frames": "active"})
+					else:
+						daemon.show_gui_screen('idle', {})
 		if 'volume' in signal:
+			if 'overlay' in daemon.timeouts:
+				timeout, overlay = daemon.timeouts['overlay']
+				if overlay != 'volume':
+					del daemon.timeouts['overlay']
+					daemon.hide_gui_overlay(overlay)
 			if 'rfid' not in cortex['enclosure'] or cortex['enclosure']['rfid']['uid'] is None:
 				if 'delta' in signal['volume']:
 					if cortex['enclosure']['volume']['mute'] is False:

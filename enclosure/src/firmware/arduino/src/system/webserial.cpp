@@ -62,8 +62,8 @@ void on_system_time(JSONVar parameter) {
 	if(parameter.hasOwnProperty("config")) {
 		int interval = 3600;
 
-		if(g_system_settings.count("system/time#interval") == 1) {
-			interval = g_system_settings["system/time#interval"].toInt();
+		if(g_system_settings.count("system/time:sync/interval") == 1) {
+			interval = g_system_settings["system/time:sync/interval"].toInt();
 		}
 		if(parameter["config"].hasOwnProperty("interval")) {
 			interval = parameter["config"]["interval"];

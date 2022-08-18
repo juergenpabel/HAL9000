@@ -59,8 +59,8 @@ void on_gui_overlay(JSONVar parameter) {
 	if(parameter.hasOwnProperty("overlay")) {
 		if(parameter["overlay"].hasOwnProperty("volume")) {
 			if(parameter["overlay"].hasOwnProperty("data")) {
-				g_system_settings["audio:volume-level"] = parameter["overlay"]["data"]["level"];
-				g_system_settings["audio:volume-mute"] = parameter["overlay"]["data"]["mute"];
+				g_system_settings["system/audio:volume/level"] = parameter["overlay"]["data"]["level"];
+				g_system_settings["system/audio:volume/mute"] = parameter["overlay"]["data"]["mute"];
 			}
 			if(String("show").equals(parameter["overlay"]["volume"])) {
 				overlay_set(overlay_volume);
@@ -71,7 +71,7 @@ void on_gui_overlay(JSONVar parameter) {
 		}
 		if(parameter["overlay"].hasOwnProperty("message")) {
 			if(parameter["overlay"].hasOwnProperty("data")) {
-				g_system_settings["overlay:message:text"] = parameter["overlay"]["data"]["text"];
+				g_system_settings["gui/overlay:message/text"] = parameter["overlay"]["data"]["text"];
 			}
 			if(String("show").equals(parameter["overlay"]["message"])) {
 				overlay_set(overlay_message);

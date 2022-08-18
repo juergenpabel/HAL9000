@@ -12,12 +12,11 @@ overlay_func overlay_get() {
 
 overlay_func overlay_set(overlay_func new_overlay) {
 	overlay_func previous_overlay = NULL;
-
 	if(new_overlay != NULL) {
 		if(new_overlay != g_overlay) {
 			previous_overlay = g_overlay;
 			g_overlay = new_overlay;
-			screen_update(true);
+			screen_set_refresh();
 		}
 	}
 	return previous_overlay;

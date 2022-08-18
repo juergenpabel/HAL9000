@@ -7,12 +7,13 @@ static uint8_t  bson_buffer[SETTINGS_SIZE];
 
 
 Settings::Settings() {
-	this->insert({"arduino:loop-sleep_ms", "1"});
-	this->insert({"i2c0:sda", "0"});
-	this->insert({"i2c0:scl", "1"});
-	this->insert({"i2c-address:mcp23X17", "32"});
-	this->insert({"audio:volume-level", "50"});
-	this->insert({"audio:volume-mute", "False"});
+	this->insert({"system/arduino:loop/sleep_ms", "1"});
+	this->insert({"system/audio:volume/level", "50"});
+	this->insert({"system/audio:volume/mute", "False"});
+	this->insert({"device/mcp23X17:i2c/address", "32"});
+	this->insert({"device/mcp23X17:i2c/pin-sda", "0"});
+	this->insert({"device/mcp23X17:i2c/pin-scl", "1"});
+	this->insert({"gui/overlay:message/position_y", String(TFT_HEIGHT/4*3)});
 }
 
 

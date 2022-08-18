@@ -22,21 +22,23 @@ void on_device_sdcard(JSONVar parameter) {
 
 void on_device_mcp23X17(JSONVar parameter) {
 	if(parameter.hasOwnProperty("init")) {
-		uint8_t i2c_addr = 0x20;
-		uint8_t pin_sda = 0;
-		uint8_t pin_scl = 1;
+		uint8_t i2c_address = 0x20;
+		uint8_t i2c_pin_sda = 0;
+		uint8_t i2c_pin_scl = 1;
 
-		//TODO:g_system_settings
+		i2c_address = g_system_settings["device/mcp23X17:i2c/address"].toInt();
+		i2c_pin_sda = g_system_settings["device/mcp23X17:i2c/pin-sda"].toInt();
+		i2c_pin_scl = g_system_settings["device/mcp23X17:i2c/pin-scl"].toInt();
 		if(parameter["init"].hasOwnProperty("i2c-address")) {
-			i2c_addr = (int)parameter["init"]["i2c-address"];
+			i2c_address = (int)parameter["init"]["i2c-address"];
 		}
-		if(parameter["init"].hasOwnProperty("pin-sda")) {
-			pin_sda = (int)parameter["init"]["pin-sda"];
+		if(parameter["init"].hasOwnProperty("i2c-pin-sda")) {
+			i2c_pin_sda = (int)parameter["init"]["pin-sda"];
 		}
-		if(parameter["init"].hasOwnProperty("pin-scl")) {
-			pin_scl = (int)parameter["init"]["pin-scl"];
+		if(parameter["init"].hasOwnProperty("i2c-pin-scl")) {
+			i2c_pin_scl = (int)parameter["init"]["pin-scl"];
 		}
-		g_device_mcp23X17.init(i2c_addr, pin_sda, pin_scl);
+		g_device_mcp23X17.init(i2c_address, i2c_pin_sda, i2c_pin_scl);
 	}
 	if(parameter.hasOwnProperty("config")) {
 		const char*  device_name = NULL;

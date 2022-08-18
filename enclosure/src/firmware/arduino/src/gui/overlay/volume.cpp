@@ -13,10 +13,10 @@ static uint16_t      g_overlay_icon[GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIG
 
 
 void overlay_volume(bool force_refresh) {
-	if(String("False").equals(g_system_settings["audio:volume-mute"])) {
+	if(String("False").equals(g_system_settings["system/audio:volume/mute"])) {
 		uint8_t  volume_level;
 
-		volume_level = g_system_settings["audio:volume-level"].toInt();
+		volume_level = g_system_settings["system/audio:volume/level"].toInt();
 		for(uint8_t d=0; d<=100; d+=1) {
 			double v = 0;
 			double dx = TFT_WIDTH/2;

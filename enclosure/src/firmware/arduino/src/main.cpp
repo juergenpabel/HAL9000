@@ -27,7 +27,7 @@ void setup() {
 	g_gui_tft.setTextDatum(TC_DATUM);
 	g_gui_tft_overlay.setColorDepth(1);
 	g_gui_tft_overlay.setBitmapColor(TFT_WHITE, TFT_BLACK);
-	g_gui_tft_overlay.createSprite(240, 240);
+	g_gui_tft_overlay.createSprite(TFT_WIDTH, TFT_HEIGHT);
 	g_gui_tft_overlay.setTextColor(TFT_WHITE);
 	g_gui_tft_overlay.setTextFont(1);
 	g_gui_tft_overlay.setTextSize(2);
@@ -75,6 +75,6 @@ void loop() {
 	g_util_webserial_queue.sendMessages();
 	g_util_webserial.check();
 	screen_update(false);
-	sleep_ms(g_system_settings["arduino:loop-sleep_ms"].toInt());
+	sleep_ms(g_system_settings["system/arduino:loop/sleep_ms"].toInt());
 }
 
