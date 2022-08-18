@@ -15,7 +15,7 @@ class Action(HAL9000_Action):
 		self.config['enclosure'] = dict()
 		self.config['enclosure']['control'] = dict()
 		self.config['enclosure']['control']['menu'] = list()
-		self.config['enclosure']['control']['menu'].append("HAL9000")
+		self.config['enclosure']['control']['menu'].append("Kalliope")
 		self.config['enclosure']['control']['menu'].append("Settings")
 		self.config['enclosure']['control']['menu'].append("System")
 		self.config['enclosure']['volume'] = dict()
@@ -66,9 +66,11 @@ class Action(HAL9000_Action):
 						del daemon.timeouts['overlay']
 						daemon.hide_gui_overlay('message')
 					if cortex['enclosure']['control']['position'] == 0:
-						daemon.show_gui_screen('hal9000', {"frames": "active"})
+						daemon.mqtt.publish(daemon.config['mqtt-voice-assistant-trigger'], None)
 					else:
 						daemon.show_gui_screen('idle', {})
+						daemon.show_gui_overlay('message', {"text": "NOT YET IMPLEMENTED"})
+						daemon.timeouts['overlay'] = datetime.datetime.now()+datetime.timedelta(seconds=3), 'message'
 		if 'volume' in signal:
 			if 'overlay' in daemon.timeouts:
 				timeout, overlay = daemon.timeouts['overlay']

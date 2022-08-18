@@ -11,18 +11,15 @@
     neurons:
       - play:
           filename: "resources/data/dong.wav"
-      - mqtt_publisher:
-          broker_ip: "127.0.0.1"
-          topic: "hal9000/status"
-          payload: "init"
 
-  - name: "on-triggered"
+
+  - name: "on-waiting-for-trigger"
     signals: []
     neurons:
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
-          topic: "hal9000/status"
-          payload: "wakeup"
+          topic: "kalliope/brain/state"
+          payload: "waiting"
 
 
   - name: "on-start-listening"
@@ -32,8 +29,26 @@
           filename: "resources/data/dong.wav"
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
-          topic: "hal9000/status"
-          payload: "active"
+          topic: "kalliope/brain/state"
+          payload: "listening"
+
+
+  - name: "on-stop-listening"
+    signals: []
+    neurons:
+      - mqtt_publisher:
+          broker_ip: "127.0.0.1"
+          topic: "kalliope/brain/state"
+          payload: "thinking"
+
+
+  - name: "on-start-speaking"
+    signals: []
+    neurons:
+      - mqtt_publisher:
+          broker_ip: "127.0.0.1"
+          topic: "kalliope/brain/state"
+          payload: "speaking"
 
 
   - name: "on-stt-error"
@@ -42,10 +57,6 @@
       - say:
           message:
             - "Es ist ein Fehler aufgetreten."
-      - mqtt_publisher:
-          broker_ip: "127.0.0.1"
-          topic: "hal9000/status"
-          payload: "wait"
 
 
   - name: "on-order-not-found"
@@ -54,17 +65,4 @@
       - say:
           message:
             - "Ich verstehe diesen Befehl nicht."
-      - mqtt_publisher:
-          broker_ip: "127.0.0.1"
-          topic: "hal9000/status"
-          payload: "wait"
-
-
-  - name: "on-processed"
-    signals: []
-    neurons:
-      - mqtt_publisher:
-          broker_ip: "127.0.0.1"
-          topic: "hal9000/status"
-          payload: "wait"
 

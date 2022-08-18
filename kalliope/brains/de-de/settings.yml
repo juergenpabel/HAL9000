@@ -1,8 +1,11 @@
-default_trigger: "porcupine"
+default_trigger: "porcupine2"
 triggers:
-  - precise:
-      pb_file: "resources/data/precise/computer-en.pb"
-      sensitivity: 0.5
+  - mqtt:
+      topic: "kalliope/trigger/mqtt/event"
+  - porcupine2:
+      access_key_file: "/etc/picovoice/access_key.txt"
+      keyword_paths: "resources/data/porcupine2/porcupine_raspberry-pi.ppn"
+      sensitivities: 0.5
 
 
 default_speech_to_text: "vosk"
@@ -29,16 +32,16 @@ players:
 
 hooks:
   on_start: "on-start"
-  on_waiting_for_trigger:
-  on_triggered: "on-triggered"
+  on_waiting_for_trigger: "on-waiting-for-trigger"
+  on_triggered:
   on_start_listening: "on-start-listening"
-  on_stop_listening:
+  on_stop_listening: "on-stop-listening"
   on_order_found:
   on_order_not_found: "on-order-not-found"
-  on_processed_synapses: "on-processed"
+  on_processed_synapses:
   on_deaf:
   on_undeaf:
-  on_start_speaking:
+  on_start_speaking: "on-start-speaking"
   on_stop_speaking:
   on_stt_error: "on-stt-error"
 
