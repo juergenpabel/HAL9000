@@ -127,7 +127,7 @@ class Daemon(HAL9000_Daemon):
 
 			if message.topic == '{}/brain/consciousness/awake/state'.format(self.config['mqtt-topic-base']):
 				state = message.payload.decode('utf-8')
-				if state in Daemon.CONSCIOUSNESS_AWAKE_VALID:
+				if state in Daemon.CONSCIOUSNESS_AWAKE_VALID and state != self.cortex['daemon']['consciousness']['awake']:
 					self.logger.info("CONSCIOUSNESS:AWAKE state changing from '{}' to '{}'".format(self.cortex['daemon']['consciousness']['awake'], state))
 					self.cortex['daemon']['consciousness']['awake'] = state
 			return
