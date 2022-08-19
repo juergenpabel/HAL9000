@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import time
 import datetime
 import alsaaudio
 
@@ -15,12 +16,14 @@ class Action(HAL9000_Action):
 		self.config['enclosure'] = dict()
 		self.config['enclosure']['control'] = dict()
 		self.config['enclosure']['control']['menu'] = list()
-		self.config['enclosure']['control']['menu'].append("Kalliope")
+		self.config['enclosure']['control']['menu'].append("Kalliope: Trigger")
 		self.config['enclosure']['control']['menu'].append("Settings")
-		self.config['enclosure']['control']['menu'].append("System")
+		self.config['enclosure']['control']['menu'].append("Restart Arduino")
+		self.config['enclosure']['control']['menu'].append("Restart Linux")
 		self.config['enclosure']['volume'] = dict()
 		self.config['enclosure']['rfid'] = dict()
-#TODO		self.alsamixer = alsaaudio.Mixer('Speaker')
+		self.config['enclosure']['alsa'] = dict()
+		self.alsamixer = None
 
 
 	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict = None) -> None:
@@ -39,8 +42,16 @@ class Action(HAL9000_Action):
 				cortex['enclosure']['volume'] = dict()
 				cortex['enclosure']['volume']['level'] = self.config['enclosure']['volume']['initial-level']
 				cortex['enclosure']['volume']['mute'] = self.config['enclosure']['volume']['initial-mute']
-#TODO		self.alsamixer.setvolume(self.config['enclosure']['volume']['initial-level'])
-		#TODO:self.alsamixer.setmute(self.config['enclosure']['volume']['initial-mute'])
+		self.config['enclosure']['alsa']['cardindex'] = configuration.getint('alsa', 'cardindex', fallback=0)
+		self.config['enclosure']['alsa']['control'] = configuration.get('alsa', 'control', fallback=None)
+		if self.config['enclosure']['alsa']['control'] is not None:
+			try:
+				self.alsamixer = alsaaudio.Mixer(self.config['enclosure']['alsa']['control'], cardindex=self.config['enclosure']['alsa']['cardindex'])
+#				self.alsamixer.setvolume(self.config['enclosure']['volume']['initial-level'])
+#TODO				self.alsamixer.setmute(1 if self.config['enclosure']['volume']['initial-mute'] else 0, 0)
+			except alsaaudio.ALSAAudioError as e:
+				print("alsaaudio.Mixer({},cardindex={}) => {})".format(self.config['enclosure']['alsa']['control'], self.config['enclosure']['alsa']['cardindex'], e))
+				self.alsamixer = None
 
 
 	def process(self, signal: dict, cortex: dict) -> dict:
@@ -67,9 +78,11 @@ class Action(HAL9000_Action):
 						daemon.hide_gui_overlay('message')
 					if cortex['enclosure']['control']['position'] == 0:
 						daemon.mqtt.publish(daemon.config['mqtt-voice-assistant-trigger'], None)
+					elif cortex['enclosure']['control']['position'] == 2:
+						daemon.arduino_system_reset()
 					else:
 						daemon.show_gui_screen('idle', {})
-						daemon.show_gui_overlay('message', {"text": "NOT YET IMPLEMENTED"})
+						daemon.show_gui_overlay('message', {"text": "NOT IMPLEMENTED"})
 						daemon.timeouts['overlay'] = datetime.datetime.now()+datetime.timedelta(seconds=3), 'message'
 		if 'volume' in signal:
 			if 'overlay' in daemon.timeouts:
@@ -86,8 +99,9 @@ class Action(HAL9000_Action):
 							volume = self.config['enclosure']['volume']['minimum']
 						if volume > self.config['enclosure']['volume']['maximum']:
 							volume = self.config['enclosure']['volume']['maximum']
-#TODO						self.alsamixer.setvolume(volume)
 						cortex['enclosure']['volume']['level'] = volume
+						if self.alsamixer is not None:
+							self.alsamixer.setvolume(volume)
 						if daemon is not None:
 							daemon.show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
 							daemon.timeouts['overlay'] = datetime.datetime.now()+datetime.timedelta(seconds=3), 'volume'
@@ -97,7 +111,8 @@ class Action(HAL9000_Action):
 						cortex['enclosure']['volume']['mute'] = True
 					else:
 						cortex['enclosure']['volume']['mute'] = False
-					#TODO:self.alsamixer.setmute(cortex['enclosure']['volume']['mute'])
+#TODO					if self.alsamixer is not None:
+#TODO						self.alsamixer.setmute(cortex['enclosure']['volume']['mute'])
 					if daemon is not None:
 						if signal['volume']['mute'] == "on":
 							daemon.show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))

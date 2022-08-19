@@ -196,6 +196,10 @@ class Daemon(HAL9000_Daemon):
 		mqtt_publish_message('{}/enclosure/device/display'.format(self.config['mqtt-topic-base']), json.dumps({"display": {"data": parameter}}))
 
 
+	def arduino_system_reset(self) -> None:
+		mqtt_publish_message('{}/enclosure/system/reset'.format(self.config['mqtt-topic-base']), json.dumps({}))
+
+
 if __name__ == "__main__":
 	daemon = Daemon()
 	daemon.load(sys.argv[1])
