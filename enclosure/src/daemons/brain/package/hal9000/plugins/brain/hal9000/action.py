@@ -3,6 +3,7 @@
 import time
 import datetime
 import alsaaudio
+import math
 
 from hal9000.brain import HAL9000_Action
 from configparser import ConfigParser
@@ -101,7 +102,13 @@ class Action(HAL9000_Action):
 							volume = self.config['enclosure']['volume']['maximum']
 						cortex['enclosure']['volume']['level'] = volume
 						if self.alsamixer is not None:
-							self.alsamixer.setvolume(volume)
+							mixer_min, mixer_max = self.alsamixer.getrange()
+							mixer_range = mixer_max - mixer_min
+							mixer_volume = float(volume) / 100.0
+							mixer_volume = math.sqrt(math.sqrt(mixer_volume))
+							mixer_volume = int(mixer_range * mixer_volume)
+							print(mixer_volume)
+							self.alsamixer.setvolume(int(mixer_volume), units=alsaaudio.VOLUME_UNITS_RAW)
 						if daemon is not None:
 							daemon.show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
 							daemon.timeouts['overlay'] = datetime.datetime.now()+datetime.timedelta(seconds=3), 'volume'
