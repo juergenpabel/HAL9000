@@ -19,10 +19,9 @@ class Action(HAL9000_Action):
 		pass
 
 
-	def process(self, signal: dict, cortex: dict) -> dict:
+	def process(self, signal: dict, cortex: dict) -> None:
 		if 'rfid' in cortex['enclosure'] and cortex['enclosure']['rfid']['uid'] is not None:
 			print('action:sonos.process({})'.format(signal))
 			player = SoCo('192.168.3.30')
 			player.volume += int(signal['volume']['delta'])
-		return None
 

@@ -138,6 +138,7 @@ class Daemon(HAL9000_Daemon):
 						signals[synapse_name] = signal
 				for synapse_name in signals.keys():
 					signal = signals[synapse_name]
+					self.logger.debug("SIGNAL generated from triggers = {}".format(signal))
 					for action_name in self.synapses[synapse_name]:
 						cortex = self.cortex.copy()
 						self.actions[action_name].process(signal, cortex)

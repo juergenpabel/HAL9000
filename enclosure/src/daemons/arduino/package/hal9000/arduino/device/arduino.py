@@ -39,8 +39,8 @@ class Device(HAL9000_Device):
 						if callback_event is not None:
 							device_type=payload["device"]["type"]
 							device_name=payload["device"]["name"]
-							if self.config[device_name]['name'] is not None:
-								device_name = self.config[device_name]['name']
+							if self.config['name'] is not None:
+								device_name = self.config['name']
 							if device_type == "rotary":
 								callback_event(device_type, device_name, "delta", payload["event"]["delta"])
 							if device_type in ["switch", "button", "toggle"]:

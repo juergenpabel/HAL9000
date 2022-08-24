@@ -42,7 +42,7 @@ class Daemon(HAL9000):
 		return result
 
 
-	def on_event(self, device_type: str, device: str, event: str, value: str=None) -> None:
+	def on_event(self, device_type: str, device_name: str, event: str, value: str=None) -> None:
 		payload = '{}:{} {}={}'.format(device_type, device_name, event, value)
 		self.logger.info('EVENT: {}'.format(payload))
 		if self.mqtt is not None:
