@@ -6,7 +6,7 @@ import time
 from threading import Thread
 from configparser import ConfigParser
 
-from uwsgi import accepting
+#from uwsgi import accepting
 
 
 from hal9000.daemon import DaemonLoader
@@ -18,7 +18,7 @@ for name in loader.get_daemon_threads():
 	daemon.load(sys.argv[1])
 	Thread(target=daemon.loop).start()
 
-accepting()
+#accepting()
 
 while True:
 	time.sleep(1)

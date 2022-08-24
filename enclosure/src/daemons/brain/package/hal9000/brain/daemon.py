@@ -31,16 +31,17 @@ class Daemon(HAL9000_Daemon):
 		HAL9000_Daemon.__init__(self, 'brain')
 		self.cortex = dict()
 
-		self.cortex['daemon'] = dict()
-		self.cortex['daemon']['consciousness'] = dict()
-		self.cortex['daemon']['consciousness']['state'] = Daemon.CONSCIOUSNESS_AWAKE
-		self.cortex['daemon']['consciousness']['awake'] = Daemon.CONSCIOUSNESS_AWAKE_WAITING
+		self.cortex['brain'] = dict()
+		self.cortex['brain']['consciousness'] = dict()
+		self.cortex['brain']['consciousness']['state'] = Daemon.CONSCIOUSNESS_AWAKE
+		self.cortex['brain']['consciousness']['awake'] = Daemon.CONSCIOUSNESS_AWAKE_WAITING
 
 		self.cortex['enclosure'] = dict()
 		self.cortex['enclosure']['rfid'] = dict()
 		self.cortex['enclosure']['rfid']['uid'] = None
 		self.cortex['enclosure']['button'] = dict()
 		self.cortex['enclosure']['motion'] = dict()
+		self.cortex['enclosure']['volume'] = dict()
 
 		self.actions = dict()
 		self.triggers = dict()
@@ -51,26 +52,26 @@ class Daemon(HAL9000_Daemon):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000_Daemon.configure(self, configuration)
-		self.config['mqtt-voice-assistant-state'] = configuration.getstring('mqtt', 'voice-assistant-state', fallback="kalliope/brain/state")
-		self.config['mqtt-voice-assistant-trigger'] = configuration.getstring('mqtt', 'voice-assistant-trigger', fallback="kalliope/trigger/mqtt/event")
-		self.mqtt.subscribe(self.config['mqtt-voice-assistant-state'])
 		self.mqtt.subscribe('{}/brain/consciousness/+'.format(self.config['mqtt-topic-base']))
 		for section_name in configuration.sections():
-			module_name = configuration.getstring(section_name, 'module', fallback=None)
-			if module_name is not None:
-				section_type, section_id = section_name.lower().split(':',1)
-				if section_type == 'action':
-					Action = self.import_plugin(module_name, 'Action')
+			module_path = configuration.getstring(section_name, 'module', fallback=None)
+			if module_path is not None:
+				module_type, module_id = section_name.lower().split(':',1)
+				if module_type == 'action':
+					Action = self.import_plugin(module_path, 'Action')
 					if Action is not None:
-						action = Action(section_id)
-						action.configure(configuration, section_name, self.cortex)
-						self.actions[section_id] = action
-				if section_type == 'trigger':
-					Trigger = self.import_plugin(module_name, 'Trigger')
+						cortex = self.cortex.copy()
+						action = Action(module_id, daemon=self if module_id == 'enclosure' else None)
+						action.configure(configuration, module_path, cortex)
+						self.actions[module_id] = action
+						if module_id in cortex:
+							self.cortex[module_id] = cortex[module_id]
+				if module_type == 'trigger':
+					Trigger = self.import_plugin(module_path, 'Trigger')
 					if Trigger is not None:
-						trigger = Trigger(section_id)
+						trigger = Trigger(module_id)
 						trigger.configure(configuration, section_name)
-						self.triggers[section_id] = trigger
+						self.triggers[module_id] = trigger
 		for synapse_name in configuration.options('synapses'):
 			self.synapses[synapse_name] = list()
 			actions = configuration.getlist('synapses', synapse_name)
@@ -111,29 +112,22 @@ class Daemon(HAL9000_Daemon):
 	
 	def on_mqtt(self, client, userdata, message):
 		HAL9000_Daemon.on_mqtt(self, client, userdata, message)
-		if message.topic == self.config['mqtt-voice-assistant-state']:
-			if self.cortex['daemon']['consciousness']['state'] == Daemon.CONSCIOUSNESS_AWAKE:
-				state = message.payload.decode('utf-8')
-				if state in Daemon.CONSCIOUSNESS_AWAKE_VALID:
-					self.emit_consciousness(state)
-			return
 		if message.topic.startswith('{}/brain/consciousness/'.format(self.config['mqtt-topic-base'])):
 			if message.topic == '{}/brain/consciousness/state'.format(self.config['mqtt-topic-base']):
 				state = message.payload.decode('utf-8')
 				if state in Daemon.CONSCIOUSNESS_VALID:
-					self.logger.info("CONSCIOUSNESS state changing from '{}' to '{}'".format(self.cortex['daemon']['consciousness']['state'], state))
-					self.cortex['daemon']['consciousness']['state'] = state
-					self.cortex['daemon']['consciousness'][state] = 'waiting'
+					self.logger.info("CONSCIOUSNESS state changing from '{}' to '{}'".format(self.cortex['brain']['consciousness']['state'], state))
+					self.cortex['brain']['consciousness']['state'] = state
+					self.cortex['brain']['consciousness'][state] = 'waiting'
 
 			if message.topic == '{}/brain/consciousness/awake/state'.format(self.config['mqtt-topic-base']):
 				state = message.payload.decode('utf-8')
-				if state in Daemon.CONSCIOUSNESS_AWAKE_VALID and state != self.cortex['daemon']['consciousness']['awake']:
-					self.logger.info("CONSCIOUSNESS:AWAKE state changing from '{}' to '{}'".format(self.cortex['daemon']['consciousness']['awake'], state))
-					self.cortex['daemon']['consciousness']['awake'] = state
+				if state in Daemon.CONSCIOUSNESS_AWAKE_VALID and state != self.cortex['brain']['consciousness']['awake']:
+					self.logger.info("CONSCIOUSNESS:AWAKE state changing from '{}' to '{}'".format(self.cortex['brain']['consciousness']['awake'], state))
+					self.cortex['brain']['consciousness']['awake'] = state
 			return
 		signals = dict()
-		cortex = self.cortex.copy()
-		if self.cortex['daemon']['consciousness']['state'] == Daemon.CONSCIOUSNESS_AWAKE:
+		if self.cortex['brain']['consciousness']['state'] == Daemon.CONSCIOUSNESS_AWAKE:
 			if 'mqtt' in self.callbacks and message.topic in self.callbacks['mqtt']:
 				self.logger.info("SYNAPSES fired: {}".format(', '.join(str(x).split(':',2)[2] for x in self.callbacks['mqtt'][message.topic])))
 				self.logger.debug("CORTEX before triggers = {}".format(self.cortex))
@@ -145,22 +139,18 @@ class Daemon(HAL9000_Daemon):
 				for synapse_name in signals.keys():
 					signal = signals[synapse_name]
 					for action_name in self.synapses[synapse_name]:
-						action = self.actions[action_name]
-						if str(action) == 'action:hal9000:self':
-							signal['daemon'] = self
-						memory = action.process(signal, cortex)
-						if str(action) == 'action:hal9000:self':
-							del signal['daemon']
-						if memory is not None:
-							self.cortex |= memory
+						cortex = self.cortex.copy()
+						self.actions[action_name].process(signal, cortex)
+						if action_name in cortex:
+							self.cortex[action_name] = cortex[action_name]
 				self.logger.debug("CORTEX after actions =   {}".format(self.cortex))
 
 
 	def emit_consciousness(self, new_state) -> None:
 		if new_state in Daemon.CONSCIOUSNESS_AWAKE_VALID:
-			old_state = self.cortex['daemon']['consciousness']['awake']
+			old_state = self.cortex['brain']['consciousness']['awake']
 			self.logger.info("CONSCIOUSNESS:AWAKE state changing from '{}' to '{}'".format(old_state, new_state))
-			self.cortex['daemon']['consciousness']['awake'] = new_state
+			self.cortex['brain']['consciousness']['awake'] = new_state
 			mqtt_publish_message('{}/brain/consciousness/state'.format(self.config['mqtt-topic-base']), new_state)
 			if new_state == 'waiting':
 #TODO				if old_state != 'waiting':

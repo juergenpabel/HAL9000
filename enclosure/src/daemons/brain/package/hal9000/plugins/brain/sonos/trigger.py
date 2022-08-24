@@ -10,7 +10,8 @@ class Trigger(HAL9000_Trigger):
 
 
 	def configure(self, configuration: ConfigParser, section_name: str) -> None:
-		print('TODO:trigger:sonos.config()')
+		#print('TODO:trigger:sonos.config()')
+		pass
 
 
 	def handle(self) -> dict:

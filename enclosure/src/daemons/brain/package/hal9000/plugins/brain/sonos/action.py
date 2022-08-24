@@ -10,12 +10,13 @@ from soco import SoCo
 
 class Action(HAL9000_Action):
 
-	def __init__(self, action_name: str) -> None:
-		HAL9000_Action.__init__(self, 'sonos', action_name)
+	def __init__(self, action_name: str, **kwargs) -> None:
+		HAL9000_Action.__init__(self, 'sonos', action_name, **kwargs)
 
 
-	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict = None) -> None:
-		print('TODO:action:sonos.config()')
+	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
+		#print('TODO:action:sonos.config()')
+		pass
 
 
 	def process(self, signal: dict, cortex: dict) -> dict:

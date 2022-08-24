@@ -21,10 +21,11 @@ class Device(HAL9000_Device):
 
 	def configure(self, configuration: ConfigParser, section_name: str = None) -> None:
 		HAL9000_Device.configure(self, configuration)
-		peripheral, device = str(self).split(':')
+		device_type, device_name = str(self).split(':')
 		self.config['enabled'] = configuration.getboolean(str(self), 'enabled', fallback=True)
 		if self.config['enabled']:
-			self.driver = self.Driver('{}:{}'.format(configuration.getstring(str(self), 'driver'), device))
+			self.config['name'] = configuration.get(str(self), 'name', fallback=None)
+			self.driver = self.Driver('{}:{}'.format(configuration.getstring(str(self), 'driver'), device_name))
 			self.driver.configure(configuration)
 
 
@@ -32,17 +33,18 @@ class Device(HAL9000_Device):
 		if self.driver is not None:
 			if self.driver.do_loop():
 				line = self.driver.status['read']
-				if len(line) > 0 and line.startswith('['):
+				if len(line) > 0 and line.startswith('[') and line.endswith(']'):
 					event, payload = json.loads(line)
 					if event != "syslog":
 						if callback_event is not None:
-							peripheral=payload["device"]["type"]
-							device=payload["device"]["name"]
-							component = "default"
-							if peripheral == "rotary":
-								callback_event(peripheral, device, "default", "delta", payload["event"]["delta"])
-							if peripheral in ["switch", "button", "toggle"]:
-								callback_event(peripheral, device, "default", "status", payload["event"]["status"])
- 
-		return True
+							device_type=payload["device"]["type"]
+							device_name=payload["device"]["name"]
+							if self.config[device_name]['name'] is not None:
+								device_name = self.config[device_name]['name']
+							if device_type == "rotary":
+								callback_event(device_type, device_name, "delta", payload["event"]["delta"])
+							if device_type in ["switch", "button", "toggle"]:
+								callback_event(device_type, device_name, "status", payload["event"]["status"])
+				return True
+		return False
 

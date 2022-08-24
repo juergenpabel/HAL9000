@@ -19,13 +19,13 @@ class Action(HAL9000_Action):
 	BRICKIES_PARAMETERS = ['brickies-reader-service', 'brickies-reader-name', 'brickies-card-event', 'brickies-card-uid']
 
 
-	def __init__(self, action_name: str) -> None:
-		HAL9000_Action.__init__(self, 'brickies', action_name)
+	def __init__(self, action_name: str, **kwargs) -> None:
+		HAL9000_Action.__init__(self, 'brickies', action_name, **kwargs)
 		self.config = dict()
 		self.dict = dict()
 
 
-	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict = None) -> None:
+	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
 		self.config['hal9000-mqtt-server'] = configuration.getstring('mqtt', 'server', fallback='127.0.0.1')
 		self.config['hal9000-mqtt-port'] = configuration.getint('mqtt', 'port', fallback=1883)
 		self.config['base-url'] = configuration.getstring(section_name, 'brickies-server-url', fallback=None)
