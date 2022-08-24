@@ -14,6 +14,9 @@ class Motion(EnclosureComponent):
 
 	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
 		EnclosureComponent.configure(self, configuration, section_name, cortex)
+		if 'motion' not in cortex['enclosure']:
+			cortex['enclosure']['motion'] = dict()
+			cortex['enclosure']['motion']['timestamp'] = None
 
 
 	def process(self, signal: dict, cortex: dict) -> None:

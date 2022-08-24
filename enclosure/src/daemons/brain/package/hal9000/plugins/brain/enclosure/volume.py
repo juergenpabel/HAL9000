@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 
-from alsaaudio import Mixer, VOLUME_UNITS_PERCENTAGE, VOLUME_UNITS_RAW, ALSAAudioError
-from numpy import cbrt
-from datetime import datetime, timedelta
 from configparser import ConfigParser
+from datetime import datetime, timedelta
+from numpy import cbrt
+from alsaaudio import Mixer, VOLUME_UNITS_PERCENTAGE, VOLUME_UNITS_RAW, ALSAAudioError
 
 from hal9000.brain.daemon import Daemon
 from hal9000.plugins.brain.enclosure import EnclosureComponent
@@ -24,8 +24,6 @@ class Volume(EnclosureComponent):
 		self.config['volume-step']    = configuration.getint('enclosure:volume', 'volume-step',    fallback=5)
 		self.config['alsa-range-minimum'] = configuration.getint('enclosure:volume', 'alsa-range-minimum', fallback=None)
 		self.config['alsa-range-maximum'] = configuration.getint('enclosure:volume', 'alsa-range-maximum', fallback=None)
-		if 'volume' not in cortex['enclosure']:
-			cortex['enclosure']['volume'] = dict()
 		alsa_cardindex = configuration.getint('enclosure:volume', 'alsa-cardindex', fallback=0)
 		alsa_control   = configuration.get('enclosure:volume', 'alsa-control', fallback=None)
 		if alsa_control is None:
@@ -38,7 +36,7 @@ class Volume(EnclosureComponent):
 				self.alsamixer = Mixer(alsa_control, cardindex=alsa_cardindex)
 			except ALSAAudioError as e:
 				self.daemon.logger.error("alsaaudio.Mixer('{}',cardindex={}) raised '{}') => disabling volume control"
-						    .format(alsa_control, alsa_cardindex, e))
+				                        .format(alsa_control, alsa_cardindex, e))
 				if 'volume' in cortex['enclosure']:
 					del cortex['enclosure']['volume']
 		if 'volume' in cortex['enclosure']:

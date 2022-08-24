@@ -22,7 +22,7 @@ class Control(EnclosureComponent):
 		EnclosureComponent.configure(self, configuration, section_name, cortex)
 		if 'control' not in cortex['enclosure']:
 			cortex['enclosure']['control'] = dict()
-		cortex['enclosure']['control']['position'] = 0
+			cortex['enclosure']['control']['position'] = 0
 
 
 	def process(self, signal: dict, cortex: dict) -> None:

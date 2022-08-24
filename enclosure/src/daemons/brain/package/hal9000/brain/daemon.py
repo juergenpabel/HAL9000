@@ -37,11 +37,6 @@ class Daemon(HAL9000_Daemon):
 		self.cortex['brain']['consciousness']['awake'] = Daemon.CONSCIOUSNESS_AWAKE_WAITING
 
 		self.cortex['enclosure'] = dict()
-		self.cortex['enclosure']['rfid'] = dict()
-		self.cortex['enclosure']['rfid']['uid'] = None
-		self.cortex['enclosure']['button'] = dict()
-		self.cortex['enclosure']['motion'] = dict()
-		self.cortex['enclosure']['volume'] = dict()
 
 		self.actions = dict()
 		self.triggers = dict()
@@ -90,6 +85,7 @@ class Daemon(HAL9000_Daemon):
 							self.callbacks['mqtt'][mqtt_topic] = list()
 						self.callbacks['mqtt'][mqtt_topic].append(trigger)
 						self.mqtt.subscribe(mqtt_topic)
+		self.logger.debug("CORTEX at startup = {}".format(self.cortex))
 
 
 	def loop(self) -> None:
