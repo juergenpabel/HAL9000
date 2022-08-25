@@ -57,7 +57,7 @@ class Daemon(HAL9000_Daemon):
 					if Action is not None:
 						cortex = self.cortex.copy()
 						action = Action(module_id, daemon=self if module_id == 'enclosure' else None)
-						action.configure(configuration, module_path, cortex)
+						action.configure(configuration, section_name, cortex)
 						self.actions[module_id] = action
 						if module_id in cortex:
 							self.cortex[module_id] = cortex[module_id]
@@ -102,7 +102,12 @@ class Daemon(HAL9000_Daemon):
 					self.emit_consciousness(data)
 				if key == 'overlay':
 					self.hide_gui_overlay(data)
-				del self.timeouts[key]
+				if key == 'action':
+					[action_name, signal_data] = data
+					if action_name in self.actions:
+						self.actions[action_name].process(signal_data, self.cortex)
+				if key in self.timeouts:
+					del self.timeouts[key]
 		return True
 
 	
@@ -159,15 +164,15 @@ class Daemon(HAL9000_Daemon):
 				self.show_gui_screen('hal9000', {"frames":"active"})
 
 
-	def show_gui_screen(self, screen, parameter = None) -> None:
+	def show_gui_screen(self, screen, parameter) -> None:
 		self.set_gui_screen(screen, 'show', parameter)
 
 
-	def set_gui_screen(self, screen, action, parameter = None) -> None:
+	def set_gui_screen(self, screen, action, parameter) -> None:
 		mqtt_publish_message('{}/enclosure/gui/screen'.format(self.config['mqtt-topic-base']), json.dumps({"screen": {screen: action, "data": parameter}}))
 
 
-	def show_gui_overlay(self, overlay, parameter = None) -> None:
+	def show_gui_overlay(self, overlay, parameter) -> None:
 		self.set_gui_overlay(overlay, 'show', parameter)
 
 

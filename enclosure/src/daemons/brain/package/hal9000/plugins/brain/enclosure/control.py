@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import json
 from datetime import datetime, timedelta
 from configparser import ConfigParser
 
@@ -11,46 +12,90 @@ class Control(EnclosureComponent):
 	def __init__(self, **kwargs) -> None:
 		EnclosureComponent.__init__(self, **kwargs)
 		self.config = dict()
-		self.config['menu'] = list()
-		self.config['menu'].append("Kalliope: Trigger")
-		self.config['menu'].append("Settings")
-		self.config['menu'].append("Restart Arduino")
-		self.config['menu'].append("Restart Linux")
 
 
 	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
 		EnclosureComponent.configure(self, configuration, section_name, cortex)
 		if 'control' not in cortex['enclosure']:
 			cortex['enclosure']['control'] = dict()
-			cortex['enclosure']['control']['position'] = 0
+			cortex['enclosure']['control']['menu-name'] = None
+			cortex['enclosure']['control']['menu-item'] = None
+		menu_file = configuration.get('enclosure:control', 'menu-file', fallback=None)
+		if menu_file is not None:
+			self.config['action'] = dict()
+			self.config['menu'] = dict()
+			self.config['menu']['menu-main'] = list()
+			menu_config = ConfigParser()
+			menu_config.read(menu_file)
+			self.load_menu(menu_config, 'menu-main')
+
+
+	def load_menu(self, menu_config: ConfigParser, menu_key: str) -> None:
+		for menu_item in menu_config.options(menu_key):
+			if menu_item.startswith("item-"):
+				self.config['menu'][menu_key].append({"item": menu_item, "text": menu_config.get(menu_key, menu_item)})
+				self.config['action'][menu_item] = dict()
+				self.config['action'][menu_item]['action-name'] = menu_config.get(menu_item, "action", fallback=None)
+				self.config['action'][menu_item]['signal-data'] = menu_config.get(menu_item, "signal-data", fallback=None)
+			if menu_item.startswith("menu-"):
+				self.config['menu'][menu_key].append({"item": menu_item, "text": menu_config.get(menu_key, menu_item)})
+				if menu_item not in self.config['menu']:
+					self.config['menu'][menu_item] = list()
+					self.load_menu(menu_config, menu_item)
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
 		EnclosureComponent.process(self, signal, cortex)
-		if 'overlay' in self.daemon.timeouts:
-			timeout, overlay = self.daemon.timeouts['overlay']
-			if overlay != 'message':
-				del self.daemon.timeouts['overlay']
-				self.daemon.hide_gui_overlay(overlay)
 		if 'delta' in signal['control']:
-			position = cortex['enclosure']['control']['position']
+			if cortex['enclosure']['control']['menu-name'] is None:
+				cortex['enclosure']['control']['menu-name'] = 'menu-main'
+				cortex['enclosure']['control']['menu-item'] = self.config['menu']['menu-main'][0]["item"]
+				signal['control']['delta'] = 0
+			menu_name = cortex['enclosure']['control']['menu-name']
+			menu_item = cortex['enclosure']['control']['menu-item']
+			if menu_name not in self.config['menu']:
+				self.daemon.show_gui_overlay('error', {"text": "Error in menu"})
+				return
+			position = 0
+			for item in self.config['menu'][menu_name]:
+				if item["item"] == menu_item:
+					position = self.config['menu'][menu_name].index(item)
 			position += int(signal['control']['delta'])
-			position %= len(self.config['menu'])
-			self.daemon.show_gui_overlay('message', {"text": self.config['menu'][position]})
-			self.daemon.timeouts['overlay'] = datetime.now()+timedelta(seconds=10), 'message'
-			cortex['enclosure']['control']['position']  = position
+			position %= len(self.config['menu'][menu_name])
+			menu_item = self.config['menu'][menu_name][position]["item"]
+			self.daemon.show_gui_overlay('menu', {"text": self.config['menu'][menu_name][position]["text"]})
+			self.daemon.timeouts['action'] = datetime.now()+timedelta(seconds=15), ['enclosure', {"control": {"cancel": {}}}]
+			cortex['enclosure']['control']['menu-name'] = menu_name
+			cortex['enclosure']['control']['menu-item'] = menu_item
 		if 'select' in signal['control']:
-			if 'overlay' in self.daemon.timeouts:
-				timeout, overlay = self.daemon.timeouts['overlay']
-				if overlay == 'message':
-					del self.daemon.timeouts['overlay']
-					self.daemon.hide_gui_overlay('message')
-				if cortex['enclosure']['control']['position'] == 0:
-					self.daemon.mqtt.publish(self.daemon.config['mqtt-voice-assistant-trigger'], None)
-				elif cortex['enclosure']['control']['position'] == 2:
-					self.daemon.arduino_system_reset()
-				else:
-					self.daemon.show_gui_screen('idle', {})
-					self.daemon.show_gui_overlay('message', {"text": "NOT IMPLEMENTED"})
-					self.daemon.timeouts['overlay'] = datetime.now()+timedelta(seconds=3), 'message'
+			if 'action' in self.daemon.timeouts:
+				del self.daemon.timeouts['action']
+			if cortex['enclosure']['control']['menu-name'] is not None:
+				menu_name = cortex['enclosure']['control']['menu-name'] 
+				menu_item = cortex['enclosure']['control']['menu-item'] 
+				if menu_item is not None and menu_item.startswith("item-"):
+					if menu_item in self.config['action']:
+						action_name = self.config['action'][menu_item]["action-name"]
+						signal_data = json.loads(self.config['action'][menu_item]["signal-data"])
+						if action_name in self.daemon.actions:
+							self.daemon.actions[action_name].process(signal_data, cortex)
+						else:
+							self.daemon.logger.error("enclosure/control: menu item '{}' refers to nonexistant action '{}'"
+							                         .format(menu_item, action_name))
+					cortex['enclosure']['control']['menu-name'] = None
+					cortex['enclosure']['control']['menu-item'] = None
+					self.daemon.hide_gui_overlay('menu')
+				if menu_item is not None and menu_item.startswith("menu-"):
+					if menu_item in self.config['menu']:
+						cortex['enclosure']['control']['menu-name'] = menu_item
+						cortex['enclosure']['control']['menu-item'] = self.config['menu'][menu_item][0]["item"]
+						self.daemon.show_gui_overlay('menu', {"text": self.config['menu'][menu_item][0]["text"]})
+						self.daemon.timeouts['action']  = datetime.now()+timedelta(seconds=15), ['enclosure', {"control": {"cancel": {}}}]
+		if 'cancel' in signal['control']:
+			self.daemon.hide_gui_overlay('menu')
+			if 'action' in self.daemon.timeouts:
+				del self.daemon.timeouts['action']
+			cortex['enclosure']['control']['menu-name'] = None
+			cortex['enclosure']['control']['menu-item'] = None
+			self.daemon.logger.debug("enclosure/control: exited menu mode")
 

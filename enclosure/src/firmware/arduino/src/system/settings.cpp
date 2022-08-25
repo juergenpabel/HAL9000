@@ -13,7 +13,6 @@ Settings::Settings() {
 	this->insert({"device/mcp23X17:i2c/address", "32"});
 	this->insert({"device/mcp23X17:i2c/pin-sda", "0"});
 	this->insert({"device/mcp23X17:i2c/pin-scl", "1"});
-	this->insert({"gui/overlay:message/position_y", String(TFT_HEIGHT/4*3)});
 }
 
 

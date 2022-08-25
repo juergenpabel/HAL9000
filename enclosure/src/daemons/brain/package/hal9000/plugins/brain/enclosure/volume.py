@@ -3,7 +3,7 @@
 from configparser import ConfigParser
 from datetime import datetime, timedelta
 from numpy import cbrt
-from alsaaudio import Mixer, VOLUME_UNITS_PERCENTAGE, VOLUME_UNITS_RAW, ALSAAudioError
+from alsaaudio import cards as alsa_cards, Mixer, VOLUME_UNITS_PERCENTAGE, VOLUME_UNITS_RAW, ALSAAudioError
 
 from hal9000.brain.daemon import Daemon
 from hal9000.plugins.brain.enclosure import EnclosureComponent
@@ -12,6 +12,7 @@ from hal9000.plugins.brain.enclosure import EnclosureComponent
 class Volume(EnclosureComponent):
 	def __init__(self, **kwargs) -> None:
 		EnclosureComponent.__init__(self, **kwargs)
+		self.alsamixer = None
 		self.config = dict()
 
 
@@ -22,21 +23,26 @@ class Volume(EnclosureComponent):
 		self.config['volume-minimum'] = configuration.getint('enclosure:volume', 'volume-minimum', fallback=0)
 		self.config['volume-maximum'] = configuration.getint('enclosure:volume', 'volume-maximum', fallback=100)
 		self.config['volume-step']    = configuration.getint('enclosure:volume', 'volume-step',    fallback=5)
-		self.config['alsa-range-minimum'] = configuration.getint('enclosure:volume', 'alsa-range-minimum', fallback=None)
-		self.config['alsa-range-maximum'] = configuration.getint('enclosure:volume', 'alsa-range-maximum', fallback=None)
-		alsa_cardindex = configuration.getint('enclosure:volume', 'alsa-cardindex', fallback=0)
-		alsa_control   = configuration.get('enclosure:volume', 'alsa-control', fallback=None)
-		if alsa_control is None:
+
+		for card in alsa_cards():
+			alsa_section = "alsa:{}".format(card)
+			if 'alsa-control' not in self.config or self.config['alsa-control'] is None:
+				if configuration.has_section(alsa_section):
+					self.config['alsa-control'] = configuration.get(alsa_section, 'control', fallback=None)
+					self.config['alsa-cardindex'] = configuration.getint(alsa_section, 'cardindex', fallback=0)
+					self.config['alsa-range-raw-minimum'] = configuration.getint(alsa_section, 'range-raw-minimum', fallback=None)
+					self.config['alsa-range-raw-maximum'] = configuration.getint(alsa_section, 'range-raw-maximum', fallback=None)
+		if self.config['alsa-control'] is None:
 			self.daemon.logger.error("MISSING ALSA configuration => disabling volume control")
-			self.daemon.logger.info ("configure 'alsa-control' (and optionally 'alsa-cardindex' if not 0) in section 'volume'")
+			self.daemon.logger.info ("configure 'alsa-control' (and optionally 'alsa-cardindex' if not 0) in section 'alsa:*'")
 			if 'volume' in cortex['enclosure']:
 				del cortex['enclosure']['volume']
 		if 'volume' in cortex['enclosure']:
 			try:
-				self.alsamixer = Mixer(alsa_control, cardindex=alsa_cardindex)
+				self.alsamixer = Mixer(self.config['alsa-control'], cardindex=self.config['alsa-cardindex'])
 			except ALSAAudioError as e:
 				self.daemon.logger.error("alsaaudio.Mixer('{}',cardindex={}) raised '{}') => disabling volume control"
-				                        .format(alsa_control, alsa_cardindex, e))
+				                        .format(self.config['alsa-control'], self.config['alsa-cardindex'], e))
 				if 'volume' in cortex['enclosure']:
 					del cortex['enclosure']['volume']
 		if 'volume' in cortex['enclosure']:
@@ -68,7 +74,7 @@ class Volume(EnclosureComponent):
 				self.daemon.hide_gui_overlay(overlay)
 		if 'rfid' not in cortex['enclosure'] or cortex['enclosure']['rfid']['uid'] is None:
 			if self.alsamixer is None:
-				self.daemon.show_gui_overlay('message', {"type": "ERROR", "text": "NO ALSA DEVICE"})
+				self.daemon.show_gui_overlay('error', {"text": "NO ALSA DEVICE"})
 				return
 			if 'delta' in signal['volume']:
 				if cortex['enclosure']['volume']['mute'] is False:
@@ -99,16 +105,17 @@ class Volume(EnclosureComponent):
 
 
 	def set_alsa_volume(self, volume) -> None:
-		mixer_raw_min, mixer_raw_max = self.alsamixer.getrange(units=VOLUME_UNITS_RAW)
-		if self.config['alsa-range-minimum'] is not None:
-			if self.config['alsa-range-minimum'] > mixer_raw_min:
-				mixer_raw_min = self.config['alsa-range-minimum']
-		if self.config['alsa-range-maximum'] is not None:
-			if self.config['alsa-range-maximum'] < mixer_raw_max:
-				mixer_raw_max = self.config['alsa-range-maximum']
-		mixer_raw_vol = 0
-		if volume >= self.config['volume-step']:
-			mixer_raw_vol = int(cbrt(volume / 100.0) * (mixer_raw_max - mixer_raw_min) + mixer_raw_min)
-		self.alsamixer.setvolume(mixer_raw_vol, units=VOLUME_UNITS_RAW)
-		self.daemon.logger.info("ALSA volume = {} (raw={} [{}-{}])".format(volume, mixer_raw_vol, mixer_raw_min, mixer_raw_max))
+		if self.alsamixer is not None:
+			mixer_raw_min, mixer_raw_max = self.alsamixer.getrange(units=VOLUME_UNITS_RAW)
+			if self.config['alsa-range-raw-minimum'] is not None:
+				if self.config['alsa-range-raw-minimum'] > mixer_raw_min:
+					mixer_raw_min = self.config['alsa-range-raw-minimum']
+			if self.config['alsa-range-raw-maximum'] is not None:
+				if self.config['alsa-range-raw-maximum'] < mixer_raw_max:
+					mixer_raw_max = self.config['alsa-range-raw-maximum']
+			mixer_raw_vol = 0
+			if volume >= self.config['volume-step']:
+				mixer_raw_vol = int(cbrt(volume / 100.0) * (mixer_raw_max - mixer_raw_min) + mixer_raw_min)
+			self.alsamixer.setvolume(mixer_raw_vol, units=VOLUME_UNITS_RAW)
+			self.daemon.logger.info("ALSA volume = {} (raw={} [{}-{}])".format(volume, mixer_raw_vol, mixer_raw_min, mixer_raw_max))
 

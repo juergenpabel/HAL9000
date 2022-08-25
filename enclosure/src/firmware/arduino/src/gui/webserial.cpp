@@ -80,6 +80,17 @@ void on_gui_overlay(JSONVar parameter) {
 				overlay_set(overlay_none);
 			}
 		}
+		if(parameter["overlay"].hasOwnProperty("menu")) {
+			if(parameter["overlay"].hasOwnProperty("data")) {
+				g_system_settings["gui/overlay:menu_item/text"] = parameter["overlay"]["data"]["text"];
+			}
+			if(String("show").equals(parameter["overlay"]["menu"])) {
+				overlay_set(overlay_menu);
+			}
+			if(String("hide").equals(parameter["overlay"]["menu"])) {
+				overlay_set(overlay_none);
+			}
+		}
 	}
 }
 
