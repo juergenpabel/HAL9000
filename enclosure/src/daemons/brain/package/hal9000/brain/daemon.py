@@ -18,26 +18,21 @@ class Daemon(HAL9000_Daemon):
 	CONSCIOUSNESS_ASLEEP = 'asleep'
 	CONSCIOUSNESS_VALID = [CONSCIOUSNESS_AWAKE, CONSCIOUSNESS_ASLEEP]
 
-	CONSCIOUSNESS_ASLEEP_WAITING   = 'waiting'
-	CONSCIOUSNESS_ASLEEP_VALID = [CONSCIOUSNESS_ASLEEP_WAITING]
-
-	CONSCIOUSNESS_AWAKE_WAITING   = 'waiting'
-	CONSCIOUSNESS_AWAKE_LISTENING = 'listening'
-	CONSCIOUSNESS_AWAKE_THINKING  = 'thinking'
-	CONSCIOUSNESS_AWAKE_SPEAKING  = 'speaking'
-	CONSCIOUSNESS_AWAKE_VALID = [CONSCIOUSNESS_AWAKE_WAITING, CONSCIOUSNESS_AWAKE_LISTENING, CONSCIOUSNESS_AWAKE_THINKING, CONSCIOUSNESS_AWAKE_SPEAKING]
 
 	def __init__(self):
 		HAL9000_Daemon.__init__(self, 'brain')
 		self.cortex = dict()
 
 		self.cortex['brain'] = dict()
-		self.cortex['brain']['consciousness'] = dict()
-		self.cortex['brain']['consciousness']['state'] = Daemon.CONSCIOUSNESS_AWAKE
-		self.cortex['brain']['consciousness']['awake'] = Daemon.CONSCIOUSNESS_AWAKE_WAITING
-
+		self.cortex['brain']['consciousness'] = Daemon.CONSCIOUSNESS_AWAKE
+		self.cortex['brain']['activity'] = dict()
+		self.cortex['brain']['activity']['voice-assistant'] = None
+		self.cortex['brain']['activity']['enclosure'] = dict()
+		self.cortex['brain']['activity']['enclosure']['audio'] = None
+		self.cortex['brain']['activity']['enclosure']['gui'] = dict()
+		self.cortex['brain']['activity']['enclosure']['gui']['screen'] = None
+		self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = None
 		self.cortex['enclosure'] = dict()
-
 		self.actions = dict()
 		self.triggers = dict()
 		self.synapses = dict()
@@ -56,7 +51,7 @@ class Daemon(HAL9000_Daemon):
 					Action = self.import_plugin(module_path, 'Action')
 					if Action is not None:
 						cortex = self.cortex.copy()
-						action = Action(module_id, daemon=self if module_id == 'enclosure' else None)
+						action = Action(module_id, daemon=self)
 						action.configure(configuration, section_name, cortex)
 						self.actions[module_id] = action
 						if module_id in cortex:
@@ -99,7 +94,7 @@ class Daemon(HAL9000_Daemon):
 			timeout, data = self.timeouts[key]
 			if datetime.now() > timeout:
 				if key == 'consciousness':
-					self.emit_consciousness(data)
+					self.set_consciousness(data)
 				if key == 'overlay':
 					self.hide_gui_overlay(data)
 				if key == 'action':
@@ -117,18 +112,11 @@ class Daemon(HAL9000_Daemon):
 			if message.topic == '{}/brain/consciousness/state'.format(self.config['mqtt-topic-base']):
 				state = message.payload.decode('utf-8')
 				if state in Daemon.CONSCIOUSNESS_VALID:
-					self.logger.info("CONSCIOUSNESS state changing from '{}' to '{}'".format(self.cortex['brain']['consciousness']['state'], state))
-					self.cortex['brain']['consciousness']['state'] = state
-					self.cortex['brain']['consciousness'][state] = 'waiting'
-
-			if message.topic == '{}/brain/consciousness/awake/state'.format(self.config['mqtt-topic-base']):
-				state = message.payload.decode('utf-8')
-				if state in Daemon.CONSCIOUSNESS_AWAKE_VALID and state != self.cortex['brain']['consciousness']['awake']:
-					self.logger.info("CONSCIOUSNESS:AWAKE state changing from '{}' to '{}'".format(self.cortex['brain']['consciousness']['awake'], state))
-					self.cortex['brain']['consciousness']['awake'] = state
+					self.logger.info("CONSCIOUSNESS state changing from '{}' to '{}'".format(self.cortex['brain']['consciousness'], state))
+					self.cortex['brain']['consciousness'] = state
 			return
 		signals = dict()
-		if self.cortex['brain']['consciousness']['state'] == Daemon.CONSCIOUSNESS_AWAKE:
+		if self.cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
 			if 'mqtt' in self.callbacks and message.topic in self.callbacks['mqtt']:
 				self.logger.info("SYNAPSES fired: {}".format(', '.join(str(x).split(':',2)[2] for x in self.callbacks['mqtt'][message.topic])))
 				self.logger.debug("CORTEX before triggers = {}".format(self.cortex))
@@ -148,24 +136,30 @@ class Daemon(HAL9000_Daemon):
 				self.logger.debug("CORTEX after actions =   {}".format(self.cortex))
 
 
-	def emit_consciousness(self, new_state) -> None:
-		if new_state in Daemon.CONSCIOUSNESS_AWAKE_VALID:
-			old_state = self.cortex['brain']['consciousness']['awake']
-			self.logger.info("CONSCIOUSNESS:AWAKE state changing from '{}' to '{}'".format(old_state, new_state))
-			self.cortex['brain']['consciousness']['awake'] = new_state
-			mqtt_publish_message('{}/brain/consciousness/state'.format(self.config['mqtt-topic-base']), new_state)
-			if new_state == 'waiting':
-#TODO				if old_state != 'waiting':
-#TODO					self.show_gui_screen('hal9000', {"frames":"fade-out"})
-				self.show_gui_screen('idle')
+	def queue_action(self, action_name, signal_data) -> None:
+		self.timeouts['action'] = datetime.now(), [action_name, signal_data]
+
+
+	def set_consciousness(self, new_state) -> None:
+		if new_state in Daemon.CONSCIOUSNESS_VALID:
+			old_state = self.cortex['brain']['consciousness']
+			self.logger.info("CONSCIOUSNESS state changing from '{}' to '{}'".format(old_state, new_state))
+			self.cortex['brain']['consciousness'] = new_state
+			if new_state == "awake":
+				self.set_device_display({"backlight": "on"})
 			else:
-#TODO				if old_state == 'waiting':
-#TODO					self.show_gui_screen('hal9000', {"frames":"fade-in"})
-				self.show_gui_screen('hal9000', {"frames":"active"})
+				self.set_device_display({"backlight": "off"})
 
 
 	def show_gui_screen(self, screen, parameter) -> None:
+		self.cortex['brain']['activity']['enclosure']['gui']['screen'] = screen
 		self.set_gui_screen(screen, 'show', parameter)
+
+
+	def hide_gui_screen(self, screen, parameter) -> None:
+		if self.cortex['brain']['activity']['enclosure']['gui']['screen'] == screen:
+			self.cortex['brain']['activity']['enclosure']['gui']['screen'] = None
+			self.set_gui_screen('idle', 'show', {})
 
 
 	def set_gui_screen(self, screen, action, parameter) -> None:
@@ -173,11 +167,14 @@ class Daemon(HAL9000_Daemon):
 
 
 	def show_gui_overlay(self, overlay, parameter) -> None:
+		self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = overlay
 		self.set_gui_overlay(overlay, 'show', parameter)
 
 
 	def hide_gui_overlay(self, overlay) -> None:
-		self.set_gui_overlay(overlay, 'hide', None)
+		if self.cortex['brain']['activity']['enclosure']['gui']['overlay'] == overlay:
+			self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = None
+			self.set_gui_overlay(overlay, 'hide', None)
 
 
 	def set_gui_overlay(self, overlay, action, parameter) -> None:

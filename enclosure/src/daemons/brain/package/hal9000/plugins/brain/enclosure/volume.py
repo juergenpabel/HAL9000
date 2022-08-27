@@ -72,7 +72,7 @@ class Volume(EnclosureComponent):
 			if overlay != 'volume':
 				del self.daemon.timeouts['overlay']
 				self.daemon.hide_gui_overlay(overlay)
-		if 'rfid' not in cortex['enclosure'] or cortex['enclosure']['rfid']['uid'] is None:
+		if cortex['brain']['activity']['enclosure']['audio'] == None:
 			if self.alsamixer is None:
 				self.daemon.show_gui_overlay('error', {"text": "NO ALSA DEVICE"})
 				return

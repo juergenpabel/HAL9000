@@ -43,13 +43,14 @@ class HAL9000_Daemon(HAL9000_Abstract):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		if self.status == HAL9000_Daemon.STATUS_INIT:
-			self.config['loop-delay-active'] = configuration.getfloat('daemon:{}'.format(str(self)), 'loop-delay-active', fallback=0.001)
-			self.config['loop-delay-paused'] = configuration.getfloat('daemon:{}'.format(str(self)), 'loop-delay-paused', fallback=0.100)
-			self.config['mqtt-enabled'] = configuration.getboolean('daemon:{}'.format(str(self)), 'mqtt-enabled', fallback=True)
-			self.config['mqtt-client'] = configuration.getstring('mqtt', 'client', fallback="hal9000-daemon-{}".format(str(self)))
-			self.config['mqtt-server'] = configuration.getstring('mqtt', 'server', fallback="127.0.0.1")
-			self.config['mqtt-port'] = configuration.getint('mqtt', 'port', fallback=1883)
-			self.config['mqtt-topic-base'] = configuration.getstring('mqtt', 'topic-base', fallback="hal9000")
+			self.config['loop-delay-active'] = configuration.getfloat('daemon:{}'.format(str(self)), 'loop-delay-active', fallback=0.01)
+			self.config['loop-delay-paused'] = configuration.getfloat('daemon:{}'.format(str(self)), 'loop-delay-paused', fallback=0.10)
+			self.config['mqtt-enabled']      = configuration.getboolean('daemon:{}'.format(str(self)), 'mqtt-enabled', fallback=True)
+			self.config['mqtt-client']       = configuration.getstring('mqtt', 'client', fallback="hal9000-daemon-{}".format(str(self)))
+			self.config['mqtt-server']       = configuration.getstring('mqtt', 'server', fallback="127.0.0.1")
+			self.config['mqtt-port']         = configuration.getint('mqtt', 'port', fallback=1883)
+			self.config['mqtt-topic-base']   = configuration.getstring('mqtt', 'topic-base', fallback="hal9000")
+			self.config['mqtt-loop-timeout'] = configuration.getfloat('mqtt', 'loop-timeout', fallback=0.01)
 			if self.config['mqtt-enabled']:
 				self.mqtt = mqtt_client.Client(self.config['mqtt-client'])
 				self.mqtt.connect(self.config['mqtt-server'], self.config['mqtt-port'])
@@ -66,13 +67,15 @@ class HAL9000_Daemon(HAL9000_Abstract):
 
 	def loop(self) -> None:
 		if self.status == HAL9000_Daemon.STATUS_READY:
-			if self.config['mqtt-enabled']:
-				self.mqtt.loop_start()
 			delay_active = self.config['loop-delay-active']
 			delay_paused = self.config['loop-delay-paused']
+			mqtt_enabled = self.config['mqtt-enabled']
+			mqtt_timeout = self.config['mqtt-loop-timeout']
 			self.status = HAL9000_Daemon.STATUS_ACTIVE
 			self.logger.debug('LOOP')
 			while self.do_loop():
+				if mqtt_enabled is True:
+					self.mqtt.loop(timeout=mqtt_timeout)
 				while self.status == HAL9000_Daemon.STATUS_PAUSED:
 					time.sleep(delay_paused)
 				time.sleep(delay_active)

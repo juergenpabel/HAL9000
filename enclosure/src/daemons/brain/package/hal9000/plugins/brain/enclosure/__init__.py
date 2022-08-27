@@ -7,16 +7,17 @@ from hal9000.brain.daemon import Daemon
 
 
 class EnclosureComponent:
-        def __init__(self, **kwargs) -> None:
-                self.daemon = kwargs.get('daemon', None)
+	def __init__(self, **kwargs) -> None:
+		self.daemon = kwargs.get('daemon', None)
+		self.config = dict()
 
 
-        def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
-                pass
+	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
+		pass
 
 
-        def process(self, signal: dict, cortex: dict) -> None:
-                pass
+	def process(self, signal: dict, cortex: dict) -> None:
+		pass
 
 
 

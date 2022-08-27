@@ -11,7 +11,9 @@ from hal9000.plugins.brain.enclosure import EnclosureComponent
 class Control(EnclosureComponent):
 	def __init__(self, **kwargs) -> None:
 		EnclosureComponent.__init__(self, **kwargs)
-		self.config = dict()
+		self.config['action'] = dict()
+		self.config['menu'] = dict()
+		self.config['menu']['menu-main'] = list()
 
 
 	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
@@ -20,13 +22,12 @@ class Control(EnclosureComponent):
 			cortex['enclosure']['control'] = dict()
 			cortex['enclosure']['control']['menu-name'] = None
 			cortex['enclosure']['control']['menu-item'] = None
-		menu_file = configuration.get('enclosure:control', 'menu-file', fallback=None)
-		if menu_file is not None:
-			self.config['action'] = dict()
-			self.config['menu'] = dict()
-			self.config['menu']['menu-main'] = list()
+		menu_files = configuration.getlist('enclosure:control', 'menu-files', fallback=[])
+		item_files = configuration.getlist('enclosure:control', 'item-files', fallback=[])
+		files = [file for file in menu_files+item_files if file is not None]
+		if len(files) > 0:
 			menu_config = ConfigParser()
-			menu_config.read(menu_file)
+			menu_config.read(files)
 			self.load_menu(menu_config, 'menu-main')
 
 
@@ -78,7 +79,7 @@ class Control(EnclosureComponent):
 						action_name = self.config['action'][menu_item]["action-name"]
 						signal_data = json.loads(self.config['action'][menu_item]["signal-data"])
 						if action_name in self.daemon.actions:
-							self.daemon.actions[action_name].process(signal_data, cortex)
+							self.daemon.queue_action(action_name, signal_data)
 						else:
 							self.daemon.logger.error("enclosure/control: menu item '{}' refers to nonexistant action '{}'"
 							                         .format(menu_item, action_name))
