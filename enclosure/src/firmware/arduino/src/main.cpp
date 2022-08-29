@@ -24,14 +24,14 @@ void setup() {
 	g_gui_tft.setTextColor(TFT_WHITE);
 	g_gui_tft.setTextFont(1);
 	g_gui_tft.setTextSize(5);
-	g_gui_tft.setTextDatum(TC_DATUM);
+	g_gui_tft.setTextDatum(MC_DATUM);
 	g_gui_tft_overlay.setColorDepth(1);
 	g_gui_tft_overlay.setBitmapColor(TFT_WHITE, TFT_BLACK);
 	g_gui_tft_overlay.createSprite(TFT_WIDTH, TFT_HEIGHT);
-	g_gui_tft_overlay.setTextColor(TFT_WHITE);
+	g_gui_tft_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
 	g_gui_tft_overlay.setTextFont(1);
 	g_gui_tft_overlay.setTextSize(2);
-	g_gui_tft_overlay.setTextDatum(TC_DATUM);
+	g_gui_tft_overlay.setTextDatum(MC_DATUM);
 
 	if(LittleFS.begin() == false) {
 		while(1) {

@@ -13,7 +13,9 @@ class Control(EnclosureComponent):
 		EnclosureComponent.__init__(self, **kwargs)
 		self.config['action'] = dict()
 		self.config['menu'] = dict()
-		self.config['menu']['menu-main'] = list()
+		self.config['menu']['menu-main'] = dict()
+		self.config['menu']['menu-main']['title'] = ''
+		self.config['menu']['menu-main']['items'] = list()
 
 
 	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
@@ -31,18 +33,20 @@ class Control(EnclosureComponent):
 			self.load_menu(menu_config, 'menu-main')
 
 
-	def load_menu(self, menu_config: ConfigParser, menu_key: str) -> None:
-		for menu_item in menu_config.options(menu_key):
-			if menu_item.startswith("item-"):
-				self.config['menu'][menu_key].append({"item": menu_item, "text": menu_config.get(menu_key, menu_item)})
-				self.config['action'][menu_item] = dict()
-				self.config['action'][menu_item]['action-name'] = menu_config.get(menu_item, "action", fallback=None)
-				self.config['action'][menu_item]['signal-data'] = menu_config.get(menu_item, "signal-data", fallback=None)
-			if menu_item.startswith("menu-"):
-				self.config['menu'][menu_key].append({"item": menu_item, "text": menu_config.get(menu_key, menu_item)})
-				if menu_item not in self.config['menu']:
-					self.config['menu'][menu_item] = list()
-					self.load_menu(menu_config, menu_item)
+	def load_menu(self, menu_config: ConfigParser, menu_self: str) -> None:
+		self.config['menu'][menu_self]['title'] = menu_config.get(menu_self, 'title', fallback='')
+		for menu_entry in menu_config.options(menu_self):
+			if menu_entry.startswith("item-"):
+				self.config['menu'][menu_self]['items'].append({"item": menu_entry, "text": menu_config.get(menu_self, menu_entry)})
+				self.config['action'][menu_entry] = dict()
+				self.config['action'][menu_entry]['action-name'] = menu_config.get(menu_entry, "action", fallback=None)
+				self.config['action'][menu_entry]['signal-data'] = menu_config.get(menu_entry, "signal-data", fallback=None)
+			if menu_entry.startswith("menu-"):
+				self.config['menu'][menu_self]['items'].append({"item": menu_entry, "text": menu_config.get(menu_self, menu_entry)})
+				if menu_entry not in self.config['menu']:
+					self.config['menu'][menu_entry] = dict()
+					self.config['menu'][menu_entry]['items'] = list()
+					self.load_menu(menu_config, menu_entry)
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
@@ -50,7 +54,7 @@ class Control(EnclosureComponent):
 		if 'delta' in signal['control']:
 			if cortex['enclosure']['control']['menu-name'] is None:
 				cortex['enclosure']['control']['menu-name'] = 'menu-main'
-				cortex['enclosure']['control']['menu-item'] = self.config['menu']['menu-main'][0]["item"]
+				cortex['enclosure']['control']['menu-item'] = self.config['menu']['menu-main']['items'][0]["item"]
 				signal['control']['delta'] = 0
 			menu_name = cortex['enclosure']['control']['menu-name']
 			menu_item = cortex['enclosure']['control']['menu-item']
@@ -58,13 +62,15 @@ class Control(EnclosureComponent):
 				self.daemon.show_gui_overlay('error', {"text": "Error in menu"})
 				return
 			position = 0
-			for item in self.config['menu'][menu_name]:
+			for item in self.config['menu'][menu_name]['items']:
 				if item["item"] == menu_item:
-					position = self.config['menu'][menu_name].index(item)
+					position = self.config['menu'][menu_name]['items'].index(item)
 			position += int(signal['control']['delta'])
-			position %= len(self.config['menu'][menu_name])
-			menu_item = self.config['menu'][menu_name][position]["item"]
-			self.daemon.show_gui_overlay('menu', {"text": self.config['menu'][menu_name][position]["text"]})
+			position %= len(self.config['menu'][menu_name]['items'])
+			menu_title = self.config['menu'][menu_name]['title']
+			menu_item  = self.config['menu'][menu_name]['items'][position]["item"]
+			menu_text  = self.config['menu'][menu_name]['items'][position]["text"]
+			self.daemon.show_gui_screen('menu', {"title": menu_title, "text": menu_text})
 			self.daemon.timeouts['action'] = datetime.now()+timedelta(seconds=15), ['enclosure', {"control": {"cancel": {}}}]
 			cortex['enclosure']['control']['menu-name'] = menu_name
 			cortex['enclosure']['control']['menu-item'] = menu_item
@@ -85,15 +91,17 @@ class Control(EnclosureComponent):
 							                         .format(menu_item, action_name))
 					cortex['enclosure']['control']['menu-name'] = None
 					cortex['enclosure']['control']['menu-item'] = None
-					self.daemon.hide_gui_overlay('menu')
+					self.daemon.show_gui_screen('idle', {})
 				if menu_item is not None and menu_item.startswith("menu-"):
 					if menu_item in self.config['menu']:
 						cortex['enclosure']['control']['menu-name'] = menu_item
-						cortex['enclosure']['control']['menu-item'] = self.config['menu'][menu_item][0]["item"]
-						self.daemon.show_gui_overlay('menu', {"text": self.config['menu'][menu_item][0]["text"]})
+						cortex['enclosure']['control']['menu-item'] = self.config['menu'][menu_item]['items'][0]["item"]
+						menu_title = self.config['menu'][menu_item]['title']
+						menu_text  = self.config['menu'][menu_item]['items'][0]["text"]
+						self.daemon.show_gui_screen('menu', {"title": menu_title, "text": menu_text})
 						self.daemon.timeouts['action']  = datetime.now()+timedelta(seconds=15), ['enclosure', {"control": {"cancel": {}}}]
 		if 'cancel' in signal['control']:
-			self.daemon.hide_gui_overlay('menu')
+			self.daemon.show_gui_screen('idle', {})
 			if 'action' in self.daemon.timeouts:
 				del self.daemon.timeouts['action']
 			cortex['enclosure']['control']['menu-name'] = None

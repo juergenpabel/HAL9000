@@ -31,7 +31,7 @@ class Driver(HAL9000):
 		while Driver.serial is None:
 			try:
 				self.logger.debug('driver:{} => Connecting to {}'.format(str(self), self.config['tty']))
-				Driver.serial = serial.Serial(port=self.config['tty'], timeout=1, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
+				Driver.serial = serial.Serial(port=self.config['tty'], timeout=0.1, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
 				self.logger.debug('driver:{} => connected...'.format(str(self)))
 				line = self.receive()
 				while "loop()" not in line:

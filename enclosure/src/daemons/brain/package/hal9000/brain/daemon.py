@@ -95,13 +95,9 @@ class Daemon(HAL9000_Daemon):
 			if datetime.now() > timeout:
 				if key == 'consciousness':
 					self.set_consciousness(data)
+					del self.timeouts[key]
 				if key == 'overlay':
 					self.hide_gui_overlay(data)
-				if key == 'action':
-					[action_name, signal_data] = data
-					if action_name in self.actions:
-						self.actions[action_name].process(signal_data, self.cortex)
-				if key in self.timeouts:
 					del self.timeouts[key]
 		return True
 
@@ -133,11 +129,25 @@ class Daemon(HAL9000_Daemon):
 						self.actions[action_name].process(signal, cortex)
 						if action_name in cortex:
 							self.cortex[action_name] = cortex[action_name]
+				self.process_queued_actions()
 				self.logger.debug("CORTEX after actions =   {}".format(self.cortex))
 
 
 	def queue_action(self, action_name, signal_data) -> None:
-		self.timeouts['action'] = datetime.now(), [action_name, signal_data]
+		self.timeouts['action-{}'.format(int(datetime.now().timestamp()))] = datetime.now(), [action_name, signal_data]
+
+
+	def process_queued_actions(self) -> None:
+		for key in self.timeouts.copy().keys():
+			cortex = self.cortex.copy()
+			timeout, data = self.timeouts[key]
+			if key.startswith('action-'):
+				[action_name, signal] = data
+				if action_name in self.actions:
+					self.actions[action_name].process(signal, cortex)
+					if action_name in self.cortex:
+						self.cortex[action_name] = cortex[action_name]
+				del self.timeouts[key]
 
 
 	def set_consciousness(self, new_state) -> None:

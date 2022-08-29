@@ -20,6 +20,15 @@ void on_gui_screen(JSONVar parameter) {
 				screen_set(screen_idle);
 			}
 		}
+		if(parameter["screen"].hasOwnProperty("menu")) {
+			if(parameter["screen"].hasOwnProperty("data")) {
+				g_system_settings["gui/screen:menu/title"] = parameter["screen"]["data"]["title"];
+				g_system_settings["gui/screen:menu/text"] = parameter["screen"]["data"]["text"];
+			}
+			if(String("show").equals(parameter["screen"]["menu"])) {
+				screen_set(screen_menu);
+			}
+		}
 		if(parameter["screen"].hasOwnProperty("hal9000")) {
 			if(String("show").equals(parameter["screen"]["hal9000"])) {
 				if(parameter["screen"]["data"].hasOwnProperty("frames")) {
@@ -77,17 +86,6 @@ void on_gui_overlay(JSONVar parameter) {
 				overlay_set(overlay_message);
 			}
 			if(String("hide").equals(parameter["overlay"]["message"])) {
-				overlay_set(overlay_none);
-			}
-		}
-		if(parameter["overlay"].hasOwnProperty("menu")) {
-			if(parameter["overlay"].hasOwnProperty("data")) {
-				g_system_settings["gui/overlay:menu_item/text"] = parameter["overlay"]["data"]["text"];
-			}
-			if(String("show").equals(parameter["overlay"]["menu"])) {
-				overlay_set(overlay_menu);
-			}
-			if(String("hide").equals(parameter["overlay"]["menu"])) {
 				overlay_set(overlay_none);
 			}
 		}
