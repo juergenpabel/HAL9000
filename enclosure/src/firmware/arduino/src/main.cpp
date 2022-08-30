@@ -6,18 +6,16 @@
 #include "system/webserial.h"
 #include "device/webserial.h"
 #include "gui/webserial.h"
-
 #include "system/rp2040.h"
 #include "system/settings.h"
 #include "device/mcp23X17/mcp23X17.h"
 #include "gui/screen/screen.h"
-#include "gui/screen/splash/jpeg.h"
+#include "gui/screen/idle/screen.h"
+#include "gui/screen/splash/screen.h"
 
 
 void setup() {
-	Serial.begin(115200);
-	pinMode(TFT_BL, OUTPUT);
-	digitalWrite(TFT_BL, LOW);
+	system_rp2040_start();
 	g_gui_tft.begin();
 	g_gui_tft.setRotation(2);
 	g_gui_tft.fillScreen(TFT_BLACK);
@@ -43,15 +41,19 @@ void setup() {
 		LittleFS.remove("/system/configuration.bson");
 	}
 	if(!Serial) {
-		gui_screen_splash_jpeg("/images/splash/error.jpg");
-		digitalWrite(TFT_BL, HIGH);
+		g_system_status["gui/screen:splash/filename"] = "error.jpg";
+		gui_screen_set(gui_screen_splash);
 		while(!Serial) {
-			sleep_ms(100);
+			g_system_status.update();
+			if(g_system_status.isAwake()) {
+				digitalWrite(TFT_BL, HIGH);
+			} else {
+				digitalWrite(TFT_BL, LOW);
+			}
+			sleep_ms(1000);
 		}
-		g_gui_tft.fillScreen(TFT_BLACK);
-		digitalWrite(TFT_BL, LOW);
 	}
-	screen_set(screen_idle);
+	gui_screen_set(gui_screen_idle);
 
 	g_util_webserial.send("syslog", "setup()");
 	g_util_webserial.on("system/reset", on_system_reset);
@@ -63,18 +65,22 @@ void setup() {
 	g_util_webserial.on("gui/screen", on_gui_screen);
 	g_util_webserial.on("gui/overlay", on_gui_overlay);
 	g_util_webserial.send("syslog", "loop()");
-
-	digitalWrite(TFT_BL, HIGH); //TODO:backlighting off logic
 }
 
 
 void loop() {
 	if(!Serial) {
-		rp2040_reset();
+		system_rp2040_reset();
 	}
 	g_util_webserial_queue.sendMessages();
 	g_util_webserial.check();
-	screen_update(false);
-	sleep_ms(g_system_settings["system/arduino:loop/sleep_ms"].toInt());
+	g_system_status.update();
+	if(g_system_status.isAwake()) {
+		digitalWrite(TFT_BL, HIGH);
+	} else {
+		digitalWrite(TFT_BL, LOW);
+	}
+	gui_screen_update(false);
+	sleep_ms(std::stoi(g_system_settings["system/arduino:loop/sleep_ms"]));
 }
 

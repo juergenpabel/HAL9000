@@ -1,16 +1,13 @@
+#include "util/jpeg.h"
+#include "gui/screen/screen.h"
 #include "globals.h"
 
-#include <TimeLib.h>
-#include "gui/screen/screen.h"
 
-screen_func  g_previous_screen = NULL;
+void gui_screen_splash(bool force_refresh) {
+	char filename[256] = {0};
 
-
-void screen_splash(bool force_refresh) {
-//TODO	if(false /*TODO*/) {
-//TODO		g_util_webserial.send("syslog", "screen_splash() reactivating previous screen");
-//TODO		screen_set(g_previous_screen);
-//TODO		g_previous_screen = NULL;
-//TODO	}
+	snprintf(filename, sizeof(filename), "/images/splash/%s", g_system_status["gui/screen:splash/filename"]);
+	util_jpeg_decode565_littlefs(filename, g_gui_tft_buffer, TFT_WIDTH*TFT_HEIGHT);
+	g_gui_tft.pushImage(0, 0, TFT_WIDTH, TFT_HEIGHT, (uint16_t*)g_gui_tft_buffer);
 }
 

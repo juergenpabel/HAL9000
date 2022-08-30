@@ -1,4 +1,3 @@
-#include <string.h>
 #include <TimeLib.h>
 #include <LittleFS.h>
 #include <SimpleWebSerial.h>
@@ -51,6 +50,6 @@ void gui_screen_hal9000_frames_load(const char* name) {
 			file.close();
 		}
 	}
-	g_util_webserial.send("syslog", String("Frames '") + name + "' loaded from littlefs:" + directory);
+	g_util_webserial.send("syslog", arduino::String("Frames '") + name + "' loaded from littlefs:" + directory);
 }
 

@@ -1,4 +1,4 @@
-#include <string.h>
+#include <string>
 #include <JSONVar.h>
 
 #include "globals.h"
@@ -8,9 +8,11 @@
 
 void on_device_display(JSONVar parameter) {
 	if(parameter.hasOwnProperty("backlight")) {
-		bool  backlight;
+		bool  backlight = true;
 
-		backlight = String("on").equals(parameter["backlight"]);
+		if(arduino::String("off") == parameter["backlight"]) {
+			backlight = false;
+		}
 		digitalWrite(TFT_BL, backlight ? HIGH : LOW);
 	}
 }
@@ -26,9 +28,9 @@ void on_device_mcp23X17(JSONVar parameter) {
 		uint8_t i2c_pin_sda = 0;
 		uint8_t i2c_pin_scl = 1;
 
-		i2c_address = g_system_settings["device/mcp23X17:i2c/address"].toInt();
-		i2c_pin_sda = g_system_settings["device/mcp23X17:i2c/pin-sda"].toInt();
-		i2c_pin_scl = g_system_settings["device/mcp23X17:i2c/pin-scl"].toInt();
+		i2c_address = std::stoi(g_system_settings["device/mcp23X17:i2c/address"]);
+		i2c_pin_sda = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-sda"]);
+		i2c_pin_scl = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-scl"]);
 		if(parameter["init"].hasOwnProperty("i2c-address")) {
 			i2c_address = (int)parameter["init"]["i2c-address"];
 		}

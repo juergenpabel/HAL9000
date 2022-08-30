@@ -1,9 +1,8 @@
 #include <Adafruit_MCP23X17.h>
 #include <Wire.h>
-#include <string.h>
-#include <RingBuf.h>
 #include <JSONVar.h>
 #include <pico/multicore.h>
+
 #include "gui/overlay/overlay.h"
 #include "device/mcp23X17/devices.h"
 #include "device/mcp23X17/mcp23X17.h"

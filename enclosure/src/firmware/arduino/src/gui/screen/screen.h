@@ -1,18 +1,8 @@
-#include <TimeLib.h>
+typedef void (*gui_screen_func)(bool refresh);
 
+gui_screen_func gui_screen_get();
+gui_screen_func gui_screen_set(gui_screen_func new_screen);
+void            gui_screen_set_refresh();
 
-typedef void (*screen_func)(bool refresh);
-
-screen_func screen_get();
-screen_func screen_set(screen_func);
-void        screen_set_refresh();
-void screen_update(bool force_refresh);
-
-
-void screen_idle(bool force_refresh);
-void screen_menu(bool force_refresh);
-void screen_hal9000(bool force_refresh);
-
-
-extern time_t  g_gui_screen_idle_clock_previously;
+void gui_screen_update(bool force_refresh);
 

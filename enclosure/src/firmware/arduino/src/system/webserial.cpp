@@ -28,7 +28,7 @@ void on_system_settings(JSONVar parameter) {
 
 			if(g_system_settings.count(key) == 1) {
 				data["key"] = key;
-				data["value"] = g_system_settings[key];
+				data["value"] = g_system_settings[key].c_str();
 			}
 			g_util_webserial.send("system/settings#get", data);
 			g_util_webserial.send("syslog", "system/settings#get => OK");
@@ -56,19 +56,19 @@ void on_system_settings(JSONVar parameter) {
 void on_system_time(JSONVar parameter) {
 	if(parameter.hasOwnProperty("sync")) {
 		if(parameter["sync"].hasOwnProperty("epoch")) {
-			rp2040_time_sync(parameter["sync"]["epoch"]);
+			system_rp2040_set_epoch(parameter["sync"]["epoch"]);
 		}
 	}
 	if(parameter.hasOwnProperty("config")) {
 		int interval = 3600;
 
-		if(g_system_settings.count("system/time:sync/interval") == 1) {
-			interval = g_system_settings["system/time:sync/interval"].toInt();
+		if(g_system_status.count("system/time:sync/interval") == 1) {
+			interval = std::stoi(g_system_status["system/time:sync/interval"]);
 		}
 		if(parameter["config"].hasOwnProperty("interval")) {
 			interval = parameter["config"]["interval"];
 		}
-		setSyncProvider(rp2040_timelib_sync);
+		setSyncProvider(system_rp2040_timelib_sync);
 		setSyncInterval(interval);
 	}
 }
@@ -82,9 +82,9 @@ void on_system_reset(JSONVar parameter) {
 	}
 	if(uf2) {
 		g_util_webserial.send("syslog", "Resetting RP2040 with boot target UF2...");
-		rp2040_reset_uf2();
+		system_rp2040_reset_uf2();
 	}
 	g_util_webserial.send("syslog", "Resetting RP2040...");
-	rp2040_reset();
+	system_rp2040_reset();
 }
 

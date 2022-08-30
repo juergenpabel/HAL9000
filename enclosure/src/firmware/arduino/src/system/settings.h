@@ -1,11 +1,11 @@
 #ifndef __ROUNDYPI_SYSTEM_SETTINGS_H__
 #define __ROUNDYPI_SYSTEM_SETTINGS_H__
 
-#include <string.h>
+#include <string>
 #include <map>
 
 
-class Settings : public std::map<String, String> {
+class Settings : public std::map<std::string, std::string> {
 	public:
 		Settings();
 

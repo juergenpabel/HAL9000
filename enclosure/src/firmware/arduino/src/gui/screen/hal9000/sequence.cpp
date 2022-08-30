@@ -1,4 +1,3 @@
-#include <string.h>
 #include <TimeLib.h>
 #include <LittleFS.h>
 #include <SimpleWebSerial.h>
@@ -22,7 +21,7 @@ void  add_sequence_recursively(JSONVar data, uint8_t offset);
 sequence_t      g_sequences_queue[GUI_SEQUENCES_MAX] = {0};
 sequence_t*     g_current_sequence = &g_sequences_queue[0];
 
-void screen_sequence(bool refresh) {
+void gui_screen_sequence(bool refresh) {
 /*
 	for(int i=0; i<GUI_SEQUENCE_FRAMES_MAX; i++) {
 		if(g_frames_jpg[i].size > 0) {
@@ -39,7 +38,7 @@ void screen_sequence(bool refresh) {
 			}
 		} else {
 			g_util_webserial.send("syslog", "Sequences queue empty, activating idle handler");
-			screen_set(screen_idle);
+			gui_screen_set(screen_idle);
 		}
 	}
 */
@@ -85,7 +84,7 @@ void add_sequence_recursively(JSONVar data, uint8_t offset) {
 	strncpy(target_sequence->name, data[offset]["name"], sizeof(target_sequence->name)-1);
 	target_sequence->timeout = (long)data[offset]["timeout"];
 	target_sequence->next = target_sequence;
-	g_util_webserial.send("syslog", String("Added sequence '") + (const char*)data[offset]["name"] + "' at pos=" + target_offset + " with timeout=" + (long)data[offset]["timeout"]);
+	g_util_webserial.send("syslog", arduino::String("Added sequence '") + (const char*)data[offset]["name"] + "' at pos=" + target_offset + " with timeout=" + (long)data[offset]["timeout"]);
 	if(offset+1 < data.length()) {
 		add_sequence_recursively(data, offset+1);
 	}

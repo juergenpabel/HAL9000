@@ -1,25 +1,26 @@
 #ifndef __ROUNDYPI_WEBSERIAL_QUEUE_H__
 #define __ROUNDYPI_WEBSERIAL_QUEUE_H__
 
-#include <string.h>
+#include <string>
+#include <queue>
 #include <JSONVar.h>
-#include <RingBuf.h>
 
 
 typedef struct {
-	String   topic;
-	JSONVar  data;
+	std::string  topic;
+	JSONVar      data;
 } WebSerialMessage;
 
 
-class WebSerialQueue : public RingBuf<WebSerialMessage, RingBufSize> {
+class WebSerialQueue {
 	private:
+		std::queue<WebSerialMessage> queue;
 		mutex_t mutex;
 	public:
 		WebSerialQueue();
-		bool pushMessage(String topic, JSONVar& data);
-		bool pushMessage(String topic, String data);
-		bool sendMessages();
+		void pushMessage(std::string topic, JSONVar& data);
+		void pushMessage(std::string topic, arduino::String data);
+		void sendMessages();
 };
 
 #endif

@@ -1,5 +1,4 @@
 #include <SimpleWebSerial.h>
-#include <RingBuf.h>
 #include <pico/mutex.h> 
 
 #include "util/queue.h"
@@ -10,46 +9,39 @@ WebSerialQueue::WebSerialQueue() {
 	mutex_init(&this->mutex);
 }
 
-bool WebSerialQueue::pushMessage(String topic, String data) {
+
+void WebSerialQueue::pushMessage(std::string topic, arduino::String data) {
 	JSONVar json(data);
 
-	return this->pushMessage(topic, json);
+	this->pushMessage(topic, json);
 }
 
 
-bool WebSerialQueue::pushMessage(String topic, JSONVar& data) {
-	bool  result = false;
+void WebSerialQueue::pushMessage(std::string topic, JSONVar& data) {
+	WebSerialMessage  message;
 
+	message.topic = topic;
+	message.data = data;
 	mutex_enter_blocking(&this->mutex);
-	if(this->isFull() == false) {
-		WebSerialMessage  message;
-
-		message.topic = topic;
-		message.data = data;
-		result = RingBuf::push(message);
-	}
+	queue.push(message);
 	mutex_exit(&this->mutex);
-	return result;
 }
 
 
-bool WebSerialQueue::sendMessages() {
-	bool result = false;
-
+void WebSerialQueue::sendMessages() {
 	if(mutex_try_enter(&this->mutex, NULL)) {
-		while(this->isEmpty() == false) {
+		while(this->queue.empty() == false) {
 			WebSerialMessage message;
 
-			if(RingBuf::pop(message)) {
-				if(message.topic.length() > 0) {
-					g_util_webserial.send(message.topic.c_str(), message.data);
-				} else {
-					g_util_webserial.send("syslog", message.data);
-				}
+			message = this->queue.front();
+			this->queue.pop();
+			if(message.topic.length() > 0) {
+				g_util_webserial.send(message.topic.c_str(), message.data);
+			} else {
+				g_util_webserial.send("syslog", message.data);
 			}
 		}
 		mutex_exit(&this->mutex);
 	}
-	return result;
 }
 
