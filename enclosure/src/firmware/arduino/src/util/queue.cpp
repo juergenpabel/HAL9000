@@ -45,3 +45,13 @@ void WebSerialQueue::sendMessages() {
 	}
 }
 
+
+void WebSerialQueue::dropMessages() {
+	if(mutex_try_enter(&this->mutex, NULL)) {
+		while(this->queue.empty() == false) {
+			this->queue.pop();
+		}
+		mutex_exit(&this->mutex);
+	}
+}
+

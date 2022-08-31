@@ -3,7 +3,7 @@
 #include "devices.h"
 
 
-MCP23X17_Device* MCP23X17_Device::instances[MCP23X17_INSTANCES] = { NULL };
+MCP23X17_Device* MCP23X17_Device::instances[SYSTEM_SETTINGS_MCP23X17_DEV_INSTANCES] = { NULL };
 
 
 MCP23X17_Device::MCP23X17_Device(const char* type) {
@@ -21,7 +21,7 @@ bool MCP23X17_Device::configure(const char* name, Adafruit_MCP23X17* mcp23X17, J
 		return false;
 	}
 	strncpy(this->name, name, MaximumKeyNameLength-1);
-	for(uint8_t i=0; i<MCP23X17_INSTANCES; i++) {
+	for(uint8_t i=0; i<SYSTEM_SETTINGS_MCP23X17_DEV_INSTANCES; i++) {
 		if(result == false && MCP23X17_Device::instances[i] == NULL) {
 			MCP23X17_Device::instances[i] = this;
 			result = true;
@@ -193,10 +193,7 @@ JSONVar MCP23X17_Switch::process(const char* pin, const char* pin_value) {
 
 
 bool MCP23X17_Button::configure(const char* name, Adafruit_MCP23X17* mcp23X17, JSONVar& inputs, JSONVar& actions) {
-	bool result = false;
-
-	result = MCP23X17_Switch::configure(name, mcp23X17, inputs, actions);
-	return result;
+	return MCP23X17_Switch::configure(name, mcp23X17, inputs, actions);
 }
 
 

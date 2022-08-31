@@ -21,7 +21,10 @@ const char* MCP23X17::PIN_VALUES[2] = {"LOW", "HIGH"};
 #define MCP23X17_STATE_RUNNING       0x30
 
  
-MCP23X17::MCP23X17() : status(MCP23X17_STATE_UNINITIALIZED), wire(i2c0, 0, 1), mcp23X17() {
+MCP23X17::MCP23X17()
+         :status(MCP23X17_STATE_UNINITIALIZED),
+          wire(i2c0, SYSTEM_SETTINGS_MCP23X17_PIN_SDA, SYSTEM_SETTINGS_MCP23X17_PIN_SCL),
+          mcp23X17() {
 }
 
 
@@ -37,8 +40,8 @@ void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
 		return;
 	}
 	this->mcp23X17.setupInterrupts(false, true, LOW);
-	pinMode(MCP23X17_INTA, INPUT_PULLUP);
-	pinMode(MCP23X17_INTB, INPUT_PULLUP);
+	pinMode(std::stoi(g_system_settings["device/mcp23X17:i2c/pin-int_a"]), INPUT_PULLUP);
+	pinMode(std::stoi(g_system_settings["device/mcp23X17:i2c/pin-int_b"]), INPUT_PULLUP);
 	this->status = MCP23X17_STATE_INITIALIZED;
 }
 
@@ -47,7 +50,11 @@ void MCP23X17::config_inputs(const char* event_name, const char* device_type, JS
 	MCP23X17_Device* device = NULL;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
-		this->init(0x20, 0, 1);
+		uint8_t i2c_address = std::stoi(g_system_settings["device/mcp23X17:i2c/address"]);
+		uint8_t i2c_pin_sda = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-sda"]);
+		uint8_t i2c_pin_scl = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-scl"]);
+
+		this->init(i2c_address, i2c_pin_sda, i2c_pin_scl);
 	}
 	if(this->status == MCP23X17_STATE_RUNNING) {
 		g_util_webserial.send("syslog", "MCP23X17 already loop()'ing on the other core");
@@ -104,7 +111,11 @@ void MCP23X17::config_outputs(const char* event_name, const char* device_type, J
 	MCP23X17_Device* device = NULL;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
-		this->init(0x20, 0, 1);
+		uint8_t i2c_address = std::stoi(g_system_settings["device/mcp23X17:i2c/address"]);
+		uint8_t i2c_pin_sda = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-sda"]);
+		uint8_t i2c_pin_scl = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-scl"]);
+
+		this->init(i2c_address, i2c_pin_sda, i2c_pin_scl);
 	}
 	if(event_name == NULL || device_type == NULL) {
 		g_util_webserial.send("syslog", "MCP23X17::config_outputs(): invalid parameters name/type");
@@ -152,7 +163,7 @@ void MCP23X17::check() {
 
 				pin_label = MCP23X17::PIN_NAMES[pin];
 				pin_value = MCP23X17::PIN_VALUES[new_value];
-				for(uint8_t i=0; i<MCP23X17_INSTANCES; i++) {
+				for(uint8_t i=0; i<SYSTEM_SETTINGS_MCP23X17_DEV_INSTANCES; i++) {
 					MCP23X17_Device* device;
 
 					device = MCP23X17_Device::instances[i];

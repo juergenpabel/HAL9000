@@ -7,14 +7,22 @@ import select
 from datetime import datetime, timezone
 
 menu = dict()
-menu['1'] = ['Wakeup sequence', '["gui/screen", {"sequence" :{"queue": [{"name": "wakeup", "timeout": 0}, {"name": "active", "timeout": 10}, {"name": "sleep", "timeout": 0}]}}]']
-menu['2'] = ['Splash JPG (timeout=3)', '["gui/screen", {"splash": {"filename": "error.jpg", "timeout": 3}}]']
+menu['1'] = ['Dump system status', '["system/status", {"list": {}}]']
+menu['2'] = ['Dump system settings', '["system/settings", {"list": {}}]']
+menu['3'] = ['Load system settings', '["system/settings", {"load": {}}]']
+menu['4'] = ['Save system settings', '["system/settings", {"save": {}}]']
+menu['5'] = ['Reset system settings', '["system/settings", {"reset": {}}]']
+menu['6'] = ['Add dummy system setting', '["system/settings", {"set": {"key": "foo", "value": "bar"}}]']
+menu['7'] = ['Switch to screen "hal9000" (animation)',    '["gui/screen", {"screen": {"hal9000": "show", "data": {"frames": "active"}}}]']
+menu['8'] = ['Switch to screen "splash" (error.jpg)',     '["gui/screen", {"screen": {"splash":  "show", "data": {"filename": "error.jpg"}}}]']
+menu['9'] = ['Switch to screen "idle" (showing a clock)', '["gui/screen", {"screen": {"idle":    "show"}}]']
+menu['0'] = ['Reset system', '["system/reset", {}]']
 
 
 def handler(self, line: str):
 	if len(line):
-		if line.strip('"') == "system/time":
-			self.send('["system/time", "sync":{"epoch":'+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
+		if line.strip() == '["system/time",{"sync":{"format":"epoch"}}]':
+			self.send('["system/time", {"sync":{"epoch":'+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
 	else:
 		if select.select([sys.stdin, ], [], [], 0.0)[0]:
 			choice = sys.stdin.read(1)
@@ -29,6 +37,6 @@ print('========')
 for key in menu.keys():
 	print("{}: {}".format(key, menu[key][0]))
 	
-roundypi.send('["system/time", {"interval": 60}]')
+roundypi.send('["system/time", {"config": {"interval": 60}}]')
 roundypi.run(handler)
 

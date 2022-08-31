@@ -4,10 +4,12 @@
 
 
 void gui_screen_splash(bool force_refresh) {
-	char filename[256] = {0};
+	if(force_refresh == true) {
+		std::string filename("/images/splash/");
 
-	snprintf(filename, sizeof(filename), "/images/splash/%s", g_system_status["gui/screen:splash/filename"]);
-	util_jpeg_decode565_littlefs(filename, g_gui_tft_buffer, TFT_WIDTH*TFT_HEIGHT);
-	g_gui_tft.pushImage(0, 0, TFT_WIDTH, TFT_HEIGHT, (uint16_t*)g_gui_tft_buffer);
+		filename += g_system_status["gui/screen:splash/filename"];
+		util_jpeg_decode565_littlefs(filename.c_str(), g_gui_tft_buffer, TFT_WIDTH*TFT_HEIGHT);
+		g_gui_tft.pushImage(0, 0, TFT_WIDTH, TFT_HEIGHT, (uint16_t*)g_gui_tft_buffer);
+	}
 }
 

@@ -6,11 +6,14 @@
 
 
 class Settings : public std::map<std::string, std::string> {
+	private:
+		std::string filename;
 	public:
-		Settings();
+		Settings(std::string filename);
 
-		bool load(const char* filename);
-		bool save(const char* filename);
+		bool load();
+		bool save();
+		bool reset();
 };
 
 #endif

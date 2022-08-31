@@ -24,9 +24,9 @@ void on_device_sdcard(JSONVar parameter) {
 
 void on_device_mcp23X17(JSONVar parameter) {
 	if(parameter.hasOwnProperty("init")) {
-		uint8_t i2c_address = 0x20;
-		uint8_t i2c_pin_sda = 0;
-		uint8_t i2c_pin_scl = 1;
+		uint8_t i2c_address;
+		uint8_t i2c_pin_sda;
+		uint8_t i2c_pin_scl;
 
 		i2c_address = std::stoi(g_system_settings["device/mcp23X17:i2c/address"]);
 		i2c_pin_sda = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-sda"]);

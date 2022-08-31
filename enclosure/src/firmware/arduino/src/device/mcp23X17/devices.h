@@ -7,7 +7,7 @@
 
 class MCP23X17_Device {
 	public:
-		static MCP23X17_Device* instances[MCP23X17_INSTANCES];
+		static MCP23X17_Device* instances[SYSTEM_SETTINGS_MCP23X17_DEV_INSTANCES];
 		const uint8_t PIN_LOW  = 0x00;
 		const uint8_t PIN_HIGH = 0x01;
 	protected:

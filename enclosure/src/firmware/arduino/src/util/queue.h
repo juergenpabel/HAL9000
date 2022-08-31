@@ -21,6 +21,7 @@ class WebSerialQueue {
 		void pushMessage(std::string topic, JSONVar& data);
 		void pushMessage(std::string topic, arduino::String data);
 		void sendMessages();
+		void dropMessages();
 };
 
 #endif

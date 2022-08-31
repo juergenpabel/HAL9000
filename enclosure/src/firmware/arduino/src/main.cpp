@@ -7,8 +7,6 @@
 #include "device/webserial.h"
 #include "gui/webserial.h"
 #include "system/rp2040.h"
-#include "system/settings.h"
-#include "device/mcp23X17/mcp23X17.h"
 #include "gui/screen/screen.h"
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/splash/screen.h"
@@ -33,17 +31,21 @@ void setup() {
 
 	if(LittleFS.begin() == false) {
 		while(1) {
-			g_util_webserial.send("syslog", "LittleFS error, halting");
+			if(Serial) {
+				g_util_webserial.send("syslog", "LittleFS error, halting");
+			}
 			sleep_ms(1000);
 		}
 	}
-	if(g_system_settings.load("/system/configuration.bson") == false) {
-		LittleFS.remove("/system/configuration.bson");
+	if(g_system_settings.load() == false) {
+		g_util_webserial_queue.pushMessage("syslog", "setup() failed to load settings from littlefs");
+		g_system_settings.reset();
 	}
 	if(!Serial) {
-		g_system_status["gui/screen:splash/filename"] = "error.jpg";
+		g_system_status["gui/screen:splash/filename"] = std::string("error.jpg");
 		gui_screen_set(gui_screen_splash);
 		while(!Serial) {
+			gui_screen_update(false);
 			g_system_status.update();
 			if(g_system_status.isAwake()) {
 				digitalWrite(TFT_BL, HIGH);
@@ -53,10 +55,12 @@ void setup() {
 			sleep_ms(1000);
 		}
 	}
+	g_util_webserial_queue.sendMessages();
 	gui_screen_set(gui_screen_idle);
 
 	g_util_webserial.send("syslog", "setup()");
 	g_util_webserial.on("system/reset", on_system_reset);
+	g_util_webserial.on("system/status", on_system_status);
 	g_util_webserial.on("system/settings", on_system_settings);
 	g_util_webserial.on("system/time", on_system_time);
 	g_util_webserial.on("device/sdcard", on_device_sdcard);
@@ -69,18 +73,21 @@ void setup() {
 
 
 void loop() {
+	static int loop_sleep_ms = std::stoi(g_system_settings["system/arduino:loop/sleep_ms"])+1;
+
 	if(!Serial) {
 		system_rp2040_reset();
 	}
-	g_util_webserial_queue.sendMessages();
-	g_util_webserial.check();
 	g_system_status.update();
 	if(g_system_status.isAwake()) {
 		digitalWrite(TFT_BL, HIGH);
+		g_util_webserial_queue.sendMessages();
 	} else {
 		digitalWrite(TFT_BL, LOW);
+		g_util_webserial_queue.dropMessages();
 	}
+	g_util_webserial.check();
 	gui_screen_update(false);
-	sleep_ms(std::stoi(g_system_settings["system/arduino:loop/sleep_ms"]));
+	sleep_ms(loop_sleep_ms);
 }
 

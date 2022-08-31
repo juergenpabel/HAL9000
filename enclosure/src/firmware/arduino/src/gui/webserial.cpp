@@ -67,8 +67,8 @@ void on_gui_overlay(JSONVar parameter) {
 	if(parameter.hasOwnProperty("overlay")) {
 		if(parameter["overlay"].hasOwnProperty("volume")) {
 			if(parameter["overlay"].hasOwnProperty("data")) {
-				g_system_status["system/audio:volume/level"] = (const char*)parameter["overlay"]["data"]["level"];
-				g_system_status["system/audio:volume/mute"] = (const char*)parameter["overlay"]["data"]["mute"];
+				g_system_status["gui/screen:volume/level"] = (const char*)parameter["overlay"]["data"]["level"];
+				g_system_status["gui/screen:volume/mute"] = (const char*)parameter["overlay"]["data"]["mute"];
 			}
 			if(arduino::String("show") == parameter["overlay"]["volume"]) {
 				gui_overlay_set(gui_overlay_volume);

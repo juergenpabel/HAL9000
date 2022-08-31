@@ -13,10 +13,10 @@ static uint16_t      g_gui_overlay_icon[GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_
 
 
 void gui_overlay_volume(bool force_refresh) {
-	if(g_system_status["system/audio:volume/mute"] == std::string("False")) {
+	if(g_system_status["gui/screen:volume/mute"] == std::string("False")) {
 		uint8_t  volume_level;
 
-		volume_level = std::stoi(g_system_status["system/audio:volume/level"]);
+		volume_level = std::stoi(g_system_status["gui/screen:volume/level"]);
 		for(uint8_t d=0; d<=100; d+=1) {
 			double v = 0;
 			double dx = TFT_WIDTH/2;
