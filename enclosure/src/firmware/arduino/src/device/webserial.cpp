@@ -17,8 +17,9 @@ void on_device_display(JSONVar parameter) {
 	}
 }
 
+
 void on_device_sdcard(JSONVar parameter) {
-	//TODO
+//TODO: implement logic
 }
 
 

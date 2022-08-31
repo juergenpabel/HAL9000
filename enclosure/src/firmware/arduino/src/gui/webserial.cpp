@@ -39,14 +39,14 @@ void on_gui_screen(JSONVar parameter) {
 		if(parameter["screen"].hasOwnProperty("splash")) {
 			if(arduino::String("show") == parameter["screen"]["splash"]) {
 				if(parameter["screen"]["data"].hasOwnProperty("filename")) {
-					char*  extension = NULL;
+					std::string filename = (const char*)parameter["screen"]["data"]["filename"];
 
-					extension = strrchr(parameter["screen"]["data"]["filename"], '.');
-					if(extension == NULL || strncmp(extension, ".jpg", 5) != 0) {
-						//TODO:error
+					if(filename.substr(filename.length()-4,4).compare(".jpg") != 0) {
+						g_util_webserial.send("syslog", "on_gui_screen() => 'splash' screen called with non-jpeg filename (*.jpg)");
+						g_util_webserial.send("syslog", filename.c_str());
 						return;
 					}
-					g_system_status["gui/screen:splash/filename"] = (const char*)parameter["screen"]["data"]["filename"];
+					g_system_status["gui/screen:splash/filename"] = filename;
 					gui_screen_set(gui_screen_splash);
 				}
 			}

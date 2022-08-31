@@ -24,10 +24,6 @@ void system_rp2040_start() {
 
 
 void system_rp2040_reset() {
-//TODO	if(g_system_settings.save() == false) {
-//TODO		g_util_webserial.send("system/rp2040", "rp2040_reset(): settings could not be saved to flash/littlefs");
-//TODO		g_util_webserial.send("system/rp2040", "rp2040_reset(): any modified settings will be lost");
-//TODO	}
 //TODO	if(year(g_sync_epoch_secs) >= 2001) {
 //TODO		watchdog_hw->scratch[5] = 0x00002001;
 //TODO		watchdog_hw->scratch[6] = 0x00009000;

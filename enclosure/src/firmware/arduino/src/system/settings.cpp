@@ -10,8 +10,6 @@ static uint8_t  bson_buffer[SETTINGS_SIZE];
 
 Settings::Settings(std::string filename) {
 	this->filename = filename;
-	(*this)["system/state:time/sleep"] = STRING(SYSTEM_SETTINGS_TIME_SLEEP);
-	(*this)["system/state:time/wakeup"] = STRING(SYSTEM_SETTINGS_TIME_WAKEUP);
 	(*this)["system/arduino:loop/sleep_ms"] = STRING(SYSTEM_SETTINGS_LOOP_MS);
 	(*this)["device/mcp23X17:i2c/address"] = STRING(SYSTEM_SETTINGS_MCP23X17_ADDRESS);
 	(*this)["device/mcp23X17:i2c/pin-sda"] = STRING(SYSTEM_SETTINGS_MCP23X17_PIN_SDA);

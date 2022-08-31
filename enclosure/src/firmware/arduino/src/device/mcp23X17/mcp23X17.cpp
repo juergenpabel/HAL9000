@@ -123,9 +123,9 @@ void MCP23X17::config_outputs(const char* event_name, const char* device_type, J
 		g_util_webserial.send("syslog", device_type);
 		return;
 	}
-	if(strncmp(device_type, "TODO", 5) == 0) {
-		//TODO:device = &g_devices_switch[0];
-	}
+//TODO	if(strncmp(device_type, "TODO", 5) == 0) {
+//TODO		device = &g_devices_switch[0];
+//TODO	}
 	if(device == NULL) {
 		g_util_webserial.send("syslog", "MCP23X17::config_outputs(): invalid parameter device_type");
 		g_util_webserial.send("syslog", device_type);

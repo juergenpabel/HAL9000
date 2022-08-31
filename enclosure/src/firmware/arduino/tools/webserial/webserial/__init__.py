@@ -52,7 +52,7 @@ class webserial:
 					handler(self, line)
 		except:
 			print("Connection closed")
-			raise
+			sys.exit(0)
 
 
 
