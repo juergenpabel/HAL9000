@@ -5,9 +5,9 @@
 #include <map>
 
 
-class Status : public std::map<std::string, std::string> {
+class Runtime : public std::map<std::string, std::string> {
 	public:
-		Status();
+		Runtime();
 		bool  isAwake();
 		bool  isAsleep();
 		void  update();

@@ -42,12 +42,12 @@ void setup() {
 		g_system_settings.reset();
 	}
 	if(!Serial) {
-		g_system_status["gui/screen:splash/filename"] = std::string("error.jpg");
+		g_system_runtime["gui/screen:splash/filename"] = std::string("error.jpg");
 		gui_screen_set(gui_screen_splash);
 		while(!Serial) {
 			gui_screen_update(false);
-			g_system_status.update();
-			if(g_system_status.isAwake()) {
+			g_system_runtime.update();
+			if(g_system_runtime.isAwake()) {
 				digitalWrite(TFT_BL, HIGH);
 			} else {
 				digitalWrite(TFT_BL, LOW);
@@ -60,7 +60,7 @@ void setup() {
 
 	g_util_webserial.send("syslog", "setup()");
 	g_util_webserial.on("system/reset", on_system_reset);
-	g_util_webserial.on("system/status", on_system_status);
+	g_util_webserial.on("system/runtime", on_system_runtime);
 	g_util_webserial.on("system/settings", on_system_settings);
 	g_util_webserial.on("system/time", on_system_time);
 	g_util_webserial.on("device/sdcard", on_device_sdcard);
@@ -78,8 +78,8 @@ void loop() {
 	if(!Serial) {
 		system_rp2040_reset();
 	}
-	g_system_status.update();
-	if(g_system_status.isAwake()) {
+	g_system_runtime.update();
+	if(g_system_runtime.isAwake()) {
 		digitalWrite(TFT_BL, HIGH);
 		g_util_webserial_queue.sendMessages();
 	} else {

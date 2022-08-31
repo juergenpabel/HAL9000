@@ -13,9 +13,9 @@ void gui_screen_menu(bool force_refresh) {
 		menu_item  = std::string();
 		g_gui_tft.fillScreen(TFT_BLACK);
 	}
-	if(menu_title != g_system_status["gui/screen:menu/title"] || menu_item != g_system_status["gui/screen:menu/text"]) {
-		menu_title = g_system_status["gui/screen:menu/title"];
-		menu_item  = g_system_status["gui/screen:menu/text"];
+	if(menu_title != g_system_runtime["gui/screen:menu/title"] || menu_item != g_system_runtime["gui/screen:menu/text"]) {
+		menu_title = g_system_runtime["gui/screen:menu/title"];
+		menu_item  = g_system_runtime["gui/screen:menu/text"];
 		g_gui_tft.setTextColor(TFT_WHITE, TFT_BLACK, true);
 		g_gui_tft.setTextDatum(MC_DATUM);
 		g_gui_tft.setTextSize(1);

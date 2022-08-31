@@ -20,8 +20,8 @@ void on_gui_screen(JSONVar parameter) {
 		}
 		if(parameter["screen"].hasOwnProperty("menu")) {
 			if(parameter["screen"].hasOwnProperty("data")) {
-				g_system_status["gui/screen:menu/title"] = (const char*)parameter["screen"]["data"]["title"];
-				g_system_status["gui/screen:menu/text"] = (const char*)parameter["screen"]["data"]["text"];
+				g_system_runtime["gui/screen:menu/title"] = (const char*)parameter["screen"]["data"]["title"];
+				g_system_runtime["gui/screen:menu/text"] = (const char*)parameter["screen"]["data"]["text"];
 			}
 			if(arduino::String("show") == parameter["screen"]["menu"]) {
 				gui_screen_set(gui_screen_menu);
@@ -46,7 +46,7 @@ void on_gui_screen(JSONVar parameter) {
 						g_util_webserial.send("syslog", filename.c_str());
 						return;
 					}
-					g_system_status["gui/screen:splash/filename"] = filename;
+					g_system_runtime["gui/screen:splash/filename"] = filename;
 					gui_screen_set(gui_screen_splash);
 				}
 			}
@@ -67,8 +67,8 @@ void on_gui_overlay(JSONVar parameter) {
 	if(parameter.hasOwnProperty("overlay")) {
 		if(parameter["overlay"].hasOwnProperty("volume")) {
 			if(parameter["overlay"].hasOwnProperty("data")) {
-				g_system_status["gui/screen:volume/level"] = (const char*)parameter["overlay"]["data"]["level"];
-				g_system_status["gui/screen:volume/mute"] = (const char*)parameter["overlay"]["data"]["mute"];
+				g_system_runtime["gui/screen:volume/level"] = (const char*)parameter["overlay"]["data"]["level"];
+				g_system_runtime["gui/screen:volume/mute"] = (const char*)parameter["overlay"]["data"]["mute"];
 			}
 			if(arduino::String("show") == parameter["overlay"]["volume"]) {
 				gui_overlay_set(gui_overlay_volume);
@@ -79,7 +79,7 @@ void on_gui_overlay(JSONVar parameter) {
 		}
 		if(parameter["overlay"].hasOwnProperty("message")) {
 			if(parameter["overlay"].hasOwnProperty("data")) {
-				g_system_status["gui/overlay:message/text"] = (const char*)parameter["overlay"]["data"]["text"];
+				g_system_runtime["gui/overlay:message/text"] = (const char*)parameter["overlay"]["data"]["text"];
 			}
 			if(arduino::String("show") == parameter["overlay"]["message"]) {
 				gui_overlay_set(gui_overlay_message);

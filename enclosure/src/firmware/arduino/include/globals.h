@@ -4,13 +4,13 @@
 #include <TFT_eSPI.h>
 #include <SimpleWebSerial.h>
 #include <JPEGDEC.h>
-#include "system/status.h"
+#include "system/runtime.h"
 #include "system/settings.h"
 #include "device/mcp23X17/mcp23X17.h"
 #include "util/queue.h"
 
 
-extern Status          g_system_status;
+extern Runtime         g_system_runtime;
 extern Settings        g_system_settings;
 extern MCP23X17        g_device_mcp23X17;
 extern TFT_eSPI        g_gui_tft;

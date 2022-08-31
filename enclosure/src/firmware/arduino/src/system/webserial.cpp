@@ -6,14 +6,14 @@
 #include "globals.h"
 
 
-void on_system_status(JSONVar parameter) {
+void on_system_runtime(JSONVar parameter) {
 	if(parameter.hasOwnProperty("list")) {
 		JSONVar result;
 
-		for(Status::iterator iter=g_system_status.begin(); iter!=g_system_status.end(); ++iter) {
+		for(Runtime::iterator iter=g_system_runtime.begin(); iter!=g_system_runtime.end(); ++iter) {
 			result[iter->first.c_str()] = iter->second.c_str();
 		}
-		g_util_webserial.send("system/status#list", result);
+		g_util_webserial.send("system/runtime#list", result);
 	}
 }
 
@@ -90,10 +90,10 @@ void on_system_time(JSONVar parameter) {
 	if(parameter.hasOwnProperty("config")) {
 		int interval_secs;
 
-		interval_secs = std::stoi(g_system_status["system/time:sync/interval"]);
+		interval_secs = std::stoi(g_system_runtime["system/time:sync/interval"]);
 		if(parameter["config"].hasOwnProperty("interval")) {
 			interval_secs = parameter["config"]["interval"];
-			g_system_status["system/time:sync/interval"] = std::to_string(interval_secs);
+			g_system_runtime["system/time:sync/interval"] = std::to_string(interval_secs);
 		}
 		setSyncProvider(system_time_sync);
 		setSyncInterval(interval_secs);

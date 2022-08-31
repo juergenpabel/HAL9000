@@ -8,7 +8,7 @@
 #define STRING(value) QUOTE(value)
 
 
-Status::Status() {
+Runtime::Runtime() {
 	(*this)["system/state:conciousness"] = std::string("awake");
 	(*this)["system/time:sync/interval"] = STRING(SYSTEM_STATUS_TIME_SYNC_INTERVAL);
 	(*this)["gui/screen:volume/level"] = STRING(SYSTEM_STATUS_VOLUME);
@@ -16,17 +16,17 @@ Status::Status() {
 }
 
 
-bool Status::isAwake() {
+bool Runtime::isAwake() {
 	return (*this)["system/state:conciousness"].compare("awake")==0;
 }
 
 
-bool Status::isAsleep() {
+bool Runtime::isAsleep() {
 	return (*this)["system/state:conciousness"].compare("asleep")==0;
 }
 
 
-void Status::update() {
+void Runtime::update() {
 	if(year() > 2001) {
 		if((g_system_settings.find("system/state:time/sleep") != g_system_settings.end()) &&
 		   (g_system_settings.find("system/state:time/wakeup") != g_system_settings.end())) {

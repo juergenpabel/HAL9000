@@ -11,8 +11,8 @@ void gui_overlay_message(bool force_refresh) {
 	if(force_refresh) {
 		message = std::string();
 	}
-	if(message.compare(g_system_status["gui/overlay:message/text"]) != 0) {
-		message = g_system_status["gui/overlay:message/text"];
+	if(message.compare(g_system_runtime["gui/overlay:message/text"]) != 0) {
+		message = g_system_runtime["gui/overlay:message/text"];
 		g_gui_tft_overlay.fillRect(0, (TFT_HEIGHT/8*5)-(g_gui_tft_overlay.fontHeight()/2), TFT_WIDTH, g_gui_tft_overlay.fontHeight()/2, TFT_BLACK);
 		g_gui_tft_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
 		g_gui_tft_overlay.setTextFont(1);

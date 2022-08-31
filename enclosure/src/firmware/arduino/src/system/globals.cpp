@@ -1,5 +1,5 @@
 #include "globals.h"
 
-Status          g_system_status;
+Runtime         g_system_runtime;
 Settings        g_system_settings("/system/configuration.bson");
 
