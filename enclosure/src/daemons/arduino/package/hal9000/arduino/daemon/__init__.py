@@ -11,8 +11,8 @@ from hal9000.daemon.plugin import HAL9000_Plugin
 
 class Daemon(HAL9000):
 
-	def __init__(self, arduino):
-		HAL9000.__init__(self, arduino)
+	def __init__(self):
+		HAL9000.__init__(self, 'arduino')
 		self.devices = dict()
 
 

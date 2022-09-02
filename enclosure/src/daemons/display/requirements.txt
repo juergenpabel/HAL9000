@@ -1,3 +1,0 @@
-adafruit-blinka-displayio==0.7.0
-adafruit-circuitpython-display-text
-adafruit-circuitpython-display-shapes

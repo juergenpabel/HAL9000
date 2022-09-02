@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 
+import sys
 import time
 import importlib
+import signal
 import logging
 import logging.config
 
@@ -10,6 +12,12 @@ from paho.mqtt import client as mqtt_client
 
 from hal9000.abstract import HAL9000_Abstract
 from hal9000.daemon.plugin import HAL9000_Plugin
+
+
+try:
+	import uwsgi
+except ImportError:
+	pass
 
 
 class HAL9000_Daemon(HAL9000_Abstract):
@@ -26,6 +34,17 @@ class HAL9000_Daemon(HAL9000_Abstract):
 		self.mqtt = None
 		self.logger = logging.getLogger()
 		self._status = HAL9000_Daemon.STATUS_INIT
+		self.uwsgi = None
+		if 'uwsgi' in sys.modules:
+			if hasattr(sys.modules['uwsgi'], 'accepting'):
+				self.uwsgi = sys.modules['uwsgi']
+		self.loop_exit = False
+		signal.signal(signal.SIGHUP, self.signal)
+		signal.signal(signal.SIGTERM, self.signal)
+
+
+	def signal(self, number, frame):
+		self.loop_exit = True
 
 
 	def load(self, filename: str) -> None:
@@ -74,15 +93,20 @@ class HAL9000_Daemon(HAL9000_Abstract):
 			mqtt_thread  = self.config['mqtt-loop-thread']
 			mqtt_timeout = self.config['mqtt-loop-timeout']
 			self.status = HAL9000_Daemon.STATUS_ACTIVE
+			if self.uwsgi is not None:
+				self.uwsgi.accepting()
 			if mqtt_thread is True:
 				self.mqtt.loop_start()
 			self.logger.debug('LOOP')
-			while self.do_loop():
+			while self.do_loop() is True and self.loop_exit is False:
 				if mqtt_thread is False:
 					self.mqtt.loop(timeout=mqtt_timeout)
 				while self.status == HAL9000_Daemon.STATUS_PAUSED:
 					time.sleep(delay_paused)
 				time.sleep(delay_active)
+			if mqtt_thread is True:
+				self.mqtt.loop_stop()
+			self.logger.debug('EXIT')
 
 
 	def on_mqtt(self, client, userdata, message) -> None:

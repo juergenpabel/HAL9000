@@ -1,11 +1,11 @@
-default_trigger: "mqtt"
+default_trigger: "porcupine2"
 triggers:
   - mqtt:
       topic: "kalliope/trigger/mqtt/event"
   - porcupine2:
       access_key_file: "/etc/picovoice/access_key.txt"
       keyword_paths: "resources/data/porcupine2/porcupine_raspberry-pi.ppn"
-      sensitivities: 0.5
+      sensitivities: 0.75
 
 
 default_speech_to_text: "vosk"

@@ -22,7 +22,6 @@ class Daemon(HAL9000_Daemon):
 	def __init__(self):
 		HAL9000_Daemon.__init__(self, 'brain')
 		self.cortex = dict()
-
 		self.cortex['brain'] = dict()
 		self.cortex['brain']['consciousness'] = Daemon.CONSCIOUSNESS_AWAKE
 		self.cortex['brain']['activity'] = dict()

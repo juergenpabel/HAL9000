@@ -17,7 +17,7 @@ chown root.hal9000 /opt/hal9000
 chmod 750          /opt/hal9000
 
 ### enclosure ###
-useradd --home-dir / -g hal9000 -G plugdev,i2c,spi,gpio -M -N -r -s /bin/false hal9000-enclosure
+useradd --home-dir / -g hal9000 -G sudo,audio -M -N -r -s /bin/false hal9000
 cp conf/mosquitto/conf.d/enclosure.conf /etc/mosquitto/conf.d/hal9000-enclosure.conf
 systemctl restart mosquitto
 
@@ -31,20 +31,16 @@ cat conf/uwsgi/enclosure.ini \
 
 
 ### kalliope ###
-useradd --home-dir / -g hal9000 -G audio,sudo -M -N -r -s /bin/false hal9000-kalliope
-cat conf/sudo/sudoers.d/100_kalliope | sed 's#kalliope#hal9000-kalliope#g' > /etc/sudoers.d/100_hal9000-kalliope
+useradd --home-dir / -g kalliope -G audio,sudo -M -N -r -s /bin/false kalliope
+cp conf/sudo/sudoers.d/100_kalliope /etc/sudoers.d/100_kalliope
 
 pip3 install -r ../../../kalliope/src/requirements.txt
 cp -r --dereference ../../../kalliope/src /opt/hal9000/kalliope
 cp -r --dereference ../../../kalliope/brains /opt/hal9000/kalliope/
 cp -r --dereference ../../../kalliope/scripts /opt/hal9000/kalliope/
-chown -R root.hal9000 /opt/hal9000/kalliope
-chmod -R 770          /opt/hal9000/kalliope
-cat conf/uwsgi/kalliope.ini \
-	| sed 's#/data/git/HAL9000-kalliope/kalliope/src#/opt/hal9000/kalliope#g' \
-	| sed 's#/data/git/HAL9000-kalliope/kalliope/brains#/opt/hal9000/kalliope/brains#g' \
-	| sed 's#app/kalliope/dummy#app/hal9000-kalliope/dummy#g' \
-	> /etc/uwsgi/apps-enabled/hal9000-kalliope.ini
+chown -R root.kalliope /opt/hal9000/kalliope
+chmod -R 770           /opt/hal9000/kalliope
+cp conf/uwsgi/kalliope.ini /etc/uwsgi/apps-enabled/kalliope.ini
 
 echo -n "List of preconfigured brain languages: "
 ( cd /opt/hal9000/kalliope/brains/ ; ls -d *-* )
