@@ -16,10 +16,11 @@ class Action(HAL9000_Action):
 		pass
 
 
-	def process(self, synapse_data: dict, cortex: dict) -> None:
-		mqtt_topic = synapse_data['mqtt']['topic']
-		mqtt_payload = synapse_data['mqtt']['payload']['data']
-		if synapse_data['mqtt']['payload']['type'] == "json":
-			mqtt_payload = json.loads(mqtt_payload)
-		mqtt_publish_message(mqtt_topic, str(mqtt_payload))
+	def process(self, signal: dict, cortex: dict) -> None:
+		if 'mqtt' in signal:
+			mqtt_topic = signal['mqtt']['topic']
+			mqtt_payload = signal['mqtt']['payload']['data']
+			if signal['mqtt']['payload']['type'] == "json":
+				mqtt_payload = json.loads(mqtt_payload)
+			mqtt_publish_message(mqtt_topic, str(mqtt_payload))
 

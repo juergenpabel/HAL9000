@@ -71,10 +71,10 @@ class Volume(EnclosureComponent):
 			timeout, overlay = self.daemon.timeouts['overlay']
 			if overlay != 'volume':
 				del self.daemon.timeouts['overlay']
-				self.daemon.hide_gui_overlay(overlay)
+				self.daemon.arduino_hide_gui_overlay(overlay)
 		if cortex['brain']['activity']['enclosure']['audio'] == None:
 			if self.alsamixer is None:
-				self.daemon.show_gui_overlay('error', {"text": "NO ALSA DEVICE"})
+				self.daemon.arduino_show_gui_overlay('error', {"text": "NO ALSA DEVICE"})
 				return
 			if 'delta' in signal['volume']:
 				if cortex['enclosure']['volume']['mute'] is False:
@@ -86,7 +86,7 @@ class Volume(EnclosureComponent):
 						volume = self.config['volume-maximum']
 					cortex['enclosure']['volume']['level'] = volume
 					self.set_alsa_volume(volume)
-					self.daemon.show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
+					self.daemon.arduino_show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
 					self.daemon.timeouts['overlay'] = datetime.now()+timedelta(seconds=3), 'volume'
 			if 'mute' in signal['volume']:
 				if signal['volume']['mute'] == "on":
@@ -96,9 +96,9 @@ class Volume(EnclosureComponent):
 					cortex['enclosure']['volume']['mute'] = False
 					self.set_alsa_volume(cortex['enclosure']['volume']['level'])
 				if cortex['enclosure']['volume']['mute'] is True:
-					self.daemon.show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
+					self.daemon.arduino_show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
 				else:
-					self.daemon.hide_gui_overlay('volume')
+					self.daemon.arduino_hide_gui_overlay('volume')
 				if 'overlay' in self.daemon.timeouts:
 					del self.daemon.timeouts['overlay']
 				self.daemon.logger.info('mute={}'.format(cortex['enclosure']['volume']['mute']))

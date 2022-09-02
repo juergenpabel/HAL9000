@@ -24,7 +24,6 @@ class EnclosureComponent:
 class Action(HAL9000_Action):
 	def __init__(self, action_name: str, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'enclosure', 'self', **kwargs)
-		self.daemon = kwargs.get('daemon', None)
 		self.components = dict()
 
 
@@ -42,6 +41,9 @@ class Action(HAL9000_Action):
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
+		if 'brain' in signal:
+			if 'consciousness' in signal['brain']:
+				self.daemon.arduino_set_system_runtime("system/state:consciousness", signal['brain']['consciousness'])
 		for identifier in signal.keys():
 			if identifier in self.components:
 				self.components[identifier].process(signal, cortex)

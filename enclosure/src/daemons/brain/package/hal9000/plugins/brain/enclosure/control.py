@@ -59,7 +59,7 @@ class Control(EnclosureComponent):
 			menu_name = cortex['enclosure']['control']['menu-name']
 			menu_item = cortex['enclosure']['control']['menu-item']
 			if menu_name not in self.config['menu']:
-				self.daemon.show_gui_overlay('error', {"text": "Error in menu"})
+				self.daemon.arduino_show_gui_overlay('error', {"text": "Error in menu"})
 				return
 			position = 0
 			for item in self.config['menu'][menu_name]['items']:
@@ -70,7 +70,7 @@ class Control(EnclosureComponent):
 			menu_title = self.config['menu'][menu_name]['title']
 			menu_item  = self.config['menu'][menu_name]['items'][position]["item"]
 			menu_text  = self.config['menu'][menu_name]['items'][position]["text"]
-			self.daemon.show_gui_screen('menu', {"title": menu_title, "text": menu_text})
+			self.daemon.arduino_show_gui_screen('menu', {"title": menu_title, "text": menu_text})
 			self.daemon.timeouts['action'] = datetime.now()+timedelta(seconds=15), ['enclosure', {"control": {"cancel": {}}}]
 			cortex['enclosure']['control']['menu-name'] = menu_name
 			cortex['enclosure']['control']['menu-item'] = menu_item
@@ -91,17 +91,17 @@ class Control(EnclosureComponent):
 							                         .format(menu_item, action_name))
 					cortex['enclosure']['control']['menu-name'] = None
 					cortex['enclosure']['control']['menu-item'] = None
-					self.daemon.show_gui_screen('idle', {})
+					self.daemon.arduino_show_gui_screen('idle', {})
 				if menu_item is not None and menu_item.startswith("menu-"):
 					if menu_item in self.config['menu']:
 						cortex['enclosure']['control']['menu-name'] = menu_item
 						cortex['enclosure']['control']['menu-item'] = self.config['menu'][menu_item]['items'][0]["item"]
 						menu_title = self.config['menu'][menu_item]['title']
 						menu_text  = self.config['menu'][menu_item]['items'][0]["text"]
-						self.daemon.show_gui_screen('menu', {"title": menu_title, "text": menu_text})
+						self.daemon.arduino_show_gui_screen('menu', {"title": menu_title, "text": menu_text})
 						self.daemon.timeouts['action']  = datetime.now()+timedelta(seconds=15), ['enclosure', {"control": {"cancel": {}}}]
 		if 'cancel' in signal['control']:
-			self.daemon.show_gui_screen('idle', {})
+			self.daemon.arduino_show_gui_screen('idle', {})
 			if 'action' in self.daemon.timeouts:
 				del self.daemon.timeouts['action']
 			cortex['enclosure']['control']['menu-name'] = None

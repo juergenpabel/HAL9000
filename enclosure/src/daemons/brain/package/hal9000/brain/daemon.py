@@ -95,8 +95,11 @@ class Daemon(HAL9000_Daemon):
 			if(datetime.now() > wakeup_time):
 				wakeup_time += timedelta(hours=24)
 			self.timeouts[Daemon.CONSCIOUSNESS_AWAKE] = wakeup_time, None
-			self.set_system_setting('system/state:time/sleep',  self.config['sleep-time'])
-			self.set_system_setting('system/state:time/wakeup', self.config['wakeup-time'])
+			if wakeup_time < sleep_time:
+				self.set_consciousness(Daemon.CONSCIOUSNESS_ASLEEP)
+			self.arduino_set_system_setting('system/state:time/sleep',  self.config['sleep-time'])
+			self.arduino_set_system_setting('system/state:time/wakeup', self.config['wakeup-time'])
+			#TODO(bug): self.arduino_save_system_setting()
 		#TODO: signal ready
 		HAL9000_Daemon.loop(self)
 
@@ -106,11 +109,11 @@ class Daemon(HAL9000_Daemon):
 			timeout, data = self.timeouts[key]
 			if datetime.now() > timeout:
 				if key in Daemon.CONSCIOUSNESS_VALID:
-					self.set_consciousness(key)
 					self.timeouts[key] = timeout+timedelta(hours=24), data
+					self.set_consciousness(key)
 				if key == 'overlay':
-					self.hide_gui_overlay(data)
 					del self.timeouts[key]
+					self.arduino_hide_gui_overlay(data)
 		return True
 
 	
@@ -120,11 +123,11 @@ class Daemon(HAL9000_Daemon):
 			if message.topic == '{}/brain/consciousness/state'.format(self.config['mqtt-topic-base']):
 				self.set_consciousness(message.payload.decode('utf-8'))
 			return
-		signals = dict()
-		if self.cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
+		if self.cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE or message.topic.startswith(self.config['mqtt-topic-base']) is False:
 			if 'mqtt' in self.callbacks and message.topic in self.callbacks['mqtt']:
 				self.logger.info("SYNAPSES fired: {}".format(', '.join(str(x).split(':',2)[2] for x in self.callbacks['mqtt'][message.topic])))
 				self.logger.debug("CORTEX before triggers = {}".format(self.cortex))
+				signals = dict()
 				for trigger in self.callbacks['mqtt'][message.topic]:
 					signal = trigger.handle(message)
 					if signal is not None:
@@ -139,7 +142,7 @@ class Daemon(HAL9000_Daemon):
 						if action_name in cortex:
 							self.cortex[action_name] = cortex[action_name]
 				self.process_queued_actions()
-				self.logger.debug("CORTEX after actions =   {}".format(self.cortex))
+				self.logger.debug("CORTEX after actions   = {}".format(self.cortex))
 
 
 	def queue_action(self, action_name, signal_data) -> None:
@@ -163,41 +166,49 @@ class Daemon(HAL9000_Daemon):
 		if new_state in Daemon.CONSCIOUSNESS_VALID:
 			old_state = self.cortex['brain']['consciousness']
 			self.logger.info("CONSCIOUSNESS state changing from '{}' to '{}'".format(old_state, new_state))
+			self.logger.debug("CORTEX before state change = {}".format(self.cortex))
 			self.cortex['brain']['consciousness'] = new_state
-			self.set_system_runtime("system/state:conciousness", new_state)
+			for action_name in self.actions.keys():
+				signal = {"brain": {"consciousness": new_state}}
+				cortex = self.cortex.copy()
+				self.actions[action_name].process(signal, cortex)
+				if action_name in cortex:
+					self.cortex[action_name] = cortex[action_name]
+			self.process_queued_actions()
+			self.logger.debug("CORTEX after state change  = {}".format(self.cortex))
 
 
-	def show_gui_screen(self, screen, parameter) -> None:
+	def arduino_show_gui_screen(self, screen, parameter) -> None:
 		self.cortex['brain']['activity']['enclosure']['gui']['screen'] = screen
-		self.set_gui_screen(screen, 'show', parameter)
+		self.arduino_set_gui_screen(screen, 'show', parameter)
 
 
-	def hide_gui_screen(self, screen, parameter) -> None:
+	def arduino_hide_gui_screen(self, screen, parameter) -> None:
 		if self.cortex['brain']['activity']['enclosure']['gui']['screen'] == screen:
 			self.cortex['brain']['activity']['enclosure']['gui']['screen'] = None
-			self.set_gui_screen('idle', 'show', {})
+			self.arduino_set_gui_screen('idle', 'show', {})
 
 
-	def set_gui_screen(self, screen, action, parameter) -> None:
+	def arduino_set_gui_screen(self, screen, action, parameter) -> None:
 		mqtt_publish_message('{}/enclosure/gui/screen'.format(self.config['mqtt-topic-base']), json.dumps({"screen": {screen: action, "data": parameter}}))
 
 
-	def show_gui_overlay(self, overlay, parameter) -> None:
+	def arduino_show_gui_overlay(self, overlay, parameter) -> None:
 		self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = overlay
-		self.set_gui_overlay(overlay, 'show', parameter)
+		self.arduino_set_gui_overlay(overlay, 'show', parameter)
 
 
-	def hide_gui_overlay(self, overlay) -> None:
+	def arduino_hide_gui_overlay(self, overlay) -> None:
 		if self.cortex['brain']['activity']['enclosure']['gui']['overlay'] == overlay:
 			self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = None
-			self.set_gui_overlay(overlay, 'hide', None)
+			self.arduino_set_gui_overlay(overlay, 'hide', None)
 
 
-	def set_gui_overlay(self, overlay, action, parameter) -> None:
+	def arduino_set_gui_overlay(self, overlay, action, parameter) -> None:
 		mqtt_publish_message('{}/enclosure/gui/overlay'.format(self.config['mqtt-topic-base']), json.dumps({"overlay": {overlay: action, "data": parameter}}))
 
 
-	def set_device_display(self, parameter) -> None:
+	def arduino_set_device_display(self, parameter) -> None:
 		mqtt_publish_message('{}/enclosure/device/display'.format(self.config['mqtt-topic-base']), json.dumps({"display": {"data": parameter}}))
 
 
@@ -205,12 +216,16 @@ class Daemon(HAL9000_Daemon):
 		mqtt_publish_message('{}/enclosure/system/reset'.format(self.config['mqtt-topic-base']), json.dumps({}))
 
 
-	def set_system_runtime(self, key, value) -> None:
+	def arduino_set_system_runtime(self, key, value) -> None:
 		mqtt_publish_message('{}/enclosure/system/runtime'.format(self.config['mqtt-topic-base']), json.dumps({"set": {"key": key, "value": value}}))
 
 
-	def set_system_setting(self, key, value) -> None:
+	def arduino_set_system_setting(self, key, value) -> None:
 		mqtt_publish_message('{}/enclosure/system/settings'.format(self.config['mqtt-topic-base']), json.dumps({"set": {"key": key, "value": value}}))
+
+
+	def arduino_save_system_setting(self) -> None:
+		mqtt_publish_message('{}/enclosure/system/settings'.format(self.config['mqtt-topic-base']), json.dumps({"save": {}}))
 
 
 

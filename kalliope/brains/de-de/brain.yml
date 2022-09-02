@@ -9,8 +9,10 @@
   - name: "on-start"
     signals: []
     neurons:
-      - play:
-          filename: "resources/data/dong.wav"
+      - mqtt_publisher:
+          broker_ip: "127.0.0.1"
+          topic: "kalliope/brain/state"
+          payload: "started"
 
 
   - name: "on-waiting-for-trigger"

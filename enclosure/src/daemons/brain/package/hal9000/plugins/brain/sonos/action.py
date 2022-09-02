@@ -29,7 +29,7 @@ class Action(HAL9000_Action):
 		if 'sonos' in signal:
 			if 'trigger' in signal['sonos']:
 				cortex['brain']['activity']['enclosure']['audio'] = str(self)
-				self.daemon.show_gui_overlay('message', {"text": "<SONOS>"})
+				self.daemon.arduino_show_gui_overlay('message', {"text": "<SONOS>"})
 			return
 		if cortex['brain']['activity']['enclosure']['audio'] == str(self):
 			if 'volume' in signal:
@@ -42,9 +42,9 @@ class Action(HAL9000_Action):
 						self.sonos.mute = True
 					else:
 						self.sonos.mute = False
-					self.daemon.show_gui_overlay('sonos', {"mute": str(mute)})
+					self.daemon.arduino_show_gui_overlay('sonos', {"mute": str(mute)})
 			if 'control' in signal:
 				if 'select' in signal['control']:
 					cortex['brain']['activity']['enclosure']['audio'] = None
-					self.daemon.hide_gui_overlay('message')
+					self.daemon.arduino_hide_gui_overlay('message')
 
