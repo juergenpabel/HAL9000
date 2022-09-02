@@ -5,7 +5,7 @@ import sys
 import re
 import json
 
-from datetime import datetime, timedelta
+from datetime import datetime, date, time, timedelta
 from configparser import ConfigParser
 
 from paho.mqtt.publish import single as mqtt_publish_message
@@ -42,6 +42,8 @@ class Daemon(HAL9000_Daemon):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000_Daemon.configure(self, configuration)
+		self.config['sleep-time']  = configuration.get('brain', 'sleep-time', fallback=None)
+		self.config['wakeup-time'] = configuration.get('brain', 'wakeup-time', fallback=None)
 		self.mqtt.subscribe('{}/brain/consciousness/+'.format(self.config['mqtt-topic-base']))
 		for section_name in configuration.sections():
 			module_path = configuration.getstring(section_name, 'module', fallback=None)
@@ -84,7 +86,17 @@ class Daemon(HAL9000_Daemon):
 
 
 	def loop(self) -> None:
-		self.set_device_display({"backlight": "on"})
+		if self.config['sleep-time'] is not None and self.config['wakeup-time'] is not None:
+			sleep_time = datetime.combine(date.today(), time.fromisoformat(self.config['sleep-time']))
+			if(datetime.now() > sleep_time):
+				sleep_time += timedelta(hours=24)
+			self.timeouts[Daemon.CONSCIOUSNESS_ASLEEP] = sleep_time, None
+			wakeup_time = datetime.combine(date.today(), time.fromisoformat(self.config['wakeup-time']))
+			if(datetime.now() > wakeup_time):
+				wakeup_time += timedelta(hours=24)
+			self.timeouts[Daemon.CONSCIOUSNESS_AWAKE] = wakeup_time, None
+			self.set_system_setting('system/state:time/sleep',  self.config['sleep-time'])
+			self.set_system_setting('system/state:time/wakeup', self.config['wakeup-time'])
 		#TODO: signal ready
 		HAL9000_Daemon.loop(self)
 
@@ -93,9 +105,9 @@ class Daemon(HAL9000_Daemon):
 		for key in self.timeouts.copy().keys():
 			timeout, data = self.timeouts[key]
 			if datetime.now() > timeout:
-				if key == 'consciousness':
-					self.set_consciousness(data)
-					del self.timeouts[key]
+				if key in Daemon.CONSCIOUSNESS_VALID:
+					self.set_consciousness(key)
+					self.timeouts[key] = timeout+timedelta(hours=24), data
 				if key == 'overlay':
 					self.hide_gui_overlay(data)
 					del self.timeouts[key]
@@ -106,10 +118,7 @@ class Daemon(HAL9000_Daemon):
 		HAL9000_Daemon.on_mqtt(self, client, userdata, message)
 		if message.topic.startswith('{}/brain/consciousness/'.format(self.config['mqtt-topic-base'])):
 			if message.topic == '{}/brain/consciousness/state'.format(self.config['mqtt-topic-base']):
-				state = message.payload.decode('utf-8')
-				if state in Daemon.CONSCIOUSNESS_VALID:
-					self.logger.info("CONSCIOUSNESS state changing from '{}' to '{}'".format(self.cortex['brain']['consciousness'], state))
-					self.cortex['brain']['consciousness'] = state
+				self.set_consciousness(message.payload.decode('utf-8'))
 			return
 		signals = dict()
 		if self.cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
@@ -155,10 +164,7 @@ class Daemon(HAL9000_Daemon):
 			old_state = self.cortex['brain']['consciousness']
 			self.logger.info("CONSCIOUSNESS state changing from '{}' to '{}'".format(old_state, new_state))
 			self.cortex['brain']['consciousness'] = new_state
-			if new_state == "awake":
-				self.set_device_display({"backlight": "on"})
-			else:
-				self.set_device_display({"backlight": "off"})
+			self.set_system_runtime("system/state:conciousness", new_state)
 
 
 	def show_gui_screen(self, screen, parameter) -> None:
@@ -197,6 +203,15 @@ class Daemon(HAL9000_Daemon):
 
 	def arduino_system_reset(self) -> None:
 		mqtt_publish_message('{}/enclosure/system/reset'.format(self.config['mqtt-topic-base']), json.dumps({}))
+
+
+	def set_system_runtime(self, key, value) -> None:
+		mqtt_publish_message('{}/enclosure/system/runtime'.format(self.config['mqtt-topic-base']), json.dumps({"set": {"key": key, "value": value}}))
+
+
+	def set_system_setting(self, key, value) -> None:
+		mqtt_publish_message('{}/enclosure/system/settings'.format(self.config['mqtt-topic-base']), json.dumps({"set": {"key": key, "value": value}}))
+
 
 
 if __name__ == "__main__":

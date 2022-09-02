@@ -29,6 +29,9 @@ MCP23X17::MCP23X17()
 
 
 void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
+	int  pin_int_a = SYSTEM_SETTINGS_MCP23X17_PIN_INTA;
+	int  pin_int_b = SYSTEM_SETTINGS_MCP23X17_PIN_INTB;
+
 	if(this->status != MCP23X17_STATE_UNINITIALIZED) {
 		g_util_webserial.send("syslog", "MCP23X17 already initialized");
 		return;
@@ -40,8 +43,14 @@ void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
 		return;
 	}
 	this->mcp23X17.setupInterrupts(false, true, LOW);
-	pinMode(std::stoi(g_system_settings["device/mcp23X17:i2c/pin-int_a"]), INPUT_PULLUP);
-	pinMode(std::stoi(g_system_settings["device/mcp23X17:i2c/pin-int_b"]), INPUT_PULLUP);
+	if(g_system_settings.count("device/mcp23X17:i2c/pin-int_a") == 1) {
+		pin_int_a = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-int_a"]);
+	}
+	if(g_system_settings.count("device/mcp23X17:i2c/pin-int_b") == 1) {
+		pin_int_b = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-int_b"]);
+	}
+	pinMode(pin_int_a, INPUT_PULLUP);
+	pinMode(pin_int_b, INPUT_PULLUP);
 	this->status = MCP23X17_STATE_INITIALIZED;
 }
 
@@ -50,10 +59,19 @@ void MCP23X17::config_inputs(const char* event_name, const char* device_type, JS
 	MCP23X17_Device* device = NULL;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
-		uint8_t i2c_address = std::stoi(g_system_settings["device/mcp23X17:i2c/address"]);
-		uint8_t i2c_pin_sda = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-sda"]);
-		uint8_t i2c_pin_scl = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-scl"]);
+		int i2c_address = SYSTEM_SETTINGS_MCP23X17_ADDRESS;
+		int i2c_pin_sda = SYSTEM_SETTINGS_MCP23X17_PIN_SDA;
+		int i2c_pin_scl = SYSTEM_SETTINGS_MCP23X17_PIN_SCL;
 
+		if(g_system_settings.count("device/mcp23X17:i2c/address") == 1) {
+			i2c_address = std::stoi(g_system_settings["device/mcp23X17:i2c/address"]);
+		}
+		if(g_system_settings.count("device/mcp23X17:i2c/pin-sda") == 1) {
+			i2c_pin_sda = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-sda"]);
+		}
+		if(g_system_settings.count("device/mcp23X17:i2c/pin-scl") == 1) {
+			i2c_pin_scl = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-scl"]);
+		}
 		this->init(i2c_address, i2c_pin_sda, i2c_pin_scl);
 	}
 	if(this->status == MCP23X17_STATE_RUNNING) {
@@ -111,10 +129,19 @@ void MCP23X17::config_outputs(const char* event_name, const char* device_type, J
 	MCP23X17_Device* device = NULL;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
-		uint8_t i2c_address = std::stoi(g_system_settings["device/mcp23X17:i2c/address"]);
-		uint8_t i2c_pin_sda = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-sda"]);
-		uint8_t i2c_pin_scl = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-scl"]);
+		int i2c_address = SYSTEM_SETTINGS_MCP23X17_ADDRESS;
+		int i2c_pin_sda = SYSTEM_SETTINGS_MCP23X17_PIN_SDA;
+		int i2c_pin_scl = SYSTEM_SETTINGS_MCP23X17_PIN_SCL;
 
+		if(g_system_settings.count("device/mcp23X17:i2c/address") == 1) {
+			i2c_address = std::stoi(g_system_settings["device/mcp23X17:i2c/address"]);
+		}
+		if(g_system_settings.count("device/mcp23X17:i2c/pin-sda") == 1) {
+			i2c_pin_sda = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-sda"]);
+		}
+		if(g_system_settings.count("device/mcp23X17:i2c/pin-scl") == 1) {
+			i2c_pin_scl = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-scl"]);
+		}
 		this->init(i2c_address, i2c_pin_sda, i2c_pin_scl);
 	}
 	if(event_name == NULL || device_type == NULL) {

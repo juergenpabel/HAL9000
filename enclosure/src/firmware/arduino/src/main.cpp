@@ -1,6 +1,8 @@
 #include <LittleFS.h>
 #include <FS.h>
 #include <pico/stdlib.h>
+#include <string>
+#include <stdexcept>
 
 #include "globals.h"
 #include "system/webserial.h"
@@ -73,11 +75,10 @@ void setup() {
 
 
 void loop() {
-	static int loop_sleep_ms = std::stoi(g_system_settings["system/arduino:loop/sleep_ms"])+1;
-
 	if(!Serial) {
 		system_rp2040_reset();
 	}
+	g_util_webserial.check();
 	g_system_runtime.update();
 	if(g_system_runtime.isAwake()) {
 		digitalWrite(TFT_BL, HIGH);
@@ -86,8 +87,11 @@ void loop() {
 		digitalWrite(TFT_BL, LOW);
 		g_util_webserial_queue.dropMessages();
 	}
-	g_util_webserial.check();
 	gui_screen_update(false);
-	sleep_ms(loop_sleep_ms);
+	if(g_system_settings.count("system/arduino:loop/sleep_ms") == 1) {
+		static int milliseconds = std::stoi(g_system_settings["system/arduino:loop/sleep_ms"]);
+
+		sleep_ms(milliseconds);
+	}
 }
 

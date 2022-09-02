@@ -1,3 +1,4 @@
+#include <string>
 #include <TimeLib.h>
 #include <JSONVar.h>
 #include "system/webserial.h"
@@ -15,6 +16,19 @@ void on_system_runtime(JSONVar parameter) {
 		}
 		g_util_webserial.send("system/runtime#list", result);
 	}
+	if(parameter.hasOwnProperty("set")) {
+		std::string key;
+		std::string value;
+
+		key = (const char*)parameter["set"]["key"];
+		value = (const char*)parameter["set"]["value"];
+		if(key.length() > 0 && value.length() > 0) {
+			g_system_runtime[key] = value;
+			g_util_webserial.send("syslog", "system/runtime#set => OK");
+		} else {
+			g_util_webserial.send("syslog", "system/runtime#set => ERROR");
+		}
+	}
 }
 
 
@@ -28,14 +42,14 @@ void on_system_settings(JSONVar parameter) {
 		g_util_webserial.send("system/settings#list", result);
 	}
 	if(parameter.hasOwnProperty("get")) {
-		const char* key;
+		std::string key;
 
-		key = parameter["get"]["key"];
-		if(key != NULL) {
+		key = (const char*)parameter["get"]["key"];
+		if(key.length() > 0) {
 			JSONVar data;
 
 			if(g_system_settings.count(key) == 1) {
-				data["key"] = key;
+				data["key"] = key.c_str();
 				data["value"] = g_system_settings[key].c_str();
 			}
 			g_util_webserial.send("system/settings#get", data);
@@ -45,12 +59,12 @@ void on_system_settings(JSONVar parameter) {
 		}
 	}
 	if(parameter.hasOwnProperty("set")) {
-		const char* key;
-		const char* value;
+		std::string key;
+		std::string value;
 
-		key = parameter["set"]["key"];
-		value = parameter["set"]["value"];
-		if(key != NULL && value != NULL) {
+		key = (const char*)parameter["set"]["key"];
+		value = (const char*)parameter["set"]["value"];
+		if(key.length() > 0 && value.length() > 0) {
 			g_system_settings[key] = value;
 			g_util_webserial.send("syslog", "system/settings#set => OK");
 		} else {
@@ -88,9 +102,11 @@ void on_system_time(JSONVar parameter) {
 		}
 	}
 	if(parameter.hasOwnProperty("config")) {
-		int interval_secs;
+		int interval_secs = SYSTEM_STATUS_TIME_SYNC_INTERVAL;
 
-		interval_secs = std::stoi(g_system_runtime["system/time:sync/interval"]);
+		if(g_system_runtime.count("system/time:sync/interval") == 1) {
+			interval_secs = std::stoi(g_system_runtime["system/time:sync/interval"]);
+		}
 		if(parameter["config"].hasOwnProperty("interval")) {
 			interval_secs = parameter["config"]["interval"];
 			g_system_runtime["system/time:sync/interval"] = std::to_string(interval_secs);

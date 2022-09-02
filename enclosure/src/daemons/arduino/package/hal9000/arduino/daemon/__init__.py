@@ -19,6 +19,8 @@ class Daemon(HAL9000):
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
 		self.mqtt.subscribe("{}/system/reset".format(self.config['mqtt-topic-base']))
+		self.mqtt.subscribe("{}/system/runtime".format(self.config['mqtt-topic-base']))
+		self.mqtt.subscribe("{}/system/settings".format(self.config['mqtt-topic-base']))
 		self.mqtt.subscribe("{}/device/display".format(self.config['mqtt-topic-base']))
 		self.mqtt.subscribe("{}/gui/screen".format(self.config['mqtt-topic-base']))
 		self.mqtt.subscribe("{}/gui/overlay".format(self.config['mqtt-topic-base']))
@@ -58,6 +60,10 @@ class Daemon(HAL9000):
 		payload = message.payload.decode('utf-8')
 		if topic == "{}/system/reset".format(self.config['mqtt-topic-base']):
 			self.devices["volume"].driver.send('["system/reset", %s]' % payload)
+		if topic == "{}/system/runtime".format(self.config['mqtt-topic-base']):
+			self.devices["volume"].driver.send('["system/runtime", %s]' % payload)
+		if topic == "{}/system/settings".format(self.config['mqtt-topic-base']):
+			self.devices["volume"].driver.send('["system/settings", %s]' % payload)
 		if topic == "{}/device/display".format(self.config['mqtt-topic-base']):
 			self.devices["volume"].driver.send('["device/display", %s]' % payload)
 		if topic == "{}/gui/screen".format(self.config['mqtt-topic-base']):

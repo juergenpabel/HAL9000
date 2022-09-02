@@ -35,7 +35,7 @@ class Device(HAL9000_Device):
 				line = self.driver.status['read']
 				if len(line) > 0 and line.startswith('[') and line.endswith(']'):
 					event, payload = json.loads(line)
-					if event != "syslog":
+					if event != "syslog" and 'device' in payload:
 						if callback_event is not None:
 							device_type=payload["device"]["type"]
 							device_name=payload["device"]["name"]

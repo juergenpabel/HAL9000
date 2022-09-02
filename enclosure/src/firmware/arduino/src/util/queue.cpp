@@ -29,29 +29,27 @@ void WebSerialQueue::pushMessage(std::string topic, JSONVar& data) {
 
 
 void WebSerialQueue::sendMessages() {
-	if(mutex_try_enter(&this->mutex, NULL)) {
-		while(this->queue.empty() == false) {
-			WebSerialMessage message;
+	mutex_enter_blocking(&this->mutex);
+	while(this->queue.empty() == false) {
+		WebSerialMessage message;
 
-			message = this->queue.front();
-			this->queue.pop();
-			if(message.topic.length() > 0) {
-				g_util_webserial.send(message.topic.c_str(), message.data);
-			} else {
-				g_util_webserial.send("syslog", message.data);
-			}
+		message = this->queue.front();
+		this->queue.pop();
+		if(message.topic.length() > 0) {
+			g_util_webserial.send(message.topic.c_str(), message.data);
+		} else {
+			g_util_webserial.send("syslog", message.data);
 		}
-		mutex_exit(&this->mutex);
 	}
+	mutex_exit(&this->mutex);
 }
 
 
 void WebSerialQueue::dropMessages() {
-	if(mutex_try_enter(&this->mutex, NULL)) {
-		while(this->queue.empty() == false) {
-			this->queue.pop();
-		}
-		mutex_exit(&this->mutex);
+	mutex_enter_blocking(&this->mutex);
+	while(this->queue.empty() == false) {
+		this->queue.pop();
 	}
+	mutex_exit(&this->mutex);
 }
 

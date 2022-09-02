@@ -25,13 +25,19 @@ void on_device_sdcard(JSONVar parameter) {
 
 void on_device_mcp23X17(JSONVar parameter) {
 	if(parameter.hasOwnProperty("init")) {
-		uint8_t i2c_address;
-		uint8_t i2c_pin_sda;
-		uint8_t i2c_pin_scl;
+		uint8_t i2c_address = SYSTEM_SETTINGS_MCP23X17_ADDRESS;
+		uint8_t i2c_pin_sda = SYSTEM_SETTINGS_MCP23X17_PIN_SDA;
+		uint8_t i2c_pin_scl = SYSTEM_SETTINGS_MCP23X17_PIN_SCL;
 
-		i2c_address = std::stoi(g_system_settings["device/mcp23X17:i2c/address"]);
-		i2c_pin_sda = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-sda"]);
-		i2c_pin_scl = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-scl"]);
+		if(g_system_settings.count("device/mcp23X17:i2c/address") == 1) {
+			i2c_address = std::stoi(g_system_settings["device/mcp23X17:i2c/address"]);
+		}
+		if(g_system_settings.count("device/mcp23X17:i2c/pin-sda") == 1) {
+			i2c_pin_sda = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-sda"]);
+		}
+		if(g_system_settings.count("device/mcp23X17:i2c/pin-scl") == 1) {
+			i2c_pin_scl = std::stoi(g_system_settings["device/mcp23X17:i2c/pin-scl"]);
+		}
 		if(parameter["init"].hasOwnProperty("i2c-address")) {
 			i2c_address = (int)parameter["init"]["i2c-address"];
 		}
