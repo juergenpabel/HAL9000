@@ -1,5 +1,7 @@
-default_trigger: "porcupine2"
+default_trigger: "multiplexer"
 triggers:
+  - multiplexer:
+      triggers: porcupine2, mqtt
   - mqtt:
       topic: "kalliope/trigger/mqtt/event"
   - porcupine2:
