@@ -12,7 +12,9 @@
 #include "gui/screen/screen.h"
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/splash/screen.h"
+#include "gui/screen/animations/screen.h"
 
+#include "util/jpeg.h"
 
 void setup() {
 	system_rp2040_start();
@@ -43,6 +45,16 @@ void setup() {
 		g_util_webserial_queue.pushMessage("syslog", "setup() failed to load settings from littlefs");
 		g_system_settings.reset();
 	}
+	g_system_runtime.update();
+	if(g_system_runtime.isAsleep()) {
+		digitalWrite(TFT_BL, LOW);
+	}
+	if(/*show boot animation==*/true) {
+		gui_screen_set(gui_screen_startup);
+		while(gui_screen_get() == gui_screen_startup) {
+			gui_screen_update(g_system_runtime.isAwake());
+		}
+	}
 	if(!Serial) {
 		g_system_runtime["gui/screen:splash/filename"] = std::string("error.jpg");
 		gui_screen_set(gui_screen_splash);
@@ -57,10 +69,10 @@ void setup() {
 			sleep_ms(1000);
 		}
 	}
-	g_util_webserial_queue.sendMessages();
 	gui_screen_set(gui_screen_idle);
 
 	g_util_webserial.send("syslog", "setup()");
+	g_util_webserial_queue.sendMessages();
 	g_util_webserial.on("system/reset", on_system_reset);
 	g_util_webserial.on("system/runtime", on_system_runtime);
 	g_util_webserial.on("system/settings", on_system_settings);
@@ -76,7 +88,13 @@ void setup() {
 
 void loop() {
 	if(!Serial) {
-		system_rp2040_reset();
+		if(gui_screen_get() != gui_screen_shutdown) {
+			system_rp2040_reset();
+		}
+		while(gui_screen_get() == gui_screen_shutdown) {
+			gui_screen_update(g_system_runtime.isAwake());
+		}
+		system_rp2040_halt();
 	}
 	g_util_webserial.check();
 	g_system_runtime.update();

@@ -80,6 +80,7 @@ class Daemon(HAL9000_Daemon):
 						if mqtt_topic not in self.callbacks['mqtt']:
 							self.callbacks['mqtt'][mqtt_topic] = list()
 						self.callbacks['mqtt'][mqtt_topic].append(trigger)
+						self.logger.debug("mqtt.subscribe('{}') for trigger '{}'".format(mqtt_topic, trigger_id))
 						self.mqtt.subscribe(mqtt_topic)
 		self.logger.debug("CORTEX at startup = {}".format(self.cortex))
 

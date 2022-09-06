@@ -40,3 +40,8 @@ void gui_screen_update(bool force_refresh) {
 	g_gui_tft_overlay.pushSprite(0, 0, TFT_BLACK);
 }
 
+
+void gui_screen_none(bool refresh) {
+	(void)refresh;
+}
+

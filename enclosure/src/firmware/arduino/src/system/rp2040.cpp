@@ -29,6 +29,7 @@ void system_rp2040_reset() {
 //TODO		watchdog_hw->scratch[6] = 0x00009000;
 //TODO		watchdog_hw->scratch[7] = now();
 //TODO	}
+	digitalWrite(TFT_BL, LOW);
 	multicore_reset_core1();
 
 	reset_block(RESETS_RESET_SPI0_BITS | RESETS_RESET_SPI1_BITS);
@@ -54,6 +55,16 @@ void system_rp2040_reset() {
 void system_rp2040_reset_uf2() {
 	multicore_reset_core1();
 	reset_usb_boot(0, 0);
+	while(true) {
+		sleep_ms(1);
+	}
+}
+
+
+void system_rp2040_halt() {
+	multicore_reset_core1();
+	digitalWrite(TFT_BL, LOW);
+	Serial.end();
 	while(true) {
 		sleep_ms(1);
 	}

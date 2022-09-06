@@ -42,7 +42,7 @@ void gui_screen_hal9000_frames_load(const char* name) {
 	}
 	snprintf(directory, sizeof(directory)-1, "/images/frames/%s", name);
 	for(int i=0; i<GUI_SEQUENCE_FRAMES_MAX; i++) {
-		snprintf(filename, sizeof(filename)-1, "%s/%.2d.jpg", directory, i);
+		snprintf(filename, sizeof(filename), "%s/%02d.jpg", directory, i);
 		file = LittleFS.open(filename, "r");
 		if(file) {
 			g_gui_screen_hal9000_frames[i].size = file.size();

@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import os
 import sys
 import time
 import importlib
@@ -26,12 +27,14 @@ class HAL9000_Daemon(HAL9000_Abstract):
 	STATUS_READY = "ready"
 	STATUS_ACTIVE = "active"
 	STATUS_PAUSED = "paused"
+	STATUS_VALID = [STATUS_INIT, STATUS_READY, STATUS_ACTIVE, STATUS_PAUSED]
 
 
 	def __init__(self, name: str) -> None:
 		HAL9000_Abstract.__init__(self, name)
 		self.config = dict()
 		self.mqtt = None
+		self.commands = dict()
 		self.logger = logging.getLogger()
 		self._status = HAL9000_Daemon.STATUS_INIT
 		self.uwsgi = None
@@ -41,6 +44,8 @@ class HAL9000_Daemon(HAL9000_Abstract):
 		self.loop_exit = False
 		signal.signal(signal.SIGHUP, self.signal)
 		signal.signal(signal.SIGTERM, self.signal)
+		signal.signal(signal.SIGQUIT, self.signal)
+		signal.signal(signal.SIGINT, self.signal)
 
 
 	def signal(self, number, frame):
@@ -74,8 +79,15 @@ class HAL9000_Daemon(HAL9000_Abstract):
 			if self.config['mqtt-enabled']:
 				self.mqtt = mqtt_client.Client(self.config['mqtt-client'])
 				self.mqtt.connect(self.config['mqtt-server'], self.config['mqtt-port'])
-				self.mqtt.subscribe("{}/enclosure/{}/control".format(self.config['mqtt-topic-base'], str(self)))
+				self.mqtt.subscribe("{}/daemon/{}/status".format(self.config['mqtt-topic-base'], str(self)))
+				self.mqtt.subscribe("{}/daemon/{}/command".format(self.config['mqtt-topic-base'], str(self)))
 				self.mqtt.on_message = self.on_mqtt
+		for section_name in configuration.sections():
+			if section_name.startswith('command:'):
+				exec = configuration.getstring(section_name, 'exec', fallback=None)
+				if exec is not None:
+					dummy, command = section_name.split(':',1)
+					self.commands[command] = exec
 
 
 	def import_plugin(self, module_name: str, class_name: str) -> HAL9000_Plugin:
@@ -98,12 +110,15 @@ class HAL9000_Daemon(HAL9000_Abstract):
 			if mqtt_thread is True:
 				self.mqtt.loop_start()
 			self.logger.debug('LOOP')
-			while self.do_loop() is True and self.loop_exit is False:
-				if mqtt_thread is False:
-					self.mqtt.loop(timeout=mqtt_timeout)
-				while self.status == HAL9000_Daemon.STATUS_PAUSED:
-					time.sleep(delay_paused)
-				time.sleep(delay_active)
+			try:
+				while self.do_loop() is True and self.loop_exit is False:
+					if mqtt_thread is False:
+						self.mqtt.loop(timeout=mqtt_timeout)
+					while self.status == HAL9000_Daemon.STATUS_PAUSED:
+						time.sleep(delay_paused)
+					time.sleep(delay_active)
+			except:
+				pass
 			if mqtt_thread is True:
 				self.mqtt.loop_stop()
 			self.logger.debug('EXIT')
@@ -113,8 +128,13 @@ class HAL9000_Daemon(HAL9000_Abstract):
 		topic = message.topic
 		payload = message.payload.decode('utf-8')
 		self.logger.debug('MQTT received: {} => {}'.format(topic, payload))
-		if topic == "{}/{}/control".format(self.config['mqtt-topic-base'], self):
-			self.status = payload
+		if topic == "{}/daemon/{}/status".format(self.config['mqtt-topic-base'], str(self)):
+			if payload in Daemon.STATUS_VALID:
+				self.status = payload
+		if topic == "{}/daemon/{}/command".format(self.config['mqtt-topic-base'], str(self)):
+			if payload in self.commands:
+				self.logger.info("executing configured command with id '{}'".format(payload))
+				os.system(self.commands[payload])
 
 
 	@property

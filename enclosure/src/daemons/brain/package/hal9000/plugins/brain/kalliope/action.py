@@ -29,19 +29,30 @@ class Action(HAL9000_Action):
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
-		if self.config['kalliope-trigger-mqtt-topic'] is not None:
-			if 'brain' in signal:
-				if 'consciousness' in signal['brain']:
-					brain_state = signal['brain']['consciousness']
-					if brain_state == Daemon.CONSCIOUSNESS_AWAKE:
+		if 'brain' in signal:
+			if 'consciousness' in signal['brain']:
+				brain_state = signal['brain']['consciousness']
+				if brain_state == Daemon.CONSCIOUSNESS_AWAKE:
+					if self.config['kalliope-trigger-mqtt-topic'] is not None:
 						mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], "unpause")
-					if brain_state == Daemon.CONSCIOUSNESS_ASLEEP:
+				if brain_state == Daemon.CONSCIOUSNESS_ASLEEP:
+					if self.config['kalliope-trigger-mqtt-topic'] is not None:
 						mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], "pause")
-			if 'kalliope' in signal:
-				if 'state' in signal['kalliope']:
-					kalliope_state = signal['kalliope']['state']
-					if kalliope_state in Action.KALLIOPE_STATES_VALID:
-						cortex['kalliope']['state'] = kalliope_state
-						if cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_ASLEEP:
+		if 'kalliope' in signal:
+			if 'state' in signal['kalliope']:
+				kalliope_state = signal['kalliope']['state']
+				if kalliope_state in Action.KALLIOPE_STATES_VALID:
+					cortex['kalliope']['state'] = kalliope_state
+					if cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
+						if kalliope_state == Action.KALLIOPE_STATE_LISTENING:
+							self.daemon.arduino_show_gui_screen('hal9000', {"frames": "wakeup"})
+						if kalliope_state == Action.KALLIOPE_STATE_THINKING:
+							self.daemon.arduino_show_gui_screen('hal9000', {"frames": "active"})
+						if kalliope_state == Action.KALLIOPE_STATE_SPEAKING:
+							self.daemon.arduino_show_gui_screen('hal9000', {"frames": "active"})
+						if kalliope_state == Action.KALLIOPE_STATE_WAITING:
+							self.daemon.arduino_show_gui_screen('idle', None)
+					if cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_ASLEEP:
+						if self.config['kalliope-trigger-mqtt-topic'] is not None:
 							mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], "pause")
 

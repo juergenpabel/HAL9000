@@ -6,6 +6,7 @@
 #include "gui/screen/splash/screen.h"
 #include "gui/screen/hal9000/screen.h"
 #include "gui/screen/hal9000/sequence.h"
+#include "gui/screen/animations/screen.h"
 #include "gui/overlay/overlay.h"
 #include "globals.h"
 
@@ -57,6 +58,11 @@ void on_gui_screen(JSONVar parameter) {
 					sequence_add(parameter["screen"]["data"]["queue"]);
 					gui_screen_set(gui_screen_sequence);
 				}
+			}
+		}
+		if(parameter["screen"].hasOwnProperty("shutdown")) {
+			if(arduino::String("show") == parameter["screen"]["shutdown"]) {
+				gui_screen_set(gui_screen_shutdown);
 			}
 		}
 	}

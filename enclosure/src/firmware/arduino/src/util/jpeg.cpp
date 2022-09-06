@@ -7,7 +7,9 @@ static int render2buffer(JPEGDRAW *pDraw) {
 	uint16_t*  image565_data;
 
 	image565_data = (uint16_t*)pDraw->pUser;
-	memcpy(&image565_data[pDraw->y*pDraw->iWidth+pDraw->x], pDraw->pPixels, sizeof(uint16_t)*pDraw->iWidth*pDraw->iHeight);
+	for(int line=0; line<pDraw->iHeight; line++) {
+		memcpy(&image565_data[(pDraw->y+line)*(TFT_WIDTH)+(pDraw->x)], &pDraw->pPixels[(line)*(pDraw->iWidth)], sizeof(uint16_t)*(pDraw->iWidth));
+	}
 	return true;
 }
 
@@ -61,7 +63,7 @@ void util_jpeg_decode565_littlefs(const char* filename, uint16_t* image565_data,
 		return;
 	}
 	if(image565_data != NULL && image565_size > 0) {
-		if(g_util_jpeg.getWidth()*g_util_jpeg.getHeight() != image565_size) {
+		if((g_util_jpeg.getWidth()*g_util_jpeg.getHeight()) > image565_size) {
 			g_util_webserial.send("syslog", "util_jpeg_decode565_littlefs() -> provided buffer is not the correct size (jpeg:width*height)");
 			g_util_webserial.send("syslog", filename);
 			g_util_jpeg.close();

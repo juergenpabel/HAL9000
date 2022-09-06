@@ -6,7 +6,7 @@ triggers:
       topic: "kalliope/trigger/mqtt/event"
   - porcupine2:
       access_key_file: "/etc/picovoice/access_key.txt"
-      keyword_paths: "resources/data/porcupine2/porcupine_raspberry-pi.ppn"
+      keyword_paths: "resources/data/porcupine2/OK-HAL_en_raspberry-pi_v2_1_0.ppn"
       sensitivities: 0.75
 
 

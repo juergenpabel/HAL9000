@@ -31,6 +31,19 @@ if os.path.exists(DST_BASEDIR) is False:
 		subprocess.run(["convert", BMP, "-quality", "95%", "-resize", "240x240", JPG])
 
 
+SRC_BASEDIR="./resources/images/animations"
+DST_BASEDIR="./data/images/animations"
+if os.path.exists(DST_BASEDIR) is False:
+	for DIR in ['startup/countdown','startup/fadeout','shutdown/monitor','shutdown/fadeout']:
+		if os.path.exists("{}/{}".format(DST_BASEDIR,DIR)) is False:
+			os.makedirs("{}/{}".format(DST_BASEDIR,DIR))
+		for SRC in glob.glob("{}/{}/*.jpg".format(SRC_BASEDIR,DIR)):
+			print(SRC)
+			DST = "{}/{}/{}".format(DST_BASEDIR, DIR, os.path.basename(SRC))
+			print(DST)
+			subprocess.run(["convert", SRC, "-resize", "240x240", "-background", "black", "-compose", "Copy", "-gravity", "center", "-extent", "240x240", DST])
+
+
 SRC_BASEDIR="./resources/images/overlay"
 DST_BASEDIR="./data/images/overlay"
 if os.path.exists("./data/images/overlay") is False:
