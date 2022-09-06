@@ -10,25 +10,25 @@
 
 void system_rp2040_start() {
 	Serial.begin(115200);
-//TODO	if((watchdog_hw->scratch[5] == 0x00002001) && (watchdog_hw->scratch[6] == 0x00009000)) {
-//TODO		g_sync_epoch_secs = watchdog_hw->scratch[7];
-//TODO		setTime(g_sync_epoch_secs);
-//TODO		watchdog_hw->scratch[5] = 0x00000000;
-//TODO		watchdog_hw->scratch[6] = 0x00000000;
-//TODO		watchdog_hw->scratch[7] = 0x00000000;
-//TODO		g_util_webserial_queue.pushMessage("syslog", "recovered time from rp2040 scratch registers");
-//TODO	}
+	if((watchdog_hw->scratch[5] == 0x00002001) && (watchdog_hw->scratch[6] == 0x00009000)) {
+		setTime(watchdog_hw->scratch[7]);
+		watchdog_hw->scratch[5] = 0x00000000;
+		watchdog_hw->scratch[6] = 0x00000000;
+		watchdog_hw->scratch[7] = 0x00000000;
+		g_util_webserial_queue.pushMessage("syslog", "recovered time from rp2040 scratch registers");
+	}
 	pinMode(TFT_BL, OUTPUT);
 	digitalWrite(TFT_BL, HIGH);
 }
 
 
 void system_rp2040_reset() {
-//TODO	if(year(g_sync_epoch_secs) >= 2001) {
-//TODO		watchdog_hw->scratch[5] = 0x00002001;
-//TODO		watchdog_hw->scratch[6] = 0x00009000;
-//TODO		watchdog_hw->scratch[7] = now();
-//TODO	}
+	if(year() >= 2001) {
+		hw_clear_bits(&watchdog_hw->ctrl, WATCHDOG_CTRL_ENABLE_BITS);
+		watchdog_hw->scratch[5] = 0x00002001;
+		watchdog_hw->scratch[6] = 0x00009000;
+		watchdog_hw->scratch[7] = now();
+	}
 	digitalWrite(TFT_BL, LOW);
 	multicore_reset_core1();
 
@@ -44,7 +44,7 @@ void system_rp2040_reset() {
 	reset_block(RESETS_RESET_USBCTRL_BITS);
 	unreset_block_wait(RESETS_RESET_USBCTRL_BITS);
 
-	watchdog_reboot(0, SRAM_END, 0);
+	watchdog_reboot(0, 0, 0);
 	reset_usb_boot(0, 0);
 	while(true) {
 		sleep_ms(1);
