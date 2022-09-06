@@ -1,5 +1,6 @@
 #include <LittleFS.h>
 #include <FS.h>
+#include <TimeLib.h>
 #include <pico/stdlib.h>
 #include <string>
 #include <stdexcept>
@@ -49,7 +50,7 @@ void setup() {
 	if(g_system_runtime.isAsleep()) {
 		digitalWrite(TFT_BL, LOW);
 	}
-	if(/*show boot animation==*/true) {
+	if(year() < 2001) {
 		gui_screen_set(gui_screen_startup);
 		while(gui_screen_get() == gui_screen_startup) {
 			gui_screen_update(g_system_runtime.isAwake());

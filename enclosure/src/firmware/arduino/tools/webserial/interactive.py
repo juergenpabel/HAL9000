@@ -13,10 +13,10 @@ menu['2'] = ['Dump system settings',  '["system/settings", {"list": {}}]']
 menu['3'] = ['Load system settings',  '["system/settings", {"load": {}}]']
 menu['4'] = ['Save system settings',  '["system/settings", {"save": {}}]']
 menu['5'] = ['Reset system settings', '["system/settings", {"reset":{}}]']
-menu['6'] = ['Add dummy system setting', '["system/settings", {"set": {"key": "foo", "value": "bar"}}]']
-menu['7'] = ['Switch to screen "hal9000" (animation)',    '["gui/screen", {"screen": {"hal9000": "show", "data": {"frames": "active"}}}]']
-menu['8'] = ['Switch to screen "splash" (error.jpg)',     '["gui/screen", {"screen": {"splash":  "show", "data": {"filename": "error.jpg"}}}]']
-menu['9'] = ['Switch to screen "idle" (showing a clock)', '["gui/screen", {"screen": {"idle":    "show"}}]']
+menu['6'] = ['Switch to screen "hal9000" (animation)',    '["gui/screen", {"screen": {"hal9000": "show", "data": {"frames": "active"}}}]']
+menu['7'] = ['Switch to screen "splash" (error.jpg)',     '["gui/screen", {"screen": {"splash":  "show", "data": {"filename": "error.jpg"}}}]']
+menu['8'] = ['Switch to screen "idle" (showing a clock)', '["gui/screen", {"screen": {"idle":    "show"}}]']
+menu['9'] = ['Switch to screen "shutdown" (->halt MCU)',  '["gui/screen", {"screen": {"shutdown":"show"}}]']
 
 
 def handler(self, line: str):

@@ -3,7 +3,7 @@
 #include "system/settings.h"
 
 
-static uint8_t  bson_buffer[SETTINGS_SIZE];
+static uint8_t  bson_buffer[SYSTEM_SETTINGS_SIZE];
 
 #define QUOTE(value) #value
 #define STRING(value) QUOTE(value)
