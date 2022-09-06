@@ -1,27 +1,10 @@
-# HAL9000 animation
+# HAL9000 startup and shutdown animations
 
-The images used by this project are derived from a source image,
-which has been created by Jean-Claude Heudin. He gave permission
-to use, modify and distribute his file for the purposes of this project.
+The images used by this project are derived from source images,
+which have been created by [Armel FAUVEAU](https://github.com/armel)
+and were published under the MIT license. The MIT license is provided 
+in this folder.
 
-The animated source image (haleye.gif) was copied from:
-http://www.jcheudin.fr/playground/playground/hal9000/images/haleye.gif
-
-For some other HAL9000 fun, check out his HAL9000 interactive game:
-http://www.jcheudin.fr/playground/playground/hal9000/
-
-The script gif2bmp.sh converts the animated GIF into BMPs that are used
-for different animation sequences (./frames/...). 
-- wakeup: fades from black to image
-- active: single images from original GIF (modified as described below), used in a loop while active
-- sleep: fades from image to black
-The BMPs are numbered and stored in corresponding subdirectories.
-
-The following modifications of the original image are implemented by
-the script:
-- separate GIF animation into individual images
-- cut out only the (red'ish) eye (without the silver frame)
-- mirror the bottom half to the top in order to remove the reflections
-  (because the enclosure features a fisheye dome, this adds reflections
-  "naturally")
-
+The animations provided here are based on:
+- [startup/](./startup/): [HAL 9000 Screensaver 4K (16_9 Widescreen) – COM (Communications) Animation 6 of 7.mp4](https://github.com/armel/HAL9000/tree/main/media/1440p/HAL 9000 Screensaver 4K \(16_9 Widescreen\) – COM \(Communications\) Animation 6 of 7.mp4)
+- [shutdown/](./shutdown/): [HAL 9000 Screensaver 4K (16_9 Widescreen) – HIB (Hibernation) Animation 8 of 8.mp4](https://github.com/armel/HAL9000/tree/main/media/1440p/HAL 9000 Screensaver 4K \(16_9 Widescreen\) – HIB \(Hibernation\) Animation 8 of 8.mp4)
