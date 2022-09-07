@@ -24,7 +24,7 @@ void util_jpeg_decode565_ram(uint8_t* jpeg_data, uint32_t jpeg_size, uint16_t* i
 		image565_func = render2buffer;
 	}
 	if(g_util_jpeg.openRAM(jpeg_data, jpeg_size, image565_func) == false) {
-		g_util_webserial.send("syslog", "util_jpeg_decode565_ram() -> g_util_jpeg.openRAM() failed");
+		g_util_webserial.send("syslog", arduino::String("util_jpeg_decode565_ram() -> g_util_jpeg.openRAM() failed (jpeg_size=")+arduino::String(jpeg_size)+")");
 		return;
 	}
 	if(image565_data != NULL && image565_size > 0) {
