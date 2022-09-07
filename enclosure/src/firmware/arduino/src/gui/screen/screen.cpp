@@ -30,13 +30,13 @@ void gui_screen_set_refresh() {
 }
 
 
-void gui_screen_update(bool force_refresh) {
-	if(force_refresh == false) {
-		force_refresh = g_gui_screen_forced_refresh;
+void gui_screen_update(bool refresh) {
+	if(refresh == false) {
+		refresh = g_gui_screen_forced_refresh;
 		g_gui_screen_forced_refresh = false;
 	}
-	gui_overlay_update(force_refresh);
-	g_gui_screen(force_refresh);
+	gui_overlay_update(refresh);
+	g_gui_screen(refresh);
 	g_gui_tft_overlay.pushSprite(0, 0, TFT_BLACK);
 }
 

@@ -45,13 +45,10 @@ class Action(HAL9000_Action):
 					cortex['kalliope']['state'] = kalliope_state
 					if cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
 						if kalliope_state == Action.KALLIOPE_STATE_LISTENING:
-							self.daemon.arduino_show_gui_screen('hal9000', {"frames": "wakeup"})
-						if kalliope_state == Action.KALLIOPE_STATE_THINKING:
-							self.daemon.arduino_show_gui_screen('hal9000', {"frames": "active"})
-						if kalliope_state == Action.KALLIOPE_STATE_SPEAKING:
-							self.daemon.arduino_show_gui_screen('hal9000', {"frames": "active"})
+							self.daemon.arduino_show_gui_screen('hal9000', {"queue": "replace", "sequence": {"name": "wakeup", "loop": "false"}})
+							self.daemon.arduino_show_gui_screen('hal9000', {"queue": "append",  "sequence": {"name": "active", "loop": "true"}})
 						if kalliope_state == Action.KALLIOPE_STATE_WAITING:
-							self.daemon.arduino_show_gui_screen('idle', None)
+							self.daemon.arduino_show_gui_screen('hal9000', {"queue": "replace", "sequence": {"name": "sleep",  "loop": "false"}})
 					if cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_ASLEEP:
 						if self.config['kalliope-trigger-mqtt-topic'] is not None:
 							mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], "pause")

@@ -6,8 +6,8 @@ import sys
 import glob
 import subprocess
 
-SRC_BASEDIR="./resources/images/frames"
-DST_BASEDIR="./data/images/frames"
+SRC_BASEDIR="./resources/images/sequences"
+DST_BASEDIR="./data/images/sequences"
 if os.path.exists(DST_BASEDIR) is False:
 	for DIR in ['init','wakeup','active','wait','sleep','standby']:
 		if os.path.exists("{}/{}".format(DST_BASEDIR,DIR)) is False:

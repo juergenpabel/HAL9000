@@ -12,13 +12,13 @@ static uint16_t      g_gui_overlay_icon[GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_
 #define RADIUS_MAX (TFT_WIDTH/2- 5)
 
 
-void gui_overlay_volume(bool force_refresh) {
-	if(g_system_runtime.count("gui/screen:volume/mute") == 1) {
-		if(g_system_runtime["gui/screen:volume/mute"] == std::string("False")) {
+void gui_overlay_volume(bool refresh) {
+	if(g_system_runtime.count("gui/overlay:volume/mute") == 1) {
+		if(g_system_runtime["gui/overlay:volume/mute"] == std::string("False")) {
 			uint8_t  volume_level = SYSTEM_STATUS_VOLUME;
 
-			if(g_system_runtime.count("gui/screen:volume/level") == 1) {
-				volume_level = std::stoi(g_system_runtime["gui/screen:volume/level"]);
+			if(g_system_runtime.count("gui/overlay:volume/level") == 1) {
+				volume_level = std::stoi(g_system_runtime["gui/overlay:volume/level"]);
 			}
 			for(uint8_t d=0; d<=100; d+=1) {
 				double v = 0;
@@ -36,23 +36,23 @@ void gui_overlay_volume(bool force_refresh) {
 				}
 			}
 //TODO			util_jpeg_decode565_littlefs("/images/overlay/volume/speaker.jpg", g_gui_overlay_icon, GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT);
-			for(int y=0; y<GUI_OVERLAY_ICON_HEIGHT; y++) {
-				for(int x=0; x<GUI_OVERLAY_ICON_WIDTH; x++) {
-					if(g_gui_overlay_icon[y*GUI_OVERLAY_ICON_WIDTH+x] != TFT_BLACK) {
-						g_gui_tft.drawPixel(x, y, TFT_WHITE);
-					}
-				}
-			}
-//			g_gui_tft_overlay.pushImage(CENTER_X-(GUI_OVERLAY_ICON_WIDTH/2), CENTER_Y+(CENTER_Y/2)-(GUI_OVERLAY_ICON_HEIGHT/2), GUI_OVERLAY_ICON_WIDTH, GUI_OVERLAY_ICON_HEIGHT, g_gui_overlay_icon);
+//TODO			for(int y=0; y<GUI_OVERLAY_ICON_HEIGHT; y++) {
+//TODO				for(int x=0; x<GUI_OVERLAY_ICON_WIDTH; x++) {
+//TODO					if(g_gui_overlay_icon[y*GUI_OVERLAY_ICON_WIDTH+x] != TFT_BLACK) {
+//TODO						g_gui_tft.drawPixel(x, y, TFT_WHITE);
+//TODO					}
+//TODO				}
+//TODO			}
+//TODO			g_gui_tft_overlay.pushImage(CENTER_X-(GUI_OVERLAY_ICON_WIDTH/2), CENTER_Y+(CENTER_Y/2)-(GUI_OVERLAY_ICON_HEIGHT/2), GUI_OVERLAY_ICON_WIDTH, GUI_OVERLAY_ICON_HEIGHT, g_gui_overlay_icon);
 		} else {
-			util_jpeg_decode565_littlefs("/images/overlay/volume/speaker-mute.jpg", g_gui_overlay_icon, GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT);
-			for(int y=0; y<GUI_OVERLAY_ICON_HEIGHT; y++) {
-				for(int x=0; x<GUI_OVERLAY_ICON_WIDTH; x++) {
-					if(g_gui_overlay_icon[y*GUI_OVERLAY_ICON_WIDTH+x] != TFT_BLACK) {
-						g_gui_tft_overlay.drawPixel(x, y, TFT_WHITE);
-					}
-				}
-			}
+//TODO			util_jpeg_decode565_littlefs("/images/overlay/volume/speaker-mute.jpg", g_gui_overlay_icon, GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT);
+//TODO			for(int y=0; y<GUI_OVERLAY_ICON_HEIGHT; y++) {
+//TODO				for(int x=0; x<GUI_OVERLAY_ICON_WIDTH; x++) {
+//TODO					if(g_gui_overlay_icon[y*GUI_OVERLAY_ICON_WIDTH+x] != TFT_BLACK) {
+//TODO						g_gui_tft_overlay.drawPixel(x, y, TFT_WHITE);
+//TODO					}
+//TODO				}
+//TODO			}
 		}
 	}
 }

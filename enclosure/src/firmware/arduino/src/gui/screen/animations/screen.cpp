@@ -47,7 +47,7 @@ static void gui_screen_animations(bool refresh) {
 }
 
 
-void gui_screen_startup(bool refresh) {
+void gui_screen_animation_startup(bool refresh) {
 	if(g_animation_folder == NULL || g_animation_count == NULL || g_animation_delay == NULL) {
 		g_animation_folder = g_startup_folder;
 		g_animation_count = g_startup_count;
@@ -59,7 +59,7 @@ void gui_screen_startup(bool refresh) {
 }
 
 
-void gui_screen_shutdown(bool refresh) {
+void gui_screen_animation_shutdown(bool refresh) {
 	if(g_animation_folder == NULL || g_animation_count == NULL || g_animation_delay == NULL) {
 		g_animation_folder = g_shutdown_folder;
 		g_animation_count = g_shutdown_count;
@@ -68,7 +68,7 @@ void gui_screen_shutdown(bool refresh) {
 		g_animation_frame = 0;
 	}
 	gui_screen_animations(refresh);
-	if(gui_screen_get() != gui_screen_shutdown) {
+	if(gui_screen_get() == gui_screen_none) {
 		system_rp2040_halt();
 	}
 }

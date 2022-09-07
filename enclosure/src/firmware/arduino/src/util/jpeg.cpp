@@ -24,7 +24,7 @@ void util_jpeg_decode565_ram(uint8_t* jpeg_data, uint32_t jpeg_size, uint16_t* i
 		image565_func = render2buffer;
 	}
 	if(g_util_jpeg.openRAM(jpeg_data, jpeg_size, image565_func) == false) {
-		g_util_webserial.send("syslog", "util_jpeg_decode565_ram() -> g_util_jpeg.open() failed");
+		g_util_webserial.send("syslog", "util_jpeg_decode565_ram() -> g_util_jpeg.openRAM() failed");
 		return;
 	}
 	if(image565_data != NULL && image565_size > 0) {

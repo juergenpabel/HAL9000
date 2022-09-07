@@ -5,10 +5,10 @@
 #include "globals.h"
 
 
-void gui_overlay_message(bool force_refresh) {
+void gui_overlay_message(bool refresh) {
 	static std::string  message;
 
-	if(force_refresh) {
+	if(refresh) {
 		message = std::string();
 	}
 	if(message.compare(g_system_runtime["gui/overlay:message/text"]) != 0) {
@@ -19,7 +19,7 @@ void gui_overlay_message(bool force_refresh) {
 		g_gui_tft_overlay.setTextSize(2);
 		g_gui_tft_overlay.setTextDatum(MC_DATUM);
 		g_gui_tft_overlay.drawString(message.c_str(), TFT_WIDTH/2, TFT_HEIGHT/8*5);
-		if(force_refresh == false) {
+		if(refresh == false) {
 			gui_screen_set_refresh();
 		}
 	}

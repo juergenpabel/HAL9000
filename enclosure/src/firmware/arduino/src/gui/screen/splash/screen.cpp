@@ -3,8 +3,8 @@
 #include "globals.h"
 
 
-void gui_screen_splash(bool force_refresh) {
-	if(force_refresh == true) {
+void gui_screen_splash(bool refresh) {
+	if(refresh == true) {
 		std::string filename("/images/splash/");
 
 		filename += g_system_runtime["gui/screen:splash/filename"];

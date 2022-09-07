@@ -4,11 +4,11 @@
 #include "globals.h"
 
 
-void gui_screen_menu(bool force_refresh) {
+void gui_screen_menu(bool refresh) {
 	static std::string  menu_title;
 	static std::string  menu_item;
 
-	if(force_refresh) {
+	if(refresh) {
 		menu_title = std::string();
 		menu_item  = std::string();
 		g_gui_tft.fillScreen(TFT_BLACK);

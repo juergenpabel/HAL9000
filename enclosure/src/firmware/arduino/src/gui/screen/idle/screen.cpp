@@ -3,11 +3,11 @@
 #include "globals.h"
 
 
-void gui_screen_idle(bool force_refresh) {
+void gui_screen_idle(bool refresh) {
 	static time_t  clock_previous = 0;
 	       time_t  clock_current = now();
 
-	if(force_refresh) {
+	if(refresh) {
 		clock_previous = 0;
 		g_gui_tft.fillScreen(TFT_BLACK);
 	}

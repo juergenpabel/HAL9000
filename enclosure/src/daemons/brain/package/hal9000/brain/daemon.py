@@ -180,17 +180,17 @@ class Daemon(HAL9000_Daemon):
 
 	def arduino_show_gui_screen(self, screen, parameter) -> None:
 		self.cortex['brain']['activity']['enclosure']['gui']['screen'] = screen
-		self.arduino_set_gui_screen(screen, 'show', parameter)
+		self.arduino_set_gui_screen(screen, parameter)
 
 
 	def arduino_hide_gui_screen(self, screen, parameter) -> None:
 		if self.cortex['brain']['activity']['enclosure']['gui']['screen'] == screen:
 			self.cortex['brain']['activity']['enclosure']['gui']['screen'] = None
-			self.arduino_set_gui_screen('idle', 'show', {})
+			self.arduino_set_gui_screen('idle', {})
 
 
-	def arduino_set_gui_screen(self, screen, action, parameter) -> None:
-		mqtt_publish_message('{}/enclosure/gui/screen'.format(self.config['mqtt-topic-base']), json.dumps({"screen": {screen: action, "data": parameter}}))
+	def arduino_set_gui_screen(self, screen, parameter) -> None:
+		mqtt_publish_message('{}/enclosure/gui/screen'.format(self.config['mqtt-topic-base']), json.dumps({screen: parameter}))
 
 
 	def arduino_show_gui_overlay(self, overlay, parameter) -> None:

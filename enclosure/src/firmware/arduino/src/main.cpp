@@ -51,8 +51,8 @@ void setup() {
 		digitalWrite(TFT_BL, LOW);
 	}
 	if(year() < 2001) {
-		gui_screen_set(gui_screen_startup);
-		while(gui_screen_get() == gui_screen_startup) {
+		gui_screen_set(gui_screen_animation_startup);
+		while(gui_screen_get() == gui_screen_animation_startup) {
 			gui_screen_update(g_system_runtime.isAwake());
 		}
 	}
@@ -89,10 +89,10 @@ void setup() {
 
 void loop() {
 	if(!Serial) {
-		if(gui_screen_get() != gui_screen_shutdown) {
+		if(gui_screen_get() != gui_screen_animation_shutdown) {
 			system_rp2040_reset();
 		}
-		while(gui_screen_get() == gui_screen_shutdown) {
+		while(gui_screen_get() == gui_screen_animation_shutdown) {
 			gui_screen_update(g_system_runtime.isAwake());
 		}
 		system_rp2040_halt();

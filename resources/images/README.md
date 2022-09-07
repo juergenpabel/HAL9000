@@ -8,6 +8,6 @@ from other sources. Currently, images from two sources are used:
 - An animated HAL9000 (red) "eye", shown when interacting with the system by voice
   to indicate audio processing (aside from wake-word processing).
   - Source: http://www.jcheudin.fr/playground/playground/hal9000/
-  - Readme: [frames/README.md](frames/README.md)
+  - Readme: [sequences/README.md](sequences/README.md)
 
 
