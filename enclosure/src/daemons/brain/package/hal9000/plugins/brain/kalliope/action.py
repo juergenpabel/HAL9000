@@ -14,7 +14,7 @@ class Action(HAL9000_Action):
 	KALLIOPE_STATE_LISTENING = 'listening'
 	KALLIOPE_STATE_THINKING  = 'thinking'
 	KALLIOPE_STATE_SPEAKING  = 'speaking'
-	KALLIOPE_STATES_VALID = [KALLIOPE_STATE_STARTED, KALLIOPE_STATE_WAITING, KALLIOPE_STATE_LISTENING, KALLIOPE_STATE_THINKING, KALLIOPE_STATE_SPEAKING]
+	KALLIOPE_STATES_VALID = [KALLIOPE_STATE_WAITING, KALLIOPE_STATE_LISTENING, KALLIOPE_STATE_THINKING, KALLIOPE_STATE_SPEAKING]
 
 
 	def __init__(self, action_name: str, **kwargs) -> None:
@@ -25,7 +25,7 @@ class Action(HAL9000_Action):
 		HAL9000_Action.configure(self, configuration, section_name, cortex)
 		self.config['kalliope-trigger-mqtt-topic'] = configuration.get(section_name, 'kalliope-trigger-mqtt-topic', fallback=None)
 		cortex['kalliope'] = dict()
-		cortex['kalliope']['state'] = None
+		cortex['kalliope']['state'] = Action.KALLIOPE_STATE_STARTED
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
@@ -41,6 +41,10 @@ class Action(HAL9000_Action):
 		if 'kalliope' in signal:
 			if 'state' in signal['kalliope']:
 				kalliope_state = signal['kalliope']['state']
+				if cortex['kalliope']['state'] == Action.KALLIOPE_STATE_STARTED:
+					if kalliope_state in Action.KALLIOPE_STATES_VALID:
+						cortex['kalliope']['state'] = kalliope_state
+					return
 				if kalliope_state in Action.KALLIOPE_STATES_VALID:
 					cortex['kalliope']['state'] = kalliope_state
 					if cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:

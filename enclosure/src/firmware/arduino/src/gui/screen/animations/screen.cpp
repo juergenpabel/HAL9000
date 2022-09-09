@@ -8,9 +8,9 @@ static const char*   g_startup_folder[] = {"startup/countdown", "startup/fadeout
 static int           g_startup_count[]  = {23, 19, 0};
 static int           g_startup_delay[]  = {900, 100, 0};
 
-static const char*   g_shutdown_folder[] = {"shutdown/monitor", "shutdown/fadeout", NULL};
-static int           g_shutdown_count[]  = {80, 10, 0};
-static int           g_shutdown_delay[]  = {25, 10, 0};
+static const char*   g_shutdown_folder[] = {"shutdown", NULL};
+static int           g_shutdown_count[]  = {70, 0};
+static int           g_shutdown_delay[]  = {25, 0};
 
 static const char**  g_animation_folder = NULL;
 static int*          g_animation_count = NULL;

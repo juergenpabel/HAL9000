@@ -34,7 +34,7 @@ if os.path.exists(DST_BASEDIR) is False:
 SRC_BASEDIR="./resources/images/animations"
 DST_BASEDIR="./data/images/animations"
 if os.path.exists(DST_BASEDIR) is False:
-	for DIR in ['startup/countdown','startup/fadeout','shutdown/monitor','shutdown/fadeout']:
+	for DIR in ['startup/countdown','startup/fadeout','shutdown']:
 		if os.path.exists("{}/{}".format(DST_BASEDIR,DIR)) is False:
 			os.makedirs("{}/{}".format(DST_BASEDIR,DIR))
 		for SRC in glob.glob("{}/{}/*.jpg".format(SRC_BASEDIR,DIR)):

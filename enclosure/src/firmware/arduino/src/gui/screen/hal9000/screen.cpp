@@ -29,8 +29,10 @@ void gui_screen_hal9000(bool refresh) {
 		frame_next = 0;
 		queue = JSONVar::parse(g_system_runtime["gui/screen:hal9000/queue"].c_str());
 		if(JSON.typeof(queue) != arduino::String("array") || queue.length() == 0) {
+			g_system_runtime["gui/screen:hal9000/queue"] = std::string("[]");
 			if(frame_loop == false) {
 				g_util_webserial.send("syslog", "gui_screen_hal9000() => empty queue and loop=false, switching to screen 'idle'");
+				frame_next = GUI_SEQUENCE_FRAMES_MAX;
 				gui_screen_set(gui_screen_idle);
 				return;
 			}
@@ -47,8 +49,8 @@ void gui_screen_hal9000(bool refresh) {
 					queue_new[i-1] = queue[i];
 				}
 				queue = queue_new;
-				g_system_runtime["gui/screen:hal9000/queue"] = JSONVar::stringify(queue).c_str();
 			}
+			g_system_runtime["gui/screen:hal9000/queue"] = JSONVar::stringify(queue).c_str();
 		}
 	}
 	if(g_frames[frame_next].size > 0) {
