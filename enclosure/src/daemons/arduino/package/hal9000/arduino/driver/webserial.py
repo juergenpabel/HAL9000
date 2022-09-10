@@ -3,51 +3,51 @@
 import logging
 import time
 import json
-from datetime import datetime, timezone
 import serial
 from configparser import ConfigParser
+from datetime import datetime, timezone
 
-from . import HAL9000_Driver as HAL9000
+from . import HAL9000_Driver
 
 
-class Driver(HAL9000):
+class Driver(HAL9000_Driver):
 
 	def __init__(self, name: str):
-		HAL9000.__init__(self, name)
+		HAL9000_Driver.__init__(self, name)
 		self.config = dict()
 		if hasattr(Driver, 'serial') is False:
 			Driver.serial = None
-			Driver.status = dict()
-			Driver.status['read'] = None
-		self.logger = logging.getLogger()
+			Driver.received_line = None
 
 
 	def configure(self, configuration: ConfigParser) -> None:
-		HAL9000.configure(self, configuration)
-		self.config['tty'] = configuration.getstring(str(self), 'tty', fallback="/dev/ttyRP2040")
-		self.config['hardware'] = configuration.getstring(str(self), 'hardware')
-		self.config['software'] = configuration.getstring(str(self), 'software')
-		self.config['pins'] = configuration.getlist(str(self), 'pins')
+		HAL9000_Driver.configure(self, configuration)
+		self.config['tty']  = configuration.getstring(str(self), 'driver-tty', fallback='/dev/ttyRP2040')
+		self.config['pins'] = configuration.getlist(str(self),   'driver-pins', fallback="")
 		while Driver.serial is None:
 			try:
-				self.logger.debug('driver:{} => Connecting to {}'.format(str(self), self.config['tty']))
+				self.logger.debug('driver:webserial => Connecting to {}'.format(self.config['tty']))
 				Driver.serial = serial.Serial(port=self.config['tty'], timeout=0.1, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
-				self.logger.debug('driver:{} => connected...'.format(str(self)))
+				self.logger.debug('driver:webserial => connected...')
 				line = self.receive()
 				while "loop()" not in line:
 					line = self.receive()
-				self.logger.debug('driver:{} => ...waiting...'.format(str(self)))
+				self.logger.debug('driver:webserial => ...waiting...')
 				self.send('["device/mcp23X17", {"init": {}}]')
 			except:
 				time.sleep(0.1)
-		if self.config['software'] == "rotary":
-			self.send('["device/mcp23X17", {"config": {"device": {"name": "%s",    "type": "%s", "inputs": [{"pin": "%s", "label": "sigA"},{"pin": "%s", "label": "sigB"}]}}}]' % (str(self).split(':')[1], self.config['software'], self.config['pins'][0], self.config['pins'][1]))
-		if self.config['software'] in ["switch", "button", "toggle"]:
-			self.send('["device/mcp23X17", {"config": {"device": {"name": "%s",    "type": "%s", "inputs": [{"pin": "%s", "label": "sigX"}], "actions": {"true": "on", "false": "off"}}}}]' % (str(self).split(':')[1], self.config['software'], self.config['pins'][0]))
-		time.sleep(0.1)
-		self.send('["system/time", {"config": {"interval": 60}}]')
-		self.logger.debug('driver:{} => ...and configured'.format(str(self)))
-
+		peripheral_type, peripheral_name = str(self).split(':', 1)
+		if peripheral_type in ["rotary"]:
+			if len(self.config['pins']) != 2:
+				self.logger.error('driver:webserial => invalid configuration for driver-pins, must be a list with two elements')
+				return
+			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s",    "name": "%s", "inputs": [{"pin": "%s", "label": "sigA"},{"pin": "%s", "label": "sigB"}]}}}]' % (peripheral_type, peripheral_name, self.config['pins'][0], self.config['pins'][1]))
+		if peripheral_type in ["switch", "button", "toggle"]:
+			if len(self.config['pins']) != 1:
+				self.logger.error('driver:webserial => invalid configuration for driver-pins, must be a single pin')
+				return
+			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s",    "name": "%s", "inputs": [{"pin": "%s", "label": "sigX"}], "actions": {"true": "on", "false": "off"}}}}]' % (peripheral_type, peripheral_name, self.config['pins'][0]))
+		self.logger.debug('driver:webserial => ...and configured')
 
 
 	def receive(self):
@@ -58,26 +58,34 @@ class Driver(HAL9000):
 			data = Driver.serial.readline().decode('utf-8')
 		line += data.strip()
 		if len(line):
-			print("USB(D->H): {}".format(line))
+			self.logger.debug("USB(D->H): {}".format(line))
 		return line
 
 
+	def received(self):
+		result = Driver.received_line
+		Driver.received_line = ""
+		return result
+
+
 	def send(self, line: str):
-		print("USB(H->D): {}".format(line))
+		self.logger.debug("USB(H->D): {}".format(line))
 		if not line.endswith("\n"):
 			line += "\n"
 		Driver.serial.write(line.encode('utf-8'))
 
 
 	def do_loop(self) -> bool:
-		if Driver.status['read'] is None:
+		if Driver.received_line is None:
+			self.send('["system/time", {"config": {"interval": 3600}}]')
 			self.send('["device/mcp23X17", {"start": true}]')
-		Driver.status['read'] = self.receive()
-		if len(Driver.status['read']) > 0 and Driver.status['read'].startswith('[') and Driver.status['read'].endswith(']'):
-			event, payload = json.loads(Driver.status['read'])
+			time.sleep(0.1)
+		Driver.received_line = self.receive()
+		if len(Driver.received_line) > 0 and Driver.received_line.startswith('[') and Driver.received_line.endswith(']'):
+			event, payload = json.loads(Driver.received_line)
 			if event == "system/time":
 				if payload['sync']['format'] == "epoch":
 					self.send('["system/time",{"sync":{"epoch":'+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
-					Driver.status['read'] = ""
+					Driver.received_line = ""
 		return True
 

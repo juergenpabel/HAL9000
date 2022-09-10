@@ -54,7 +54,6 @@ void gui_screen_hal9000(bool refresh) {
 		}
 	}
 	if(g_frames[frame_next].size > 0) {
-		g_util_webserial.send("syslog", String(frame_next));
 		gui_screen_hal9000_frame_draw(g_frames[frame_next].data, g_frames[frame_next].size);
 	}
 	frame_next++;

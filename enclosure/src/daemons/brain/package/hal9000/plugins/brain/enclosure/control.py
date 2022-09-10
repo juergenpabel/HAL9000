@@ -87,7 +87,7 @@ class Control(EnclosureComponent):
 						if action_name in self.daemon.actions:
 							self.daemon.queue_action(action_name, signal_data)
 						else:
-							self.daemon.logger.error("enclosure/control: menu item '{}' refers to nonexistant action '{}'"
+							self.daemon.logger.error("plugin enclosure: menu item '{}' refers to nonexistant action '{}'"
 							                         .format(menu_item, action_name))
 					cortex['enclosure']['control']['menu-name'] = None
 					cortex['enclosure']['control']['menu-item'] = None

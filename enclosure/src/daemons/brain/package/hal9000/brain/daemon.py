@@ -43,7 +43,7 @@ class Daemon(HAL9000_Daemon):
 		HAL9000_Daemon.configure(self, configuration)
 		self.config['sleep-time']  = configuration.get('brain', 'sleep-time', fallback=None)
 		self.config['wakeup-time'] = configuration.get('brain', 'wakeup-time', fallback=None)
-		self.mqtt.subscribe('{}/brain/consciousness/+'.format(self.config['mqtt-topic-base']))
+		self.mqtt.subscribe('hal9000/daemon/brain/consciousness/state')
 		for section_name in configuration.sections():
 			module_path = configuration.getstring(section_name, 'module', fallback=None)
 			if module_path is not None:
@@ -119,11 +119,10 @@ class Daemon(HAL9000_Daemon):
 	
 	def on_mqtt(self, client, userdata, message):
 		HAL9000_Daemon.on_mqtt(self, client, userdata, message)
-		if message.topic.startswith('{}/brain/consciousness/'.format(self.config['mqtt-topic-base'])):
-			if message.topic == '{}/brain/consciousness/state'.format(self.config['mqtt-topic-base']):
-				self.set_consciousness(message.payload.decode('utf-8'))
+		if message.topic == 'hal9000/daemon/brain/consciousness/state':
+			self.set_consciousness(message.payload.decode('utf-8'))
 			return
-		if self.cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE or message.topic.startswith(self.config['mqtt-topic-base']) is False:
+		if self.cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE or message.topic.startswith('hal9000/') is False:
 			if 'mqtt' in self.callbacks and message.topic in self.callbacks['mqtt']:
 				self.logger.info("SYNAPSES fired: {}".format(', '.join(str(x).split(':',2)[2] for x in self.callbacks['mqtt'][message.topic])))
 				self.logger.debug("CORTEX before triggers = {}".format(self.cortex))
@@ -190,42 +189,42 @@ class Daemon(HAL9000_Daemon):
 
 
 	def arduino_set_gui_screen(self, screen, parameter) -> None:
-		mqtt_publish_message('{}/enclosure/gui/screen'.format(self.config['mqtt-topic-base']), json.dumps({screen: parameter}))
+		mqtt_publish_message('hal9000/arduino:command/gui/screen', json.dumps({screen: parameter}))
 
 
 	def arduino_show_gui_overlay(self, overlay, parameter) -> None:
 		self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = overlay
-		self.arduino_set_gui_overlay(overlay, 'show', parameter)
+		self.arduino_set_gui_overlay(overlay, parameter)
 
 
 	def arduino_hide_gui_overlay(self, overlay) -> None:
 		if self.cortex['brain']['activity']['enclosure']['gui']['overlay'] == overlay:
 			self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = None
-			self.arduino_set_gui_overlay(overlay, 'hide', None)
+			self.arduino_set_gui_overlay('none', {})
 
 
-	def arduino_set_gui_overlay(self, overlay, action, parameter) -> None:
-		mqtt_publish_message('{}/enclosure/gui/overlay'.format(self.config['mqtt-topic-base']), json.dumps({"overlay": {overlay: action, "data": parameter}}))
+	def arduino_set_gui_overlay(self, overlay, parameter) -> None:
+		mqtt_publish_message('hal9000/arduino:command/gui/overlay', json.dumps({overlay: parameter}))
 
 
 	def arduino_set_device_display(self, parameter) -> None:
-		mqtt_publish_message('{}/enclosure/device/display'.format(self.config['mqtt-topic-base']), json.dumps({"display": {"data": parameter}}))
+		mqtt_publish_message('hal9000/arduino:command/device/display', json.dumps({"display": {"data": parameter}}))
 
 
 	def arduino_system_reset(self) -> None:
-		mqtt_publish_message('{}/enclosure/system/reset'.format(self.config['mqtt-topic-base']), json.dumps({}))
+		mqtt_publish_message('hal9000/arduino:command/system/reset', json.dumps({}))
 
 
 	def arduino_set_system_runtime(self, key, value) -> None:
-		mqtt_publish_message('{}/enclosure/system/runtime'.format(self.config['mqtt-topic-base']), json.dumps({"set": {"key": key, "value": value}}))
+		mqtt_publish_message('hal9000/arduino:command/system/runtime', json.dumps({"set": {"key": key, "value": value}}))
 
 
 	def arduino_set_system_setting(self, key, value) -> None:
-		mqtt_publish_message('{}/enclosure/system/settings'.format(self.config['mqtt-topic-base']), json.dumps({"set": {"key": key, "value": value}}))
+		mqtt_publish_message('hal9000/arduino:command/system/settings', json.dumps({"set": {"key": key, "value": value}}))
 
 
 	def arduino_save_system_setting(self) -> None:
-		mqtt_publish_message('{}/enclosure/system/settings'.format(self.config['mqtt-topic-base']), json.dumps({"save": {}}))
+		mqtt_publish_message('hal9000/arduino:command/system/settings', json.dumps({"save": {}}))
 
 
 

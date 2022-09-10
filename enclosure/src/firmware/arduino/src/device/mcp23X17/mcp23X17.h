@@ -17,8 +17,8 @@ class MCP23X17 {
 	public:
 		MCP23X17();
 		void init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl);
-		void config_inputs(const char* event_name, const char* device_type, JSONVar& inputs, JSONVar& actions);
-		void config_outputs(const char* event_name, const char* device_type, JSONVar& outputs);
+		void config_inputs(const char* device_type, const char* device_name, JSONVar& inputs, JSONVar& actions);
+		void config_outputs(const char* device_type, const char* device_name, JSONVar& outputs);
 
 		void start();
 		void check();

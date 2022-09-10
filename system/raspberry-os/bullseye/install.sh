@@ -17,7 +17,7 @@ chown root.hal9000 /opt/hal9000
 chmod 750          /opt/hal9000
 
 ### enclosure ###
-useradd --home-dir / -g hal9000 -G sudo,audio -M -N -r -s /bin/false hal9000
+useradd --home-dir / -g hal9000 -G audio,sudo -M -N -r -s /bin/false hal9000
 cp conf/mosquitto/conf.d/enclosure.conf /etc/mosquitto/conf.d/hal9000-enclosure.conf
 systemctl restart mosquitto
 
@@ -31,8 +31,7 @@ cat conf/uwsgi/enclosure.ini \
 
 
 ### kalliope ###
-useradd --home-dir / -g kalliope -G audio,sudo -M -N -r -s /bin/false kalliope
-cp conf/sudo/sudoers.d/100_kalliope /etc/sudoers.d/100_kalliope
+useradd --home-dir / -g kalliope -G audio -M -N -r -s /bin/false kalliope
 
 pip3 install -r ../../../kalliope/src/requirements.txt
 cp -r --dereference ../../../kalliope/src /opt/hal9000/kalliope

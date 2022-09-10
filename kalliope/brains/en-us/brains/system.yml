@@ -2,17 +2,23 @@
 
   - name: "system-shutdown"
     signals:
-      - order: "Good night"
+      - order: "Turn yourself off"
+      - order: "Power off"
       - order: "Shut down"
+      - order: "Shutdown"
     neurons:
-      - script:
-          path: "resources/scripts/system-shutdown.sh"
+      - mqtt_publisher:
+          broker_ip: "127.0.0.1"
+          topic: "hal9000/daemon/brain/command"
+          payload: "shutdown"
 
   - name: "system-reboot"
     signals:
       - order: "Restart yourself"
       - order: "Reboot"
     neurons:
-      - script:
-          path: "resources/scripts/system-reboot.sh"
+      - mqtt_publisher:
+          broker_ip: "127.0.0.1"
+          topic: "hal9000/daemon/brain/command"
+          payload: "restart"
 

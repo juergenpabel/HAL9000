@@ -1,4 +1,4 @@
-#!iusr/bin/python3
+#!/usr/bin/python3
 
 import sys
 import json
@@ -13,28 +13,36 @@ class Daemon(HAL9000):
 
 	def __init__(self):
 		HAL9000.__init__(self, 'arduino')
+		self.Devices = dict()
+		self.Drivers = dict()
 		self.devices = dict()
+		self.drivers = dict()
 
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
-		self.mqtt.subscribe("{}/system/reset".format(self.config['mqtt-topic-base']))
-		self.mqtt.subscribe("{}/system/runtime".format(self.config['mqtt-topic-base']))
-		self.mqtt.subscribe("{}/system/settings".format(self.config['mqtt-topic-base']))
-		self.mqtt.subscribe("{}/device/display".format(self.config['mqtt-topic-base']))
-		self.mqtt.subscribe("{}/gui/screen".format(self.config['mqtt-topic-base']))
-		self.mqtt.subscribe("{}/gui/overlay".format(self.config['mqtt-topic-base']))
-		self.logger.info("Attempting to load device '{}'".format(str(self)))
-		Device = self.import_device('hal9000.arduino.device.{}'.format(self))
-		if Device is None:
-			self.logger.critical("loading of device '{}' failed".format(str(self)))
-			sys.exit(-1)
-		for device_name in configuration.getlist('arduino:{}'.format(self), 'devices'):
-			driver_name = configuration.getstring('{}:{}'.format(self,device_name), 'driver')
-			self.logger.info("Attempting to load driver '{}'".format(driver_name))
-			Driver = self.import_driver('hal9000.arduino.driver.{}'.format(driver_name))
-			self.devices[device_name] = Device(device_name, Driver)
-			self.devices[device_name].configure(configuration)
+		self.mqtt.subscribe("hal9000/arduino:command/#")
+		self.mqtt.on_message = self.on_command
+
+		self.logger.info("Attempting to load device '{}'".format(self))
+		for peripheral_name in configuration.getlist(str(self), 'peripherals'):
+			module_device = configuration.getstring(peripheral_name, 'device', fallback='hal9000.arduino.device.arduino')
+			if module_device not in self.Devices:
+				self.logger.debug("Attempting to import device '{}'".format(module_device))
+				self.Devices[module_device] = self.import_device(module_device)
+			Device = self.Devices[module_device]
+
+			module_driver = configuration.getstring(peripheral_name, 'driver', fallback='hal9000.arduino.driver.webserial')
+			if module_driver not in self.Drivers:
+				self.logger.debug("Attempting to import driver '{}'".format(module_driver))
+				self.Drivers[module_driver] = self.import_driver(module_driver)
+			Driver = self.Drivers[module_driver]
+
+			driver = Driver(peripheral_name)
+			device = Device(peripheral_name, driver)
+			device.configure(configuration)
+			self.devices[peripheral_name] = device
+			self.drivers[peripheral_name] = driver
 
 
 	def do_loop(self) -> bool:
@@ -48,29 +56,19 @@ class Daemon(HAL9000):
 		payload = '{}:{} {}={}'.format(device_type, device_name, event, value)
 		self.logger.info('EVENT: {}'.format(payload))
 		if self.mqtt is not None:
-			mqtt_base = self.config['mqtt-topic-base']
-			mqtt_topic = '{}/{}/{}/event'.format(mqtt_base, device_type, device_name)
+			mqtt_topic = 'hal9000/arduino:event/{}/{}'.format(device_type, device_name)
 			self.mqtt.publish(mqtt_topic, payload)
 			self.logger.debug('MQTT published: {} => {}'.format(mqtt_topic, payload))
 
 
-	def on_mqtt(self, client, userdata, message) -> None:
+	def on_command(self, client, userdata, message) -> None:
 		HAL9000.on_mqtt(self, client, userdata, message)
-		topic = message.topic
-		payload = message.payload.decode('utf-8')
-		if topic == "{}/system/reset".format(self.config['mqtt-topic-base']):
-			self.devices["volume"].driver.send('["system/reset", %s]' % payload)
-		if topic == "{}/system/runtime".format(self.config['mqtt-topic-base']):
-			self.devices["volume"].driver.send('["system/runtime", %s]' % payload)
-		if topic == "{}/system/settings".format(self.config['mqtt-topic-base']):
-			self.devices["volume"].driver.send('["system/settings", %s]' % payload)
-		if topic == "{}/device/display".format(self.config['mqtt-topic-base']):
-			self.devices["volume"].driver.send('["device/display", %s]' % payload)
-		if topic == "{}/gui/screen".format(self.config['mqtt-topic-base']):
-			self.devices["volume"].driver.send('["gui/screen", %s]' % payload)
-		if topic == "{}/gui/overlay".format(self.config['mqtt-topic-base']):
-			self.devices["volume"].driver.send('["gui/overlay", %s]' % payload)
-
+		command = None
+		if message.topic.startswith("hal9000/arduino:command/"):
+			topic = message.topic[24:]
+			payload = message.payload.decode('utf-8')
+			self.logger.info("COMMAND: {} => {}".format(topic, payload))
+			self.drivers["rotary:volume"].send('["%s", %s]' % (topic, payload)) ## TODO
 
 	def import_device(self, module_name:str) -> HAL9000_Plugin:
 		return self.import_plugin(module_name, 'Device')

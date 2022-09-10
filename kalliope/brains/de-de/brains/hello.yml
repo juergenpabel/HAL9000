@@ -4,4 +4,4 @@
       - order: "Hallo"
     neurons:
       - say:
-          message: "Hallo, Dave"
+          message: "Hallo, Vinz"

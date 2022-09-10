@@ -55,7 +55,7 @@ void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
 }
 
 
-void MCP23X17::config_inputs(const char* event_name, const char* device_type, JSONVar& inputs, JSONVar& actions) {
+void MCP23X17::config_inputs(const char* device_type, const char* device_name, JSONVar& inputs, JSONVar& actions) {
 	MCP23X17_Device* device = NULL;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
@@ -78,10 +78,10 @@ void MCP23X17::config_inputs(const char* event_name, const char* device_type, JS
 		g_util_webserial.send("syslog", "MCP23X17 already loop()'ing on the other core");
 		return;
 	}
-	if(event_name == NULL || device_type == NULL) {
+	if(device_type == NULL || device_name == NULL) {
 		g_util_webserial.send("syslog", "MCP23X17::config_inputs(): invalid parameters name/type");
-		g_util_webserial.send("syslog", event_name);
 		g_util_webserial.send("syslog", device_type);
+		g_util_webserial.send("syslog", device_name);
 		return;
 	}
 	if(strncmp(device_type, "switch", 7) == 0) {
@@ -117,7 +117,7 @@ void MCP23X17::config_inputs(const char* event_name, const char* device_type, JS
 		g_util_webserial.send("syslog", device_type);
 		return;
 	}
-	if(device->configure(event_name, &this->mcp23X17, inputs, actions) == false) {
+	if(device->configure(device_name, &this->mcp23X17, inputs, actions) == false) {
 		g_util_webserial.send("syslog", "MCP23X17::config_inputs(): device configuration failed");
 		g_util_webserial.send("syslog", inputs);
 		return;
@@ -125,7 +125,7 @@ void MCP23X17::config_inputs(const char* event_name, const char* device_type, JS
 }
 
 
-void MCP23X17::config_outputs(const char* event_name, const char* device_type, JSONVar& outputs) {
+void MCP23X17::config_outputs(const char* device_type, const char* device_name, JSONVar& outputs) {
 	MCP23X17_Device* device = NULL;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
@@ -144,10 +144,10 @@ void MCP23X17::config_outputs(const char* event_name, const char* device_type, J
 		}
 		this->init(i2c_address, i2c_pin_sda, i2c_pin_scl);
 	}
-	if(event_name == NULL || device_type == NULL) {
+	if(device_type == NULL || device_name == NULL) {
 		g_util_webserial.send("syslog", "MCP23X17::config_outputs(): invalid parameters name/type");
-		g_util_webserial.send("syslog", event_name);
 		g_util_webserial.send("syslog", device_type);
+		g_util_webserial.send("syslog", device_name);
 		return;
 	}
 //TODO	if(strncmp(device_type, "TODO", 5) == 0) {
@@ -161,7 +161,7 @@ void MCP23X17::config_outputs(const char* event_name, const char* device_type, J
 //TODO	while(device->isConfigured()) {
 //TODO		device += 1;
 //TODO	}
-//TODO	if(device->configure(event_name, &this->mcp23X17, outputs) == false) {
+//TODO	if(device->configure(device_name, &this->mcp23X17, outputs) == false) {
 //TODO		g_util_webserial.send("syslog", "MCP23X17::config_outputs(): device configuration failed");
 //TODO		g_util_webserial.send("syslog", outputs);
 //TODO		return;

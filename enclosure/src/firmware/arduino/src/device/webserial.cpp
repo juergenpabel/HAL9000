@@ -50,18 +50,18 @@ void on_device_mcp23X17(JSONVar parameter) {
 		g_device_mcp23X17.init(i2c_address, i2c_pin_sda, i2c_pin_scl);
 	}
 	if(parameter.hasOwnProperty("config")) {
-		const char*  device_name = NULL;
 		const char*  device_type = NULL;
+		const char*  device_name = NULL;
 
-		device_name = parameter["config"]["device"]["name"];
 		device_type = parameter["config"]["device"]["type"];
+		device_name = parameter["config"]["device"]["name"];
 		if(parameter["config"]["device"].hasOwnProperty("inputs")) {
 			static JSONVar  device_inputs;
 			static JSONVar  device_actions;
 
 			device_inputs = parameter["config"]["device"]["inputs"];
 			device_actions = parameter["config"]["device"]["actions"];
-			g_device_mcp23X17.config_inputs(device_name, device_type, device_inputs, device_actions);
+			g_device_mcp23X17.config_inputs(device_type, device_name, device_inputs, device_actions);
 		}
 //TODO		if(parameter["config"]["device"].hasOwnProperty("outputs")) {
 //TODO			JSONVar device_outputs;

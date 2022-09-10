@@ -14,7 +14,7 @@ static uint16_t      g_gui_overlay_icon[GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_
 
 void gui_overlay_volume(bool refresh) {
 	if(g_system_runtime.count("gui/overlay:volume/mute") == 1) {
-		if(g_system_runtime["gui/overlay:volume/mute"] == std::string("False")) {
+		if(g_system_runtime["gui/overlay:volume/mute"] == std::string("false")) {
 			uint8_t  volume_level = SYSTEM_STATUS_VOLUME;
 
 			if(g_system_runtime.count("gui/overlay:volume/level") == 1) {

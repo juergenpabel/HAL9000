@@ -86,7 +86,7 @@ class Volume(EnclosureComponent):
 						volume = self.config['volume-maximum']
 					cortex['enclosure']['volume']['level'] = volume
 					self.set_alsa_volume(volume)
-					self.daemon.arduino_show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
+					self.daemon.arduino_show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute']).lower()}))
 					self.daemon.timeouts['overlay'] = datetime.now()+timedelta(seconds=3), 'volume'
 			if 'mute' in signal['volume']:
 				if signal['volume']['mute'] == "on":
@@ -96,7 +96,7 @@ class Volume(EnclosureComponent):
 					cortex['enclosure']['volume']['mute'] = False
 					self.set_alsa_volume(cortex['enclosure']['volume']['level'])
 				if cortex['enclosure']['volume']['mute'] is True:
-					self.daemon.arduino_show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute'])}))
+					self.daemon.arduino_show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(cortex['enclosure']['volume']['mute']).lower()}))
 				else:
 					self.daemon.arduino_hide_gui_overlay('volume')
 				if 'overlay' in self.daemon.timeouts:

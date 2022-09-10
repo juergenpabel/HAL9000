@@ -8,6 +8,6 @@ from hal9000.arduino.daemon import Daemon
 daemon = Daemon()
 daemon.load(sys.argv[1])
 daemon.loop()
-daemon.devices["volume"].driver.send('["gui/screen", {"shutdown": {}}]')
+daemon.drivers["rotary:volume"].send('["gui/screen", {"shutdown": {}}]')
 time.sleep(0.1)
 

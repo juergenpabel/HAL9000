@@ -1,0 +1,2 @@
+hal9000 ALL=(ALL) NOPASSWD: /usr/sbin/shutdown
+

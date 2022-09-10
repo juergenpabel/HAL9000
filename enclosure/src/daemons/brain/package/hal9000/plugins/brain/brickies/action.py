@@ -100,7 +100,7 @@ class Action(HAL9000_Action):
 					filename_cover = ""
 					data['cortex']['enclosure']['rfid']['uid'] = None
 				if filename_cover is not None:
-					mqtt_publish_message("hal9000/enclosure/display/splash/image", filename_cover, hostname=self.config['hal9000-mqtt-server'], port=self.config['hal9000-mqtt-port'])
+					self.daemon.set_gui_screen('splash', {'filename': filename_cover})
 
 			requests.put('{}/reader/{}/{}/{}/{}'.format(self.config['base-url'], reader_service, reader_name, card_event, card_uid))
 		return data['cortex']
