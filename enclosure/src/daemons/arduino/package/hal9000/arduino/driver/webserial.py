@@ -26,13 +26,14 @@ class Driver(HAL9000_Driver):
 		self.config['pins'] = configuration.getlist(str(self),   'driver-pins', fallback="")
 		while Driver.serial is None:
 			try:
-				self.logger.debug('driver:webserial => Connecting to {}'.format(self.config['tty']))
+				self.logger.info('driver:webserial => Connecting to {}'.format(self.config['tty']))
 				Driver.serial = serial.Serial(port=self.config['tty'], timeout=0.1, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
-				self.logger.debug('driver:webserial => connected...')
+				self.logger.debug('driver:webserial => ...connected')
+				self.logger.debug('driver:webserial => waiting for loop()...')
 				line = self.receive()
 				while "loop()" not in line:
 					line = self.receive()
-				self.logger.debug('driver:webserial => ...waiting...')
+				self.logger.debug('driver:webserial => ...loop() reached')
 				self.send('["device/mcp23X17", {"init": {}}]')
 			except:
 				time.sleep(0.1)
@@ -47,7 +48,6 @@ class Driver(HAL9000_Driver):
 				self.logger.error('driver:webserial => invalid configuration for driver-pins, must be a single pin')
 				return
 			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s",    "name": "%s", "inputs": [{"pin": "%s", "label": "sigX"}], "actions": {"true": "on", "false": "off"}}}}]' % (peripheral_type, peripheral_name, self.config['pins'][0]))
-		self.logger.debug('driver:webserial => ...and configured')
 
 
 	def receive(self):
@@ -79,7 +79,7 @@ class Driver(HAL9000_Driver):
 		if Driver.received_line is None:
 			self.send('["system/time", {"config": {"interval": 3600}}]')
 			self.send('["device/mcp23X17", {"start": true}]')
-			time.sleep(0.1)
+			self.logger.debug('driver:webserial => ...and started')
 		Driver.received_line = self.receive()
 		if len(Driver.received_line) > 0 and Driver.received_line.startswith('[') and Driver.received_line.endswith(']'):
 			event, payload = json.loads(Driver.received_line)

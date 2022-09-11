@@ -16,7 +16,7 @@ class Daemon(HAL9000):
 		self.Devices = dict()
 		self.Drivers = dict()
 		self.devices = dict()
-		self.drivers = dict()
+		self.webserial = None
 
 
 	def configure(self, configuration: ConfigParser) -> None:
@@ -24,26 +24,29 @@ class Daemon(HAL9000):
 		self.mqtt.subscribe("hal9000/arduino:command/#")
 		self.mqtt.on_message = self.on_command
 
-		self.logger.info("Attempting to load device '{}'".format(self))
+		self.logger.info("Configuring device '{}'...".format(self))
 		for peripheral_name in configuration.getlist(str(self), 'peripherals'):
 			module_device = configuration.getstring(peripheral_name, 'device', fallback='hal9000.arduino.device.arduino')
 			if module_device not in self.Devices:
-				self.logger.debug("Attempting to import device '{}'".format(module_device))
+				self.logger.debug("Importing module '{}'".format(module_device))
 				self.Devices[module_device] = self.import_device(module_device)
-			Device = self.Devices[module_device]
-
 			module_driver = configuration.getstring(peripheral_name, 'driver', fallback='hal9000.arduino.driver.webserial')
 			if module_driver not in self.Drivers:
-				self.logger.debug("Attempting to import driver '{}'".format(module_driver))
+				self.logger.debug("Importing module '{}'".format(module_driver))
 				self.Drivers[module_driver] = self.import_driver(module_driver)
-			Driver = self.Drivers[module_driver]
 
+			Device = self.Devices[module_device]
+			Driver = self.Drivers[module_driver]
 			driver = Driver(peripheral_name)
 			device = Device(peripheral_name, driver)
-			device.configure(configuration)
 			self.devices[peripheral_name] = device
-			self.drivers[peripheral_name] = driver
 
+		if 'hal9000.arduino.driver.webserial' in self.Drivers:
+			Driver = self.Drivers['hal9000.arduino.driver.webserial']
+			self.webserial = Driver('driver:webserial')
+			self.webserial.configure(configuration)
+		for device in self.devices.values():
+			device.configure(configuration)
 
 	def do_loop(self) -> bool:
 		result = True
@@ -68,7 +71,7 @@ class Daemon(HAL9000):
 			topic = message.topic[24:]
 			payload = message.payload.decode('utf-8')
 			self.logger.info("COMMAND: {} => {}".format(topic, payload))
-			self.drivers["rotary:volume"].send('["%s", %s]' % (topic, payload)) ## TODO
+			self.webserial.send('["%s", %s]' % (topic, payload)) ## TODO
 
 	def import_device(self, module_name:str) -> HAL9000_Plugin:
 		return self.import_plugin(module_name, 'Device')
