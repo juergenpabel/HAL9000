@@ -1,4 +1,3 @@
-#include <SimpleWebSerial.h>
 #include "util/jpeg.h"
 #include "globals.h"
 
@@ -24,11 +23,11 @@ void util_jpeg_decode565_ram(uint8_t* jpeg_data, uint32_t jpeg_size, uint16_t* i
 		image565_func = render2buffer;
 	}
 	if(g_util_jpeg.openRAM(jpeg_data, jpeg_size, image565_func) == false) {
-		g_util_webserial.send("syslog", arduino::String("util_jpeg_decode565_ram() -> g_util_jpeg.openRAM() failed (jpeg_size=")+arduino::String(jpeg_size)+")");
+		g_util_webserial.send("syslog", "util_jpeg_decode565_ram() -> g_util_jpeg.openRAM() failed");
 		return;
 	}
 	if(image565_data != NULL && image565_size > 0) {
-		if(g_util_jpeg.getWidth()*g_util_jpeg.getHeight() != image565_size) {
+		if(g_util_jpeg.getWidth()*g_util_jpeg.getHeight() != (int)image565_size) {
 			g_util_webserial.send("syslog", "util_jpeg_decode565_ram() -> provided buffer is not the correct size (jpeg:width*height)");
 			g_util_jpeg.close();
 		}
@@ -40,10 +39,10 @@ void util_jpeg_decode565_ram(uint8_t* jpeg_data, uint32_t jpeg_size, uint16_t* i
 }
 
 
-void util_jpeg_decode565_littlefs(const char* filename, uint16_t* image565_data, uint32_t image565_size, JPEG_DRAW_CALLBACK* image565_func) {
+void util_jpeg_decode565_littlefs(const etl::string<GLOBAL_FILENAME_SIZE>& filename, uint16_t* image565_data, uint32_t image565_size, JPEG_DRAW_CALLBACK* image565_func) {
 	File  file;
 
-	file = LittleFS.open(filename, "r");
+	file = LittleFS.open(filename.c_str(), "r");
 	if(file == false) {
 		g_util_webserial.send("syslog", "util_jpeg_decode565_littlefs(): file not found");
 		g_util_webserial.send("syslog", filename);
@@ -63,7 +62,7 @@ void util_jpeg_decode565_littlefs(const char* filename, uint16_t* image565_data,
 		return;
 	}
 	if(image565_data != NULL && image565_size > 0) {
-		if((g_util_jpeg.getWidth()*g_util_jpeg.getHeight()) > image565_size) {
+		if((g_util_jpeg.getWidth()*g_util_jpeg.getHeight()) > (int)image565_size) {
 			g_util_webserial.send("syslog", "util_jpeg_decode565_littlefs() -> provided buffer is not the correct size (jpeg:width*height)");
 			g_util_webserial.send("syslog", filename);
 			g_util_jpeg.close();

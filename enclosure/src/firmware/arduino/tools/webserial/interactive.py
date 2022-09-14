@@ -23,7 +23,7 @@ menu['l'] = ['Switch to screen "hal9000" ("sleep")',      '["gui/screen", {"hal9
 
 def handler(self, line: str):
 	if len(line):
-		if line.strip() == '["system/time",{"sync":{"format":"epoch"}}]':
+		if line.strip() == '["system/time", {"sync":{"format":"epoch"}}]':
 			self.send('["system/time", {"sync":{"epoch":'+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
 	else:
 		if select.select([sys.stdin, ], [], [], 0.0)[0]:

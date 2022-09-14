@@ -1,9 +1,9 @@
-#include <SimpleWebSerial.h>
-#include "util/queue.h"
+#include <ArduinoJson.h>
+
 #include "util/jpeg.h"
+#include "util/webserial.h"
 
 
 JPEGDEC         g_util_jpeg;
-SimpleWebSerial g_util_webserial;
-WebSerialQueue  g_util_webserial_queue;
+WebSerial       g_util_webserial;
 

@@ -5,12 +5,12 @@
 
 
 void gui_screen_menu(bool refresh) {
-	static std::string  menu_title;
-	static std::string  menu_item;
+	static etl::string<GLOBAL_VALUE_SIZE>  menu_title;
+	static etl::string<GLOBAL_VALUE_SIZE>  menu_item;
 
 	if(refresh) {
-		menu_title = std::string();
-		menu_item  = std::string();
+		menu_title.clear();
+		menu_item.clear();
 		g_gui_tft.fillScreen(TFT_BLACK);
 	}
 	if(menu_title != g_system_runtime["gui/screen:menu/title"] || menu_item != g_system_runtime["gui/screen:menu/text"]) {

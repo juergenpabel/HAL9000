@@ -82,6 +82,9 @@ class Driver(HAL9000_Driver):
 			self.logger.debug('driver:webserial => ...and started')
 		Driver.received_line = self.receive()
 		if len(Driver.received_line) > 0 and Driver.received_line.startswith('[') and Driver.received_line.endswith(']'):
+			if Driver.received_line.startswith('["syslog"'):
+				Driver.received_line = ""
+				return True
 			event, payload = json.loads(Driver.received_line)
 			if event == "system/time":
 				if payload['sync']['format'] == "epoch":

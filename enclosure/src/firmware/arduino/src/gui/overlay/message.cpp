@@ -6,10 +6,10 @@
 
 
 void gui_overlay_message(bool refresh) {
-	static std::string  message;
+	static etl::string<GLOBAL_VALUE_SIZE>  message;
 
 	if(refresh) {
-		message = std::string();
+		message.clear();
 	}
 	if(message.compare(g_system_runtime["gui/overlay:message/text"]) != 0) {
 		message = g_system_runtime["gui/overlay:message/text"];

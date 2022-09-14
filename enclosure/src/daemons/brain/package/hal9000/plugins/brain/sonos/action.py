@@ -42,7 +42,6 @@ class Action(HAL9000_Action):
 						self.sonos.mute = True
 					else:
 						self.sonos.mute = False
-					self.daemon.arduino_show_gui_overlay('sonos', {"mute": str(mute)})
 			if 'control' in signal:
 				if 'select' in signal['control']:
 					cortex['brain']['activity']['enclosure']['audio'] = None

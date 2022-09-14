@@ -1,7 +1,8 @@
-#include <string>
+#include <etl/string.h>
+#include <etl/to_string.h>
+#include <etl/format_spec.h>
 #include <TimeLib.h>
 #include <LittleFS.h>
-#include <SimpleWebSerial.h>
 #include "gui/screen/screen.h"
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/hal9000/screen.h"
@@ -24,12 +25,13 @@ void gui_screen_hal9000(bool refresh) {
 	static bool    frame_loop = false;
 
 	if(frame_next == GUI_SEQUENCE_FRAMES_MAX) {
-		JSONVar queue;
+		static StaticJsonDocument<1024> queue;
 
+		queue.clear();
 		frame_next = 0;
-		queue = JSONVar::parse(g_system_runtime["gui/screen:hal9000/queue"].c_str());
-		if(JSON.typeof(queue) != arduino::String("array") || queue.length() == 0) {
-			g_system_runtime["gui/screen:hal9000/queue"] = std::string("[]");
+		deserializeJson(queue, g_system_runtime["gui/screen:hal9000/queue"].c_str());
+		if(queue.is<JsonArray>() == false || queue.size() == 0) {
+			g_system_runtime["gui/screen:hal9000/queue"] = "[]";
 			if(frame_loop == false) {
 				g_util_webserial.send("syslog", "gui_screen_hal9000() => empty queue and loop=false, switching to screen 'idle'");
 				frame_next = GUI_SEQUENCE_FRAMES_MAX;
@@ -37,20 +39,16 @@ void gui_screen_hal9000(bool refresh) {
 				return;
 			}
 		}
-		if(JSON.typeof(queue) == arduino::String("array")) {
-			if(queue.length() > 0) {
-				JSONVar queue_new = JSONVar::parse("[]");
-
-				if(queue[0].hasOwnProperty("name") && queue[0].hasOwnProperty("loop")) {
+		if(queue.is<JsonArray>() == true) {
+			if(queue.size() > 0) {
+				if(queue[0].containsKey("name") && queue[0].containsKey("loop")) {
 					sequence_load(queue[0]["name"]);
-					frame_loop = arduino::String("true").equalsIgnoreCase((const char*)queue[0]["loop"]);
+					frame_loop = queue[0]["loop"].as<std::string>().compare("true") == 0;
 				}
-				for(int i=1; i<queue.length(); i++) {
-					queue_new[i-1] = queue[i];
-				}
-				queue = queue_new;
+				queue.remove(0);
 			}
-			g_system_runtime["gui/screen:hal9000/queue"] = JSONVar::stringify(queue).c_str();
+			RuntimeWriter runtimewriter(g_system_runtime, "gui/screen:hal9000/queue");
+			serializeJson(queue, runtimewriter);
 		}
 	}
 	if(g_frames[frame_next].size > 0) {
@@ -61,27 +59,31 @@ void gui_screen_hal9000(bool refresh) {
 
 
 static void sequence_load(const char* name) {
-	char     directory[256] = {0};
-	char     filename[256] = {0};
-	File     file = {0};
+	etl::string<GLOBAL_FILENAME_SIZE>  directory;
+	etl::string<GLOBAL_FILENAME_SIZE>  filename;
+	File                               file = {0};
 
 	for(int i=0; i<GUI_SEQUENCE_FRAMES_MAX; i++) {
 		g_frames[i].size = 0;
 	}
-	snprintf(directory, sizeof(directory), "/images/sequences/%s", name);
+	directory = "/images/sequences/";
+	directory += name;
+	directory += "/";
 	for(int i=0; i<GUI_SEQUENCE_FRAMES_MAX; i++) {
-		snprintf(filename, sizeof(filename), "%s/%02d.jpg", directory, i);
-		file = LittleFS.open(filename, "r");
+		filename = directory;
+		etl::to_string(i, filename, etl::format_spec().width(2).fill('0'), true);
+		filename += ".jpg";
+		file = LittleFS.open(filename.c_str(), "r");
 		if(file) {
 			g_frames[i].size = file.size();
 			if(g_frames[i].size > sizeof(jpg_t::data)) {
 				g_frames[i].size = 0;
-				g_util_webserial.send("syslog", arduino::String("JPEG file '") + filename + arduino::String("' too big, skipping"));
+				g_util_webserial.send("syslog", etl::string<UTIL_WEBSERIAL_BODY_SIZE>("JPEG file '").append(filename).append("' too big, skipping"));
 			}
 			file.read(g_frames[i].data, g_frames[i].size);
 			file.close();
 		}
 	}
-	g_util_webserial.send("syslog", arduino::String("Frames '") + name + "' loaded from littlefs:" + directory);
+	g_util_webserial.send("syslog", etl::string<UTIL_WEBSERIAL_BODY_SIZE>("Frames '").append(name).append("' loaded from littlefs:").append(directory));
 }
 

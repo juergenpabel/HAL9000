@@ -1,7 +1,7 @@
-#include <JSONVar.h>
+#include <ArduinoJson.h>
 
-void on_system_time(JSONVar parameter);
-void on_system_runtime(JSONVar parameter);
-void on_system_settings(JSONVar parameter);
-void on_system_reset(JSONVar parameter);
+void on_system_time(const JsonVariant& parameter);
+void on_system_runtime(const JsonVariant& parameter);
+void on_system_settings(const JsonVariant& parameter);
+void on_system_reset(const JsonVariant& parameter);
 

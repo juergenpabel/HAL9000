@@ -14,7 +14,7 @@ void gui_screen_idle(bool refresh) {
 		g_gui_tft.fillScreen(TFT_BLACK);
 	}
 	if(g_system_runtime.count("gui/screen:idle/clock") == 1) {
-		if(g_system_runtime["gui/screen:idle/clock"] == std::string("false")) {
+		if(g_system_runtime["gui/screen:idle/clock"].compare("false") == 0) {
 			clock_show = false;
 		}
 	}

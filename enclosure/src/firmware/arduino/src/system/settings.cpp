@@ -2,13 +2,13 @@
 #include <LittleFS.h>
 #include "system/settings.h"
 
-
+#define SYSTEM_SETTINGS_SIZE 2048
 static uint8_t  bson_buffer[SYSTEM_SETTINGS_SIZE];
 
 #define QUOTE(value) #value
 #define STRING(value) QUOTE(value)
 
-Settings::Settings(std::string filename) {
+Settings::Settings(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
 	this->filename = filename;
 }
 
@@ -31,7 +31,7 @@ bool Settings::load() {
 
 		this->clear();
 		bson.getKeyCount(&count);
-		for(uint32_t i=0; i<count; i++) {
+		for(int32_t i=0; i<count; i++) {
 			bson.getKeyAt(i, &key);
 			if(key != NULL) {
 				bson.get(key, &value);

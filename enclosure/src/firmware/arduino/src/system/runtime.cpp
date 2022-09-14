@@ -7,9 +7,8 @@
 #define QUOTE(value) #value
 #define STRING(value) QUOTE(value)
 
-
 Runtime::Runtime() {
-	(*this)["system/state:conciousness"] = std::string("awake");
+	(*this)["system/state:conciousness"] = "awake";
 }
 
 
@@ -33,16 +32,16 @@ void Runtime::update() {
 	if(year() > 2001) {
 		if((g_system_settings.find("system/state:time/sleep") != g_system_settings.end()) &&
 		   (g_system_settings.find("system/state:time/wakeup") != g_system_settings.end())) {
-			std::string time_sleep;
-			std::string time_wakeup;
+			etl::string<GLOBAL_VALUE_SIZE> time_sleep;
+			etl::string<GLOBAL_VALUE_SIZE> time_wakeup;
 
 			time_sleep = g_system_settings["system/state:time/sleep"];
 			time_wakeup = g_system_settings["system/state:time/wakeup"];
 			if((time_sleep.length() >= 5) && (time_wakeup.length() >= 5)) {
-				static std::string status_prev("awake");
-				       std::string status_next("awake");
-				       char        time_buffer[9] = "00:00:00";
-				       std::string time_now;
+				static etl::string<16> status_prev("awake");
+				       etl::string<16> status_next("awake");
+				       char            time_buffer[9] = "00:00:00";
+				       etl::string<9>  time_now;
 
 				time_buffer[0] += hour()/10;
 				time_buffer[1] += hour()%10;
@@ -52,18 +51,31 @@ void Runtime::update() {
 				time_buffer[7] += second()%10;
 				time_now = time_buffer;
 				if((time_sleep.compare(time_wakeup) < 0) && ((time_now.compare(time_sleep) >= 0) && (time_now.compare(time_wakeup) <= 0))) {
-					status_next = std::string("asleep");
+					status_next = "asleep";
 				}
 				if((time_sleep.compare(time_wakeup) > 0) && ((time_now.compare(time_sleep) >= 0) || (time_now.compare(time_wakeup) <= 0))) {
-					status_next = std::string("asleep");
+					status_next = "asleep";
 				}
 				if(status_prev != status_next) {
 					(*this)["system/state:conciousness"] = status_next;
 					status_prev = status_next;
-					g_util_webserial.send("syslog", arduino::String("Runtime::update() changing state to '")+status_next.c_str()+"'");
+					g_util_webserial.send("syslog", etl::string<UTIL_WEBSERIAL_BODY_SIZE>("Runtime::update() changing state to '").append(status_next).append("'"));
 				}
 			}
 		}
 	}
+}
+
+
+
+size_t RuntimeWriter::write(uint8_t c) {
+	this->m_runtime[m_key].append(1, (char)c);
+	return 1;
+}
+
+
+size_t RuntimeWriter::write(const uint8_t *buffer, size_t length) {
+	this->m_runtime[m_key].append((const char*)buffer, length);
+	return length;
 }
 

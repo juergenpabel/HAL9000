@@ -1,5 +1,4 @@
 #include <TimeLib.h>
-#include <JSONVar.h>
 #include <hardware/watchdog.h>
 #include <hardware/structs/watchdog.h>
 #include <hardware/resets.h>
@@ -15,7 +14,7 @@ void system_rp2040_start() {
 		watchdog_hw->scratch[5] = 0x00000000;
 		watchdog_hw->scratch[6] = 0x00000000;
 		watchdog_hw->scratch[7] = 0x00000000;
-		g_util_webserial_queue.pushMessage("syslog", "recovered time from rp2040 scratch registers");
+		g_util_webserial.send("syslog", "recovered time from rp2040 scratch registers");
 	}
 	pinMode(TFT_BL, OUTPUT);
 	digitalWrite(TFT_BL, HIGH);

@@ -2,12 +2,12 @@
 #define __ROUNDYPI_GLOBAL_H__
 
 #include <TFT_eSPI.h>
-#include <SimpleWebSerial.h>
 #include <JPEGDEC.h>
+#include <ArduinoJson.h>
 #include "system/runtime.h"
 #include "system/settings.h"
 #include "device/mcp23X17/mcp23X17.h"
-#include "util/queue.h"
+#include "util/webserial.h"
 
 
 extern Runtime         g_system_runtime;
@@ -17,8 +17,7 @@ extern TFT_eSPI        g_gui_tft;
 extern TFT_eSprite     g_gui_tft_overlay;
 extern uint16_t        g_gui_tft_buffer[TFT_WIDTH*TFT_HEIGHT];
 extern JPEGDEC         g_util_jpeg;
-extern SimpleWebSerial g_util_webserial;
-extern WebSerialQueue  g_util_webserial_queue;
+extern WebSerial       g_util_webserial;
 
 
 

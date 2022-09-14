@@ -1,10 +1,9 @@
-#include <string>
 #include "gui/screen/screen.h"
 #include "gui/overlay/overlay.h"
 #include "util/jpeg.h"
 #include "globals.h"
 
-static uint16_t      g_gui_overlay_icon[GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT];
+//TODO static uint16_t      g_gui_overlay_icon[GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT];
 
 #define CENTER_X   (TFT_WIDTH/2)
 #define CENTER_Y   (TFT_HEIGHT/2)
@@ -14,11 +13,11 @@ static uint16_t      g_gui_overlay_icon[GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_
 
 void gui_overlay_volume(bool refresh) {
 	if(g_system_runtime.count("gui/overlay:volume/mute") == 1) {
-		if(g_system_runtime["gui/overlay:volume/mute"] == std::string("false")) {
+		if(g_system_runtime["gui/overlay:volume/mute"].compare("false") == 0) {
 			uint8_t  volume_level = SYSTEM_STATUS_VOLUME;
 
 			if(g_system_runtime.count("gui/overlay:volume/level") == 1) {
-				volume_level = std::stoi(g_system_runtime["gui/overlay:volume/level"]);
+				volume_level = atoi(g_system_runtime["gui/overlay:volume/level"].c_str());
 			}
 			for(uint8_t d=0; d<=100; d+=1) {
 				double v = 0;
