@@ -18,7 +18,7 @@ void WebSerial::send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const 
 	message += "\", ";
 	message += body;
 	message += "]";
-	if(Serial == false || recursive_mutex_try_enter(&this->serial_mutex, NULL) == false) {
+	if(Serial == false || recursive_mutex_try_enter(&this->serial_mutex, nullptr) == false) {
 		this->queue_send.push(message);
 		return;
 	}
@@ -53,7 +53,7 @@ void WebSerial::update() {
 			recursive_mutex_exit(&this->serial_mutex);
 		}
 
-		int serial_available = Serial.available();
+		size_t serial_available = Serial.available();
 		if(serial_available > 0) {
 			serial_input_pos += Serial.readBytes(serial_buffer+serial_input_pos, min(serial_available, UTIL_WEBSERIAL_LINE_SIZE-serial_input_pos));
 			if(serial_input_pos > 0) {
@@ -79,7 +79,7 @@ void WebSerial::update() {
 							webserial_command_func handler;
 
 							handler = this->commands[command];
-							if(handler != NULL) {
+							if(handler != nullptr) {
 								JsonVariant data;
 
 								data = message[1].as<JsonVariant>();

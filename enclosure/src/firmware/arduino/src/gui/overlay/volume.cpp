@@ -14,7 +14,7 @@
 void gui_overlay_volume(bool refresh) {
 	if(g_system_runtime.count("gui/overlay:volume/mute") == 1) {
 		if(g_system_runtime["gui/overlay:volume/mute"].compare("false") == 0) {
-			uint8_t  volume_level = SYSTEM_STATUS_VOLUME;
+			uint8_t  volume_level = SYSTEM_RUNTIME_VOLUME;
 
 			if(g_system_runtime.count("gui/overlay:volume/level") == 1) {
 				volume_level = atoi(g_system_runtime["gui/overlay:volume/level"].c_str());

@@ -55,11 +55,11 @@ void on_gui_screen(const JsonVariant& body) {
 			}
 			if((body["hal9000"]["sequence"].containsKey("name"))
 			&& (body["hal9000"]["sequence"].containsKey("loop"))) {
-				if(body["hal9000"]["queue"].as<std::string>().compare("replace") == 0) {
+				if(strncmp(body["hal9000"]["queue"].as<const char*>(), "replace", 8) == 0) {
 					deserializeJson(queue, "[]");
 					queue_pos = 0;
 				}
-				if(body["hal9000"]["queue"].as<std::string>().compare("append") == 0) {
+				if(strncmp(body["hal9000"]["queue"].as<const char*>(), "append", 7) == 0) {
 					queue_pos = queue.size();
 				}
 			}

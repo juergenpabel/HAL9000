@@ -19,6 +19,7 @@ menu['9'] = ['Switch to screen "shutdown" (->halt MCU)',  '["gui/screen", {"shut
 menu['h'] = ['Switch to screen "hal9000" ("wakeup")',     '["gui/screen", {"hal9000": {"queue": "replace", "sequence": {"name": "wakeup", "loop": "false"}}}]']
 menu['a'] = ['Switch to screen "hal9000" ("active")',     '["gui/screen", {"hal9000": {"queue": "append",  "sequence": {"name": "active", "loop": "true"}}}]']
 menu['l'] = ['Switch to screen "hal9000" ("sleep")',      '["gui/screen", {"hal9000": {"queue": "replace", "sequence": {"name": "sleep",  "loop": "false"}}}]']
+menu['s'] = ['Add timestamp system setting',              '["system/settings", {"set":{"key": "%s", "value": "Uhrzeit"}}]'%(str(datetime.now().strftime("%H:%M:%S")))]
 
 
 def handler(self, line: str):

@@ -14,7 +14,7 @@ static int hal9000_frame(JPEGDRAW *pDraw) {
 
 
 void gui_screen_hal9000_frame_draw(uint8_t* jpeg_data, uint32_t jpeg_size) {
-	util_jpeg_decode565_ram(jpeg_data, jpeg_size, NULL, 0, hal9000_frame);
+	util_jpeg_decode565_ram(jpeg_data, jpeg_size, nullptr, 0, hal9000_frame);
 	for(int y=0; y<TFT_HEIGHT/2; y++) {
 		for(int x=0; x<TFT_WIDTH/2; x++) {
 			g_gui_tft_buffer[(y*TFT_WIDTH)+(TFT_WIDTH-x-1)] = g_gui_tft_buffer[(y*TFT_WIDTH)+(x)];

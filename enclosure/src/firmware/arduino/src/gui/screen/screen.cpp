@@ -17,7 +17,7 @@ gui_screen_func gui_screen_set(gui_screen_func new_screen) {
 	gui_screen_func previous_screen;
 
 	previous_screen = g_gui_screen;
-	if(new_screen != NULL) {
+	if(new_screen != nullptr) {
 		g_gui_screen = new_screen;
 		g_gui_screen_forced_refresh = true;
 	}

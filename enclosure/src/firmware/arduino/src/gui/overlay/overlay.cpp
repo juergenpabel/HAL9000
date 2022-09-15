@@ -11,8 +11,8 @@ gui_overlay_func gui_overlay_get() {
 
 
 gui_overlay_func gui_overlay_set(gui_overlay_func new_overlay) {
-	gui_overlay_func previous_overlay = NULL;
-	if(new_overlay != NULL) {
+	gui_overlay_func previous_overlay = nullptr;
+	if(new_overlay != nullptr) {
 		if(new_overlay != g_gui_overlay) {
 			previous_overlay = g_gui_overlay;
 			g_gui_overlay = new_overlay;

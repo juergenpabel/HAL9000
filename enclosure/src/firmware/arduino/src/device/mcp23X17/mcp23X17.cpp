@@ -8,13 +8,14 @@
 #include "device/mcp23X17/mcp23X17.h"
 
 
-static MCP23X17_Switch g_devices_switch[2];
-static MCP23X17_Button g_devices_button[2];
-static MCP23X17_Toggle g_devices_toggle[2];
-static MCP23X17_Rotary g_devices_rotary[2];
+static MCP23X17_Switch      g_devices_switch[2];
+static MCP23X17_Button      g_devices_button[2];
+static MCP23X17_Toggle      g_devices_toggle[2];
+static MCP23X17_Rotary      g_devices_rotary[2];
+static MCP23X17_DigitalOut  g_devices_digitalout[2];
 
-const char* MCP23X17::PIN_NAMES[16] = {"A0","A1","A2","A3","A4","A5","A6","A7","B0","B1","B2","B3","B4","B5","B6","B7"};
-const char* MCP23X17::PIN_VALUES[2] = {"LOW", "HIGH"};
+etl::string<2> MCP23X17::PIN_NAMES[16] = {"A0","A1","A2","A3","A4","A5","A6","A7","B0","B1","B2","B3","B4","B5","B6","B7"};
+etl::string<4> MCP23X17::PIN_VALUES[2] = {"LOW", "HIGH"};
 
 #define MCP23X17_STATE_UNINITIALIZED 0x10
 #define MCP23X17_STATE_INITIALIZED   0x20
@@ -25,6 +26,25 @@ MCP23X17::MCP23X17()
          :status(MCP23X17_STATE_UNINITIALIZED),
           wire(i2c0, SYSTEM_SETTINGS_MCP23X17_PIN_SDA, SYSTEM_SETTINGS_MCP23X17_PIN_SCL),
           mcp23X17() {
+}
+
+
+void MCP23X17::init() {
+	int i2c_address = SYSTEM_SETTINGS_MCP23X17_ADDRESS;
+	int i2c_pin_sda = SYSTEM_SETTINGS_MCP23X17_PIN_SDA;
+	int i2c_pin_scl = SYSTEM_SETTINGS_MCP23X17_PIN_SCL;
+
+	if(g_system_settings.count("device/mcp23X17:i2c/address") == 1) {
+		i2c_address = atoi(g_system_settings["device/mcp23X17:i2c/address"].c_str());
+	}
+	if(g_system_settings.count("device/mcp23X17:i2c/pin-sda") == 1) {
+		i2c_pin_sda = atoi(g_system_settings["device/mcp23X17:i2c/pin-sda"].c_str());
+	}
+	if(g_system_settings.count("device/mcp23X17:i2c/pin-scl") == 1) {
+		i2c_pin_scl = atoi(g_system_settings["device/mcp23X17:i2c/pin-scl"].c_str());
+	}
+	this->init(i2c_address, i2c_pin_sda, i2c_pin_scl);
+
 }
 
 
@@ -56,23 +76,10 @@ void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
 
 
 void MCP23X17::config_inputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, const etl::string<GLOBAL_VALUE_SIZE>& device_name, const JsonArray& inputs, const JsonObject& actions) {
-	MCP23X17_Device* device = NULL;
+	MCP23X17_InputDevice* device = nullptr;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
-		int i2c_address = SYSTEM_SETTINGS_MCP23X17_ADDRESS;
-		int i2c_pin_sda = SYSTEM_SETTINGS_MCP23X17_PIN_SDA;
-		int i2c_pin_scl = SYSTEM_SETTINGS_MCP23X17_PIN_SCL;
-
-		if(g_system_settings.count("device/mcp23X17:i2c/address") == 1) {
-			i2c_address = atoi(g_system_settings["device/mcp23X17:i2c/address"].c_str());
-		}
-		if(g_system_settings.count("device/mcp23X17:i2c/pin-sda") == 1) {
-			i2c_pin_sda = atoi(g_system_settings["device/mcp23X17:i2c/pin-sda"].c_str());
-		}
-		if(g_system_settings.count("device/mcp23X17:i2c/pin-scl") == 1) {
-			i2c_pin_scl = atoi(g_system_settings["device/mcp23X17:i2c/pin-scl"].c_str());
-		}
-		this->init(i2c_address, i2c_pin_sda, i2c_pin_scl);
+		this->init();
 	}
 	if(this->status == MCP23X17_STATE_RUNNING) {
 		g_util_webserial.send("syslog", "MCP23X17 already loop()'ing on the other core");
@@ -80,44 +87,44 @@ void MCP23X17::config_inputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, 
 	}
 	if(device_type.size() == 0 || device_name.size() == 0) {
 		g_util_webserial.send("syslog", "MCP23X17::config_inputs(): invalid parameters name/type");
-		g_util_webserial.send("syslog", device_type.c_str());
-		g_util_webserial.send("syslog", device_name.c_str());
+		g_util_webserial.send("syslog", device_type);
+		g_util_webserial.send("syslog", device_name);
 		return;
 	}
 	if(device_type.compare("switch") == 0) {
 		for(int i=0;i<3;i++) {
-			if(device == NULL && g_devices_switch[i].isConfigured() == false) {
+			if(device == nullptr && g_devices_switch[i].isConfigured() == false) {
 				device = &g_devices_switch[i];
 			}
 		}
 	}
 	if(device_type.compare("button") == 0) {
 		for(int i=0;i<3;i++) {
-			if(device == NULL && g_devices_button[i].isConfigured() == false) {
+			if(device == nullptr && g_devices_button[i].isConfigured() == false) {
 				device = &g_devices_button[i];
 			}
 		}
 	}
 	if(device_type.compare("toggle") == 0) {
 		for(int i=0;i<3;i++) {
-			if(device == NULL && g_devices_toggle[i].isConfigured() == false) {
+			if(device == nullptr && g_devices_toggle[i].isConfigured() == false) {
 				device = &g_devices_toggle[i];
 			}
 		}
 	}
 	if(device_type.compare("rotary") == 0) {
 		for(int i=0;i<3;i++) {
-			if(device == NULL && g_devices_rotary[i].isConfigured() == false) {
+			if(device == nullptr && g_devices_rotary[i].isConfigured() == false) {
 				device = &g_devices_rotary[i];
 			}
 		}
 	}
-	if(device == NULL) {
+	if(device == nullptr) {
 		g_util_webserial.send("syslog", "MCP23X17::config_inputs(): invalid parameter device_type");
-		g_util_webserial.send("syslog", device_type.c_str());
+		g_util_webserial.send("syslog", device_type);
 		return;
 	}
-	if(device->configure(device_name.c_str(), &this->mcp23X17, inputs, actions) == false) {
+	if(device->configure(device_name, &this->mcp23X17, inputs, actions) == false) {
 		g_util_webserial.send("syslog", "MCP23X17::config_inputs(): device configuration failed");
 		return;
 	}
@@ -125,23 +132,10 @@ void MCP23X17::config_inputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, 
 
 
 void MCP23X17::config_outputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, const etl::string<GLOBAL_VALUE_SIZE>& device_name, const JsonArray& outputs) {
-	MCP23X17_Device* device = NULL;
+	MCP23X17_OutputDevice* device = nullptr;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
-		int i2c_address = SYSTEM_SETTINGS_MCP23X17_ADDRESS;
-		int i2c_pin_sda = SYSTEM_SETTINGS_MCP23X17_PIN_SDA;
-		int i2c_pin_scl = SYSTEM_SETTINGS_MCP23X17_PIN_SCL;
-
-		if(g_system_settings.count("device/mcp23X17:i2c/address") == 1) {
-			i2c_address = atoi(g_system_settings["device/mcp23X17:i2c/address"].c_str());
-		}
-		if(g_system_settings.count("device/mcp23X17:i2c/pin-sda") == 1) {
-			i2c_pin_sda = atoi(g_system_settings["device/mcp23X17:i2c/pin-sda"].c_str());
-		}
-		if(g_system_settings.count("device/mcp23X17:i2c/pin-scl") == 1) {
-			i2c_pin_scl = atoi(g_system_settings["device/mcp23X17:i2c/pin-scl"].c_str());
-		}
-		this->init(i2c_address, i2c_pin_sda, i2c_pin_scl);
+		this->init();
 	}
 	if(device_type.size() == 0 || device_name.size() == 0) {
 		g_util_webserial.send("syslog", "MCP23X17::config_outputs(): invalid parameters name/type");
@@ -149,22 +143,22 @@ void MCP23X17::config_outputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type,
 		g_util_webserial.send("syslog", device_name);
 		return;
 	}
-//TODO	if(strncmp(device_type, "TODO", 5) == 0) {
-//TODO		device = &g_devices_switch[0];
-//TODO	}
-	if(device == NULL) {
+	if(device_type.compare("digital") == 0) {
+		for(int i=0;i<3;i++) {
+			if(device == nullptr && g_devices_digitalout[i].isConfigured() == false) {
+				device = &g_devices_digitalout[i];
+			}
+		}
+	}
+	if(device == nullptr) {
 		g_util_webserial.send("syslog", "MCP23X17::config_outputs(): invalid parameter device_type");
 		g_util_webserial.send("syslog", device_type);
 		return;
 	}
-//TODO	while(device->isConfigured()) {
-//TODO		device += 1;
-//TODO	}
-//TODO	if(device->configure(device_name, &this->mcp23X17, outputs) == false) {
-//TODO		g_util_webserial.send("syslog", "MCP23X17::config_outputs(): device configuration failed");
-//TODO		g_util_webserial.send("syslog", outputs);
-//TODO		return;
-//TODO	}
+	if(device->configure(device_name, &this->mcp23X17, outputs) == false) {
+		g_util_webserial.send("syslog", "MCP23X17::config_outputs(): device configuration failed");
+		return;
+	}
 }
 
 
@@ -177,28 +171,25 @@ void MCP23X17::check() {
 	mcp23X17_gpio_values = this->mcp23X17.readGPIOAB();
 	if(mcp23X17_gpio_values != this->mcp23X17_gpio_values) {
 
-		for(int pin=0; pin<16; pin++) {
+		for(int nr=0; nr<16; nr++) {
 			uint8_t old_value = 0;
 			uint8_t new_value = 0;
 
-			old_value = (this->mcp23X17_gpio_values >> pin) & 0x01;
-			new_value = (      mcp23X17_gpio_values >> pin) & 0x01;
+			old_value = (this->mcp23X17_gpio_values >> nr) & 0x01;
+			new_value = (      mcp23X17_gpio_values >> nr) & 0x01;
 			if(old_value != new_value) {
-				const char*  pin_label = NULL;
-				const char*  pin_value = NULL;
-
-				pin_label = MCP23X17::PIN_NAMES[pin];
-				pin_value = MCP23X17::PIN_VALUES[new_value];
-				for(uint8_t i=0; i<SYSTEM_SETTINGS_MCP23X17_DEV_INSTANCES; i++) {
-					MCP23X17_Device* device;
+				for(uint8_t i=0; i<SYSTEM_SETTINGS_MCP23X17_DEVICES; i++) {
+					MCP23X17_Device*      device;
+					MCP23X17_InputDevice* input_device;
 
 					device = MCP23X17_Device::instances[i];
-					if(device != NULL) {
-						if(device->isConfigured()) {
+					if(device != nullptr) {
+						if(device->isInputDevice() == true) {
 							static StaticJsonDocument<1024> data;
 
 							data.clear();
-							device->process(pin_label, pin_value, data);
+							input_device = (MCP23X17_InputDevice*)device;
+							input_device->process(MCP23X17::PIN_NAMES[nr], MCP23X17::PIN_VALUES[new_value], data);
 							if(data.size() > 0) {
 								g_util_webserial.send("device/event", data);
 							}
@@ -213,7 +204,7 @@ void MCP23X17::check() {
 
 
 void MCP23X17::loop() {
-	MCP23X17* mcp23X17 = NULL;
+	MCP23X17* mcp23X17 = nullptr;
 	
 	mcp23X17 = (MCP23X17*)multicore_fifo_pop_blocking();
 	g_util_webserial.send("syslog", "MCP23X17::loop() now running on 2nd core");
