@@ -1,3 +1,6 @@
+#include <FS.h>
+#include <LittleFS.h>
+
 #include "util/jpeg.h"
 #include "globals.h"
 

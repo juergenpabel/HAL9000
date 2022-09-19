@@ -5,21 +5,19 @@
 #include <ArduinoJson.h>
 #include <etl/string.h>
 
-#include "globals.h"
-
 
 class MCP23X17 {
 	friend class MCP23X17_Rotary;
 	friend class MCP23X17_Switch;
 	friend class MCP23X17_Button;
 	friend class MCP23X17_Toggle;
+	friend class MCP23X17_OutputDevice;
 	friend class MCP23X17_DigitalOut;
 	protected:
 		static etl::string<2> PIN_NAMES[16];
 		static etl::string<4> PIN_VALUES[2];
 	private:
 		uint8_t            status;
-		TwoWire            wire;
 		Adafruit_MCP23X17  mcp23X17;
 		uint16_t           mcp23X17_gpio_values;
 	public:

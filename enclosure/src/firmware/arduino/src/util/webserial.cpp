@@ -1,12 +1,13 @@
-#include <pico/mutex.h> 
 #include <etl/string.h>
 #include <ArduinoJson.h>
+
 #include "util/webserial.h"
+#include "globals.h"
 
 
 
 WebSerial::WebSerial() {
-	recursive_mutex_init(&this->serial_mutex);
+	g_system_microcontroller.mutex_create("webserial");
 }
 
 
@@ -18,13 +19,13 @@ void WebSerial::send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const 
 	message += "\", ";
 	message += body;
 	message += "]";
-	if(Serial == false || recursive_mutex_try_enter(&this->serial_mutex, nullptr) == false) {
+	if(Serial == false || g_system_microcontroller.mutex_try_enter("webserial") == false) {
 		this->queue_send.push(message);
 		return;
 	}
 	Serial.write(message.c_str());
 	Serial.write('\n');
-	recursive_mutex_exit(&this->serial_mutex);
+	g_system_microcontroller.mutex_exit("webserial");
 }
 
 
@@ -43,14 +44,14 @@ void WebSerial::update() {
 
 	if(Serial) {
 		if(this->queue_send.size() > 0) {
-			recursive_mutex_enter_blocking(&this->serial_mutex);
+			g_system_microcontroller.mutex_enter("webserial");
 
 			while(this->queue_send.empty() == false) {
 				Serial.write(this->queue_send.front().c_str());
 				Serial.write('\n');
 				this->queue_send.pop();
 			}
-			recursive_mutex_exit(&this->serial_mutex);
+			g_system_microcontroller.mutex_exit("webserial");
 		}
 
 		size_t serial_available = Serial.available();
@@ -91,7 +92,7 @@ void WebSerial::update() {
 				}
 			}
 		}
-		recursive_mutex_exit(&this->serial_mutex);
+		g_system_microcontroller.mutex_exit("webserial");
 	}
 }
 

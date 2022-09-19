@@ -1,10 +1,27 @@
 #include <TimeLib.h>
 #include <ArduinoJson.h>
 #include <etl/to_string.h>
-#include "system/webserial.h"
-#include "system/rp2040.h"
+#include "system/microcontroller/include.h"
+#include "system/system.h"
 #include "system/time.h"
+#include "system/webserial.h"
 #include "globals.h"
+
+
+void on_system_microcontroller(const JsonVariant& data) {
+	if(data.containsKey("reset")) {
+		uint32_t timestamp = 0;
+		if(data["reset"].containsKey("save-time")) {
+			if(data["reset"]["save-time"].as<bool>() == true) { 
+				timestamp = now();
+			}
+		}
+		g_system_microcontroller.reset(timestamp);
+	}
+	if(data.containsKey("halt")) {
+		g_system_microcontroller.halt();
+	}
+}
 
 
 void on_system_runtime(const JsonVariant& data) {
@@ -119,16 +136,7 @@ void on_system_time(const JsonVariant& data) {
 
 
 void on_system_reset(const JsonVariant& data) {
-	bool  uf2 = false;
-
-	if(data.containsKey("uf2")) {
-		uf2 = data["uf2"].as<bool>();
-	}
-	if(uf2) {
-		g_util_webserial.send("syslog", "Resetting RP2040 with boot target UF2...");
-		system_rp2040_reset_uf2();
-	}
-	g_util_webserial.send("syslog", "Resetting RP2040...");
-	system_rp2040_reset();
+	g_util_webserial.send("syslog", "Resetting system...");
+	system_reset();
 }
 

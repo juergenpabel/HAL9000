@@ -1,8 +1,9 @@
 #include <ArduinoJson.h>
+#include <TimeLib.h>
 
-#include "globals.h"
 #include "device/sdcard/sdcard.h"
 #include "device/mcp23X17/mcp23X17.h"
+#include "globals.h"
 
 
 void on_device_display(const JsonVariant& data) {
@@ -18,6 +19,26 @@ void on_device_display(const JsonVariant& data) {
 
 
 void on_device_sdcard(const JsonVariant& data) {
+	if(data.containsKey("format")) {
+		const char*  filesystem = "fat";
+
+		if(data["format"].containsKey("filesystem")) {
+			filesystem = data["format"]["filesystem"].as<const char*>();
+		}
+	}
+	if(data.containsKey("list")) {
+		const char*  directory = "/";
+
+		if(data["list"].containsKey("directory")) {
+			directory = data["list"]["directory"].as<const char*>();
+		}
+	}
+	if(data.containsKey("read")) {
+	}
+	if(data.containsKey("write")) {
+	}
+	if(data.containsKey("delete")) {
+	}
 //TODO: implement logic
 }
 
@@ -25,8 +46,8 @@ void on_device_sdcard(const JsonVariant& data) {
 void on_device_mcp23X17(const JsonVariant& data) {
 	if(data.containsKey("init")) {
 		uint8_t i2c_address = SYSTEM_SETTINGS_MCP23X17_ADDRESS;
-		uint8_t i2c_pin_sda = SYSTEM_SETTINGS_MCP23X17_PIN_SDA;
-		uint8_t i2c_pin_scl = SYSTEM_SETTINGS_MCP23X17_PIN_SCL;
+		uint8_t i2c_pin_sda = TWOWIRE_PIN_SDA;
+		uint8_t i2c_pin_scl = TWOWIRE_PIN_SCL;
 
 		if(g_system_settings.count("device/mcp23X17:i2c/address") == 1) {
 			i2c_address = atoi(g_system_settings["device/mcp23X17:i2c/address"].c_str());

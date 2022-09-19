@@ -11,8 +11,6 @@ typedef void (*webserial_command_func)(const JsonVariant& data);
 
 class WebSerial {
 	private:
-		recursive_mutex_t serial_mutex;
-
 		etl::map<etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>, webserial_command_func, UTIL_WEBSERIAL_COMMANDS_MAX> commands;
 		etl::queue<etl::string<UTIL_WEBSERIAL_LINE_SIZE>, UTIL_WEBSERIAL_QUEUE_RECV_MAX> queue_recv;
 		etl::queue<etl::string<UTIL_WEBSERIAL_LINE_SIZE>, UTIL_WEBSERIAL_QUEUE_SEND_MAX> queue_send;

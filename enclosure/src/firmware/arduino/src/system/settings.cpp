@@ -68,18 +68,17 @@ bool Settings::load() {
 bool Settings::save() {
 	File    file;
 
+	LittleFS.remove(this->filename.c_str());
 	file = LittleFS.open(this->filename.c_str(), "w");
 	if(!file) {
 		g_util_webserial.send("syslog", LogString("Settings::save('").append(this->filename).append(LogString("') => failed to open file")));
 		return false;
 	}
-	file.seek(0);
-	file.truncate(0);
 	for(Settings::iterator iter=this->begin(); iter!=this->end(); ++iter) {
-		file.write(iter->first.c_str(), iter->first.size());
-		file.write("=", 1);
-		file.write(iter->second.c_str(), iter->second.size());
-		file.write("\n", 1);
+		file.write((uint8_t*)iter->first.c_str(), iter->first.size());
+		file.write((uint8_t*)"=", 1);
+		file.write((uint8_t*)iter->second.c_str(), iter->second.size());
+		file.write((uint8_t*)"\n", 1);
 	}
 	file.close();
 	return true;

@@ -1,13 +1,12 @@
 #include <LittleFS.h>
 #include <FS.h>
 #include <TimeLib.h>
-#include <pico/stdlib.h>
 
 #include "globals.h"
 #include "system/webserial.h"
 #include "device/webserial.h"
 #include "gui/webserial.h"
-#include "system/rp2040.h"
+#include "system/system.h"
 #include "gui/screen/screen.h"
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/splash/screen.h"
@@ -18,7 +17,7 @@
 
 
 void setup() {
-	system_rp2040_start();
+	system_start();
 	g_gui_tft.begin();
 	g_gui_tft.setRotation(2);
 	g_gui_tft.fillScreen(TFT_BLACK);
@@ -38,7 +37,7 @@ void setup() {
 			if(Serial) {
 				g_util_webserial.send("syslog", "LittleFS error, halting");
 			}
-			sleep_ms(1000);
+			delay(1000);
 		}
 	}
 	if(g_system_settings.load() == false) {
@@ -66,7 +65,7 @@ void setup() {
 			} else {
 				digitalWrite(TFT_BL, LOW);
 			}
-			sleep_ms(1000);
+			delay(1000);
 		}
 	}
 	gui_screen_set(gui_screen_idle);
@@ -74,6 +73,7 @@ void setup() {
 
 	g_util_webserial.send("syslog", "setup()");
 	g_util_webserial.set("system/reset", on_system_reset);
+	g_util_webserial.set("system/microcontroller", on_system_microcontroller);
 	g_util_webserial.set("system/runtime", on_system_runtime);
 	g_util_webserial.set("system/settings", on_system_settings);
 	g_util_webserial.set("system/time", on_system_time);
@@ -89,12 +89,12 @@ void setup() {
 void loop() {
 	if(!Serial) {
 		if(gui_screen_get() != gui_screen_animation_shutdown) {
-			system_rp2040_reset();
+			system_reset();
 		}
 		while(gui_screen_get() == gui_screen_animation_shutdown) {
 			gui_screen_update(g_system_runtime.isAwake());
 		}
-		system_rp2040_halt();
+		system_halt();
 	}
 	g_util_webserial.update();
 	g_system_runtime.update();
@@ -107,7 +107,7 @@ void loop() {
 	if(g_system_settings.count("system/arduino:loop/sleep_ms") == 1) {
 		static int milliseconds = atoi(g_system_settings["system/arduino:loop/sleep_ms"].c_str());
 
-		sleep_ms(milliseconds);
+		delay(milliseconds);
 	}
 }
 

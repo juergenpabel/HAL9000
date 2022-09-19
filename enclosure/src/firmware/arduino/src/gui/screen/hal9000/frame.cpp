@@ -1,3 +1,4 @@
+#include <FS.h>
 #include <TFT_eSPI.h>
 
 #include "gui/overlay/overlay.h"

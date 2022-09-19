@@ -1,7 +1,5 @@
 #include <Adafruit_MCP23X17.h>
-#include <Wire.h>
 #include <ArduinoJson.h>
-#include <pico/multicore.h>
 
 #include "gui/overlay/overlay.h"
 #include "device/mcp23X17/devices.h"
@@ -24,15 +22,14 @@ etl::string<4> MCP23X17::PIN_VALUES[2] = {"LOW", "HIGH"};
  
 MCP23X17::MCP23X17()
          :status(MCP23X17_STATE_UNINITIALIZED),
-          wire(i2c0, SYSTEM_SETTINGS_MCP23X17_PIN_SDA, SYSTEM_SETTINGS_MCP23X17_PIN_SCL),
           mcp23X17() {
 }
 
 
 void MCP23X17::init() {
 	int i2c_address = SYSTEM_SETTINGS_MCP23X17_ADDRESS;
-	int i2c_pin_sda = SYSTEM_SETTINGS_MCP23X17_PIN_SDA;
-	int i2c_pin_scl = SYSTEM_SETTINGS_MCP23X17_PIN_SCL;
+	int i2c_pin_sda = TWOWIRE_PIN_SDA;
+	int i2c_pin_scl = TWOWIRE_PIN_SCL;
 
 	if(g_system_settings.count("device/mcp23X17:i2c/address") == 1) {
 		i2c_address = atoi(g_system_settings["device/mcp23X17:i2c/address"].c_str());
@@ -56,9 +53,7 @@ void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
 		g_util_webserial.send("syslog", "MCP23X17 already initialized");
 		return;
 	}
-	this->wire.setSDA(pin_sda);
-	this->wire.setSCL(pin_scl);
-	if(this->mcp23X17.begin_I2C(i2c_addr, &this->wire) == false) {
+	if(this->mcp23X17.begin_I2C(i2c_addr, g_system_microcontroller.twowire_get(0)) == false) {
 		g_util_webserial.send("syslog", "MCP23X17 failed to initialize");
 		return;
 	}
@@ -203,19 +198,6 @@ void MCP23X17::check() {
 }
 
 
-void MCP23X17::loop() {
-	MCP23X17* mcp23X17 = nullptr;
-	
-	mcp23X17 = (MCP23X17*)multicore_fifo_pop_blocking();
-	g_util_webserial.send("syslog", "MCP23X17::loop() now running on 2nd core");
-	while(true) {
-		mcp23X17->check();
-		yield();
-		sleep_ms(1);
-	}
-}
-
-
 void MCP23X17::start() {
 	if(this->status != MCP23X17_STATE_INITIALIZED) {
 		g_util_webserial.send("syslog", "MCP23X17::start() with invalid state");
@@ -223,7 +205,16 @@ void MCP23X17::start() {
 	}
 	this->mcp23X17_gpio_values = this->mcp23X17.readGPIOAB();
 	this->status = MCP23X17_STATE_RUNNING;
-	multicore_launch_core1(MCP23X17::loop);
-	multicore_fifo_push_blocking((uint32_t)this);
+	g_system_microcontroller.thread_create(MCP23X17::loop, 1);
+}
+
+
+void MCP23X17::loop() {
+	g_util_webserial.send("syslog", "MCP23X17::loop() now running on 2nd core");
+	while(true) {
+		g_device_mcp23X17.check();
+		yield();
+		delay(1);
+	}
 }
 

@@ -56,7 +56,40 @@ bool MCP23X17_OutputDevice::configure(const etl::string<GLOBAL_VALUE_SIZE>& devi
 		return false;
 	}
 	result = MCP23X17_Device::configure(device_name);
-	//TODO activate outputs
+	for(uint8_t i=0; i<outputs.size(); i++) {
+		JsonObject   output;
+		const char*  pin = nullptr;
+		const char*  value = nullptr;
+		uint8_t      gpio;
+
+		output = outputs[i].as<JsonObject>();
+		if(output.containsKey("pin") == false || output.containsKey("label") == false || output.containsKey("value") == false) {
+			g_util_webserial.send("syslog", "MCP23X17_OutputDevice::configure(): incomplete pin configuration");
+			g_util_webserial.send("syslog", output);
+			return false;
+		}
+		pin = output["pin"].as<const char*>();
+		if(pin == nullptr || (pin[0] != 'A' && pin[0] != 'B') || pin[1] < 0x30 || pin[1] > 0x39) {
+			g_util_webserial.send("syslog", "MCP23X17_Rotary::configure(): invalid pin in outputs (A0-A7,B0-B7)");
+			g_util_webserial.send("syslog", pin);
+			return false;
+		}
+		value = output["value"].as<const char*>();
+		if(value == nullptr || (value[0] != 'h' && value[0] != 'l')) {
+			g_util_webserial.send("syslog", "MCP23X17_Rotary::configure(): invalid value in output (low, high)");
+			g_util_webserial.send("syslog", value);
+			return false;
+		}
+		gpio = (pin[0]-'A')*8 + pin[1]-'0';
+		this->pin_names[i] = MCP23X17::PIN_NAMES[gpio];
+		if(value[0] == 'h') {
+			this->pin_states[i] = PIN_HIGH;
+		} else {
+			this->pin_states[i] = PIN_LOW;
+		}
+		mcp23X17->pinMode(gpio, OUTPUT);
+		mcp23X17->digitalWrite(gpio, this->pin_states[i]);
+	}
 	return result;
 }
 

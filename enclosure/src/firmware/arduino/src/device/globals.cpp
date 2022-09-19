@@ -1,5 +1,6 @@
 #include "globals.h"
 
 
-MCP23X17        g_device_mcp23X17;
+SDCard           g_device_sdcard;
+MCP23X17         g_device_mcp23X17;
 

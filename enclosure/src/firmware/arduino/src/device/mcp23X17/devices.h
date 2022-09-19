@@ -7,12 +7,13 @@
 
 class MCP23X17_Device {
 	friend class MCP23X17;
+	public:
+		const uint8_t PIN_LOW  = 0x00;
+		const uint8_t PIN_HIGH = 0xff;
 	protected:
 		static MCP23X17_Device* instances[SYSTEM_SETTINGS_MCP23X17_DEVICES];
 		etl::string<GLOBAL_VALUE_SIZE> device_type;
 		etl::string<GLOBAL_VALUE_SIZE> device_name;
-		const uint8_t PIN_LOW  = 0x00;
-		const uint8_t PIN_HIGH = 0x01;
 	public:
 		MCP23X17_Device(const etl::string<GLOBAL_VALUE_SIZE>& device_type) { this->device_type = device_type; };
 		bool isConfigured() { return this->device_name.size() > 0; };
@@ -25,6 +26,9 @@ class MCP23X17_Device {
 
 
 class MCP23X17_OutputDevice : public MCP23X17_Device {
+	protected:
+		etl::string<2>  pin_names[8];
+		uint8_t         pin_states[8];
 	public:
 		MCP23X17_OutputDevice(const etl::string<GLOBAL_VALUE_SIZE>& type);
 		bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& outputs);

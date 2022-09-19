@@ -25,7 +25,7 @@ time_t system_time_sync() {
 	timeout = millis() + 1000;
 	while(g_sync_epoch_secs == 0 && millis() < timeout) {
 		g_util_webserial.update();
-		sleep_ms(100);
+		delay(100);
 	}
 	return g_sync_epoch_secs;
 }

@@ -1,5 +1,5 @@
 #include "gui/screen/screen.h"
-#include "system/rp2040.h"
+#include "system/system.h"
 #include "util/jpeg.h"
 #include "globals.h"
 
@@ -42,7 +42,7 @@ static void gui_screen_animations(bool refresh) {
 		util_jpeg_decode565_littlefs(filename, g_gui_tft_buffer, TFT_WIDTH*TFT_HEIGHT);
 		g_gui_tft.pushImage(0, 0, TFT_WIDTH, TFT_HEIGHT, (uint16_t*)g_gui_tft_buffer);
 	}
-	sleep_ms(g_animation_delay[g_animation_nr]);
+	delay(g_animation_delay[g_animation_nr]);
 	g_animation_frame++;
 }
 
@@ -69,7 +69,7 @@ void gui_screen_animation_shutdown(bool refresh) {
 	}
 	gui_screen_animations(refresh);
 	if(gui_screen_get() == gui_screen_none) {
-		system_rp2040_halt();
+		system_halt();
 	}
 }
 
