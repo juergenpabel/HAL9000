@@ -9,7 +9,7 @@ class MCP23X17_Device {
 	friend class MCP23X17;
 	public:
 		const uint8_t PIN_LOW  = 0x00;
-		const uint8_t PIN_HIGH = 0xff;
+		const uint8_t PIN_HIGH = 0x01;
 	protected:
 		static MCP23X17_Device* instances[SYSTEM_SETTINGS_MCP23X17_DEVICES];
 		etl::string<GLOBAL_VALUE_SIZE> device_type;
