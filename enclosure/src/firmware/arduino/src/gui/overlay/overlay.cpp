@@ -25,7 +25,7 @@ gui_overlay_func gui_overlay_set(gui_overlay_func new_overlay) {
 
 void gui_overlay_update(bool refresh) {
 	if(refresh) {
-		g_gui_tft_overlay.fillSprite(TFT_BLACK);
+		g_device_tft_overlay.fillSprite(TFT_BLACK);
 	}
 	g_gui_overlay(refresh);
 }

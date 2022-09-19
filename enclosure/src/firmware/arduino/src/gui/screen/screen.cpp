@@ -37,7 +37,7 @@ void gui_screen_update(bool refresh) {
 	}
 	gui_overlay_update(refresh);
 	g_gui_screen(refresh);
-	g_gui_tft_overlay.pushSprite(0, 0, TFT_BLACK);
+	g_device_tft_overlay.pushSprite(0, 0, TFT_BLACK);
 }
 
 

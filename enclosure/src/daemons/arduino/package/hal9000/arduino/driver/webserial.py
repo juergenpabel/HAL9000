@@ -22,6 +22,7 @@ class Driver(HAL9000_Driver):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000_Driver.configure(self, configuration)
+		self.config['webserial:trace'] = configuration.getbool('driver:webserial', 'trace', fallback=False)
 		self.config['tty']  = configuration.getstring(str(self), 'driver-tty', fallback='/dev/ttyRP2040')
 		self.config['pins'] = configuration.getlist(str(self),   'driver-pins', fallback="")
 		while Driver.serial is None:
@@ -58,7 +59,8 @@ class Driver(HAL9000_Driver):
 			data = Driver.serial.readline().decode('utf-8')
 		line += data.strip()
 		if len(line):
-			self.logger.debug("USB(D->H): {}".format(line))
+			if self.config['webserial:trace'] is True:
+				self.logger.debug("USB(D->H): {}".format(line))
 		return line
 
 
@@ -69,7 +71,8 @@ class Driver(HAL9000_Driver):
 
 
 	def send(self, line: str):
-		self.logger.debug("USB(H->D): {}".format(line))
+		if self.config['webserial:trace'] is True:
+			self.logger.debug("USB(H->D): {}".format(line))
 		if not line.endswith("\n"):
 			line += "\n"
 		Driver.serial.write(line.encode('utf-8'))

@@ -24,11 +24,11 @@ void gui_screen_hal9000_frame_draw(uint8_t* jpeg_data, uint32_t jpeg_size) {
 	}
 	for(int y=0; y<TFT_HEIGHT; y++) {
 		for(int x=0; x<TFT_WIDTH; x++) {
-			if(g_gui_tft_overlay.readPixel(x,y) == TFT_WHITE) {
+			if(g_device_tft_overlay.readPixel(x,y) == TFT_WHITE) {
 				g_gui_tft_buffer[(y*TFT_WIDTH)+x] = TFT_WHITE;
 			}
 		}
 	}
-	g_gui_tft.pushImage(0, 0, TFT_WIDTH, TFT_HEIGHT, (uint16_t*)g_gui_tft_buffer);
+	g_device_tft.pushImage(0, 0, TFT_WIDTH, TFT_HEIGHT, (uint16_t*)g_gui_tft_buffer);
 }
 
