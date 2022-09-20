@@ -108,7 +108,7 @@ bool Microcontroller::thread_create(void (*function)(), uint8_t core) {
         bool result = false;
 
 	if(core == 1) {
-		xTaskCreatePinnedToCore(thread_function, "MCP23X17", 4096, NULL, configMAX_PRIORITIES - 1, NULL, 1);
+		xTaskCreatePinnedToCore(thread_function, "MCP23X17", 4096, nullptr, configMAX_PRIORITIES - 1, nullptr, 1);
 		result = true;
 	}
 	return result;

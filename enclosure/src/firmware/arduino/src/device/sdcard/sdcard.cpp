@@ -14,14 +14,16 @@ SDCard::SDCard() {
 
 
 void SDCard::begin() {
-	if(g_system_settings.count("device/sdcard:spi/pin-cs") == 1) {
-		this->pin_cs = atoi(g_system_settings["device/sdcard:spi/pin-cs"].c_str());
+	if(this->ready == false) {
+		if(g_system_settings.count("device/sdcard:spi/pin-cs") == 1) {
+			this->pin_cs = atoi(g_system_settings["device/sdcard:spi/pin-cs"].c_str());
+		}
+		if(!SD.begin(this->pin_cs)) {
+			g_util_webserial.send("syslog", "SDCard::begin() => SD.begin() failed");
+			return;
+		}
+		this->ready = true;
 	}
-	if(!SD.begin(this->pin_cs)) {
-		g_util_webserial.send("syslog", "SDCard::begin() => SD.begin() failed");
-		return;
-	}
-	this->ready = true;
 }
 
 
