@@ -19,27 +19,31 @@ void on_device_display(const JsonVariant& data) {
 
 
 void on_device_sdcard(const JsonVariant& data) {
-	static StaticJsonDocument<1024> result;
+	static StaticJsonDocument<1024> json;
 
-	result.clear();
+	json.clear();
 	if(data.containsKey("list")) {
 		const char*  directory = "/";
+		JsonArray    result;
 
+		result = json.as<JsonArray>();
 		if(data["list"].containsKey("directory")) {
 			directory = data["list"]["directory"].as<const char*>();
 		}
 		g_device_sdcard.list(directory, result);
-		for(JsonVariant entry : result.as<JsonArray>()) {
+		for(JsonVariant entry : result) {
 			g_util_webserial.send("device/sdcard#list", entry);
 		}
 	}
 	if(data.containsKey("read")) {
 		if(data["read"].containsKey("filename")) {
 			const char*  filename = "";
+			JsonArray    result;
 
+			result = json.as<JsonArray>();
 			filename = data["read"]["filename"].as<const char*>();
 			g_device_sdcard.read(filename, result);
-			for(JsonVariant entry : result.as<JsonArray>()) {
+			for(JsonVariant entry : result) {
 				g_util_webserial.send("device/sdcard#read", entry);
 			}
 		}
@@ -47,7 +51,9 @@ void on_device_sdcard(const JsonVariant& data) {
 	if(data.containsKey("remove")) {
 		if(data["remove"].containsKey("filename")) {
 			const char*  filename = "";
+			JsonArray    result;
 
+			result = json.as<JsonArray>();
 			filename = data["remove"]["filename"].as<const char*>();
 			g_device_sdcard.remove(filename, result);
 			g_util_webserial.send("device/sdcard#remove", result);

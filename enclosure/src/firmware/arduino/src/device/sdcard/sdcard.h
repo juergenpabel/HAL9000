@@ -11,7 +11,7 @@ class SDCard {
 		bool     ready;
 	public:
 		SDCard();
-		void init();
+		void begin();
 
 		void list(const etl::string<GLOBAL_FILENAME_SIZE>& directory, JsonArray& result);
 		void read(const etl::string<GLOBAL_FILENAME_SIZE>& filename, JsonArray& result);

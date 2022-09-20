@@ -1,8 +1,10 @@
 #include <SPI.h>
 #include <SD.h>
+#include <SdFat.h>
 #include <etl/string.h>
 
 #include "device/sdcard/sdcard.h"
+#include "globals.h"
 
 
 SDCard::SDCard() {
@@ -35,9 +37,9 @@ void SDCard::list(const etl::string<GLOBAL_FILENAME_SIZE>& directory, JsonArray&
 				JsonObject result_entry;
 
 				result_entry = result.createNestedObject();
-				result["name"] = (char*)entry.name;
-				result["type"] = (char*)entry.isDirectory() ? "dir" : "file";
-				result["size"] = (char*)entry.size();
+				result_entry["name"] = entry.name();
+				result_entry["type"] = (char*)entry.isDirectory() ? "dir" : "file";
+				result_entry["size"] = (char*)entry.size();
 				entry.close();
 			}
 		} while(entry);
