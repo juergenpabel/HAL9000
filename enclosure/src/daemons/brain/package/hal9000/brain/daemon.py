@@ -111,6 +111,9 @@ class Daemon(HAL9000_Daemon):
 				if key in Daemon.CONSCIOUSNESS_VALID:
 					self.timeouts[key] = timeout+timedelta(hours=24), data
 					self.set_consciousness(key)
+				if key == 'screen':
+					del self.timeouts[key]
+					self.arduino_show_gui_screen(data, {})
 				if key == 'overlay':
 					del self.timeouts[key]
 					self.arduino_hide_gui_overlay(data)

@@ -17,7 +17,7 @@ def handler(self, line: str):
 				self.volume += int(data["event"]["delta"])
 				roundypi.send('["gui/overlay", {"overlay": {"volume": "show", "data": {"level": "%s", "mute": "false"}}}]' % self.volume)
 			if data["device"]["type"] == "toggle":
-				roundypi.send('["gui/overlay", {"overlay": {"volume": "hide"}}]')
+				roundypi.send('["gui/overlay", {"overlay": {}}]')
 
 roundypi = webserial()
 roundypi.volume = 50

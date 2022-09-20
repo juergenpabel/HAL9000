@@ -22,9 +22,8 @@ class Driver(HAL9000_Driver):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000_Driver.configure(self, configuration)
-		self.config['webserial:trace'] = configuration.getbool('driver:webserial', 'trace', fallback=False)
+		self.config['webserial:trace'] = configuration.getboolean('driver:webserial', 'trace', fallback=False)
 		self.config['tty']  = configuration.getstring(str(self), 'driver-tty', fallback='/dev/ttyRP2040')
-		self.config['pins'] = configuration.getlist(str(self),   'driver-pins', fallback="")
 		while Driver.serial is None:
 			try:
 				self.logger.info('driver:webserial => Connecting to {}'.format(self.config['tty']))
@@ -40,15 +39,20 @@ class Driver(HAL9000_Driver):
 				time.sleep(0.1)
 		peripheral_type, peripheral_name = str(self).split(':', 1)
 		if peripheral_type in ["rotary"]:
-			if len(self.config['pins']) != 2:
+			input_pins = configuration.getlist(str(self), 'driver-pins', fallback="")
+			if len(input_pins) != 2:
 				self.logger.error('driver:webserial => invalid configuration for driver-pins, must be a list with two elements')
 				return
-			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s",    "name": "%s", "inputs": [{"pin": "%s", "label": "sigA"},{"pin": "%s", "label": "sigB"}]}}}]' % (peripheral_type, peripheral_name, self.config['pins'][0], self.config['pins'][1]))
+			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s", "name": "%s", "inputs": [{"pin": "%s", "label": "sigA"},{"pin": "%s", "label": "sigB"}]}}}]' % (peripheral_type, peripheral_name, input_pins[0], input_pins[1]))
 		if peripheral_type in ["switch", "button", "toggle"]:
-			if len(self.config['pins']) != 1:
-				self.logger.error('driver:webserial => invalid configuration for driver-pins, must be a single pin')
+			input_pin = configuration.get(str(self), 'driver-pin', fallback="")
+			if len(input_pin) != 2:
+				self.logger.error('driver:webserial => invalid configuration for driver-pin, must be a single pin name (A0-A7,B0-B7)')
 				return
-			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s",    "name": "%s", "inputs": [{"pin": "%s", "label": "sigX"}], "actions": {"true": "on", "false": "off"}}}}]' % (peripheral_type, peripheral_name, self.config['pins'][0]))
+			input_pin_pullup = configuration.getboolean(str(self), 'driver-pin-pullup', fallback=True)
+			event_low  = configuration.getstring(str(self), 'event-low', fallback='on')
+			event_high = configuration.getstring(str(self), 'event-high', fallback='off')
+			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s", "name": "%s", "inputs": [{"pin": "%s", "pullup": "%s", "label": "sigX"}], "events": {"low": "%s", "high": "%s"}}}}]' % (peripheral_type, peripheral_name, input_pin, str(input_pin_pullup).lower(), event_low, event_high))
 
 
 	def receive(self):

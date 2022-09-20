@@ -19,27 +19,40 @@ void on_device_display(const JsonVariant& data) {
 
 
 void on_device_sdcard(const JsonVariant& data) {
-	if(data.containsKey("format")) {
-		const char*  filesystem = "fat";
+	static StaticJsonDocument<1024> result;
 
-		if(data["format"].containsKey("filesystem")) {
-			filesystem = data["format"]["filesystem"].as<const char*>();
-		}
-	}
+	result.clear();
 	if(data.containsKey("list")) {
 		const char*  directory = "/";
 
 		if(data["list"].containsKey("directory")) {
 			directory = data["list"]["directory"].as<const char*>();
 		}
+		g_device_sdcard.list(directory, result);
+		for(JsonVariant entry : result.as<JsonArray>()) {
+			g_util_webserial.send("device/sdcard#list", entry);
+		}
 	}
 	if(data.containsKey("read")) {
+		if(data["read"].containsKey("filename")) {
+			const char*  filename = "";
+
+			filename = data["read"]["filename"].as<const char*>();
+			g_device_sdcard.read(filename, result);
+			for(JsonVariant entry : result.as<JsonArray>()) {
+				g_util_webserial.send("device/sdcard#read", entry);
+			}
+		}
 	}
-	if(data.containsKey("write")) {
+	if(data.containsKey("remove")) {
+		if(data["remove"].containsKey("filename")) {
+			const char*  filename = "";
+
+			filename = data["remove"]["filename"].as<const char*>();
+			g_device_sdcard.remove(filename, result);
+			g_util_webserial.send("device/sdcard#remove", result);
+		}
 	}
-	if(data.containsKey("delete")) {
-	}
-//TODO: implement logic
 }
 
 
@@ -77,11 +90,11 @@ void on_device_mcp23X17(const JsonVariant& data) {
 		device_name = data["config"]["device"]["name"].as<const char*>();
 		if(data["config"]["device"].containsKey("inputs")) {
 			JsonArray   device_inputs;
-			JsonObject  device_actions;
+			JsonObject  device_events;
 
 			device_inputs = data["config"]["device"]["inputs"].as<JsonArray>();
-			device_actions = data["config"]["device"]["actions"].as<JsonObject>();
-			g_device_mcp23X17.config_inputs(device_type, device_name, device_inputs, device_actions);
+			device_events = data["config"]["device"]["events"].as<JsonObject>();
+			g_device_mcp23X17.config_inputs(device_type, device_name, device_inputs, device_events);
 		}
 		if(data["config"]["device"].containsKey("outputs")) {
 			JsonArray device_outputs;

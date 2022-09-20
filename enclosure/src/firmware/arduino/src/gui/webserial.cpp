@@ -53,9 +53,9 @@ void on_gui_screen(const JsonVariant& body) {
 					deserializeJson(queue, g_system_runtime["gui/screen:hal9000/queue"]);
 				}
 			}
-			if((body["hal9000"]["sequence"].containsKey("name"))
-			&& (body["hal9000"]["sequence"].containsKey("loop"))) {
+			if((body["hal9000"]["sequence"].containsKey("name")) && (body["hal9000"]["sequence"].containsKey("loop"))) {
 				if(strncmp(body["hal9000"]["queue"].as<const char*>(), "replace", 8) == 0) {
+					queue.clear();
 					deserializeJson(queue, "[]");
 					queue_pos = 0;
 				}

@@ -45,7 +45,7 @@ class MCP23X17_DigitalOut : public MCP23X17_OutputDevice {
 class MCP23X17_InputDevice : public MCP23X17_Device {
 	public:
 		MCP23X17_InputDevice(const etl::string<GLOBAL_VALUE_SIZE>& type);
-		virtual bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& actions);
+		virtual bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events);
 		virtual bool isInputDevice();
 		virtual void process(const etl::string<2>& pin_name, const etl::string<4>& pin_value, JsonDocument& result);
 };
@@ -58,7 +58,7 @@ class MCP23X17_Rotary : public MCP23X17_InputDevice {
 		uint8_t         rotary_state = 0x00;
 	public:
 		MCP23X17_Rotary() : MCP23X17_InputDevice("rotary") {};
-		virtual bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& actions);
+		virtual bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events);
 		virtual void process(const etl::string<2>& pin_name, const etl::string<4>& pin_value, JsonDocument& result);
 };
 
@@ -66,11 +66,11 @@ class MCP23X17_Rotary : public MCP23X17_InputDevice {
 class MCP23X17_Switch : public MCP23X17_InputDevice {
 	protected:
 		etl::string<2>  pin_name;
-		etl::string<GLOBAL_VALUE_SIZE> action_true;
-		etl::string<GLOBAL_VALUE_SIZE> action_false;
+		etl::string<GLOBAL_VALUE_SIZE> event_low;
+		etl::string<GLOBAL_VALUE_SIZE> event_high;
 	public:
 		MCP23X17_Switch(const etl::string<GLOBAL_VALUE_SIZE>& device_type = "switch") : MCP23X17_InputDevice(device_type) {};
-		virtual bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& actions);
+		virtual bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events);
 		virtual void process(const etl::string<2>& pin_name, const etl::string<4>& pin_value, JsonDocument& result);
 };
 
@@ -78,7 +78,7 @@ class MCP23X17_Switch : public MCP23X17_InputDevice {
 class MCP23X17_Button : public MCP23X17_Switch {
 	public:
 		MCP23X17_Button() : MCP23X17_Switch("button") {};
-		virtual bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& actions);
+		virtual bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events);
 		virtual void process(const etl::string<2>& pin_name, const etl::string<4>& pin_value, JsonDocument& result);
 };
 
@@ -88,7 +88,7 @@ class MCP23X17_Toggle : public MCP23X17_Switch {
 		bool state = false;
 	public:
 		MCP23X17_Toggle() : MCP23X17_Switch("toggle") {};
-		virtual bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& actions);
+		virtual bool configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events);
 		virtual void process(const etl::string<2>& pin_name, const etl::string<4>& pin_value, JsonDocument& result);
 };
 

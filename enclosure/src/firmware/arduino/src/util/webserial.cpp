@@ -43,19 +43,20 @@ void WebSerial::update() {
 	static size_t                                serial_input_pos = 0;
 
 	if(Serial) {
+		g_system_microcontroller.mutex_enter("webserial");
 		if(this->queue_send.size() > 0) {
-			g_system_microcontroller.mutex_enter("webserial");
-
 			while(this->queue_send.empty() == false) {
 				Serial.write(this->queue_send.front().c_str());
 				Serial.write('\n');
 				this->queue_send.pop();
 			}
-			g_system_microcontroller.mutex_exit("webserial");
 		}
-
 		size_t serial_available = Serial.available();
 		if(serial_available > 0) {
+			if(serial_input_pos == UTIL_WEBSERIAL_LINE_SIZE) {
+				this->send("syslog", "WebSerial::update() => line buffer full, no newline (\\n) found: dropping line buffer (data loss)");
+				serial_input_pos = 0;
+			}
 			serial_input_pos += Serial.readBytes(serial_buffer+serial_input_pos, min(serial_available, UTIL_WEBSERIAL_LINE_SIZE-serial_input_pos));
 			if(serial_input_pos > 0) {
 				size_t pos = 0;

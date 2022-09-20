@@ -27,10 +27,10 @@ void gui_screen_hal9000(bool refresh) {
 	if(frame_next == GUI_SCREEN_HAL9000_SEQUENCE_FRAMES_MAX) {
 		static StaticJsonDocument<1024> queue;
 
-		queue.clear();
 		frame_next = 0;
+		queue.clear();
 		deserializeJson(queue, g_system_runtime["gui/screen:hal9000/queue"].c_str());
-		if(queue.is<JsonArray>() == false || queue.size() == 0) {
+		if(queue.is<JsonArray>() == false || queue.as<JsonArray>().size() == 0) {
 			g_system_runtime["gui/screen:hal9000/queue"] = "[]";
 			if(frame_loop == false) {
 				g_util_webserial.send("syslog", "gui_screen_hal9000() => empty queue and loop=false, switching to screen 'idle'");
@@ -41,9 +41,12 @@ void gui_screen_hal9000(bool refresh) {
 		}
 		if(queue.is<JsonArray>() == true) {
 			if(queue.size() > 0) {
+				frame_loop = false;
 				if(queue[0].containsKey("name") && queue[0].containsKey("loop")) {
 					sequence_load(queue[0]["name"]);
-					frame_loop = strncasecmp(queue[0]["loop"].as<const char*>(), "true", 5) ? false : true;
+					if(strncasecmp(queue[0]["loop"].as<const char*>(), "true", 5) == 0) {
+						frame_loop = true;
+					}
 				}
 				queue.remove(0);
 			}

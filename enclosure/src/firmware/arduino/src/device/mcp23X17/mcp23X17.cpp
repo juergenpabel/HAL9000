@@ -13,7 +13,7 @@ static MCP23X17_Rotary      g_devices_rotary[2];
 static MCP23X17_DigitalOut  g_devices_digitalout[2];
 
 etl::string<2> MCP23X17::PIN_NAMES[16] = {"A0","A1","A2","A3","A4","A5","A6","A7","B0","B1","B2","B3","B4","B5","B6","B7"};
-etl::string<4> MCP23X17::PIN_VALUES[2] = {"LOW", "HIGH"};
+etl::string<4> MCP23X17::PIN_VALUES[2] = {MCP23X17_PIN_VALUE_LOW, MCP23X17_PIN_VALUE_HIGH};
 
 #define MCP23X17_STATE_UNINITIALIZED 0x10
 #define MCP23X17_STATE_INITIALIZED   0x20
@@ -46,9 +46,6 @@ void MCP23X17::init() {
 
 
 void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
-	int  pin_int_a = SYSTEM_SETTINGS_MCP23X17_PIN_INTA;
-	int  pin_int_b = SYSTEM_SETTINGS_MCP23X17_PIN_INTB;
-
 	if(this->status != MCP23X17_STATE_UNINITIALIZED) {
 		g_util_webserial.send("syslog", "MCP23X17 already initialized");
 		return;
@@ -58,19 +55,11 @@ void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
 		return;
 	}
 	this->mcp23X17.setupInterrupts(false, true, LOW);
-	if(g_system_settings.count("device/mcp23X17:i2c/pin-int_a") == 1) {
-		pin_int_a = atoi(g_system_settings["device/mcp23X17:i2c/pin-int_a"].c_str());
-	}
-	if(g_system_settings.count("device/mcp23X17:i2c/pin-int_b") == 1) {
-		pin_int_b = atoi(g_system_settings["device/mcp23X17:i2c/pin-int_b"].c_str());
-	}
-	pinMode(pin_int_a, INPUT_PULLUP);
-	pinMode(pin_int_b, INPUT_PULLUP);
 	this->status = MCP23X17_STATE_INITIALIZED;
 }
 
 
-void MCP23X17::config_inputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, const etl::string<GLOBAL_VALUE_SIZE>& device_name, const JsonArray& inputs, const JsonObject& actions) {
+void MCP23X17::config_inputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, const etl::string<GLOBAL_VALUE_SIZE>& device_name, const JsonArray& inputs, const JsonObject& events) {
 	MCP23X17_InputDevice* device = nullptr;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
@@ -119,7 +108,7 @@ void MCP23X17::config_inputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, 
 		g_util_webserial.send("syslog", device_type);
 		return;
 	}
-	if(device->configure(device_name, &this->mcp23X17, inputs, actions) == false) {
+	if(device->configure(device_name, &this->mcp23X17, inputs, events) == false) {
 		g_util_webserial.send("syslog", "MCP23X17::config_inputs(): device configuration failed");
 		return;
 	}
