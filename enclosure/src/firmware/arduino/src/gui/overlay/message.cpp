@@ -1,4 +1,3 @@
-#include <string>
 #include "gui/screen/screen.h"
 #include "gui/overlay/overlay.h"
 #include "util/jpeg.h"

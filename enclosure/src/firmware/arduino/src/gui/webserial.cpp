@@ -42,8 +42,7 @@ void on_gui_screen(const JsonVariant& body) {
 		screen = gui_screen_splash;
 	}
 	if(body.containsKey("hal9000")) {
-		if((body["hal9000"].containsKey("queue"))
-		&& (body["hal9000"].containsKey("sequence"))) {
+		if((body["hal9000"].containsKey("queue")) && (body["hal9000"].containsKey("sequence"))) {
 			static StaticJsonDocument<1024> queue;
 			       int                      queue_pos = -1;
 

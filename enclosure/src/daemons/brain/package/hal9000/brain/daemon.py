@@ -19,7 +19,7 @@ class Daemon(HAL9000_Daemon):
 	CONSCIOUSNESS_VALID = [CONSCIOUSNESS_AWAKE, CONSCIOUSNESS_ASLEEP]
 
 
-	def __init__(self):
+	def __init__(self) -> None:
 		HAL9000_Daemon.__init__(self, 'brain')
 		self.cortex = dict()
 		self.cortex['brain'] = dict()
@@ -37,6 +37,7 @@ class Daemon(HAL9000_Daemon):
 		self.synapses = dict()
 		self.callbacks = dict()
 		self.timeouts = dict()
+		self.queued_actions = list()
 
 
 	def configure(self, configuration: ConfigParser) -> None:
@@ -120,7 +121,7 @@ class Daemon(HAL9000_Daemon):
 		return True
 
 	
-	def on_mqtt(self, client, userdata, message):
+	def on_mqtt(self, client, userdata, message) -> None:
 		HAL9000_Daemon.on_mqtt(self, client, userdata, message)
 		if message.topic == 'hal9000/daemon/brain/consciousness/state':
 			self.set_consciousness(message.payload.decode('utf-8'))
@@ -148,20 +149,17 @@ class Daemon(HAL9000_Daemon):
 
 
 	def queue_action(self, action_name, signal_data) -> None:
-		self.timeouts['action-{}'.format(int(datetime.now().timestamp()))] = datetime.now(), [action_name, signal_data]
+		self.queued_actions.append([action_name, signal_data])
 
 
 	def process_queued_actions(self) -> None:
-		for key in self.timeouts.copy().keys():
-			cortex = self.cortex.copy()
-			timeout, data = self.timeouts[key]
-			if key.startswith('action-'):
-				[action_name, signal] = data
-				if action_name in self.actions:
-					self.actions[action_name].process(signal, cortex)
-					if action_name in self.cortex:
-						self.cortex[action_name] = cortex[action_name]
-				del self.timeouts[key]
+		for action_name, signal_data in self.queued_actions:
+			if action_name in self.actions:
+				cortex = self.cortex.copy()
+				self.actions[action_name].process(signal_data, cortex)
+				if action_name in cortex:
+					self.cortex[action_name] = cortex[action_name]
+		self.queued_actions.clear()
 
 
 	def set_consciousness(self, new_state) -> None:
