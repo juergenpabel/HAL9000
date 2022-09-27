@@ -100,8 +100,7 @@ class Daemon(HAL9000_Daemon):
 				self.set_consciousness(Daemon.CONSCIOUSNESS_ASLEEP)
 			self.arduino_set_system_setting('system/state:time/sleep',  self.config['sleep-time'])
 			self.arduino_set_system_setting('system/state:time/wakeup', self.config['wakeup-time'])
-			#TODO(bug): self.arduino_save_system_setting()
-		#TODO: signal ready
+			self.arduino_save_system_setting()
 		HAL9000_Daemon.loop(self)
 
 	

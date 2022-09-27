@@ -11,8 +11,12 @@
 #include "globals.h"
 
 
-void Microcontroller::start(uint32_t& timestamp) {
-	if((watchdog_hw->scratch[5] == 0x00002001) && (watchdog_hw->scratch[6] == 0x00009000)) {
+void Microcontroller::start(uint32_t& timestamp, bool& booting) {
+	booting = true;
+	if(watchdog_hw->scratch[5] == 0x00002001) {
+		if(watchdog_hw->scratch[6] == 0xfee1dead) {
+			booting = false;
+		}
 		timestamp = watchdog_hw->scratch[7];
 		watchdog_hw->scratch[5] = 0x00000000;
 		watchdog_hw->scratch[6] = 0x00000000;
@@ -21,11 +25,15 @@ void Microcontroller::start(uint32_t& timestamp) {
 }
 
 
-void Microcontroller::reset(uint32_t& timestamp) {
+void Microcontroller::reset(uint32_t timestamp, bool rebooting) {
 	if(timestamp > 0) {
 		hw_clear_bits(&watchdog_hw->ctrl, WATCHDOG_CTRL_ENABLE_BITS);
 		watchdog_hw->scratch[5] = 0x00002001;
-		watchdog_hw->scratch[6] = 0x00009000;
+		if(rebooting == true) {
+			watchdog_hw->scratch[6] = 0x00000000;
+		} else {
+			watchdog_hw->scratch[6] = 0xfee1dead;
+		}
 		watchdog_hw->scratch[7] = timestamp;
 	}
 	multicore_reset_core1();
@@ -112,26 +120,24 @@ bool Microcontroller::mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name) {
 }
 
 
-static TwoWire twowire(i2c0, TWOWIRE_PIN_SDA, TWOWIRE_PIN_SCL);
 
 TwoWire* Microcontroller::twowire_get(uint8_t instance) {
-	TwoWire* result = nullptr;
-	int      pin_sda = TWOWIRE_PIN_SDA;
-	int      pin_scl = TWOWIRE_PIN_SCL;
+	static TwoWire  twowire(i2c0, TWOWIRE_PIN_SDA, TWOWIRE_PIN_SCL);
+	       int      pin_sda = TWOWIRE_PIN_SDA;
+	       int      pin_scl = TWOWIRE_PIN_SCL;
 
 	if(instance > 0) {
 		return nullptr;
 	}
-	result = &twowire;
 	if(g_system_settings.count("device/mcp23X17:i2c/pin-sda") == 1) {
 		pin_sda = atoi(g_system_settings["device/mcp23X17:i2c/pin-sda"].c_str());
 	}
 	if(g_system_settings.count("device/mcp23X17:i2c/pin-scl") == 1) {
 		pin_scl = atoi(g_system_settings["device/mcp23X17:i2c/pin-scl"].c_str());
 	}
-	result->setSDA(pin_sda);
-	result->setSCL(pin_scl);
-	return result;
+	twowire.setSDA(pin_sda);
+	twowire.setSCL(pin_scl);
+	return &twowire;
 }
 
 

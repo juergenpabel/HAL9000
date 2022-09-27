@@ -44,17 +44,19 @@ void setup() {
 		g_util_webserial.send("syslog", "setup() failed to load settings from littlefs");
 		g_system_settings.reset();
 	}
+	g_system_runtime["system/state:conciousness"] = "awake";
 	g_system_runtime.update();
 	if(g_system_runtime.isAsleep()) {
 		digitalWrite(TFT_BL, LOW);
 	}
-	if(year() < 2001) {
+	if(g_system_runtime["system/state:app/target"].compare("booting") == 0) {
 		gui_screen_set(gui_screen_animation_startup);
 		while(gui_screen_get() == gui_screen_animation_startup) {
 			gui_screen_update(g_system_runtime.isAwake());
 		}
 	}
 	if(!Serial) {
+		g_system_runtime["system/state:app/target"] = "waiting";
 		g_system_runtime["gui/screen:splash/filename"] = "error.jpg";
 		gui_screen_set(gui_screen_splash);
 		while(!Serial) {
@@ -68,15 +70,16 @@ void setup() {
 			delay(1000);
 		}
 	}
+	g_system_runtime["system/state:app/target"] = "running";
 	gui_screen_set(gui_screen_idle);
 	g_util_webserial.update();
 
 	g_util_webserial.send("syslog", "setup()");
-	g_util_webserial.set("system/reset", on_system_reset);
-	g_util_webserial.set("system/microcontroller", on_system_microcontroller);
+	g_util_webserial.set("system/app", on_system_app);
+	g_util_webserial.set("system/mcu", on_system_mcu);
+	g_util_webserial.set("system/time", on_system_time);
 	g_util_webserial.set("system/runtime", on_system_runtime);
 	g_util_webserial.set("system/settings", on_system_settings);
-	g_util_webserial.set("system/time", on_system_time);
 	g_util_webserial.set("device/sdcard", on_device_sdcard);
 	g_util_webserial.set("device/mcp23X17", on_device_mcp23X17);
 	g_util_webserial.set("device/display", on_device_display);
@@ -88,13 +91,18 @@ void setup() {
 
 void loop() {
 	if(!Serial) {
-		if(gui_screen_get() != gui_screen_animation_shutdown) {
-			system_reset();
+		etl::string<GLOBAL_VALUE_SIZE>& app_target = g_system_runtime["system/state:app/target"];
+
+		if(app_target.compare("rebooting") == 0 || app_target.compare("halting") == 0) {
+			gui_screen_set(gui_screen_animation_shutdown);
+			while(gui_screen_get() == gui_screen_animation_shutdown) {
+				gui_screen_update(g_system_runtime.isAwake());
+			}
+			if(g_system_runtime["system/state:app/target"].compare("halting") == 0) {
+				system_halt();
+			}
 		}
-		while(gui_screen_get() == gui_screen_animation_shutdown) {
-			gui_screen_update(g_system_runtime.isAwake());
-		}
-		system_halt();
+		system_reset();
 	}
 	g_util_webserial.update();
 	g_system_runtime.update();

@@ -18,9 +18,11 @@ class Action(HAL9000_Action):
 
 	def process(self, signal: dict, cortex: dict) -> None:
 		if 'mqtt' in signal:
-			mqtt_topic = signal['mqtt']['topic']
-			mqtt_payload = signal['mqtt']['payload']
-#TODO			if signal['mqtt']['payload']['type'] == "json":
-#TODO				mqtt_payload = json.loads(mqtt_payload)
-			mqtt_publish_message(mqtt_topic, str(mqtt_payload))
+			messages = signal['mqtt']
+			if(isinstance(messages, list) == False):
+				messages = [messages]
+			for message in messages:
+				mqtt_topic = message['topic']
+				mqtt_payload = message['payload']
+				mqtt_publish_message(mqtt_topic, str(mqtt_payload))
 

@@ -20,8 +20,8 @@ class Microcontroller {
 		MutexMap     mutex_map;
 	public:
 		Microcontroller() {};
-		void start(uint32_t& timestamp);
-		void reset(uint32_t& timestamp);
+		void start(uint32_t& timestamp, bool& booting);
+		void reset(uint32_t timestamp, bool rebooting);
 		void reset_uf2();
 		void halt();
 

@@ -69,7 +69,7 @@ class Daemon(HAL9000):
 			topic = message.topic[24:]
 			payload = message.payload.decode('utf-8')
 			self.logger.info("COMMAND: {} => {}".format(topic, payload))
-			self.webserial.send('["%s", %s]' % (topic, payload)) ## TODO
+			self.webserial.send('["%s", %s]' % (topic, payload))
 
 
 	def import_device(self, module_name:str) -> HAL9000_Plugin:

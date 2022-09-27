@@ -83,8 +83,8 @@ class Control(EnclosureComponent):
 				if menu_item is not None and menu_item.startswith("item-"):
 					if menu_item in self.config['action']:
 						action_name = self.config['action'][menu_item]["action-name"]
-						signal_data = json.loads(self.config['action'][menu_item]["signal-data"])
 						if action_name in self.daemon.actions:
+							signal_data = json.loads(self.config['action'][menu_item]['signal-data'])
 							self.daemon.queue_action(action_name, signal_data)
 						else:
 							self.daemon.logger.error("plugin enclosure: menu item '{}' refers to nonexistant action '{}'"

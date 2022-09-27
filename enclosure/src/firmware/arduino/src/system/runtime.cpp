@@ -7,12 +7,12 @@
 #define STRING(value) QUOTE(value)
 
 Runtime::Runtime() {
-	(*this)["system/state:conciousness"] = "awake";
+	(*this)["system/state:app/target"] = "booting";
 }
 
 
 bool Runtime::isAwake() {
-	if(this->count("system/state:conciousness") != 1) {
+	if(this->count("system/state:conciousness") == 0) {
 		return true;
 	}
 	return (*this)["system/state:conciousness"].compare("awake")==0;

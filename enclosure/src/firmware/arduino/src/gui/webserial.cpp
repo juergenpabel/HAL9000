@@ -72,9 +72,6 @@ void on_gui_screen(const JsonVariant& body) {
 			}
 		}
 	}
-	if(body.containsKey("shutdown")) {
-		screen = gui_screen_animation_shutdown;
-	}
 	if(screen != gui_screen_none) {
 		gui_screen_set(screen);
 	}

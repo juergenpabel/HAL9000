@@ -83,10 +83,10 @@ class HAL9000_Daemon(HAL9000_Abstract):
 				self.mqtt.on_message = self.on_mqtt
 		for section_name in configuration.sections():
 			if section_name.startswith('command:'):
-				exec = configuration.getstring(section_name, 'exec', fallback=None)
-				if exec is not None:
-					dummy, command = section_name.split(':',1)
-					self.commands[command] = exec
+				command_exec = configuration.getstring(section_name, 'exec', fallback=None)
+				if command_exec is not None:
+					command_name = section_name[8:]
+					self.commands[command_name] = command_exec
 
 
 	def import_plugin(self, module_name: str, class_name: str) -> HAL9000_Plugin:

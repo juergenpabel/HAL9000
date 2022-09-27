@@ -8,17 +8,32 @@
 #include "globals.h"
 
 
-void on_system_microcontroller(const JsonVariant& data) {
-	if(data.containsKey("reset")) {
-		uint32_t timestamp = 0;
-		if(data["reset"].containsKey("save-time")) {
-			if(data["reset"]["save-time"].as<bool>() == true) { 
-				timestamp = now();
+void on_system_app(const JsonVariant& data) {
+	if(data.containsKey("shutdown")) {
+		if(data["shutdown"].containsKey("target")) {
+			etl::string<10> poweroff("poweroff");
+			etl::string<10> reboot("reboot");
+
+			if(poweroff.compare(data["shutdown"]["target"].as<const char*>()) == 0) {
+				g_util_webserial.send("syslog", "system/app#target=poweroff");
+				g_system_runtime["system/state:app/target"] = "halting";
+			}
+			if(reboot.compare(data["shutdown"]["target"].as<const char*>()) == 0) {
+				g_util_webserial.send("syslog", "system/app#target=reboot");
+				g_system_runtime["system/state:app/target"] = "rebooting";
 			}
 		}
-		g_system_microcontroller.reset(timestamp);
+	}
+}
+
+
+void on_system_mcu(const JsonVariant& data) {
+	if(data.containsKey("reset")) {
+		g_util_webserial.send("syslog", "system/mcu#reset");
+		g_system_microcontroller.reset(now(), false);
 	}
 	if(data.containsKey("halt")) {
+		g_util_webserial.send("syslog", "system/mcu#halt");
 		g_system_microcontroller.halt();
 	}
 }

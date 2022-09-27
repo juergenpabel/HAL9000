@@ -5,11 +5,11 @@
 #include "system/microcontroller/esp32.h"
 
 
-void Microcontroller::start(uint32_t& timestamp) {
+void Microcontroller::start(uint32_t& timestamp, bool& booting) {
 }
 
 
-void Microcontroller::reset(uint32_t& timestamp) {
+void Microcontroller::reset(uint32_t timestamp, bool rebooting) {
 }
 
 

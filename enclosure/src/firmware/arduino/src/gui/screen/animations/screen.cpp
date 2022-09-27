@@ -10,7 +10,7 @@ static int           g_startup_delay[]  = {900, 100, 0};
 
 static const char*   g_shutdown_folder[] = {"shutdown", nullptr};
 static int           g_shutdown_count[]  = {70, 0};
-static int           g_shutdown_delay[]  = {25, 0};
+static int           g_shutdown_delay[]  = {0, 0};
 
 static const char**  g_animation_folder = nullptr;
 static int*          g_animation_count = nullptr;
@@ -68,8 +68,5 @@ void gui_screen_animation_shutdown(bool refresh) {
 		g_animation_frame = 0;
 	}
 	gui_screen_animations(refresh);
-	if(gui_screen_get() == gui_screen_none) {
-		system_halt();
-	}
 }
 
