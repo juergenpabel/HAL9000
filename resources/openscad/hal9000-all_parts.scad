@@ -1,5 +1,7 @@
 include <hal9000.scad>
 
+conf_display = "m5core2";
+
 conf_rfid = true;
 conf_rotary = true;
 conf_button = false;
