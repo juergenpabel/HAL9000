@@ -1,7 +1,7 @@
 #include <TimeLib.h>
 #include <ArduinoJson.h>
 #include <etl/to_string.h>
-#include "system/microcontroller/include.h"
+#include "device/microcontroller/include.h"
 #include "system/system.h"
 #include "system/time.h"
 #include "system/webserial.h"
@@ -30,11 +30,11 @@ void on_system_app(const JsonVariant& data) {
 void on_system_mcu(const JsonVariant& data) {
 	if(data.containsKey("reset")) {
 		g_util_webserial.send("syslog", "system/mcu#reset");
-		g_system_microcontroller.reset(now(), false);
+		g_device_microcontroller.reset(now(), false);
 	}
 	if(data.containsKey("halt")) {
 		g_util_webserial.send("syslog", "system/mcu#halt");
-		g_system_microcontroller.halt();
+		g_device_microcontroller.halt();
 	}
 }
 

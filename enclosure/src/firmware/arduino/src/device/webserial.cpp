@@ -13,7 +13,11 @@ void on_device_display(const JsonVariant& data) {
 		if(strncmp(data["backlight"].as<const char*>(), "off", 4) == 0) {
 			backlight = false;
 		}
-		digitalWrite(TFT_BL, backlight ? HIGH : LOW);
+		if(backlight == true) {
+			g_device_board.displayOn();
+		} else {
+			g_device_board.displayOff();
+		}
 	}
 }
 

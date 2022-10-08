@@ -10,7 +10,7 @@ void gui_screen_idle(bool refresh) {
 
 	if(refresh) {
 		clock_previous = 0;
-		g_device_tft.fillScreen(TFT_BLACK);
+		g_gui.fillScreen(TFT_BLACK);
 	}
 	if(g_system_runtime.count("gui/screen:idle/clock") == 1) {
 		if(g_system_runtime["gui/screen:idle/clock"].compare("false") == 0) {
@@ -23,11 +23,11 @@ void gui_screen_idle(bool refresh) {
 
 			clock_previous = clock_current;
 			snprintf(clock, sizeof(clock), "%02d:%02d", hour(clock_current), minute(clock_current));
-			g_device_tft.setTextColor(TFT_WHITE, TFT_BLACK, true);
-			g_device_tft.setTextFont(1);
-			g_device_tft.setTextSize(5);
-			g_device_tft.setTextDatum(MC_DATUM);
-			g_device_tft.drawString(clock, TFT_WIDTH/2, TFT_HEIGHT/2);
+			g_gui.setTextColor(TFT_WHITE, TFT_BLACK, true);
+			g_gui.setTextFont(1);
+			g_gui.setTextSize(5);
+			g_gui.setTextDatum(MC_DATUM);
+			g_gui.drawString(clock, TFT_WIDTH/2, TFT_HEIGHT/2);
 		}
 	}
 }

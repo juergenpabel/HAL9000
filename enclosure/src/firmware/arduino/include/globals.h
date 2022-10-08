@@ -6,7 +6,8 @@
 #include <TFT_eSPI.h>
 #include <ArduinoJson.h>
 
-#include "system/microcontroller/include.h"
+#include "device/microcontroller/include.h"
+#include "device/board/include.h"
 #include "system/runtime.h"
 #include "system/settings.h"
 #include "device/sdcard/sdcard.h"
@@ -14,16 +15,21 @@
 #include "util/webserial.h"
 
 
-extern Microcontroller g_system_microcontroller;
-extern Runtime         g_system_runtime;
-extern Settings        g_system_settings;
+extern Microcontroller g_device_microcontroller;
+extern Board           g_device_board;
 extern MCP23X17        g_device_mcp23X17;
 extern SDCard          g_device_sdcard;
-extern TFT_eSPI        g_device_tft;
-extern TFT_eSprite     g_device_tft_overlay;
-extern uint16_t*       g_gui_tft_buffer;
+
+extern TFT_eSPI        g_gui;
+extern TFT_eSprite     g_gui_overlay;
+
+extern uint16_t*       g_gui_buffer;
+
 extern JPEGDEC         g_util_jpeg;
 extern WebSerial       g_util_webserial;
+
+extern Runtime         g_system_runtime;
+extern Settings        g_system_settings;
 
 
 #endif

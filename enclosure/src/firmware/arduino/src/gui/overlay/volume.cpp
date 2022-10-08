@@ -28,27 +28,27 @@ void gui_overlay_volume(bool refresh) {
 				dx = cos(v);
 				dy = sin(v);
 				if(volume_level > 0 && d<=volume_level) {
-					g_device_tft_overlay.drawLine(CENTER_X+(dx*RADIUS_MIN), CENTER_Y+(dy*RADIUS_MIN), CENTER_X+(dx*RADIUS_MAX), CENTER_Y+(dy*RADIUS_MAX), TFT_WHITE );
+					g_gui_overlay.drawLine(CENTER_X+(dx*RADIUS_MIN), CENTER_Y+(dy*RADIUS_MIN), CENTER_X+(dx*RADIUS_MAX), CENTER_Y+(dy*RADIUS_MAX), TFT_WHITE );
 				} else {
-					g_device_tft_overlay.drawLine(CENTER_X+(dx*RADIUS_MIN), CENTER_Y+(dy*RADIUS_MIN), CENTER_X+(dx*RADIUS_MAX), CENTER_Y+(dy*RADIUS_MAX), TFT_BLACK );
-					g_device_tft.drawLine        (CENTER_X+(dx*RADIUS_MIN), CENTER_Y+(dy*RADIUS_MIN), CENTER_X+(dx*RADIUS_MAX), CENTER_Y+(dy*RADIUS_MAX), TFT_BLACK );
+					g_gui_overlay.drawLine(CENTER_X+(dx*RADIUS_MIN), CENTER_Y+(dy*RADIUS_MIN), CENTER_X+(dx*RADIUS_MAX), CENTER_Y+(dy*RADIUS_MAX), TFT_BLACK );
+					g_gui.drawLine        (CENTER_X+(dx*RADIUS_MIN), CENTER_Y+(dy*RADIUS_MIN), CENTER_X+(dx*RADIUS_MAX), CENTER_Y+(dy*RADIUS_MAX), TFT_BLACK );
 				}
 			}
 //TODO			util_jpeg_decode565_littlefs("/images/overlay/volume/speaker.jpg", g_gui_overlay_icon, GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT);
 //TODO			for(int y=0; y<GUI_OVERLAY_ICON_HEIGHT; y++) {
 //TODO				for(int x=0; x<GUI_OVERLAY_ICON_WIDTH; x++) {
 //TODO					if(g_gui_overlay_icon[y*GUI_OVERLAY_ICON_WIDTH+x] != TFT_BLACK) {
-//TODO						g_device_tft.drawPixel(x, y, TFT_WHITE);
+//TODO						g_gui.drawPixel(x, y, TFT_WHITE);
 //TODO					}
 //TODO				}
 //TODO			}
-//TODO			g_device_tft_overlay.pushImage(CENTER_X-(GUI_OVERLAY_ICON_WIDTH/2), CENTER_Y+(CENTER_Y/2)-(GUI_OVERLAY_ICON_HEIGHT/2), GUI_OVERLAY_ICON_WIDTH, GUI_OVERLAY_ICON_HEIGHT, g_gui_overlay_icon);
+//TODO			g_gui_overlay.pushImage(CENTER_X-(GUI_OVERLAY_ICON_WIDTH/2), CENTER_Y+(CENTER_Y/2)-(GUI_OVERLAY_ICON_HEIGHT/2), GUI_OVERLAY_ICON_WIDTH, GUI_OVERLAY_ICON_HEIGHT, g_gui_overlay_icon);
 		} else {
 //TODO			util_jpeg_decode565_littlefs("/images/overlay/volume/speaker-mute.jpg", g_gui_overlay_icon, GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT);
 //TODO			for(int y=0; y<GUI_OVERLAY_ICON_HEIGHT; y++) {
 //TODO				for(int x=0; x<GUI_OVERLAY_ICON_WIDTH; x++) {
 //TODO					if(g_gui_overlay_icon[y*GUI_OVERLAY_ICON_WIDTH+x] != TFT_BLACK) {
-//TODO						g_device_tft_overlay.drawPixel(x, y, TFT_WHITE);
+//TODO						g_gui_overlay.drawPixel(x, y, TFT_WHITE);
 //TODO					}
 //TODO				}
 //TODO			}

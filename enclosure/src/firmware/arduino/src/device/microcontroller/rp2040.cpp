@@ -7,7 +7,7 @@
 #include <pico/multicore.h>
 #include <Wire.h>
 
-#include "system/microcontroller/rp2040.h"
+#include "device/microcontroller/rp2040.h"
 #include "globals.h"
 
 

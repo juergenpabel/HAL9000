@@ -18,20 +18,20 @@
 
 void setup() {
 	system_start();
-	g_device_tft.begin();
-	g_device_tft.setRotation(2);
-	g_device_tft.fillScreen(TFT_BLACK);
-	g_device_tft.setTextColor(TFT_WHITE);
-	g_device_tft.setTextFont(1);
-	g_device_tft.setTextSize(5);
-	g_device_tft.setTextDatum(MC_DATUM);
-	g_device_tft_overlay.setColorDepth(1);
-	g_device_tft_overlay.setBitmapColor(TFT_WHITE, TFT_BLACK);
-	g_device_tft_overlay.createSprite(TFT_WIDTH, TFT_HEIGHT);
-	g_device_tft_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
-	g_device_tft_overlay.setTextFont(1);
-	g_device_tft_overlay.setTextSize(2);
-	g_device_tft_overlay.setTextDatum(MC_DATUM);
+	g_gui.begin();
+	g_gui.setRotation(2);
+	g_gui.fillScreen(TFT_BLACK);
+	g_gui.setTextColor(TFT_WHITE);
+	g_gui.setTextFont(1);
+	g_gui.setTextSize(5);
+	g_gui.setTextDatum(MC_DATUM);
+	g_gui_overlay.setColorDepth(1);
+	g_gui_overlay.setBitmapColor(TFT_WHITE, TFT_BLACK);
+	g_gui_overlay.createSprite(TFT_WIDTH, TFT_HEIGHT);
+	g_gui_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
+	g_gui_overlay.setTextFont(1);
+	g_gui_overlay.setTextSize(2);
+	g_gui_overlay.setTextDatum(MC_DATUM);
 	if(LittleFS.begin() == false) {
 		while(1) {
 			if(Serial) {
@@ -47,7 +47,7 @@ void setup() {
 	g_system_runtime["system/state:conciousness"] = "awake";
 	g_system_runtime.update();
 	if(g_system_runtime.isAsleep()) {
-		digitalWrite(TFT_BL, LOW);
+		g_device_board.displayOff();
 	}
 	if(g_system_runtime["system/state:app/target"].compare("booting") == 0) {
 		gui_screen_set(gui_screen_animation_startup);
@@ -63,9 +63,9 @@ void setup() {
 			gui_screen_update(false);
 			g_system_runtime.update();
 			if(g_system_runtime.isAwake()) {
-				digitalWrite(TFT_BL, HIGH);
+				g_device_board.displayOn();
 			} else {
-				digitalWrite(TFT_BL, LOW);
+				g_device_board.displayOff();
 			}
 			delay(1000);
 		}
@@ -107,9 +107,9 @@ void loop() {
 	g_util_webserial.update();
 	g_system_runtime.update();
 	if(g_system_runtime.isAwake()) {
-		digitalWrite(TFT_BL, HIGH);
+		g_device_board.displayOn();
 	} else {
-		digitalWrite(TFT_BL, LOW);
+		g_device_board.displayOff();
 	}
 	gui_screen_update(false);
 	if(g_system_settings.count("system/arduino:loop/sleep_ms") == 1) {

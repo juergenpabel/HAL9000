@@ -2,7 +2,7 @@
 
 #include <Wire.h>
 
-#include "system/microcontroller/esp32.h"
+#include "device/microcontroller/esp32.h"
 
 
 void Microcontroller::start(uint32_t& timestamp, bool& booting) {

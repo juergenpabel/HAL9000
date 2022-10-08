@@ -39,8 +39,8 @@ static void gui_screen_animations(bool refresh) {
 		char filename[256];
 
 		snprintf(filename, sizeof(filename), "/images/animations/%s/%02d.jpg", g_animation_folder[g_animation_nr], g_animation_frame);
-		util_jpeg_decode565_littlefs(filename, g_gui_tft_buffer, TFT_WIDTH*TFT_HEIGHT);
-		g_device_tft.pushImage(0, 0, TFT_WIDTH, TFT_HEIGHT, (uint16_t*)g_gui_tft_buffer);
+		util_jpeg_decode565_littlefs(filename, g_gui_buffer, TFT_WIDTH*TFT_HEIGHT);
+		g_gui.pushImage(0, 0, TFT_WIDTH, TFT_HEIGHT, (uint16_t*)g_gui_buffer);
 	}
 	delay(g_animation_delay[g_animation_nr]);
 	g_animation_frame++;

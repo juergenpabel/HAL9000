@@ -12,12 +12,12 @@ void gui_overlay_message(bool refresh) {
 	}
 	if(message.compare(g_system_runtime["gui/overlay:message/text"]) != 0) {
 		message = g_system_runtime["gui/overlay:message/text"];
-		g_device_tft_overlay.fillRect(0, (TFT_HEIGHT/8*5)-(g_device_tft_overlay.fontHeight()/2), TFT_WIDTH, g_device_tft_overlay.fontHeight()/2, TFT_BLACK);
-		g_device_tft_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
-		g_device_tft_overlay.setTextFont(1);
-		g_device_tft_overlay.setTextSize(2);
-		g_device_tft_overlay.setTextDatum(MC_DATUM);
-		g_device_tft_overlay.drawString(message.c_str(), TFT_WIDTH/2, TFT_HEIGHT/8*5);
+		g_gui_overlay.fillRect(0, (TFT_HEIGHT/8*5)-(g_gui_overlay.fontHeight()/2), TFT_WIDTH, g_gui_overlay.fontHeight()/2, TFT_BLACK);
+		g_gui_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
+		g_gui_overlay.setTextFont(1);
+		g_gui_overlay.setTextSize(2);
+		g_gui_overlay.setTextDatum(MC_DATUM);
+		g_gui_overlay.drawString(message.c_str(), TFT_WIDTH/2, TFT_HEIGHT/8*5);
 		if(refresh == false) {
 			gui_screen_set_refresh();
 		}

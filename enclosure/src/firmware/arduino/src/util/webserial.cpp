@@ -7,7 +7,7 @@
 
 
 WebSerial::WebSerial() {
-	g_system_microcontroller.mutex_create("webserial");
+	g_device_microcontroller.mutex_create("webserial");
 }
 
 
@@ -19,13 +19,13 @@ void WebSerial::send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const 
 	message += "\", ";
 	message += body;
 	message += "]";
-	if(Serial == false || g_system_microcontroller.mutex_try_enter("webserial") == false) {
+	if(Serial == false || g_device_microcontroller.mutex_try_enter("webserial") == false) {
 		this->queue_send.push(message);
 		return;
 	}
 	Serial.write(message.c_str());
 	Serial.write('\n');
-	g_system_microcontroller.mutex_exit("webserial");
+	g_device_microcontroller.mutex_exit("webserial");
 }
 
 
@@ -43,7 +43,7 @@ void WebSerial::update() {
 	static size_t                                serial_input_pos = 0;
 
 	if(Serial) {
-		g_system_microcontroller.mutex_enter("webserial");
+		g_device_microcontroller.mutex_enter("webserial");
 		if(this->queue_send.size() > 0) {
 			while(this->queue_send.empty() == false) {
 				Serial.write(this->queue_send.front().c_str());
@@ -93,7 +93,7 @@ void WebSerial::update() {
 				}
 			}
 		}
-		g_system_microcontroller.mutex_exit("webserial");
+		g_device_microcontroller.mutex_exit("webserial");
 	}
 }
 

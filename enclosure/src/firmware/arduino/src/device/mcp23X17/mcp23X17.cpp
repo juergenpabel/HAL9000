@@ -50,7 +50,7 @@ void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
 		g_util_webserial.send("syslog", "MCP23X17 already initialized");
 		return;
 	}
-	if(this->mcp23X17.begin_I2C(i2c_addr, g_system_microcontroller.twowire_get(0)) == false) {
+	if(this->mcp23X17.begin_I2C(i2c_addr, g_device_microcontroller.twowire_get(0)) == false) {
 		g_util_webserial.send("syslog", "MCP23X17 failed to initialize");
 		return;
 	}
@@ -194,7 +194,7 @@ void MCP23X17::start() {
 	}
 	this->mcp23X17_gpio_values = this->mcp23X17.readGPIOAB();
 	this->status = MCP23X17_STATE_RUNNING;
-	g_system_microcontroller.thread_create(MCP23X17::loop, 1);
+	g_device_microcontroller.thread_create(MCP23X17::loop, 1);
 }
 
 

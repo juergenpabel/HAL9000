@@ -12,8 +12,10 @@ typedef struct {
 	StaticSemaphore_t  data;
 } Semaphore;
 
+
 typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, Semaphore, 4> MutexMap;
 class TwoWire;
+
 
 class Microcontroller {
 	private:
