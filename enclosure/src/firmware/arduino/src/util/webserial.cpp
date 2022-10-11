@@ -16,9 +16,9 @@ void WebSerial::send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const 
 
 	message = "[\"";
 	message += topic;
-	message += "\", ";
+	message += "\", \"";
 	message += body;
-	message += "]";
+	message += "\"]";
 	if(Serial == false || g_device_microcontroller.mutex_try_enter("webserial") == false) {
 		this->queue_send.push(message);
 		return;

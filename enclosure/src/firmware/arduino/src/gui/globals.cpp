@@ -3,7 +3,7 @@
 
 TFT_eSPI     g_gui = TFT_eSPI();
 TFT_eSprite  g_gui_overlay = TFT_eSprite(&g_gui);
-uint16_t*    g_gui_buffer = new uint16_t[TFT_HEIGHT*TFT_WIDTH];
+uint16_t*    g_gui_buffer = NULL;
 
 JPEGDEC      g_gui_util_jpeg;
 

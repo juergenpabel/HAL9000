@@ -22,20 +22,18 @@ void Board::start(bool& host_booting) {
 		g_util_webserial.send("syslog", "recovered system time from before microcontroller was resetted");
 	}
 	if(TFT_BL >= 0) {
-		pinMode(TFT_BL, OUTPUT);
+		//pinMode(TFT_BL, OUTPUT);
 	}
 }
 
 
-void Board::reset() {
+void Board::reset(int32_t timestamp, bool host_rebooting) {
+	g_microcontroller.reset(timestamp, host_rebooting);
 }
 
 
 void Board::halt() {
-}
-
-
-void Board::reset_uf2() {
+	g_microcontroller.halt();
 }
 
 

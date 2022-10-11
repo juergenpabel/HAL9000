@@ -56,4 +56,6 @@ if os.path.exists("./data/images/overlay") is False:
 
 if os.path.exists("./data/system") is False:
 	os.makedirs("./data/system")
+	with os.open("./data/system/settings.ini", os.O_CREAT):
+		pass
 

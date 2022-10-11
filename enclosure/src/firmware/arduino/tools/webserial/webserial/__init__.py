@@ -20,6 +20,7 @@ class webserial:
 			except:
 				time.sleep(0.1)
 		print("Connected")
+		self.send('run')
 		line = self.receive()
 		while "loop()" not in line:
 			line = self.receive()

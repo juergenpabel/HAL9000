@@ -19,6 +19,9 @@ menu['9'] = ['Switch to screen "shutdown" (->halt MCU)',  '["gui/screen", {"shut
 menu['h'] = ['Switch to screen "hal9000" ("wakeup")',     '["gui/screen", {"hal9000": {"queue": "replace", "sequence": {"name": "wakeup", "loop": "false"}}}]']
 menu['a'] = ['Switch to screen "hal9000" ("active")',     '["gui/screen", {"hal9000": {"queue": "append",  "sequence": {"name": "active", "loop": "true"}}}]']
 menu['l'] = ['Switch to screen "hal9000" ("sleep")',      '["gui/screen", {"hal9000": {"queue": "replace", "sequence": {"name": "sleep",  "loop": "false"}}}]']
+menu['+'] = ['Display: on',                               '["device/display", {"backlight": "on"}]']
+menu['-'] = ['Display: off',                              '["device/display", {"backlight": "off"}]']
+menu['d'] = ['Switch to screen "idle" (showing a clock)', '["gui/screen", {"idle":    {}}]']
 menu['r'] = ['Prepare shutdown: reboot',                  '["system/app", {"shutdown": {"target": "reboot"}}]']
 menu['p'] = ['Prepare shutdown: poweroff',                '["system/app", {"shutdown": {"target": "poweroff"}}]']
 

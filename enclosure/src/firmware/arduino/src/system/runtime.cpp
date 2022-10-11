@@ -59,6 +59,11 @@ void Runtime::update() {
 					(*this)["system/state:conciousness"] = status_next;
 					status_prev = status_next;
 					g_util_webserial.send("syslog", etl::string<UTIL_WEBSERIAL_BODY_SIZE>("Runtime::update() changing state to '").append(status_next).append("'"));
+					if(this->isAwake()) {
+						g_device_board.displayOn();
+					} else {
+						g_device_board.displayOff();
+					}
 				}
 			}
 		}

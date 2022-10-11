@@ -24,7 +24,6 @@ class Microcontroller {
 		Microcontroller() {};
 		void start(uint32_t& timestamp, bool& booting);
 		void reset(uint32_t timestamp, bool rebooting);
-		void reset_uf2();
 		void halt();
 
 		bool thread_create(void (*function)(), uint8_t core);

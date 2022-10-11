@@ -3,6 +3,7 @@
 
 #ifdef ARDUINO_M5STACK_Core2
 
+
 #include "device/board/board.h"
 
 
@@ -10,7 +11,7 @@ class Board : AbstractBoard {
 	public:
 		Board();
 		virtual void start(bool& host_booting);
-		virtual void reset();
+		virtual void reset(uint32_t timestamp, bool host_rebooting);
 		virtual void halt();
 
 		virtual void displayOn();

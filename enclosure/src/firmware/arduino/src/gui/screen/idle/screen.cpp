@@ -27,7 +27,7 @@ void gui_screen_idle(bool refresh) {
 			g_gui.setTextFont(1);
 			g_gui.setTextSize(5);
 			g_gui.setTextDatum(MC_DATUM);
-			g_gui.drawString(clock, TFT_WIDTH/2, TFT_HEIGHT/2);
+			g_gui.drawString(clock, (TFT_WIDTH-GUI_SCREEN_WIDTH)+(GUI_SCREEN_WIDTH/2), (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/2));
 		}
 	}
 }

@@ -62,14 +62,13 @@ void gui_screen_hal9000(bool refresh) {
 
 
 static void sequence_load(const char* name) {
-	etl::string<GLOBAL_FILENAME_SIZE>  directory;
+	etl::string<GLOBAL_FILENAME_SIZE>  directory("/images/sequences/");
 	etl::string<GLOBAL_FILENAME_SIZE>  filename;
 	File                               file = {0};
 
 	for(int i=0; i<GUI_SCREEN_HAL9000_SEQUENCE_FRAMES_MAX; i++) {
 		g_sequence_frames[i].size = 0;
 	}
-	directory = "/images/sequences/";
 	directory += name;
 	directory += "/";
 	for(int i=0; i<GUI_SCREEN_HAL9000_SEQUENCE_FRAMES_MAX; i++) {

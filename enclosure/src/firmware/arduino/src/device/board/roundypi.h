@@ -10,10 +10,8 @@ class Board : AbstractBoard {
 	public:
 		Board();
 		virtual void start(bool& host_booting);
-		virtual void reset();
+		virtual void reset(int32_t timestamp, bool host_rebooting);
 		virtual void halt();
-
-		void reset_uf2();
 
 		virtual void displayOn();
                 virtual void displayOff();

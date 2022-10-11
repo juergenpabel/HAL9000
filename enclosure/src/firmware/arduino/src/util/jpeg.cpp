@@ -10,7 +10,7 @@ static int render2buffer(JPEGDRAW *pDraw) {
 
 	image565_data = (uint16_t*)pDraw->pUser;
 	for(int line=0; line<pDraw->iHeight; line++) {
-		memcpy(&image565_data[(pDraw->y+line)*(TFT_WIDTH)+(pDraw->x)], &pDraw->pPixels[(line)*(pDraw->iWidth)], sizeof(uint16_t)*(pDraw->iWidth));
+		memcpy(&image565_data[(pDraw->y+line)*(GUI_SCREEN_WIDTH)+(pDraw->x)], &pDraw->pPixels[(line)*(pDraw->iWidth)], sizeof(uint16_t)*(pDraw->iWidth));
 	}
 	return true;
 }

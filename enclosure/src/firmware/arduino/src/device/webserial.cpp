@@ -1,7 +1,7 @@
 #include <ArduinoJson.h>
 #include <TimeLib.h>
 
-#include "device/sdcard/sdcard.h"
+//TODO:include "device/sdcard/sdcard.h"
 #include "device/mcp23X17/mcp23X17.h"
 #include "globals.h"
 
@@ -15,8 +15,10 @@ void on_device_display(const JsonVariant& data) {
 		}
 		if(backlight == true) {
 			g_device_board.displayOn();
+			g_util_webserial.send("device/display#backlight", "\"on\"");
 		} else {
 			g_device_board.displayOff();
+			g_util_webserial.send("device/display#backlight", "\"off\"");
 		}
 	}
 }
@@ -34,7 +36,7 @@ void on_device_sdcard(const JsonVariant& data) {
 		if(data["list"].containsKey("directory")) {
 			directory = data["list"]["directory"].as<const char*>();
 		}
-		g_device_sdcard.list(directory, result);
+//TODO		g_device_sdcard.list(directory, result);
 		for(JsonVariant entry : result) {
 			g_util_webserial.send("device/sdcard#list", entry);
 		}
@@ -46,7 +48,7 @@ void on_device_sdcard(const JsonVariant& data) {
 
 			result = json.as<JsonArray>();
 			filename = data["read"]["filename"].as<const char*>();
-			g_device_sdcard.read(filename, result);
+//TODO			g_device_sdcard.read(filename, result);
 			for(JsonVariant entry : result) {
 				g_util_webserial.send("device/sdcard#read", entry);
 			}
@@ -59,7 +61,7 @@ void on_device_sdcard(const JsonVariant& data) {
 
 			result = json.as<JsonArray>();
 			filename = data["remove"]["filename"].as<const char*>();
-			g_device_sdcard.remove(filename, result);
+//TODO			g_device_sdcard.remove(filename, result);
 			g_util_webserial.send("device/sdcard#remove", result);
 		}
 	}

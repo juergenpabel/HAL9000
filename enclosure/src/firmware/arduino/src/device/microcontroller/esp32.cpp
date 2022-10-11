@@ -1,5 +1,6 @@
 #ifdef ARDUINO_ARCH_ESP32
 
+#include <Arduino.h>
 #include <Wire.h>
 
 #include "device/microcontroller/esp32.h"
@@ -10,20 +11,21 @@ void Microcontroller::start(uint32_t& timestamp, bool& booting) {
 
 
 void Microcontroller::reset(uint32_t timestamp, bool rebooting) {
-}
-
-
-void Microcontroller::reset_uf2() {
+	ESP.restart();
 }
 
 
 void Microcontroller::halt() {
+	while(true) {
+		delay(1000);
+	}
 }
 
 
 bool Microcontroller::mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	bool              result = false;
 
+return true; //TODO
 	if(this->mutex_map.count(name) == 0) {
 		if(this->mutex_map.size() < this->mutex_map.capacity()) {
 			Semaphore& semaphore = this->mutex_map[name];
@@ -39,6 +41,7 @@ bool Microcontroller::mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name) {
 bool Microcontroller::mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	bool result = false;
 
+return true; //TODO
 	if(this->mutex_map.count(name) == 1) {
 		Semaphore& semaphore = this->mutex_map[name];
 
@@ -53,6 +56,7 @@ bool Microcontroller::mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name) 
 bool Microcontroller::mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	bool result = false;
 
+return true; //TODO
 	if(this->mutex_map.count(name) == 1) {
 		Semaphore& semaphore = this->mutex_map[name];
 
@@ -69,6 +73,7 @@ bool Microcontroller::mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name) {
 bool Microcontroller::mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	bool result = false;
 
+return true; //TODO
 	if(this->mutex_map.count(name) == 1) {
 		Semaphore& semaphore = this->mutex_map[name];
 
@@ -82,6 +87,7 @@ bool Microcontroller::mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name) {
 bool Microcontroller::mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	bool result = false;
 
+return true; //TODO
 	if(this->mutex_map.count(name) == 1) {
 		this->mutex_map.erase(name);
 		result = true;

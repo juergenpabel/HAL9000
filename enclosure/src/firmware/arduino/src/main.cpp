@@ -1,7 +1,3 @@
-#include <LittleFS.h>
-#include <FS.h>
-#include <TimeLib.h>
-
 #include "globals.h"
 #include "system/webserial.h"
 #include "device/webserial.h"
@@ -18,28 +14,6 @@
 
 void setup() {
 	system_start();
-	g_gui.begin();
-	g_gui.setRotation(2);
-	g_gui.fillScreen(TFT_BLACK);
-	g_gui.setTextColor(TFT_WHITE);
-	g_gui.setTextFont(1);
-	g_gui.setTextSize(5);
-	g_gui.setTextDatum(MC_DATUM);
-	g_gui_overlay.setColorDepth(1);
-	g_gui_overlay.setBitmapColor(TFT_WHITE, TFT_BLACK);
-	g_gui_overlay.createSprite(TFT_WIDTH, TFT_HEIGHT);
-	g_gui_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
-	g_gui_overlay.setTextFont(1);
-	g_gui_overlay.setTextSize(2);
-	g_gui_overlay.setTextDatum(MC_DATUM);
-	if(LittleFS.begin() == false) {
-		while(1) {
-			if(Serial) {
-				g_util_webserial.send("syslog", "LittleFS error, halting");
-			}
-			delay(1000);
-		}
-	}
 	if(g_system_settings.load() == false) {
 		g_util_webserial.send("syslog", "setup() failed to load settings from littlefs");
 		g_system_settings.reset();
@@ -50,11 +24,13 @@ void setup() {
 		g_device_board.displayOff();
 	}
 	if(g_system_runtime["system/state:app/target"].compare("booting") == 0) {
+		g_util_webserial.send("syslog", "booting (showing startup animation)...");
 		gui_screen_set(gui_screen_animation_startup);
 		while(gui_screen_get() == gui_screen_animation_startup) {
 			gui_screen_update(g_system_runtime.isAwake());
 		}
 	}
+	g_util_webserial.send("syslog", "booting done");
 	if(!Serial) {
 		g_system_runtime["system/state:app/target"] = "waiting";
 		g_system_runtime["gui/screen:splash/filename"] = "error.jpg";
@@ -69,6 +45,16 @@ void setup() {
 			}
 			delay(1000);
 		}
+	}
+	if(Serial) {
+		g_util_webserial.send("syslog", "waiting for 'run' from host...");
+		while(Serial.available() == 0) {
+			delay(100);
+		}
+		while(Serial.read() != '\n') {
+			delay(10);
+		}
+		g_util_webserial.send("syslog", "got 'run' from host, running...");
 	}
 	g_system_runtime["system/state:app/target"] = "running";
 	gui_screen_set(gui_screen_idle);
@@ -106,11 +92,6 @@ void loop() {
 	}
 	g_util_webserial.update();
 	g_system_runtime.update();
-	if(g_system_runtime.isAwake()) {
-		g_device_board.displayOn();
-	} else {
-		g_device_board.displayOff();
-	}
 	gui_screen_update(false);
 	if(g_system_settings.count("system/arduino:loop/sleep_ms") == 1) {
 		static int milliseconds = atoi(g_system_settings["system/arduino:loop/sleep_ms"].c_str());
