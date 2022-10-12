@@ -22,6 +22,8 @@ void on_system_app(const JsonVariant& data) {
 				g_util_webserial.send("syslog", "system/app#target=reboot");
 				g_system_runtime["system/state:app/target"] = "rebooting";
 			}
+			Serial.flush();
+			Serial.end();
 		}
 	}
 }

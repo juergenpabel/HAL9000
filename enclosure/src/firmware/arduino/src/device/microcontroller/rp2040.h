@@ -31,7 +31,7 @@ class Microcontroller : AbstractMicrocontroller {
 		virtual bool mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name);
 
-		virtual TwoWire* twowire_get(uint8_t instance);
+		virtual TwoWire* twowire_get(uint8_t instance, uint8_t pin_sda, uint8_t pin_scl);
 };
 
 #endif

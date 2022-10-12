@@ -33,17 +33,18 @@ void Board::start(bool& host_booting) {
 	PMU.setSysPowerDownVoltage(2700);
 	PMU.setVbusVoltageLimit(XPOWERS_AXP192_VBUS_VOL_LIM_4V5);
 	PMU.setVbusCurrentLimit(XPOWERS_AXP192_VBUS_CUR_LIM_OFF);
+	PMU.disableDC2();
 	PMU.disableDC3();
 	PMU.disableLDO2();
 	delay(100);
 	PMU.pinMode(PMU_GPIO4, OUTPUT);
 	PMU.digitalWrite(PMU_GPIO4, 1);
+	PMU.setDC2Voltage(3300); //display
 	PMU.setDC3Voltage(3300); //backlight
 	PMU.setLDO2Voltage(3300); //display
+	PMU.enableDC2();
 	PMU.enableDC3();
 	PMU.enableLDO2();
-	delay(100);
-	PMU.digitalWrite(PMU_GPIO4, 1);
 	delay(100);
 }
 

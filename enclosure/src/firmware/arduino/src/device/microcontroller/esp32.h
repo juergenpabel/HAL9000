@@ -22,19 +22,20 @@ class Microcontroller {
 		MutexMap     mutex_map;
 	public:
 		Microcontroller() {};
-		void start(uint32_t& timestamp, bool& booting);
-		void reset(uint32_t timestamp, bool rebooting);
-		void halt();
 
-		bool thread_create(void (*function)(), uint8_t core);
+		virtual void start(uint32_t& timestamp, bool& booting);
+		virtual void reset(uint32_t timestamp, bool rebooting);
+		virtual void halt();
 
-		bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name);
-		bool mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
-		bool mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
-		bool mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name);
-		bool mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name);
+		virtual bool thread_create(void (*function)(), uint8_t core);
 
-		TwoWire* twowire_get(uint8_t instance);
+		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name);
+		virtual bool mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
+		virtual bool mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
+		virtual bool mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name);
+		virtual bool mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name);
+
+		virtual TwoWire* twowire_get(uint8_t instance, uint8_t pin_sda, uint8_t pin_scl);
 };
 
 #endif

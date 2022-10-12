@@ -5,8 +5,8 @@
 
 //TODO static uint16_t      g_gui_overlay_icon[GUI_OVERLAY_ICON_WIDTH*GUI_OVERLAY_ICON_HEIGHT];
 
-#define CENTER_X   ((TFT_WIDTH-GUI_SCREEN_WIDTH)/2+(GUI_SCREEN_WIDTH/2))
-#define CENTER_Y   ((TFT_WIDTH-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/2))
+#define CENTER_X   ((TFT_WIDTH -GUI_SCREEN_WIDTH )/2+(GUI_SCREEN_WIDTH /2))
+#define CENTER_Y   ((TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/2))
 #define RADIUS_MIN (GUI_SCREEN_WIDTH/2 - 15)
 #define RADIUS_MAX (GUI_SCREEN_WIDTH/2 -  5)
 
@@ -21,8 +21,8 @@ void gui_overlay_volume(bool refresh) {
 			}
 			for(uint8_t d=0; d<=100; d+=1) {
 				double v = 0;
-				double dx = (TFT_WIDTH -GUI_SCREEN_WIDTH )/2+(TFT_WIDTH /2);
-				double dy = (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(TFT_HEIGHT/2);
+				double dx;
+				double dy;
 
 				v = 2*PI * d/100 * 6/8 + (2*PI*3/8);
 				dx = cos(v);

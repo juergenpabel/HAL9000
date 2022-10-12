@@ -46,11 +46,18 @@ void MCP23X17::init() {
 
 
 void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
+	TwoWire* twowire = nullptr;
+
 	if(this->status != MCP23X17_STATE_UNINITIALIZED) {
 		g_util_webserial.send("syslog", "MCP23X17 already initialized");
 		return;
 	}
-	if(this->mcp23X17.begin_I2C(i2c_addr, g_device_microcontroller.twowire_get(0)) == false) {
+	twowire = g_device_microcontroller.twowire_get(0, pin_sda, pin_scl);
+	if(twowire == nullptr) {
+		g_util_webserial.send("syslog", "MCP23X17 could not obtain TwoWire instance");
+		return;
+	}
+	if(this->mcp23X17.begin_I2C(i2c_addr, twowire) == false) {
 		g_util_webserial.send("syslog", "MCP23X17 failed to initialize");
 		return;
 	}

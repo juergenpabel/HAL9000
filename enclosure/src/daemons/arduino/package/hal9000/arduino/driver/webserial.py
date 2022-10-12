@@ -23,12 +23,14 @@ class Driver(HAL9000_Driver):
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000_Driver.configure(self, configuration)
 		self.config['webserial:trace'] = configuration.getboolean('driver:webserial', 'trace', fallback=False)
-		self.config['tty']  = configuration.getstring(str(self), 'driver-tty', fallback='/dev/ttyRP2040')
+		self.config['tty']  = configuration.getstring(str(self), 'driver-tty', fallback='/dev/ttyHAL9000')
+#todo: pin-sda,pin-scl from config
 		while Driver.serial is None:
 			try:
 				self.logger.info('driver:webserial => Connecting to {}'.format(self.config['tty']))
 				Driver.serial = serial.Serial(port=self.config['tty'], timeout=0.1, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
 				self.logger.debug('driver:webserial => ...connected')
+				self.send('run')
 				self.logger.debug('driver:webserial => waiting for loop()...')
 				line = self.receive()
 				while "loop()" not in line:
@@ -92,10 +94,13 @@ class Driver(HAL9000_Driver):
 			if Driver.received_line.startswith('["syslog"'):
 				Driver.received_line = ""
 				return True
-			event, payload = json.loads(Driver.received_line)
-			if event == "system/time":
-				if payload['sync']['format'] == "epoch":
-					self.send('["system/time",{"sync":{"epoch":'+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
-					Driver.received_line = ""
+			try:
+				event, payload = json.loads(Driver.received_line)
+				if event == "system/time":
+					if payload['sync']['format'] == "epoch":
+						self.send('["system/time",{"sync":{"epoch":'+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
+						Driver.received_line = ""
+			except json.decoder.JSONDecodeError:
+				Driver.received_line = ""
 		return True
 

@@ -9,9 +9,9 @@ class webserial:
 	def __init__(self, device: str = None):
 		self.device = device
 		if self.device is None:
-			self.device = sys.argv[1] if len(sys.argv) > 1 else "/dev/ttyRP2040"
+			self.device = sys.argv[1] if len(sys.argv) > 1 else "/dev/ttyHAL9000"
 
-	def connect(self):
+	def connect(self, booting: bool = True):
 		print("Connecting to {}...".format(self.device))
 		self.serial = None
 		while self.serial is None:
@@ -20,10 +20,11 @@ class webserial:
 			except:
 				time.sleep(0.1)
 		print("Connected")
-		self.send('run')
-		line = self.receive()
-		while "loop()" not in line:
+		if booting is True:
+			self.send('run')
 			line = self.receive()
+			while "loop()" not in line:
+				line = self.receive()
 
 
 	def receive(self):

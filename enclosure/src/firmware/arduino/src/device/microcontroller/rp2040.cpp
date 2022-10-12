@@ -121,19 +121,11 @@ bool Microcontroller::mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name) {
 
 
 
-TwoWire* Microcontroller::twowire_get(uint8_t instance) {
+TwoWire* Microcontroller::twowire_get(uint8_t instance, uint8_t pin_sda, uint8_t pin_scl) {
 	static TwoWire  twowire(i2c0, TWOWIRE_PIN_SDA, TWOWIRE_PIN_SCL);
-	       int      pin_sda = TWOWIRE_PIN_SDA;
-	       int      pin_scl = TWOWIRE_PIN_SCL;
 
 	if(instance > 0) {
 		return nullptr;
-	}
-	if(g_system_settings.count("device/mcp23X17:i2c/pin-sda") == 1) {
-		pin_sda = atoi(g_system_settings["device/mcp23X17:i2c/pin-sda"].c_str());
-	}
-	if(g_system_settings.count("device/mcp23X17:i2c/pin-scl") == 1) {
-		pin_scl = atoi(g_system_settings["device/mcp23X17:i2c/pin-scl"].c_str());
 	}
 	twowire.setSDA(pin_sda);
 	twowire.setSCL(pin_scl);

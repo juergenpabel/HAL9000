@@ -32,7 +32,7 @@ class Volume(EnclosureComponent):
 					self.config['alsa-cardindex'] = configuration.getint(alsa_section, 'cardindex', fallback=0)
 					self.config['alsa-range-raw-minimum'] = configuration.getint(alsa_section, 'range-raw-minimum', fallback=None)
 					self.config['alsa-range-raw-maximum'] = configuration.getint(alsa_section, 'range-raw-maximum', fallback=None)
-		if self.config['alsa-control'] is None:
+		if 'alsa-control' not in self.config or self.config['alsa-control'] is None:
 			self.daemon.logger.error("MISSING ALSA configuration => disabling volume control")
 			self.daemon.logger.info ("configure 'alsa-control' (and optionally 'alsa-cardindex' if not 0) in section 'alsa:*'")
 			if 'volume' in cortex['enclosure']:
