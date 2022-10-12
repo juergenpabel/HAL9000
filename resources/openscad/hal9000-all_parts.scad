@@ -1,11 +1,10 @@
 include <hal9000.scad>
 
-conf_display = "m5core2";
+conf_display = "roundypi"; // "roundypi";
 
-conf_rfid = true;
-conf_rotary = true;
-conf_button = false;
-conf_motion = true;
+conf_panel_rfid = true;
+conf_panel_rotary = true;
+conf_panel_motion = true;
 
 translate([+00.0,+37.5,+00.0]) hal9000_enclosure_bottom();
 translate([+00.0,+35.0,+00.0]) hal9000_enclosure_top();

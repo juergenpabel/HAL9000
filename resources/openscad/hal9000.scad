@@ -4,7 +4,6 @@
 $fn=120;
 conf_panel_rfid = false;
 conf_panel_rotary = false;
-conf_panel_button = false;
 conf_panel_motion = false;
 
 conf_display = "m5core2";
@@ -169,11 +168,6 @@ module hal9000_enclosure_panel() {
 		if (conf_panel_rfid == true) union() {
 			translate([+00.0,-09.0,+17.0]) cube([+56.0,+01.5,+34.0], center=true);
 		}
-		if (conf_panel_button == true) union() {
-			translate([+00.0,+03.0,+00.8]) cube([+40.5,+15.5,+01.6], center=true);
-			translate([-02.5,+03.0,+02.3]) cube([+31.0,+13.0,+01.4], center=true);
-			translate([-02.5,+03.0,+04.0]) cube([+31.0,+09.0,+02.0], center=true);
-		}
 		if (conf_panel_rotary == true) union() {
 			translate([-31.0,+03.5,+14.0]) cube([+16.0,+13.5,+2.0], center=true);
 			translate([-30.5,+03.5,+05.0]) cylinder(d=+13.5, h=+10.0, center=true);
@@ -243,13 +237,13 @@ module hal9000_component_display_frame_top_roundypi() {
 			translate([+00.0,+00.0,+01.0]) cylinder(d=+55.5,h=+02.0, center=true);
 			translate([+00.0,+00.0,+01.0]) cylinder(d=+41.3,h=+02.0, center=true);
 		}
-		union(/*waveshare or roundypi display inlet*/) {
+		union(/*roundypi display inlet*/) {
 			translate([+00.0,+00.0,+01.5]) cylinder(d=+33.0,h=+03.0, center=true);
 			hull() {
 				translate([+00.0,+00.0,+06.0]) cylinder(d=+40.0,h=+06.0, center=true);
 				translate([+00.0,+21.0,+06.0]) cube([+20.0,+10.0,+06.0], center=true);
 			}
-			translate([+00.0,-25.0,+07.0]) cube([+16.0,+20.0,+06.0], center=true);
+			translate([+00.0,-25.0,+07.5]) cube([+16.0,+20.0,+05.0], center=true);
 		}
 		union(/*frame cover inlet*/) {
 			hull() {
@@ -264,8 +258,8 @@ module hal9000_component_display_frame_top_roundypi() {
 			translate([+11.0,+29.5,+07.0]) cylinder(d2=+02.0,d1=+01.5,h=+06.0, center=true);
 		}
         union(/*rpi sd card overhang / gpio cable*/) {
-            translate([+00.0,-33.5,+06.0]) cube([+70.0,+03.0,+08.0], center=true);
-            translate([+00.0,+33.5,+06.0]) cube([+70.0,+03.0,+08.0], center=true);
+            translate([+00.0,-33.5,+07.5]) cube([+70.0,+03.0,+05.0], center=true);
+            translate([+00.0,+33.5,+07.5]) cube([+70.0,+03.0,+05.0], center=true);
         }
 	}
 }
@@ -283,17 +277,16 @@ module hal9000_component_display_frame_top_m5core2() {
 			translate([+00.0,+00.0,+01.0]) cylinder(d=+41.3,h=+02.0, center=true);
 		}
 		union(/*display hole*/) {
-			translate([+00.0,+00.0,+02.0]) cylinder(d=+33.0,h=+04.0, center=true);
+			translate([+00.0,+00.0,+02.5]) cylinder(d=+33.0,h=+05.0, center=true);
 		}
+		union(/*pi0 sdcard & gpio-cable*/) {
+			translate([+00.0,-35.0,+07.5]) cube([+54.5,+05.0,+05.0], center=true);
+        }
 		union(/*m5stack core2*/) {
-			translate([+00.0,+00.0,+12.0]) cube([+55.0,+55.0,+16.0], center=true);
-            translate([+00.0,+30.0,+12.0]) cube([+55.0,+15.0,+16.0], center=true);
+			translate([+00.0,+00.0,+12.5]) cube([+55.0,+55.0,+15.5], center=true);
+            translate([+00.0,+30.0,+12.5]) cube([+55.0,+15.0,+15.5], center=true);
 		}
 		union(/*screw holes*/) {
-			translate([-22.0,-30.0,+17.5]) cylinder(d2=+02.0,d1=+01.5,h=+05.0, center=true);
-			translate([+22.0,-30.0,+17.5]) cylinder(d2=+02.0,d1=+01.5,h=+05.0, center=true);
-			//translate([-22.0,+30.0,+17.5]) cylinder(d2=+02.0,d1=+01.5,h=+05.0, center=true);
-			//translate([+22.0,+30.0,+17.5]) cylinder(d2=+02.0,d1=+01.5,h=+05.0, center=true);
 			translate([-30.0,-22.0,+17.5]) cylinder(d2=+02.0,d1=+01.5,h=+05.0, center=true);
 			translate([+30.0,-22.0,+17.5]) cylinder(d2=+02.0,d1=+01.5,h=+05.0, center=true);
 			translate([-30.0,+22.0,+17.5]) cylinder(d2=+02.0,d1=+01.5,h=+05.0, center=true);
@@ -347,16 +340,7 @@ module hal9000_component_display_cover_roundypi(){
 				translate([-11.0,+29.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
 				translate([+11.0,+29.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
 			}
-            if(false)
-			union(/*waveshare 1.8" tft cable header & screw holes*/) {
-                translate([+00.0,-10.0,+01.0]) cube([+21.0,+12.5,+02.0], center=true);
-                translate([+00.0,-20.0,+01.0]) cube([+16.0,+10.0,+02.0], center=true);
-				translate([-13.2,-09.3,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
-				translate([+13.2,-09.3,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
-				translate([-13.2,+09.3,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
-				translate([+13.2,+09.3,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
-			}
-            union(/*roundypi gpio header & boot button*/) {
+            union(/*gpio header & boot button*/) {
                 translate([+00.0,-27.5,+03.5]) cube([+11.5,+20.0,+07.0], center=true);
                 
                 

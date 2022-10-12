@@ -1,11 +1,11 @@
 include <hal9000.scad>
+// this rendering is best viewed if in openscad preview mode, because colors are shown
+
+conf_display = "m5core2";
 
 conf_panel_rfid = true;
 conf_panel_rotary = true;
-conf_panel_button = false;
-conf_panel_motion = false;
-
-conf_display = "m5core2";
+conf_panel_motion = true;
 
 translate([+00.0,+00.0,+00.0]) rotate([+00,+00,+00]) hal9000_enclosure();
 translate([+47.5,+18.5,235.0]) rotate([180,+00,+00]) hal9000_enclosure_panel();
