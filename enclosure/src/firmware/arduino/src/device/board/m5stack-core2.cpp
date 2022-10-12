@@ -21,13 +21,13 @@ void Board::start(bool& host_booting) {
 	if(LittleFS.begin() != true) {
 		while(true) {
 			if(Serial) {
-				Serial.println("[\"syslog\", \"LittleFS.begin(), halting.\"]");
+				Serial.println("[\"syslog/fatal\", \"LittleFS.begin(), halting.\"]");
 			}
 			delay(1000);
 		}
 	}
 	if(PMU.begin(Wire1, AXP192_SLAVE_ADDRESS, 21, 22) != true) {
-		Serial.println("[\"syslog\", \"PMU.begin() failed\"");
+		Serial.println("[\"syslog/error\", \"PMU.begin() failed\"");
 		return;
 	}
 	PMU.setSysPowerDownVoltage(2700);
@@ -51,7 +51,7 @@ void Board::start(bool& host_booting) {
 
 void Board::reset(uint32_t timestamp, bool host_rebooting) {
 	if(Serial) {
-		Serial.println("[\"syslog\", \"resetting NOW.\"");
+		Serial.println("[\"syslog/info\", \"resetting NOW.\"");
 		Serial.flush();
 		delay(100);
 	}
@@ -61,7 +61,7 @@ void Board::reset(uint32_t timestamp, bool host_rebooting) {
 
 void Board::halt() {
 	if(Serial) {
-		Serial.println("[\"syslog\", \"halting NOW.\"");
+		Serial.println("[\"syslog/info\", \"halting NOW.\"");
 		Serial.flush();
 		delay(100);
 	}

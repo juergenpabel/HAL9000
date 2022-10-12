@@ -10,7 +10,7 @@ void system_start() {
 	g_device_board.start(host_booting);
 	if(host_booting == false) {
 		g_system_runtime["system/state:app/target"] = "waiting";
-		g_util_webserial.send("syslog", "host system not booting");
+		g_util_webserial.send("syslog/debug", "host system not booting");
 	}
 	if(host_booting == true) {
 		g_device_board.displayOn();
@@ -18,7 +18,7 @@ void system_start() {
 	g_gui_buffer = (uint16_t*)malloc(GUI_SCREEN_HEIGHT*GUI_SCREEN_WIDTH*sizeof(uint16_t));
 	if(g_gui_buffer == nullptr) {
 		while(true) {
-			g_util_webserial.send("syslog", "g_gui_buffer could not be malloc()ed, halting");
+			g_util_webserial.send("syslog/fatal", "g_gui_buffer could not be malloc()ed, halting");
 			delay(1000);
 		}
 	}

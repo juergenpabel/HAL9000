@@ -1,9 +1,8 @@
 #ifndef __ROUNDYPI_GLOBAL_H__
 #define __ROUNDYPI_GLOBAL_H__
 
-//TODO:include <FS.h>
-#include <JPEGDEC.h>
 #include <TFT_eSPI.h>
+#include <JPEGDEC.h>
 #include <ArduinoJson.h>
 
 #include "device/microcontroller/include.h"

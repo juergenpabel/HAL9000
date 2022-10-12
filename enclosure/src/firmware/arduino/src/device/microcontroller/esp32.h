@@ -1,5 +1,6 @@
 #ifndef __DEVICE_MICROCONTROLLER_ESP32_H__
 #define __DEVICE_MICROCONTROLLER_ESP32_H__
+
 #ifdef ARDUINO_ARCH_ESP32
 
 #include <freertos/FreeRTOS.h>

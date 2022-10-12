@@ -33,8 +33,8 @@ void on_gui_screen(const JsonVariant& body) {
 			etl::string<GLOBAL_FILENAME_SIZE> filename = body["splash"]["filename"].as<const char*>();
 
 			if(filename.substr(filename.size()-4,4).compare(".jpg") != 0) {
-				g_util_webserial.send("syslog", "on_gui_screen() => 'splash' screen called with non-jpeg filename (*.jpg)");
-				g_util_webserial.send("syslog", filename);
+				g_util_webserial.send("syslog/warn", "on_gui_screen() => 'splash' screen called with non-jpeg filename (*.jpg)");
+				g_util_webserial.send("syslog/warn", filename);
 				return;
 			}
 			g_system_runtime["gui/screen:splash/filename"] = filename;

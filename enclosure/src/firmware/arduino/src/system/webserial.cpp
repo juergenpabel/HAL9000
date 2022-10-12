@@ -15,11 +15,11 @@ void on_system_app(const JsonVariant& data) {
 			etl::string<10> reboot("reboot");
 
 			if(poweroff.compare(data["shutdown"]["target"].as<const char*>()) == 0) {
-				g_util_webserial.send("syslog", "system/app#target=poweroff");
+				g_util_webserial.send("syslog/debug", "system/app#target=poweroff");
 				g_system_runtime["system/state:app/target"] = "halting";
 			}
 			if(reboot.compare(data["shutdown"]["target"].as<const char*>()) == 0) {
-				g_util_webserial.send("syslog", "system/app#target=reboot");
+				g_util_webserial.send("syslog/debug", "system/app#target=reboot");
 				g_system_runtime["system/state:app/target"] = "rebooting";
 			}
 			Serial.flush();
@@ -31,11 +31,11 @@ void on_system_app(const JsonVariant& data) {
 
 void on_system_mcu(const JsonVariant& data) {
 	if(data.containsKey("reset")) {
-		g_util_webserial.send("syslog", "system/mcu#reset");
+		g_util_webserial.send("syslog/debug", "system/mcu#reset");
 		g_device_microcontroller.reset(now(), false);
 	}
 	if(data.containsKey("halt")) {
-		g_util_webserial.send("syslog", "system/mcu#halt");
+		g_util_webserial.send("syslog/debug", "system/mcu#halt");
 		g_device_microcontroller.halt();
 	}
 }
@@ -59,9 +59,9 @@ void on_system_runtime(const JsonVariant& data) {
 		value = data["set"]["value"].as<const char*>();
 		if(key.length() > 0 && value.length() > 0) {
 			g_system_runtime[key.c_str()] = value.c_str();
-			g_util_webserial.send("syslog", "system/runtime#set => OK");
+			g_util_webserial.send("syslog/debug", "system/runtime#set => OK");
 		} else {
-			g_util_webserial.send("syslog", "system/runtime#set => ERROR");
+			g_util_webserial.send("syslog/debug", "system/runtime#set => ERROR");
 		}
 	}
 }
@@ -88,9 +88,9 @@ void on_system_settings(const JsonVariant& data) {
 				result["value"] = g_system_settings[key].c_str();
 			}
 			g_util_webserial.send("system/settings#get", result);
-			g_util_webserial.send("syslog", "system/settings#get => OK");
+			g_util_webserial.send("syslog/debug", "system/settings#get => OK");
 		} else {
-			g_util_webserial.send("syslog", "system/settings#get => ERROR");
+			g_util_webserial.send("syslog/debug", "system/settings#get => ERROR");
 		}
 	}
 	if(data.containsKey("set")) {
@@ -101,30 +101,30 @@ void on_system_settings(const JsonVariant& data) {
 		value = data["set"]["value"].as<const char*>();
 		if(key.length() > 0 && value.length() > 0) {
 			g_system_settings[key] = value;
-			g_util_webserial.send("syslog", "system/settings#set => OK");
+			g_util_webserial.send("syslog/debug", "system/settings#set => OK");
 		} else {
-			g_util_webserial.send("syslog", "system/settings#set => ERROR");
+			g_util_webserial.send("syslog/debug", "system/settings#set => ERROR");
 		}
 	}
 	if(data.containsKey("load")) {
 		if(g_system_settings.load() == true) {
-			g_util_webserial.send("syslog", "system/settings#load => OK");
+			g_util_webserial.send("syslog/debug", "system/settings#load => OK");
 		} else {
-			g_util_webserial.send("syslog", "system/settings#load => ERROR");
+			g_util_webserial.send("syslog/debug", "system/settings#load => ERROR");
 		}
 	}
 	if(data.containsKey("save")) {
 		if(g_system_settings.save() == true) {
-			g_util_webserial.send("syslog", "system/settings#save => OK");
+			g_util_webserial.send("syslog/debug", "system/settings#save => OK");
 		} else {
-			g_util_webserial.send("syslog", "system/settings#save => ERROR");
+			g_util_webserial.send("syslog/debug", "system/settings#save => ERROR");
 		}
 	}
 	if(data.containsKey("reset")) {
 		if(g_system_settings.reset() == true) {
-			g_util_webserial.send("syslog", "system/settings#reset => OK");
+			g_util_webserial.send("syslog/debug", "system/settings#reset => OK");
 		} else {
-			g_util_webserial.send("syslog", "system/settings#reset => ERROR");
+			g_util_webserial.send("syslog/debug", "system/settings#reset => ERROR");
 		}
 	}
 }
@@ -153,7 +153,7 @@ void on_system_time(const JsonVariant& data) {
 
 
 void on_system_reset(const JsonVariant& data) {
-	g_util_webserial.send("syslog", "Resetting system...");
+	g_util_webserial.send("syslog/info", "Resetting system...");
 	system_reset();
 }
 

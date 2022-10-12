@@ -1,5 +1,6 @@
 #ifndef __DEVICE_MICROCONTROLLER_RP2040_H__
 #define __DEVICE_MICROCONTROLLER_RP2040_H__
+
 #ifdef ARDUINO_ARCH_RP2040
 
 #include <pico/mutex.h>

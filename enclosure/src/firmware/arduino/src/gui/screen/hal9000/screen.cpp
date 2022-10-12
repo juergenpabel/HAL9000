@@ -33,7 +33,7 @@ void gui_screen_hal9000(bool refresh) {
 		if(queue.is<JsonArray>() == false || queue.as<JsonArray>().size() == 0) {
 			g_system_runtime["gui/screen:hal9000/queue"] = "[]";
 			if(frame_loop == false) {
-				g_util_webserial.send("syslog", "gui_screen_hal9000() => empty queue and loop=false, switching to screen 'idle'");
+				g_util_webserial.send("syslog/debug", "gui_screen_hal9000() => empty queue and loop=false, switching to screen 'idle'");
 				frame_next = GUI_SCREEN_HAL9000_SEQUENCE_FRAMES_MAX;
 				gui_screen_set(gui_screen_idle);
 				return;
@@ -80,12 +80,12 @@ static void sequence_load(const char* name) {
 			g_sequence_frames[i].size = file.size();
 			if(g_sequence_frames[i].size > sizeof(jpg_t::data)) {
 				g_sequence_frames[i].size = 0;
-				g_util_webserial.send("syslog", etl::string<UTIL_WEBSERIAL_BODY_SIZE>("JPEG file '").append(filename).append("' too big, skipping"));
+				g_util_webserial.send("syslog/warn", etl::string<UTIL_WEBSERIAL_BODY_SIZE>("JPEG file '").append(filename).append("' too big, skipping"));
 			}
 			file.read(g_sequence_frames[i].data, g_sequence_frames[i].size);
 			file.close();
 		}
 	}
-	g_util_webserial.send("syslog", etl::string<UTIL_WEBSERIAL_BODY_SIZE>("Frames '").append(name).append("' loaded from littlefs:").append(directory));
+	g_util_webserial.send("syslog/debug", etl::string<UTIL_WEBSERIAL_BODY_SIZE>("Frames '").append(name).append("' loaded from littlefs:").append(directory));
 }
 

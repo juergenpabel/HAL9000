@@ -15,7 +15,7 @@
 void setup() {
 	system_start();
 	if(g_system_settings.load() == false) {
-		g_util_webserial.send("syslog", "setup() failed to load settings from littlefs");
+		g_util_webserial.send("syslog/error", "setup() failed to load settings from littlefs");
 		g_system_settings.reset();
 	}
 	g_system_runtime["system/state:conciousness"] = "awake";
@@ -24,13 +24,13 @@ void setup() {
 		g_device_board.displayOff();
 	}
 	if(g_system_runtime["system/state:app/target"].compare("booting") == 0) {
-		g_util_webserial.send("syslog", "booting (showing startup animation)...");
+		g_util_webserial.send("syslog/info", "booting (showing startup animation)...");
 		gui_screen_set(gui_screen_animation_startup);
 		while(gui_screen_get() == gui_screen_animation_startup) {
 			gui_screen_update(g_system_runtime.isAwake());
 		}
 	}
-	g_util_webserial.send("syslog", "booting done");
+	g_util_webserial.send("syslog/info", "booting finished");
 	if(!Serial) {
 		g_system_runtime["system/state:app/target"] = "waiting";
 		g_system_runtime["gui/screen:splash/filename"] = "error.jpg";
@@ -47,20 +47,20 @@ void setup() {
 		}
 	}
 	if(Serial) {
-		g_util_webserial.send("syslog", "waiting for 'run' from host...");
+		g_util_webserial.send("syslog/info", "waiting for 'run' from host...");
 		while(Serial.available() == 0) {
 			delay(100);
 		}
 		while(Serial.read() != '\n') {
 			delay(10);
 		}
-		g_util_webserial.send("syslog", "got 'run' from host, running...");
+		g_util_webserial.send("syslog/info", "got 'run' from host, running...");
 	}
 	g_system_runtime["system/state:app/target"] = "running";
 	gui_screen_set(gui_screen_idle);
 	g_util_webserial.update();
 
-	g_util_webserial.send("syslog", "setup()");
+	g_util_webserial.send("syslog/debug", "setup()");
 	g_util_webserial.set("system/app", on_system_app);
 	g_util_webserial.set("system/mcu", on_system_mcu);
 	g_util_webserial.set("system/time", on_system_time);
@@ -71,7 +71,7 @@ void setup() {
 	g_util_webserial.set("device/display", on_device_display);
 	g_util_webserial.set("gui/screen", on_gui_screen);
 	g_util_webserial.set("gui/overlay", on_gui_overlay);
-	g_util_webserial.send("syslog", "loop()");
+	g_util_webserial.send("syslog/debug", "loop()");
 }
 
 

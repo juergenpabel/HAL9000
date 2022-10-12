@@ -10,9 +10,9 @@ bool MCP23X17_Device::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_nam
 	bool  result = false;
 
 	if(this->isConfigured()) {
-		g_util_webserial.send("syslog", "MCP23X17_Device::configure(): instance already configured");
-		g_util_webserial.send("syslog", this->device_type);
-		g_util_webserial.send("syslog", this->device_name);
+		g_util_webserial.send("syslog/warn", "MCP23X17_Device::configure(): instance already configured");
+		g_util_webserial.send("syslog/warn", this->device_type);
+		g_util_webserial.send("syslog/warn", this->device_name);
 		return false;
 	}
 	this->device_name = device_name;
@@ -50,9 +50,9 @@ bool MCP23X17_OutputDevice::configure(const etl::string<GLOBAL_VALUE_SIZE>& devi
 	bool  result = false;
 
 	if(this->isConfigured()) {
-		g_util_webserial.send("syslog", "MCP23X17_OutputDevice::configure(): instance already configured");
-		g_util_webserial.send("syslog", this->device_type);
-		g_util_webserial.send("syslog", this->device_name);
+		g_util_webserial.send("syslog/warn", "MCP23X17_OutputDevice::configure(): instance already configured");
+		g_util_webserial.send("syslog/warn", this->device_type);
+		g_util_webserial.send("syslog/warn", this->device_name);
 		return false;
 	}
 	result = MCP23X17_Device::configure(device_name);
@@ -64,20 +64,20 @@ bool MCP23X17_OutputDevice::configure(const etl::string<GLOBAL_VALUE_SIZE>& devi
 
 		output = outputs[i].as<JsonObject>();
 		if(output.containsKey("pin") == false || output.containsKey("label") == false || output.containsKey("value") == false) {
-			g_util_webserial.send("syslog", "MCP23X17_OutputDevice::configure(): incomplete pin configuration");
-			g_util_webserial.send("syslog", output);
+			g_util_webserial.send("syslog/error", "MCP23X17_OutputDevice::configure(): incomplete pin configuration");
+			g_util_webserial.send("syslog/error", output);
 			return false;
 		}
 		pin = output["pin"].as<const char*>();
 		if(pin == nullptr || (pin[0] != 'A' && pin[0] != 'B') || pin[1] < 0x30 || pin[1] > 0x39) {
-			g_util_webserial.send("syslog", "MCP23X17_OutputDevice::configure(): invalid pin in outputs (A0-A7,B0-B7)");
-			g_util_webserial.send("syslog", pin);
+			g_util_webserial.send("syslog/error", "MCP23X17_OutputDevice::configure(): invalid pin in outputs (A0-A7,B0-B7)");
+			g_util_webserial.send("syslog/error", pin);
 			return false;
 		}
 		value = output["value"].as<const char*>();
 		if(value == nullptr || (value[0] != 'h' && value[0] != 'l')) {
-			g_util_webserial.send("syslog", "MCP23X17_OutputDevice::configure(): invalid value in output (low, high)");
-			g_util_webserial.send("syslog", value);
+			g_util_webserial.send("syslog/error", "MCP23X17_OutputDevice::configure(): invalid value in output (low, high)");
+			g_util_webserial.send("syslog/error", value);
 			return false;
 		}
 		gpio = (pin[0]-'A')*8 + pin[1]-'0';
@@ -108,9 +108,9 @@ bool MCP23X17_InputDevice::configure(const etl::string<GLOBAL_VALUE_SIZE>& devic
 	bool  result = false;
 
 	if(this->isConfigured()) {
-		g_util_webserial.send("syslog", "MCP23X17_InputDevice::configure(): instance already configured");
-		g_util_webserial.send("syslog", this->device_type);
-		g_util_webserial.send("syslog", this->device_name);
+		g_util_webserial.send("syslog/warn", "MCP23X17_InputDevice::configure(): instance already configured");
+		g_util_webserial.send("syslog/warn", this->device_type);
+		g_util_webserial.send("syslog/warn", this->device_name);
 		return false;
 	}
 	this->device_name = device_name;
@@ -166,15 +166,15 @@ static const unsigned char ttable[7][4] = {
 bool MCP23X17_Rotary::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
 	this->rotary_state = R_START;
 	if(MCP23X17_InputDevice::configure(device_name, mcp23X17, inputs, events) == false) {
-		g_util_webserial.send("syslog", "MCP23X17_Rotary::configure() failed");
+		g_util_webserial.send("syslog/error", "MCP23X17_Rotary::configure() failed");
 		return false;
 	}
 	if(inputs.size() < 2) {
-		g_util_webserial.send("syslog", "MCP23X17_Rotary::configure() => inputs not a list (or empty/missing/incomplete)");
+		g_util_webserial.send("syslog/error", "MCP23X17_Rotary::configure() => inputs not a list (or empty/missing/incomplete)");
 		return false;
 	}
 	if(inputs.size() > 2) {
-		g_util_webserial.send("syslog", "MCP23X17_Rotary::configure() => inputs contains more than two entries, using only first two");
+		g_util_webserial.send("syslog/warn", "MCP23X17_Rotary::configure() => inputs contains more than two entries, using only first two");
 	}
 	for(uint8_t i=0; i<2; i++) {
 		JsonObject   input;
@@ -183,14 +183,14 @@ bool MCP23X17_Rotary::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_nam
 
 		input = inputs[i].as<JsonObject>();
 		if(input.containsKey("pin") == false || input.containsKey("label") == false) {
-			g_util_webserial.send("syslog", "MCP23X17_Rotary::configure(): incomplete pin configuration");
-			g_util_webserial.send("syslog", input);
+			g_util_webserial.send("syslog/error", "MCP23X17_Rotary::configure(): incomplete pin configuration");
+			g_util_webserial.send("syslog/error", input);
 			return false;
 		}
 		pin = input["pin"].as<const char*>();
 		if(pin == nullptr || (pin[0] != 'A' && pin[0] != 'B') || pin[1] < 0x30 || pin[1] > 0x39) {
-			g_util_webserial.send("syslog", "MCP23X17_Rotary::configure(): invalid pin in inputs (A0-A7,B0-B7)");
-			g_util_webserial.send("syslog", pin);
+			g_util_webserial.send("syslog/error", "MCP23X17_Rotary::configure(): invalid pin in inputs (A0-A7,B0-B7)");
+			g_util_webserial.send("syslog/error", pin);
 			return false;
 		}
 		gpio = (pin[0]-'A')*8 + pin[1]-'0';
@@ -230,11 +230,11 @@ bool MCP23X17_Switch::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_nam
 
 	result = MCP23X17_InputDevice::configure(device_name, mcp23X17, inputs, events);
 	if(inputs.size() == 0) {
-		g_util_webserial.send("syslog", "MCP23X17_Switch::configure() => inputs not a list (or empty/missing)");
+		g_util_webserial.send("syslog/error", "MCP23X17_Switch::configure() => inputs not a list (or empty/missing)");
 		return false;
 	}
 	if(inputs.size() > 1) {
-		g_util_webserial.send("syslog", "MCP23X17_Switch::configure() => inputs contains more than one entry, using only first one");
+		g_util_webserial.send("syslog/warn", "MCP23X17_Switch::configure() => inputs contains more than one entry, using only first one");
 	}
 	if(result) {
 		const char*  pin;
@@ -243,14 +243,14 @@ bool MCP23X17_Switch::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_nam
 
 		pin = nullptr;
 		if(inputs[0].containsKey("pin") == false || inputs[0].containsKey("label") == false) {
-			g_util_webserial.send("syslog", "MCP23X17_Switch::configure(): incomplete pin configuration");
-			g_util_webserial.send("syslog", inputs[0].as<JsonVariant>());
+			g_util_webserial.send("syslog/error", "MCP23X17_Switch::configure(): incomplete pin configuration");
+			g_util_webserial.send("syslog/error", inputs[0].as<JsonVariant>());
 			return false;
 		}
 		pin = inputs[0]["pin"].as<const char*>();
 		if(pin == nullptr || (pin[0] != 'A' && pin[0] != 'B') || pin[1] < 0x30 || pin[1] > 0x39) {
-			g_util_webserial.send("syslog", "MCP23X17_Switch::configure(): invalid pin in inputs (A0-A7,B0-B7)");
-			g_util_webserial.send("syslog", pin);
+			g_util_webserial.send("syslog/error", "MCP23X17_Switch::configure(): invalid pin in inputs (A0-A7,B0-B7)");
+			g_util_webserial.send("syslog/error", pin);
 			return false;
 		}
 		if(inputs[0].containsKey("pullup")) {

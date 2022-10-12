@@ -54,7 +54,7 @@ void WebSerial::update() {
 		size_t serial_available = Serial.available();
 		if(serial_available > 0) {
 			if(serial_input_pos == UTIL_WEBSERIAL_LINE_SIZE) {
-				this->send("syslog", "WebSerial::update() => line buffer full, no newline (\\n) found: dropping line buffer (data loss)");
+				this->send("syslog/warn", "WebSerial::update() => line buffer full, no newline (\\n) found: dropping line buffer (data loss)");
 				serial_input_pos = 0;
 			}
 			serial_input_pos += Serial.readBytes(serial_buffer+serial_input_pos, min(serial_available, UTIL_WEBSERIAL_LINE_SIZE-serial_input_pos));
