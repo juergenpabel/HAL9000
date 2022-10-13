@@ -277,7 +277,7 @@ module hal9000_component_display_frame_top_m5core2() {
 			translate([+00.0,+00.0,+01.0]) cylinder(d=+41.3,h=+02.0, center=true);
 		}
 		union(/*display hole*/) {
-			translate([+00.0,+00.0,+02.5]) cylinder(d=+29.0,h=+05.0, center=true);
+			translate([+00.0,+00.0,+02.5]) cylinder(d=+30.0,h=+05.0, center=true);
 		}
 		union(/*pi0 sdcard & gpio-cable*/) {
 			translate([+00.0,-35.0,+07.5]) cube([+54.5,+05.0,+05.0], center=true);
