@@ -20,6 +20,7 @@ gui_screen_func gui_screen_set(gui_screen_func new_screen) {
 	if(new_screen != nullptr) {
 		g_gui_screen = new_screen;
 		g_gui_screen_forced_refresh = true;
+		g_gui.fillScreen(TFT_BLACK);
 	}
 	return previous_screen;
 }
@@ -37,7 +38,7 @@ void gui_screen_update(bool refresh) {
 	}
 	gui_overlay_update(refresh);
 	g_gui_screen(refresh);
-	g_gui_overlay.pushSprite(0, 0, TFT_BLACK);
+	g_gui_overlay.pushSprite((TFT_WIDTH-GUI_SCREEN_WIDTH)/2, (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2, TFT_BLACK);
 }
 
 

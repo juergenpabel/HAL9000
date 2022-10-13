@@ -23,7 +23,7 @@ void system_start() {
 		}
 	}
 	g_gui.begin();
-	g_gui.setRotation(2);
+	g_gui.setRotation(TFT_ORIENTATION);
 	g_gui.fillScreen(TFT_BLACK);
 	g_gui.setTextColor(TFT_WHITE);
 	g_gui.setTextFont(1);

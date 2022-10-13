@@ -18,6 +18,7 @@ Board::Board()
 
 void Board::start(bool& host_booting) {
 	Serial.begin(115200);
+	delay(100);
 	if(LittleFS.begin() != true) {
 		while(true) {
 			if(Serial) {
@@ -40,7 +41,7 @@ void Board::start(bool& host_booting) {
 	PMU.pinMode(PMU_GPIO4, OUTPUT);
 	PMU.digitalWrite(PMU_GPIO4, 1);
 	PMU.setDC2Voltage(3300); //display
-	PMU.setDC3Voltage(3300); //backlight
+	PMU.setDC3Voltage(3000); //backlight
 	PMU.setLDO2Voltage(3300); //display
 	PMU.enableDC2();
 	PMU.enableDC3();

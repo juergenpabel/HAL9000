@@ -30,9 +30,10 @@ void util_jpeg_decode565_ram(uint8_t* jpeg_data, uint32_t jpeg_size, uint16_t* i
 		return;
 	}
 	if(image565_data != nullptr && image565_size > 0) {
-		if(g_util_jpeg.getWidth()*g_util_jpeg.getHeight() != (int)image565_size) {
-			g_util_webserial.send("syslog/error", "util_jpeg_decode565_ram() -> provided buffer is not the correct size (jpeg:width*height)");
+		if(g_util_jpeg.getWidth()*g_util_jpeg.getHeight()*sizeof(uint16_t) > (int)image565_size) {
+			g_util_webserial.send("syslog/error", "util_jpeg_decode565_ram() -> provided buffer is too small (jpeg.width*jpeg.height*sizeof(uint16_t))");
 			g_util_jpeg.close();
+			return;
 		}
 	}
 	g_util_jpeg.setPixelType(RGB565_BIG_ENDIAN);
