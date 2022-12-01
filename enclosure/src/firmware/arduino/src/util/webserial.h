@@ -16,10 +16,11 @@ class WebSerial {
 		etl::queue<etl::string<UTIL_WEBSERIAL_LINE_SIZE>, UTIL_WEBSERIAL_QUEUE_SEND_MAX> queue_send;
 	public:
 		WebSerial();
+		void begin();
 		void update();
 		void set(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, webserial_command_func handler);
 		void send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const JsonVariant& data);
-		void send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const etl::string<UTIL_WEBSERIAL_BODY_SIZE>& data);
+		void send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const etl::string<UTIL_WEBSERIAL_DATA_SIZE>& data, bool data_stringify = true);
 };
 
 #endif

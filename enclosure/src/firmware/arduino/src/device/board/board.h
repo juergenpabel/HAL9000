@@ -4,8 +4,8 @@
 
 class AbstractBoard {
 	public:
-		AbstractBoard() {};
-		virtual void start(bool& host_booting) = 0;
+		AbstractBoard();
+		virtual void start(bool& host_booting);
 		virtual void reset(uint32_t timestamp, bool host_rebooting) = 0;
 		virtual void halt() = 0;
 

@@ -80,12 +80,12 @@ static void sequence_load(const char* name) {
 			g_sequence_frames[i].size = file.size();
 			if(g_sequence_frames[i].size > sizeof(jpg_t::data)) {
 				g_sequence_frames[i].size = 0;
-				g_util_webserial.send("syslog/warn", etl::string<UTIL_WEBSERIAL_BODY_SIZE>("JPEG file '").append(filename).append("' too big, skipping"));
+				g_util_webserial.send("syslog/warn", etl::string<UTIL_WEBSERIAL_DATA_SIZE>("JPEG file '").append(filename).append("' too big, skipping"));
 			}
 			file.read(g_sequence_frames[i].data, g_sequence_frames[i].size);
 			file.close();
 		}
 	}
-	g_util_webserial.send("syslog/debug", etl::string<UTIL_WEBSERIAL_BODY_SIZE>("Frames '").append(name).append("' loaded from littlefs:").append(directory));
+	g_util_webserial.send("syslog/debug", etl::string<UTIL_WEBSERIAL_DATA_SIZE>("Frames '").append(name).append("' loaded from littlefs:").append(directory));
 }
 

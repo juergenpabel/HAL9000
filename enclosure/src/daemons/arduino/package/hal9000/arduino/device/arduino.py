@@ -22,7 +22,7 @@ class Device(HAL9000_Device):
 				topic, payload = json.loads(line)
 				if topic.startswith("syslog"):
 					log_level = logging.INFO
-					if topic.contains('/'):
+					if topic.find('/') >= 0:
 						syslog, level = topic.split('/', 1)
 						if isinstance(level, str):
 							if hasattr(logging, level.upper()):

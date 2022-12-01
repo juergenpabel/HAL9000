@@ -7,9 +7,10 @@ void gui_screen_menu(bool refresh) {
 	static etl::string<GLOBAL_VALUE_SIZE>  menu_title;
 	static etl::string<GLOBAL_VALUE_SIZE>  menu_item;
 
-	if(refresh) {
+	if(refresh == true) {
 		menu_title.clear();
 		menu_item.clear();
+		g_gui.fillScreen(TFT_BLACK);
 	}
 	if(menu_title != g_system_runtime["gui/screen:menu/title"] || menu_item != g_system_runtime["gui/screen:menu/text"]) {
 		menu_title = g_system_runtime["gui/screen:menu/title"];

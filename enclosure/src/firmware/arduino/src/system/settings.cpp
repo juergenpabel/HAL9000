@@ -6,7 +6,7 @@
 
 #define LINE_SIZE (GLOBAL_KEY_SIZE + 1 + GLOBAL_VALUE_SIZE + 1)
 
-typedef etl::string<UTIL_WEBSERIAL_BODY_SIZE> LogString;
+typedef etl::string<UTIL_WEBSERIAL_DATA_SIZE> LogString;
 
 
 Settings::Settings(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {

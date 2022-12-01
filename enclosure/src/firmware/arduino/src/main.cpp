@@ -31,11 +31,11 @@ void setup() {
 		}
 	}
 	g_util_webserial.send("syslog/info", "booting finished");
-	if(!Serial) {
+	if(Serial == false) {
 		g_system_runtime["system/state:app/target"] = "waiting";
 		g_system_runtime["gui/screen:splash/filename"] = "error.jpg";
 		gui_screen_set(gui_screen_splash);
-		while(!Serial) {
+		while(Serial == false) {
 			gui_screen_update(false);
 			g_system_runtime.update();
 			if(g_system_runtime.isAwake()) {
@@ -46,7 +46,7 @@ void setup() {
 			delay(1000);
 		}
 	}
-	if(Serial) {
+	if(Serial == true) {
 		g_util_webserial.send("syslog/info", "waiting for 'run' from host...");
 		while(Serial.available() == 0) {
 			delay(100);
@@ -71,12 +71,12 @@ void setup() {
 	g_util_webserial.set("device/display", on_device_display);
 	g_util_webserial.set("gui/screen", on_gui_screen);
 	g_util_webserial.set("gui/overlay", on_gui_overlay);
-	g_util_webserial.send("syslog/debug", "loop()");
+	g_util_webserial.send("system/app", "loop()");
 }
 
 
 void loop() {
-	if(!Serial) {
+	if(Serial == false) {
 		etl::string<GLOBAL_VALUE_SIZE>& app_target = g_system_runtime["system/state:app/target"];
 
 		if(app_target.compare("rebooting") == 0 || app_target.compare("halting") == 0) {

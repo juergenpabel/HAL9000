@@ -17,8 +17,7 @@ Board::Board()
 
 
 void Board::start(bool& host_booting) {
-	Serial.begin(115200);
-	delay(100);
+	AbstractBoard::start(host_booting);
 	if(LittleFS.begin() != true) {
 		while(true) {
 			if(Serial) {

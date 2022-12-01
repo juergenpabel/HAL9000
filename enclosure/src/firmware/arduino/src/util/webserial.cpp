@@ -7,33 +7,62 @@
 
 
 WebSerial::WebSerial() {
-	g_device_microcontroller.mutex_create("webserial");
 }
 
 
-void WebSerial::send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const etl::string<UTIL_WEBSERIAL_BODY_SIZE>& body) {
-	etl::string<UTIL_WEBSERIAL_LINE_SIZE> message;
+void WebSerial::begin() {
+	g_device_microcontroller.mutex_create("webserial::set", false);
+	g_device_microcontroller.mutex_create("webserial::send", false);
+	g_device_microcontroller.mutex_create("webserial::update", false);
+	g_device_microcontroller.mutex_create("webserial.queue_recv", false);
+	g_device_microcontroller.mutex_create("webserial.queue_send", false);
+}
 
+
+void WebSerial::send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const etl::string<UTIL_WEBSERIAL_DATA_SIZE>& data, bool data_stringify) {
+	static etl::string<UTIL_WEBSERIAL_LINE_SIZE> message;
+
+	g_device_microcontroller.mutex_enter("webserial::send");
 	message = "[\"";
 	message += topic;
 	message += "\", ";
-	message += body;
+	if(data_stringify == true) {
+		static etl::string<UTIL_WEBSERIAL_DATA_SIZE> data_stringified;
+		       size_t pos = 0;
+
+		data_stringified = data;
+		pos = data_stringified.find('"', pos);
+		while(pos != data_stringified.npos) {
+			data_stringified.replace(pos, 1, "\\\"");
+			pos = data_stringified.find('"', pos+2);
+		}
+		message += "\"";
+		message += data_stringified;
+		message += "\"";
+	} else {
+		message += data;
+	}
 	message += "]";
-	if(Serial == false || g_device_microcontroller.mutex_try_enter("webserial") == false) {
+
+	if(Serial == false || g_device_microcontroller.mutex_try_enter("Serial") == false) {
+		g_device_microcontroller.mutex_enter("webserial.queue_send");
 		this->queue_send.push(message);
+		g_device_microcontroller.mutex_exit("webserial.queue_send");
+		g_device_microcontroller.mutex_exit("webserial::send");
 		return;
 	}
 	Serial.write(message.c_str());
 	Serial.write('\n');
-	g_device_microcontroller.mutex_exit("webserial");
+	g_device_microcontroller.mutex_exit("Serial");
+	g_device_microcontroller.mutex_exit("webserial::send");
 }
 
 
-void WebSerial::send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const JsonVariant& data) {
-	char body[UTIL_WEBSERIAL_BODY_SIZE] = {0};
+void WebSerial::send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const JsonVariant& json) {
+	char data[UTIL_WEBSERIAL_DATA_SIZE] = {0};
 
-	serializeJson(data, body);
-	this->send(topic, body);
+	serializeJson(json, data);
+	this->send(topic, data, false);
 }
 
 
@@ -41,17 +70,24 @@ void WebSerial::update() {
 	static char                                  serial_buffer[UTIL_WEBSERIAL_LINE_SIZE] = {0};
 	static etl::string<UTIL_WEBSERIAL_LINE_SIZE> serial_input;
 	static size_t                                serial_input_pos = 0;
+	       size_t                                serial_available = 0;
 
-	if(Serial) {
-		g_device_microcontroller.mutex_enter("webserial");
-		if(this->queue_send.size() > 0) {
+	if(Serial == false) {
+		return;
+	}
+	if(this->queue_send.size() > 0) {
+		if(g_device_microcontroller.mutex_try_enter("webserial.queue_send") == true) {
 			while(this->queue_send.empty() == false) {
 				Serial.write(this->queue_send.front().c_str());
 				Serial.write('\n');
 				this->queue_send.pop();
 			}
+			g_device_microcontroller.mutex_exit("webserial.queue_send");
 		}
-		size_t serial_available = Serial.available();
+	}
+	if(g_device_microcontroller.mutex_try_enter("webserial::update") == true) {
+		g_device_microcontroller.mutex_enter("Serial");
+		serial_available = Serial.available();
 		if(serial_available > 0) {
 			if(serial_input_pos == UTIL_WEBSERIAL_LINE_SIZE) {
 				this->send("syslog/warn", "WebSerial::update() => line buffer full, no newline (\\n) found: dropping line buffer (data loss)");
@@ -93,16 +129,19 @@ void WebSerial::update() {
 				}
 			}
 		}
-		g_device_microcontroller.mutex_exit("webserial");
+		g_device_microcontroller.mutex_exit("Serial");
+		g_device_microcontroller.mutex_exit("webserial::update");
 	}
 }
 
 
 void WebSerial::set(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, webserial_command_func handler) {
+	g_device_microcontroller.mutex_enter("webserial::set");
 	if(handler != nullptr) {
 		this->commands[topic] = handler;
 	} else {
 		this->commands.erase(topic);
 	}
+	g_device_microcontroller.mutex_exit("webserial::set");
 }
 

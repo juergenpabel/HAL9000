@@ -7,15 +7,15 @@
 #include "globals.h"
 
 
-Board::Board() {
-	Serial.begin(115200);
-	delay(100);
+Board::Board()
+      :AbstractBoard() {
 }
 
 
 void Board::start(bool& host_booting) {
 	uint32_t  epoch = 0;
 
+	AbstractBoard::start(host_booting);
 	g_device_microcontroller.start(epoch, host_booting);
 	if(epoch > 0) {
 		setTime(epoch);

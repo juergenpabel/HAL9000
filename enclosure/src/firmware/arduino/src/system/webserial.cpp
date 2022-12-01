@@ -22,8 +22,10 @@ void on_system_app(const JsonVariant& data) {
 				g_util_webserial.send("syslog/debug", "system/app#target=reboot");
 				g_system_runtime["system/state:app/target"] = "rebooting";
 			}
+			g_device_microcontroller.mutex_enter("Serial");
 			Serial.flush();
 			Serial.end();
+			g_device_microcontroller.mutex_exit("Serial");
 		}
 	}
 }
@@ -137,17 +139,22 @@ void on_system_time(const JsonVariant& data) {
 		}
 	}
 	if(data.containsKey("config")) {
-		int interval_secs = SYSTEM_RUNTIME_TIME_SYNC_INTERVAL;
+		if(data["config"].containsKey("epoch")) {
+			time_t epoch = 0;
 
-		if(g_system_runtime.count("system/time:sync/interval") == 1) {
-			interval_secs = atoi(g_system_runtime["system/time:sync/interval"].c_str());
+			epoch = data["config"]["epoch"].as<unsigned long>();
+			if(epoch > 0) {
+				setTime(epoch);
+			}
 		}
 		if(data["config"].containsKey("interval")) {
-			interval_secs = data["config"]["interval"].as<int>();
+			int interval_secs = data["config"]["interval"].as<int>();
 			etl::to_string(interval_secs, g_system_runtime["system/time:sync/interval"]);
+			if(interval_secs > 0) {
+				setSyncProvider(system_time_sync);
+				setSyncInterval(interval_secs);
+			}
 		}
-		setSyncProvider(system_time_sync);
-		setSyncInterval(interval_secs);
 	}
 }
 

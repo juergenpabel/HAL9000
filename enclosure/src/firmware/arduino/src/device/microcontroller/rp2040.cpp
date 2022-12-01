@@ -63,13 +63,13 @@ void Microcontroller::halt() {
 }
 
 
-bool Microcontroller::mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name) {
+bool Microcontroller::mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name, bool recursive) {
 	bool result = false;
 
 	if(this->mutex_map.count(name) == 0) {
 		if(this->mutex_map.size() < this->mutex_map.capacity()) {
 			this->mutex_map[name] = {0};
-			recursive_mutex_init(&this->mutex_map[name]);
+			recursive_mutex_init(&this->mutex_map[name]); //TODO:recursive==false
 			result = true;
 		}
 	}

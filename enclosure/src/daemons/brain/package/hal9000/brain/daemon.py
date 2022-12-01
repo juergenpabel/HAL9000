@@ -98,9 +98,9 @@ class Daemon(HAL9000_Daemon):
 			self.timeouts[Daemon.CONSCIOUSNESS_AWAKE] = wakeup_time, None
 			if wakeup_time < sleep_time:
 				self.set_consciousness(Daemon.CONSCIOUSNESS_ASLEEP)
-			self.arduino_set_system_setting('system/state:time/sleep',  self.config['sleep-time'])
-			self.arduino_set_system_setting('system/state:time/wakeup', self.config['wakeup-time'])
-			self.arduino_save_system_setting()
+#TODO			self.arduino_set_system_setting('system/state:time/sleep',  self.config['sleep-time'])
+#TODO			self.arduino_set_system_setting('system/state:time/wakeup', self.config['wakeup-time'])
+#TODO			self.arduino_save_system_setting()
 		HAL9000_Daemon.loop(self)
 
 	
@@ -175,6 +175,11 @@ class Daemon(HAL9000_Daemon):
 					self.cortex[action_name] = cortex[action_name]
 			self.process_queued_actions()
 			self.logger.debug("CORTEX after state change  = {}".format(self.cortex))
+
+
+	def arduino_set_time(self, target: datetime) -> None:
+		epoch = int(target.timestamp()) + target.astimezone().tzinfo.utcoffset(None).seconds
+		mqtt_publish_message('hal9000/arduino:command/system/time', json.dumps({'config': {'epoch': epoch}}))
 
 
 	def arduino_show_gui_screen(self, screen, parameter) -> None:

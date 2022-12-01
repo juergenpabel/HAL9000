@@ -16,7 +16,7 @@ class AbstractMicrocontroller {
 
 		virtual bool thread_create(void (*function)(), uint8_t core) = 0;
 
-		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name) = 0;
+		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name, bool recursive) = 0;
 		virtual bool mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name) = 0;
 		virtual bool mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name) = 0;
 		virtual bool mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name) = 0;

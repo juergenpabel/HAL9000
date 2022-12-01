@@ -28,13 +28,14 @@ class Driver(HAL9000_Driver):
 		while Driver.serial is None:
 			try:
 				self.logger.info('driver:webserial => Connecting to {}'.format(self.config['tty']))
-				Driver.serial = serial.Serial(port=self.config['tty'], timeout=0.1, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
+				Driver.serial = serial.Serial(port=self.config['tty'], timeout=0.01, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
 				self.logger.debug('driver:webserial => ...connected')
 				self.send('run')
 				self.logger.debug('driver:webserial => waiting for loop()...')
 				line = self.receive()
 				while "loop()" not in line:
 					line = self.receive()
+				Driver.received_line = None
 				self.logger.debug('driver:webserial => ...loop() reached')
 				self.send('["device/mcp23X17", {"init": {}}]')
 			except:
@@ -86,8 +87,8 @@ class Driver(HAL9000_Driver):
 
 	def do_loop(self) -> bool:
 		if Driver.received_line is None:
-			self.send('["system/time", {"config": {"interval": 3600}}]')
 			self.send('["device/mcp23X17", {"start": true}]')
+			time.sleep(0.1)
 			self.logger.debug('driver:webserial => ...and started')
 		Driver.received_line = self.receive()
 		if len(Driver.received_line) > 0 and Driver.received_line.startswith('[') and Driver.received_line.endswith(']'):

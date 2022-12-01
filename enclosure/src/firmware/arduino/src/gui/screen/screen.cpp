@@ -13,16 +13,11 @@ gui_screen_func gui_screen_get() {
 }
 
 
-gui_screen_func gui_screen_set(gui_screen_func new_screen) {
-	gui_screen_func previous_screen;
-
-	previous_screen = g_gui_screen;
+void gui_screen_set(gui_screen_func new_screen) {
 	if(new_screen != nullptr) {
 		g_gui_screen = new_screen;
 		g_gui_screen_forced_refresh = true;
-		g_gui.fillScreen(TFT_BLACK);
 	}
-	return previous_screen;
 }
 
 
@@ -35,8 +30,8 @@ void gui_screen_update(bool refresh) {
 	uint16_t offset_x = (TFT_WIDTH-GUI_SCREEN_WIDTH)/2;
 	uint16_t offset_y = (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2;
 
-	if(refresh == false) {
-		refresh = g_gui_screen_forced_refresh;
+	if(g_gui_screen_forced_refresh == true) {
+		refresh = true;
 		g_gui_screen_forced_refresh = false;
 	}
 	gui_overlay_update(refresh);

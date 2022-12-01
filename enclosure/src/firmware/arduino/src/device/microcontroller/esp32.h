@@ -10,11 +10,12 @@
 
 typedef struct {
 	SemaphoreHandle_t  handle;
+	bool               recursive;
 	StaticSemaphore_t  data;
 } Semaphore;
 
 
-typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, Semaphore, 4> MutexMap;
+typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, Semaphore, 16> MutexMap;
 class TwoWire;
 
 
@@ -30,7 +31,7 @@ class Microcontroller {
 
 		virtual bool thread_create(void (*function)(), uint8_t core);
 
-		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name);
+		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name, bool recursive);
 		virtual bool mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name);
