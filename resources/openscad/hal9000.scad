@@ -17,7 +17,6 @@ module hal9000_enclosure() {
 		union(/*acryl-faceplate*/) {
 			translate([+05.0,+00.0,+50.0]) cube([+85.0,+01.5,180.0]);
 			translate([+02.0,+01.5,+47.0]) cube([+91.0,+03.5,186.0]);
-			translate([+05.0,+05.0,+45.0]) cube([+85.0,+01.5,185.0]);
 		}
 		union(/*control panel*/) {
 			translate([+47.5,+18.5,233.5]) cube([+83.0,+25.5,+03.0], center=true);
@@ -95,36 +94,37 @@ module hal9000_enclosure() {
 				translate([+09.0,+32.5,175.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0, center=true);
 			}
 			union(/*screws:respeaker 2-mic*/) {
-				translate([+47.5-58/2,+35.0,+40.0]) rotate([+90,+90,+00]) cylinder(d=+16.0,h=+02.0);
-				translate([+47.5-58/2,+35.0,+40.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
-				translate([+47.5+58/2,+35.0,+40.0]) rotate([+90,+90,+00]) cylinder(d=+16.0,h=+02.0);
-				translate([+47.5+58/2,+35.0,+40.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
+				translate([+47.5-58/2,+35.0,+45.0]) rotate([+90,+90,+00]) cylinder(d=+16.0,h=+02.0);
+				translate([+47.5-58/2,+35.0,+45.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
+				translate([+47.5+58/2,+35.0,+45.0]) rotate([+90,+90,+00]) cylinder(d=+16.0,h=+02.0);
+				translate([+47.5+58/2,+35.0,+45.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
 			}
 		}
 		union(/*grill:front(microphone)*/) {
-			translate([+05.0,+00.0,+05.0]) cube([+85.0,+02.5,+40.0]);
-			translate([+02.0,+02.5,+02.5]) cube([+91.0,+01.5,+50.0]);
-			translate([+05.0,+04.0,+05.0]) cube([+85.0,+01.0,+40.0]);
+			translate([+05.0,+00.0,+05.0]) cube([+85.0,+01.5,+40.0]);
+			translate([+02.0,+01.5,+02.5]) cube([+91.0,+01.5,+50.0]);
+			translate([+05.0,+03.0,+05.0]) cube([+85.0,+02.0,+40.0]);
 		}
 		union(/*grill:bottom(speaker)*/) {
-			for( x=[1:8] ) {
+			for( x=[1:6] ) {
 				for( y=[1:4] ) {
-					if( !(x==1&&y==1) && !(x==1&&y==4) && !(x==8&&y==1) && !(x==8&&y==4) ) {
-						translate([+25.0+(x*5),+03.5+(y*5),+02.5]) cube([+04.0,+04.0,+05.0], center=true);
+					if( !(x==1&&y==1) && !(x==1&&y==4) && !(x==6&&y==1) && !(x==6&&y==4) ) {
+						translate([+26.5+(x*6.0),+2.5+(y*6.0),+02.5]) cube([+05.0,+05.0,+05.0], center=true);
 					}
 				}
 			}
-			//inlet:visaton K20.40 speaker
-			translate([+47.5,+16.0,+04.0]) cube([+41.0,+21.0,+02.0], center=true);
-			//screws:visaton K20.40 speaker
-			translate([+29.5,+08.0,+00.5]) cylinder(d=+04.5,h=+01.0, center=true);
-			translate([+29.5,+08.0,+02.5]) cylinder(d=+02.5,h=+05.0, center=true);
-			translate([+29.5,+24.0,+00.5]) cylinder(d=+04.5,h=+01.0, center=true);
-			translate([+29.5,+24.0,+02.5]) cylinder(d=+02.5,h=+05.0, center=true);
-			translate([+65.5,+08.0,+00.5]) cylinder(d=+04.5,h=+01.0, center=true);
-			translate([+65.5,+08.0,+02.5]) cylinder(d=+02.5,h=+05.0, center=true);
-			translate([+65.5,+24.0,+00.5]) cylinder(d=+04.5,h=+01.0, center=true);
-			translate([+65.5,+24.0,+02.5]) cylinder(d=+02.5,h=+05.0, center=true);
+
+			//inlet:visaton K28.40 speaker
+			translate([+47.5,+17.5,+10.0]) cube([+41.0,+29.0,+13.0], center=true);
+			//screws:visaton K28.40 speaker
+			translate([+30.5,+06.5,+01.0]) cylinder(d=+06.5,h=+03.0, center=true);
+			translate([+30.5,+06.5,+02.5]) cylinder(d=+03.5,h=+05.0, center=true);
+			translate([+30.5,+28.5,+01.0]) cylinder(d=+06.5,h=+03.0, center=true);
+			translate([+30.5,+28.5,+02.5]) cylinder(d=+03.5,h=+05.0, center=true);
+			translate([+64.5,+06.5,+01.0]) cylinder(d=+06.5,h=+03.0, center=true);
+			translate([+64.5,+06.5,+02.5]) cylinder(d=+03.5,h=+05.0, center=true);
+			translate([+64.5,+28.5,+01.0]) cylinder(d=+06.5,h=+03.0, center=true);
+			translate([+64.5,+28.5,+02.5]) cylinder(d=+03.5,h=+05.0, center=true);
 		}
 	}
 }
