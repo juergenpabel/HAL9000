@@ -4,7 +4,7 @@
 - IDC/40pin extender cable 25-30cm
 - 1.8" fisheye dome ([ebay.com](https://www.ebay.com/itm/301729022732)) # very hard to find/buy elsewhere
 - 90° angled GPIO headers for Raspberry Pi
-- Visaton K20.40
+- Visaton K28.40 (previous versions used a K20.40 but that one is limited in terms of loudness)
 - Wire mesh (90x50mm)
 ### Make or buy
 - 3D printed: resources/openscad/hal9000-part*.scad (or STLs on [printables.com](https://www.printables.com/model/218766-hal-9000)) # Note: the display top frame and display cover exist in m5core2 and roundypi variants, print accordingly (everything else is "generic")
@@ -12,7 +12,7 @@
 
 # Required hardware, dependant on build variant (choose one only, both work just as well)
 ### Variant m5stack Core2 (recommended, due to better availabily)
-- ([M5Core2](https://docs.m5stack.com/en/core/core2))
+- M5Stack Core2 ([m5stack.com](https://docs.m5stack.com/en/core/core2))
 - USB OTG cable Micro-USB->USB-C, 15-25cm with both connectors in 90° angle (for the Pi0: right-angled when looking from the Pi0)
 - Cable: Grove->Qwiic/Stemma, 15-20cm (I couldn't find one with >10cm online, so I made on myself)
 ### Variant RoundyPI
