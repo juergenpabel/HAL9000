@@ -8,6 +8,8 @@
 #include <etl/string.h>
 #include <etl/map.h>
 
+#include "microcontroller.h"
+
 typedef struct {
 	SemaphoreHandle_t  handle;
 	bool               recursive;
@@ -19,11 +21,11 @@ typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, Semaphore, 16> MutexMap;
 class TwoWire;
 
 
-class Microcontroller {
+class Microcontroller : AbstractMicrocontroller {
 	private:
 		MutexMap     mutex_map;
 	public:
-		Microcontroller() {};
+		Microcontroller();
 
 		virtual void start(uint32_t& timestamp, bool& booting);
 		virtual void reset(uint32_t timestamp, bool rebooting);

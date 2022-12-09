@@ -2,14 +2,19 @@
 
 import os
 import sys
+import time
 import re
 import json
 
-from datetime import datetime, date, time, timedelta
+from datetime import datetime, date, timedelta, time as timeformat
 from configparser import ConfigParser
 
 from paho.mqtt.publish import single as mqtt_publish_message
 from hal9000.daemon import HAL9000_Daemon
+
+
+class ConfigurationError:
+	pass
 
 
 class Daemon(HAL9000_Daemon):
@@ -23,7 +28,7 @@ class Daemon(HAL9000_Daemon):
 		HAL9000_Daemon.__init__(self, 'brain')
 		self.cortex = dict()
 		self.cortex['brain'] = dict()
-		self.cortex['brain']['consciousness'] = Daemon.CONSCIOUSNESS_AWAKE
+		self.cortex['brain']['consciousness'] = Daemon.CONSCIOUSNESS_ASLEEP
 		self.cortex['brain']['activity'] = dict()
 		self.cortex['brain']['activity']['voice-assistant'] = None
 		self.cortex['brain']['activity']['enclosure'] = dict()
@@ -32,6 +37,7 @@ class Daemon(HAL9000_Daemon):
 		self.cortex['brain']['activity']['enclosure']['gui']['screen'] = None
 		self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = None
 		self.cortex['enclosure'] = dict()
+		self.cortex['kalliope'] = dict()
 		self.actions = dict()
 		self.triggers = dict()
 		self.synapses = dict()
@@ -44,6 +50,9 @@ class Daemon(HAL9000_Daemon):
 		HAL9000_Daemon.configure(self, configuration)
 		self.config['sleep-time']  = configuration.get('brain', 'sleep-time', fallback=None)
 		self.config['wakeup-time'] = configuration.get('brain', 'wakeup-time', fallback=None)
+		if self.config['sleep-time'] == self.config['wakeup-time']:
+			#TODO: error message
+			raise ConfigurationError
 		self.mqtt.subscribe('hal9000/daemon/brain/consciousness/state')
 		for section_name in configuration.sections():
 			module_path = configuration.getstring(section_name, 'module', fallback=None)
@@ -87,20 +96,20 @@ class Daemon(HAL9000_Daemon):
 
 
 	def loop(self) -> None:
+		datetime_now = datetime.now()
+		datetime_sleep = None
+		datetime_wakeup = None
 		if self.config['sleep-time'] is not None and self.config['wakeup-time'] is not None:
-			sleep_time = datetime.combine(date.today(), time.fromisoformat(self.config['sleep-time']))
-			if(datetime.now() > sleep_time):
-				sleep_time += timedelta(hours=24)
-			self.timeouts[Daemon.CONSCIOUSNESS_ASLEEP] = sleep_time, None
-			wakeup_time = datetime.combine(date.today(), time.fromisoformat(self.config['wakeup-time']))
-			if(datetime.now() > wakeup_time):
-				wakeup_time += timedelta(hours=24)
-			self.timeouts[Daemon.CONSCIOUSNESS_AWAKE] = wakeup_time, None
-			if wakeup_time < sleep_time:
-				self.set_consciousness(Daemon.CONSCIOUSNESS_ASLEEP)
-#TODO			self.arduino_set_system_setting('system/state:time/sleep',  self.config['sleep-time'])
-#TODO			self.arduino_set_system_setting('system/state:time/wakeup', self.config['wakeup-time'])
-#TODO			self.arduino_save_system_setting()
+			datetime_sleep = datetime.combine(date.today(), timeformat.fromisoformat(self.config['sleep-time']))
+			if(datetime_now > datetime_sleep):
+				datetime_sleep += timedelta(hours=24)
+			self.timeouts[Daemon.CONSCIOUSNESS_ASLEEP] = datetime_sleep, None
+			datetime_wakeup = datetime.combine(date.today(), timeformat.fromisoformat(self.config['wakeup-time']))
+			if(datetime_now > datetime_wakeup):
+				datetime_wakeup += timedelta(hours=24)
+			self.timeouts[Daemon.CONSCIOUSNESS_AWAKE] = datetime_wakeup, None
+		if datetime_wakeup == datetime_sleep or datetime_sleep < datetime_wakeup:
+			self.set_consciousness(Daemon.CONSCIOUSNESS_AWAKE)
 		HAL9000_Daemon.loop(self)
 
 	
@@ -123,9 +132,11 @@ class Daemon(HAL9000_Daemon):
 	def on_mqtt(self, client, userdata, message) -> None:
 		HAL9000_Daemon.on_mqtt(self, client, userdata, message)
 		if message.topic == 'hal9000/daemon/brain/consciousness/state':
-			self.set_consciousness(message.payload.decode('utf-8'))
+			consciousness_state = message.payload.decode('utf-8')
+			if consciousness_state in Daemon.CONSCIOUSNESS_VALID:
+				self.set_consciousness(consciousness_state)
 			return
-		if self.cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE or message.topic.startswith('hal9000/') is False:
+		if self.cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
 			if 'mqtt' in self.callbacks and message.topic in self.callbacks['mqtt']:
 				self.logger.info("SYNAPSES fired: {}".format(', '.join(str(x).split(':',2)[2] for x in self.callbacks['mqtt'][message.topic])))
 				self.logger.debug("CORTEX before triggers = {}".format(self.cortex))
@@ -177,60 +188,58 @@ class Daemon(HAL9000_Daemon):
 			self.logger.debug("CORTEX after state change  = {}".format(self.cortex))
 
 
-	def arduino_set_time(self, target: datetime) -> None:
-		epoch = int(target.timestamp()) + target.astimezone().tzinfo.utcoffset(None).seconds
-		mqtt_publish_message('hal9000/arduino:command/system/time', json.dumps({'config': {'epoch': epoch}}))
-
-
 	def arduino_show_gui_screen(self, screen, parameter) -> None:
 		self.cortex['brain']['activity']['enclosure']['gui']['screen'] = screen
-		self.arduino_set_gui_screen(screen, parameter)
+		self.arduino_send_command('gui/screen', json.dumps({screen: parameter}))
 
 
 	def arduino_hide_gui_screen(self, screen, parameter) -> None:
 		if self.cortex['brain']['activity']['enclosure']['gui']['screen'] == screen:
 			self.cortex['brain']['activity']['enclosure']['gui']['screen'] = None
-			self.arduino_set_gui_screen('idle', {})
-
-
-	def arduino_set_gui_screen(self, screen, parameter) -> None:
-		mqtt_publish_message('hal9000/arduino:command/gui/screen', json.dumps({screen: parameter}))
+			self.arduino_send_command('gui/screen', json.dumps({'idle': {}}))
 
 
 	def arduino_show_gui_overlay(self, overlay, parameter) -> None:
 		self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = overlay
-		self.arduino_set_gui_overlay(overlay, parameter)
+		self.arduino_send_command('gui/overlay', json.dumps({overlay: parameter}))
 
 
 	def arduino_hide_gui_overlay(self, overlay) -> None:
 		if self.cortex['brain']['activity']['enclosure']['gui']['overlay'] == overlay:
 			self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = None
-			self.arduino_set_gui_overlay('none', {})
+			self.arduino_send_command('gui/screen', json.dumps({'none': {}}))
 
 
-	def arduino_set_gui_overlay(self, overlay, parameter) -> None:
-		mqtt_publish_message('hal9000/arduino:command/gui/overlay', json.dumps({overlay: parameter}))
-
-
-	def arduino_set_device_display(self, parameter) -> None:
-		mqtt_publish_message('hal9000/arduino:command/device/display', json.dumps({"display": {"data": parameter}}))
-
-
-	def arduino_system_reset(self) -> None:
-		mqtt_publish_message('hal9000/arduino:command/system/reset', json.dumps({}))
+	def arduino_set_system_time(self) -> None:
+		self.arduino_send_command("system/time", json.dumps({"config": {"epoch": int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds)}}))
+		if self.config['sleep-time'] != self.config['wakeup-time']:
+			self.arduino_set_system_setting('system/state:time/sleep',  self.config['sleep-time'])
+			self.arduino_set_system_setting('system/state:time/wakeup', self.config['wakeup-time'])
+			self.arduino_save_system_setting()
 
 
 	def arduino_set_system_runtime(self, key, value) -> None:
-		mqtt_publish_message('hal9000/arduino:command/system/runtime', json.dumps({"set": {"key": key, "value": value}}))
+		self.arduino_send_command('system/runtime', json.dumps({"set": {"key": key, "value": value}}))
 
 
 	def arduino_set_system_setting(self, key, value) -> None:
-		mqtt_publish_message('hal9000/arduino:command/system/settings', json.dumps({"set": {"key": key, "value": value}}))
+		self.arduino_send_command('system/settings', json.dumps({"set": {"key": key, "value": value}}))
 
 
 	def arduino_save_system_setting(self) -> None:
-		mqtt_publish_message('hal9000/arduino:command/system/settings', json.dumps({"save": {}}))
+		self.arduino_send_command('system/settings', json.dumps({"save": {}}))
 
+
+	def arduino_set_device_display(self, parameter) -> None:
+		self.arduino_send_command("device/display", json.dumps({"display": {"data": parameter}}))
+
+
+	def arduino_system_reset(self) -> None:
+		self.arduino_send_command("system/reset", json.dumps({}))
+
+
+	def arduino_send_command(self, topic, body) -> None:
+		mqtt_publish_message(f"hal9000/arduino:command/{topic}", body)
 
 
 if __name__ == "__main__":

@@ -1,16 +1,37 @@
 #ifdef ARDUINO_ARCH_ESP32
 
+#include "esp_log.h"
 #include <Arduino.h>
 #include <Wire.h>
 
 #include "device/microcontroller/esp32.h"
 
+static vprintf_like_t original_vprintf = NULL;
+
+
+static int webserial_vprintf(const char* format, va_list message) {
+	const char* webserial_format = "[\"syslog/error\", \"%s\"]";
+
+	if(strncmp(format, "%s", 3) == 0) {
+		format = webserial_format;
+	}
+	return original_vprintf(format, message);
+}
+
+
+Microcontroller::Microcontroller()
+                :AbstractMicrocontroller() {
+}
+
 
 void Microcontroller::start(uint32_t& timestamp, bool& booting) {
+	original_vprintf = esp_log_set_vprintf(webserial_vprintf);
+//TODO:timestamp + reboot marker
 }
 
 
 void Microcontroller::reset(uint32_t timestamp, bool rebooting) {
+//TODO:timestamp + reboot marker
 	ESP.restart();
 }
 
@@ -130,8 +151,12 @@ static void thread_function(void* parameter) {
 
 
 bool Microcontroller::thread_create(void (*function)(), uint8_t core) {
-        bool result = false;
+        static bool result = false;
 
+	if(result == true) {
+//TODO: error handling
+		return false;
+	}
 	if(core == 1) {
 		xTaskCreatePinnedToCore(thread_function, "MCP23X17", 4096, (void*)function, configMAX_PRIORITIES - 1, nullptr, 1);
 		result = true;

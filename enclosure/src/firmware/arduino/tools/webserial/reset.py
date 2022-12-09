@@ -3,7 +3,8 @@
 from webserial import webserial
 
 mcu = webserial()
-mcu.connect(False)
-mcu.send('["system/mcu", {"reset": "true"}]')
-mcu.run()
+mcu.reset()
+#mcu.connect()
+#mcu.send('["system/microcontroller", {"reset": "true"}]')
+#mcu.run()
 

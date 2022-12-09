@@ -2,7 +2,7 @@
 
 from webserial import webserial
 
-mcu = webserial()
+mcu = webserial(True, True)
 mcu.connect()
 mcu.run()
 

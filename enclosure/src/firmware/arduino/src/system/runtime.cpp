@@ -6,70 +6,102 @@
 #define QUOTE(value) #value
 #define STRING(value) QUOTE(value)
 
+const etl::string<GLOBAL_VALUE_SIZE> Runtime::Null;
+
+
 Runtime::Runtime() {
-	(*this)["system/state:app/target"] = "booting";
+	this->m_status = StatusBooting;
+//TODO	this->m_condition = ConditionAsleep;
+	this->m_condition = ConditionAwake;
 }
 
 
-bool Runtime::isAwake() {
-	if(this->count("system/state:conciousness") == 0) {
-		return true;
-	}
-	return (*this)["system/state:conciousness"].compare("awake")==0;
-}
+uint8_t Runtime::update() {
+	if(this->m_status == StatusOnline && year() > 2001) {
+		if((g_system_settings.find("system/state:app/condition:time-sleep") != g_system_settings.end())
+		&& (g_system_settings.find("system/state:app/condition:time-wakeup") != g_system_settings.end())) {
+			static etl::string<GLOBAL_VALUE_SIZE> time_sleep;
+			static etl::string<GLOBAL_VALUE_SIZE> time_wakeup;
+			       etl::string<9>                 time_now("00:00:00");
 
-
-bool Runtime::isAsleep() {
-	if(this->count("system/state:conciousness") != 1) {
-		return false;
-	}
-	return (*this)["system/state:conciousness"].compare("asleep")==0;
-}
-
-
-void Runtime::update() {
-	if(year() > 2001) {
-		if((g_system_settings.find("system/state:time/sleep") != g_system_settings.end()) &&
-		   (g_system_settings.find("system/state:time/wakeup") != g_system_settings.end())) {
-			etl::string<GLOBAL_VALUE_SIZE> time_sleep;
-			etl::string<GLOBAL_VALUE_SIZE> time_wakeup;
-
-			time_sleep = g_system_settings["system/state:time/sleep"];
-			time_wakeup = g_system_settings["system/state:time/wakeup"];
+			time_sleep  = g_system_settings["system/state:app/condition:time-sleep"];
+			time_wakeup = g_system_settings["system/state:app/condition:time-wakeup"];
 			if((time_sleep.length() >= 5) && (time_wakeup.length() >= 5)) {
-				static etl::string<16> status_prev("awake");
-				       etl::string<16> status_next("awake");
-				       char            time_buffer[9] = "00:00:00";
-				       etl::string<9>  time_now;
+				Condition condition_now = ConditionUnknown;
+				Condition condition_new = ConditionUnknown;
 
-				time_buffer[0] += hour()/10;
-				time_buffer[1] += hour()%10;
-				time_buffer[3] += minute()/10;
-				time_buffer[4] += minute()%10;
-				time_buffer[6] += second()/10;
-				time_buffer[7] += second()%10;
-				time_now = time_buffer;
-				if((time_sleep.compare(time_wakeup) < 0) && ((time_now.compare(time_sleep) >= 0) && (time_now.compare(time_wakeup) <= 0))) {
-					status_next = "asleep";
+				condition_now = this->getCondition();
+				time_now[0] += hour()/10;
+				time_now[1] += hour()%10;
+				time_now[3] += minute()/10;
+				time_now[4] += minute()%10;
+				time_now[6] += second()/10;
+				time_now[7] += second()%10;
+				if(((time_wakeup.compare(time_sleep) < 0) && ((time_now.compare(time_wakeup) >= 0) && (time_now.compare(time_sleep) <= 0)))
+				|| ((time_wakeup.compare(time_sleep) > 0) && ((time_now.compare(time_wakeup) >= 0) || (time_now.compare(time_sleep) <= 0)))) {
+					condition_new = ConditionAwake;
 				}
-				if((time_sleep.compare(time_wakeup) > 0) && ((time_now.compare(time_sleep) >= 0) || (time_now.compare(time_wakeup) <= 0))) {
-					status_next = "asleep";
+				if(((time_sleep.compare(time_wakeup) < 0) && ((time_now.compare(time_sleep) >= 0) && (time_now.compare(time_wakeup) <= 0)))
+				|| ((time_sleep.compare(time_wakeup) > 0) && ((time_now.compare(time_sleep) >= 0) || (time_now.compare(time_wakeup) <= 0)))) {
+					condition_new = ConditionAsleep;
 				}
-				if(status_prev != status_next) {
-					(*this)["system/state:conciousness"] = status_next;
-					status_prev = status_next;
-					g_util_webserial.send("syslog/info", etl::string<UTIL_WEBSERIAL_DATA_SIZE>("Runtime::update() changing state to '").append(status_next).append("'"));
-					if(this->isAwake()) {
+				if(condition_new != ConditionUnknown && condition_now != condition_new) {
+					if(condition_new == ConditionAwake) {
+						g_util_webserial.send("syslog/info", etl::string<UTIL_WEBSERIAL_DATA_SIZE>("Runtime::update() changing state to 'awake'"));
 						g_device_board.displayOn();
-					} else {
+					}
+					if(condition_new == ConditionAsleep) {
+						g_util_webserial.send("syslog/info", etl::string<UTIL_WEBSERIAL_DATA_SIZE>("Runtime::update() changing state to 'asleep'"));
 						g_device_board.displayOff();
 					}
+					this->setCondition(condition_new);
+					condition_now = condition_new;
 				}
 			}
 		}
 	}
+	return (this->m_status | this->m_condition);
 }
 
+
+const etl::string<GLOBAL_VALUE_SIZE>& Runtime::get(const etl::string<GLOBAL_KEY_SIZE>& key) {
+	RuntimeMap::iterator item;
+
+	item = this->m_map.find(key);
+	if(item == this->m_map.end()) {
+		return Runtime::Null;
+	}
+	return item->second;
+}
+
+
+void Runtime::set(const etl::string<GLOBAL_KEY_SIZE>& key, const etl::string<GLOBAL_VALUE_SIZE>& value) {
+	RuntimeMap::iterator item;
+
+	item = this->m_map.find(key);
+	if(item == this->m_map.end()) {
+		this->m_map.insert({key, value});
+	} else {
+		item->second = value;
+	}
+}
+
+
+etl::string<GLOBAL_VALUE_SIZE>& Runtime::operator[](const etl::string<GLOBAL_KEY_SIZE>& key) {
+	RuntimeMap::iterator item;
+
+	item = this->m_map.find(key);
+	if(item == this->m_map.end()) {
+		this->m_map[key] = Runtime::Null;
+		item = this->m_map.find(key);
+	}
+	return item->second;
+}
+
+
+bool Runtime::exists(const etl::string<GLOBAL_KEY_SIZE>& key) {
+	return this->m_map.find(key) != this->m_map.end();
+}
 
 
 size_t RuntimeWriter::write(uint8_t c) {

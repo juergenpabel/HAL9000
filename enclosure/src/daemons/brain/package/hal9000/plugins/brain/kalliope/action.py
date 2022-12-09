@@ -9,7 +9,8 @@ from hal9000.brain.daemon import Daemon
 
 class Action(HAL9000_Action):
 
-	KALLIOPE_STATE_STARTED   = 'started'
+	KALLIOPE_STATE_UNKNOWN   = 'unknown'
+	KALLIOPE_STATE_READY     = 'ready'
 	KALLIOPE_STATE_WAITING   = 'waiting'
 	KALLIOPE_STATE_LISTENING = 'listening'
 	KALLIOPE_STATE_THINKING  = 'thinking'
@@ -25,7 +26,7 @@ class Action(HAL9000_Action):
 		HAL9000_Action.configure(self, configuration, section_name, cortex)
 		self.config['kalliope-trigger-mqtt-topic'] = configuration.get(section_name, 'kalliope-trigger-mqtt-topic', fallback=None)
 		cortex['kalliope'] = dict()
-		cortex['kalliope']['state'] = Action.KALLIOPE_STATE_STARTED
+		cortex['kalliope']['state'] = Action.KALLIOPE_STATE_UNKNOWN
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
@@ -41,8 +42,10 @@ class Action(HAL9000_Action):
 		if 'kalliope' in signal:
 			if 'state' in signal['kalliope']:
 				kalliope_state = signal['kalliope']['state']
-				if cortex['kalliope']['state'] == Action.KALLIOPE_STATE_STARTED:
-					if kalliope_state in Action.KALLIOPE_STATES_VALID:
+				if cortex['kalliope']['state'] == Action.KALLIOPE_STATE_UNKNOWN:
+					if kalliope_state == Action.KALLIOPE_STATE_READY:
+						cortex['kalliope']['state'] = Action.KALLIOPE_STATE_READY
+					elif kalliope_state in Action.KALLIOPE_STATES_VALID:
 						cortex['kalliope']['state'] = kalliope_state
 					return
 				if kalliope_state in Action.KALLIOPE_STATES_VALID:

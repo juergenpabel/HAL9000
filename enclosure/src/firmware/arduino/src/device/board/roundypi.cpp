@@ -23,17 +23,18 @@ void Board::start(bool& host_booting) {
 	}
 	if(TFT_BL >= 0) {
 		pinMode(TFT_BL, OUTPUT);
+		this->displayOff();
 	}
 }
 
 
-void Board::reset(uint32_t timestamp, bool host_rebooting) {
-	g_device_microcontroller.reset(timestamp, host_rebooting);
+void Board::reset(bool host_rebooting) {
+	AbstractBoard::reset(host_rebooting);
 }
 
 
 void Board::halt() {
-	g_device_microcontroller.halt();
+	AbstractBoard::halt();
 }
 
 
@@ -49,7 +50,6 @@ void Board::displayOff() {
 		digitalWrite(TFT_BL, LOW);
 	}
 }
-
 
 
 #endif

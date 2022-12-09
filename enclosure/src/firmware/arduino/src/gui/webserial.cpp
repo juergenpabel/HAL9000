@@ -47,7 +47,7 @@ void on_gui_screen(const JsonVariant& body) {
 			       int                      queue_pos = -1;
 
 			queue.clear();
-			if(g_system_runtime.count("gui/screen:hal9000/queue") == 1) {
+			if(g_system_runtime.exists("gui/screen:hal9000/queue") == true) {
 				if(g_system_runtime["gui/screen:hal9000/queue"].size() > 0) {
 					deserializeJson(queue, g_system_runtime["gui/screen:hal9000/queue"]);
 				}

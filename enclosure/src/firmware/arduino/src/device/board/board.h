@@ -6,8 +6,8 @@ class AbstractBoard {
 	public:
 		AbstractBoard();
 		virtual void start(bool& host_booting);
-		virtual void reset(uint32_t timestamp, bool host_rebooting) = 0;
-		virtual void halt() = 0;
+		virtual void reset(bool host_rebooting);
+		virtual void halt();
 
 		virtual void displayOn() = 0;
 		virtual void displayOff() = 0;

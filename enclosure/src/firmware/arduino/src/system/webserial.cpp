@@ -8,36 +8,52 @@
 #include "globals.h"
 
 
-void on_system_app(const JsonVariant& data) {
+static const char* SYSTEM_STATUS[] = {
+	"unknown",
+	"booting",
+	"offline",
+	"online",
+	"rebooting",
+	"halting",
+};
+
+
+void on_system_application(const JsonVariant& data) {
+	if(data.containsKey("status")) {
+		Status status = StatusUnknown;
+
+		status = g_system_runtime.getStatus();
+		g_util_webserial.send("system/application#status", SYSTEM_STATUS[status]);
+	}
 	if(data.containsKey("shutdown")) {
 		if(data["shutdown"].containsKey("target")) {
 			etl::string<10> poweroff("poweroff");
 			etl::string<10> reboot("reboot");
 
 			if(poweroff.compare(data["shutdown"]["target"].as<const char*>()) == 0) {
-				g_util_webserial.send("syslog/debug", "system/app#target=poweroff");
-				g_system_runtime["system/state:app/target"] = "halting";
+				g_util_webserial.send("syslog/debug", "system/application#target=poweroff");
+				g_system_runtime.setStatus(StatusHalting);
 			}
 			if(reboot.compare(data["shutdown"]["target"].as<const char*>()) == 0) {
-				g_util_webserial.send("syslog/debug", "system/app#target=reboot");
-				g_system_runtime["system/state:app/target"] = "rebooting";
+				g_util_webserial.send("syslog/debug", "system/application#target=reboot");
+				g_system_runtime.setStatus(StatusRebooting);
 			}
-			g_device_microcontroller.mutex_enter("Serial");
-			Serial.flush();
-			Serial.end();
-			g_device_microcontroller.mutex_exit("Serial");
+			g_device_microcontroller.mutex_enter("Serial"); //TODO: move to webserial class
+			Serial.flush(); //TODO: move to webserial class
+			Serial.end(); //TODO: move to webserial class
+			g_device_microcontroller.mutex_exit("Serial"); //TODO: move to webserial class
 		}
 	}
 }
 
 
-void on_system_mcu(const JsonVariant& data) {
+void on_system_microcontroller(const JsonVariant& data) {
 	if(data.containsKey("reset")) {
-		g_util_webserial.send("syslog/debug", "system/mcu#reset");
+		g_util_webserial.send("syslog/debug", "system/microcontroller#reset");
 		g_device_microcontroller.reset(now(), false);
 	}
 	if(data.containsKey("halt")) {
-		g_util_webserial.send("syslog/debug", "system/mcu#halt");
+		g_util_webserial.send("syslog/debug", "system/microcontroller#halt");
 		g_device_microcontroller.halt();
 	}
 }
@@ -48,7 +64,7 @@ void on_system_runtime(const JsonVariant& data) {
 
 	result.clear();
 	if(data.containsKey("list")) {
-		for(Runtime::iterator iter=g_system_runtime.begin(); iter!=g_system_runtime.end(); ++iter) {
+		for(RuntimeMap::iterator iter=g_system_runtime.m_map.begin(); iter!=g_system_runtime.m_map.end(); ++iter) {
 			result[iter->first.c_str()] = iter->second.c_str();
 		}
 		g_util_webserial.send("system/runtime#list", result.as<JsonVariant>());

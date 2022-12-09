@@ -27,7 +27,8 @@ class HAL9000_Daemon(HAL9000_Abstract):
 	STATUS_READY = "ready"
 	STATUS_ACTIVE = "active"
 	STATUS_PAUSED = "paused"
-	STATUS_VALID = [STATUS_INIT, STATUS_READY, STATUS_ACTIVE, STATUS_PAUSED]
+	STATUS_EXIT = "exit"
+	STATUS_VALID = [STATUS_INIT, STATUS_READY, STATUS_ACTIVE, STATUS_PAUSED, STATUS_EXIT]
 
 
 	def __init__(self, name: str) -> None:
@@ -61,8 +62,7 @@ class HAL9000_Daemon(HAL9000_Abstract):
 			self.logger.info('LOADING CONFIGURATION ({})'.format(filename))
 			configuration.read(filename)
 			self.configure(configuration)
-			self._status = HAL9000_Daemon.STATUS_READY
-			('READY')
+			self.status = HAL9000_Daemon.STATUS_READY
 
 
 	def configure(self, configuration: ConfigParser) -> None:
@@ -109,7 +109,6 @@ class HAL9000_Daemon(HAL9000_Abstract):
 			if mqtt_thread is True:
 				self.mqtt.loop_start()
 				self.mqtt._thread.name = 'uWSGIWorker1Mqtt0'
-			self.logger.info('LOOP')
 			try:
 				while self.do_loop() is True and self.loop_exit is False:
 					if mqtt_thread is False:
@@ -117,12 +116,16 @@ class HAL9000_Daemon(HAL9000_Abstract):
 					while self.status == HAL9000_Daemon.STATUS_PAUSED:
 						time.sleep(delay_paused)
 					time.sleep(delay_active)
+				if self.loop_exit is True:
+					self.logger.info("loop() => self.loop_exit==True (probably due to a signal)")
+				else:
+					self.logger.info("loop() => self.do_loop() returned False (probably due to lack of heartbeat)")
 			except:
-				raise
+				raise # TODO
 				pass
 			if mqtt_thread is True:
 				self.mqtt.loop_stop()
-			self.logger.info('EXIT')
+			self.status = HAL9000_Daemon.STATUS_EXIT
 
 
 	def on_mqtt(self, client, userdata, message) -> None:
@@ -145,7 +148,13 @@ class HAL9000_Daemon(HAL9000_Abstract):
 
 	@status.setter
 	def status(self, value):
-		if value in [HAL9000_Daemon.STATUS_ACTIVE, HAL9000_Daemon.STATUS_PAUSED]:
-			self._status = value
-			self.logger.info("STATUS changed to '{}'".format(value))
+		if value != self._status:
+			if value in HAL9000_Daemon.STATUS_VALID:
+				if self._status in [HAL9000_Daemon.STATUS_ACTIVE, HAL9000_Daemon.STATUS_PAUSED]:
+					if value in [HAL9000_Daemon.STATUS_ACTIVE, HAL9000_Daemon.STATUS_PAUSED, HAL9000_Daemon.STATUS_EXIT]:
+						self._status = value
+						self.logger.info("STATUS changed to '{}'".format(value))
+				else:
+					self._status = value
+					self.logger.info("STATUS changed to '{}'".format(value))
 

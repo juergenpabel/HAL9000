@@ -18,51 +18,8 @@ void setup() {
 		g_util_webserial.send("syslog/error", "setup() failed to load settings from littlefs");
 		g_system_settings.reset();
 	}
-	g_system_runtime["system/state:conciousness"] = "awake";
-	g_system_runtime.update();
-	if(g_system_runtime.isAsleep()) {
-		g_device_board.displayOff();
-	}
-	if(g_system_runtime["system/state:app/target"].compare("booting") == 0) {
-		g_util_webserial.send("syslog/info", "booting (showing startup animation)...");
-		gui_screen_set(gui_screen_animation_startup);
-		while(gui_screen_get() == gui_screen_animation_startup) {
-			gui_screen_update(g_system_runtime.isAwake());
-		}
-	}
-	g_util_webserial.send("syslog/info", "booting finished");
-	if(Serial == false) {
-		g_system_runtime["system/state:app/target"] = "waiting";
-		g_system_runtime["gui/screen:splash/filename"] = "error.jpg";
-		gui_screen_set(gui_screen_splash);
-		while(Serial == false) {
-			gui_screen_update(false);
-			g_system_runtime.update();
-			if(g_system_runtime.isAwake()) {
-				g_device_board.displayOn();
-			} else {
-				g_device_board.displayOff();
-			}
-			delay(1000);
-		}
-	}
-	if(Serial == true) {
-		g_util_webserial.send("syslog/info", "waiting for 'run' from host...");
-		while(Serial.available() == 0) {
-			delay(100);
-		}
-		while(Serial.read() != '\n') {
-			delay(10);
-		}
-		g_util_webserial.send("syslog/info", "got 'run' from host, running...");
-	}
-	g_system_runtime["system/state:app/target"] = "running";
-	gui_screen_set(gui_screen_idle);
-	g_util_webserial.update();
-
-	g_util_webserial.send("syslog/debug", "setup()");
-	g_util_webserial.set("system/app", on_system_app);
-	g_util_webserial.set("system/mcu", on_system_mcu);
+	g_util_webserial.set("system/application", on_system_application);
+	g_util_webserial.set("system/microcontroller", on_system_microcontroller);
 	g_util_webserial.set("system/time", on_system_time);
 	g_util_webserial.set("system/runtime", on_system_runtime);
 	g_util_webserial.set("system/settings", on_system_settings);
@@ -71,32 +28,74 @@ void setup() {
 	g_util_webserial.set("device/display", on_device_display);
 	g_util_webserial.set("gui/screen", on_gui_screen);
 	g_util_webserial.set("gui/overlay", on_gui_overlay);
-	g_util_webserial.send("system/app", "loop()");
 }
 
 
 void loop() {
-	if(Serial == false) {
-		etl::string<GLOBAL_VALUE_SIZE>& app_target = g_system_runtime["system/state:app/target"];
+	static int oldStatus = StatusUnknown;
+	       int newStatus = StatusUnknown;
 
-		if(app_target.compare("rebooting") == 0 || app_target.compare("halting") == 0) {
-			gui_screen_set(gui_screen_animation_shutdown);
-			while(gui_screen_get() == gui_screen_animation_shutdown) {
-				gui_screen_update(g_system_runtime.isAwake());
-			}
-			if(g_system_runtime["system/state:app/target"].compare("halting") == 0) {
-				system_halt();
-			}
-		}
-		system_reset();
-	}
 	g_util_webserial.update();
 	g_system_runtime.update();
-	gui_screen_update(false);
-	if(g_system_settings.count("system/arduino:loop/sleep_ms") == 1) {
-		static int milliseconds = atoi(g_system_settings["system/arduino:loop/sleep_ms"].c_str());
-
-		delay(milliseconds);
+	newStatus = g_system_runtime.getStatus();
+	if(newStatus != oldStatus) {
+		switch(newStatus) {
+			case StatusBooting:
+				g_util_webserial.send("system/application", "booting");
+				gui_screen_set(gui_screen_animation_startup);
+				while(gui_screen_get() == gui_screen_animation_startup) {
+//TODO					int serial_data = '\n';
+//TODO
+//TODO					while(serial_data == '\n' && Serial.available() > 1) {
+//TODO						serial_data = Serial.peek();
+//TODO						if(serial_data == '\n') {
+//TODO							Serial.read();
+//TODO						}
+//TODO					}
+					gui_screen_update(true);
+				}
+				g_system_runtime.setStatus(StatusOffline);
+				break;
+			case StatusOffline:
+				if(oldStatus == StatusBooting) {
+					g_util_webserial.send("system/application", "offline");
+					g_system_runtime.set("gui/screen:splash/filename", "error.jpg");
+					gui_screen_set(gui_screen_splash);
+				}
+				if(oldStatus == StatusOnline) {
+					g_system_runtime.setStatus(StatusResetting);
+				}
+				break;
+			case StatusOnline:
+				g_util_webserial.send("system/application", "online");
+				gui_screen_set(gui_screen_idle);
+				break;
+			case StatusResetting:
+				g_util_webserial.send("system/application", "resetting");
+				system_reset();
+				break;
+			case StatusRebooting:
+				g_util_webserial.send("system/application", "rebooting");
+				gui_screen_set(gui_screen_animation_shutdown);
+				while(gui_screen_get() == gui_screen_animation_shutdown) {
+					gui_screen_update(true);
+				}
+				system_reset();
+				break;
+			case StatusHalting:
+				g_util_webserial.send("system/application", "halting");
+				gui_screen_set(gui_screen_animation_shutdown);
+				while(gui_screen_get() == gui_screen_animation_shutdown) {
+					gui_screen_update(true);
+				}
+				system_halt();
+				break;
+			default:
+				g_util_webserial.send("syslog/error", "invalid runtime status => resetting");
+				system_reset();
+		}
+		oldStatus = newStatus;
 	}
+	gui_screen_update(false);
 }
 

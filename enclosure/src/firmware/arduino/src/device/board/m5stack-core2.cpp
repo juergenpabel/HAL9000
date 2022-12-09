@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include <LittleFS.h>
 #include <XPowersLib.h>
+#include <TimeLib.h>
 
 #include "globals.h"
 #include "device/board/m5stack-core2.h"
@@ -20,7 +21,7 @@ void Board::start(bool& host_booting) {
 	AbstractBoard::start(host_booting);
 	if(LittleFS.begin() != true) {
 		while(true) {
-			if(Serial) {
+			if(Serial == true) {
 				Serial.println("[\"syslog/fatal\", \"LittleFS.begin(), halting.\"]");
 			}
 			delay(1000);
@@ -45,28 +46,23 @@ void Board::start(bool& host_booting) {
 	PMU.enableDC2();
 	PMU.enableDC3();
 	PMU.enableLDO2();
-	delay(100);
+	delay(120);
+//TODO	this->displayOff();
 }
 
 
-void Board::reset(uint32_t timestamp, bool host_rebooting) {
-	if(Serial) {
-		Serial.println("[\"syslog/info\", \"resetting NOW.\"");
-		Serial.flush();
-		delay(100);
-	}
-	g_device_microcontroller.reset(timestamp, host_rebooting);
+void Board::reset(bool host_rebooting) {
+	LittleFS.end();
+	AbstractBoard::reset(host_rebooting);
 }
 
 
 void Board::halt() {
-	if(Serial) {
-		Serial.println("[\"syslog/info\", \"halting NOW.\"");
-		Serial.flush();
-		delay(100);
-	}
-	this->displayOff();
-	g_device_microcontroller.halt();
+	PMU.disableDC2();
+	PMU.disableDC3();
+	PMU.disableLDO2();
+	LittleFS.end();
+	AbstractBoard::halt();
 }
 
 

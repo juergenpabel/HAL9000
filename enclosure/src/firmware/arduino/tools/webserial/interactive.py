@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 
 menu = dict()
 menu['0'] = ['Disconnect', None]
+menu['t'] = ['Add system runtime',   '["system/runtime",  {"set": {"key": "foo", "value": "bar"}}]']
 menu['1'] = ['Dump system runtime',   '["system/runtime",  {"list": {}}]']
 menu['2'] = ['Dump system settings',  '["system/settings", {"list": {}}]']
 menu['3'] = ['Load system settings',  '["system/settings", {"load": {}}]']
@@ -27,7 +28,7 @@ menu['p'] = ['Prepare shutdown: poweroff',                '["system/app", {"shut
 
 
 def handler(self, line: str):
-	if len(line):
+	if line is not None and len(line) > 0:
 		if line.strip() == '["system/time", {"sync":{"format":"epoch"}}]':
 			self.send('["system/time", {"sync":{"epoch":'+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
 	else:
@@ -41,13 +42,11 @@ def handler(self, line: str):
 			if choice == 'h':
 				self.send(menu['a'][1])
 
-roundypi = webserial()
-roundypi.connect()
+hal9000 = webserial(True, True)
+hal9000.connect()
 print('COMMANDS')
 print('========')
 for key in menu.keys():
 	print("{}: {}".format(key, menu[key][0]))
-	
-roundypi.send('["system/time", {"config": {"interval": 60}}]')
-roundypi.run(handler)
+hal9000.run(handler)
 

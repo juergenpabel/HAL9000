@@ -100,7 +100,7 @@ class Action(HAL9000_Action):
 					filename_cover = ""
 					data['cortex']['enclosure']['rfid']['uid'] = None
 				if filename_cover is not None:
-					self.daemon.set_gui_screen('splash', {'filename': filename_cover})
+					self.daemon.show_gui_screen('splash', {'filename': filename_cover})
 
 			requests.put('{}/reader/{}/{}/{}/{}'.format(self.config['base-url'], reader_service, reader_name, card_event, card_uid))
 		return data['cortex']

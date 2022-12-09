@@ -9,10 +9,11 @@ void system_start() {
 
 	g_device_board.start(host_booting);
 	if(host_booting == false) {
-		g_system_runtime["system/state:app/target"] = "waiting";
-		g_util_webserial.send("syslog/debug", "host system not booting");
+		g_system_runtime.setStatus(StatusOffline);
+		g_util_webserial.send("syslog/debug", "host system not booting, waiting for serial connection");
 	}
 	if(host_booting == true) {
+		g_util_webserial.send("syslog/debug", "host system is booting, turning display on");
 		g_device_board.displayOn();
 	}
 	g_gui_buffer = (uint16_t*)malloc(GUI_SCREEN_HEIGHT*GUI_SCREEN_WIDTH*sizeof(uint16_t));
@@ -40,20 +41,16 @@ void system_start() {
 
 
 void system_reset() {
-	uint32_t  epoch = 0;
 	bool      host_rebooting = false;
 
-	if(year() > 2001) {
-		epoch = now();
-	}
-	if(g_system_runtime["system/state:app/target"].compare("rebooting") == 0) {
+	if(g_system_runtime.getStatus() == StatusRebooting) {
 		host_rebooting = true;
 	}
-	g_device_board.displayOff();
-	g_device_board.reset(epoch, host_rebooting);
+	g_device_board.reset(host_rebooting);
 	//this codepath should never be taken 
+	g_device_board.displayOn();
 	g_gui.fillScreen(TFT_BLACK);
-	g_gui.drawString("ERROR, halting.", (TFT_WIDTH-GUI_SCREEN_WIDTH)/2+(GUI_SCREEN_WIDTH/2), (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/2));
+	g_gui.drawString("ERROR resetting", (TFT_WIDTH-GUI_SCREEN_WIDTH)/2+(GUI_SCREEN_WIDTH/2), (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/2));
 	g_device_board.displayOn();
 	while(true) {
 		delay(1);
@@ -62,8 +59,12 @@ void system_reset() {
 
 
 void system_halt() {
-	g_device_board.displayOff();
 	g_device_board.halt();
+	//this codepath should never be taken 
+	g_device_board.displayOn();
+	g_gui.fillScreen(TFT_BLACK);
+	g_gui.drawString("ERROR halting", (TFT_WIDTH-GUI_SCREEN_WIDTH)/2+(GUI_SCREEN_WIDTH/2), (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/2));
+	g_device_board.displayOn();
 	while(true) {
 		delay(1);
 	}
