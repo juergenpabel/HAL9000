@@ -44,14 +44,14 @@ void loop() {
 				g_util_webserial.send("system/application", "booting");
 				gui_screen_set(gui_screen_animation_startup);
 				while(gui_screen_get() == gui_screen_animation_startup) {
-//TODO					int serial_data = '\n';
-//TODO
-//TODO					while(serial_data == '\n' && Serial.available() > 1) {
-//TODO						serial_data = Serial.peek();
-//TODO						if(serial_data == '\n') {
-//TODO							Serial.read();
-//TODO						}
-//TODO					}
+					int serial_data = '\n';
+
+					while(serial_data == '\n' && Serial.available() > 1) {
+						serial_data = Serial.peek();
+						if(serial_data == '\n') {
+							Serial.read();
+						}
+					}
 					gui_screen_update(true);
 				}
 				g_system_runtime.setStatus(StatusOffline);

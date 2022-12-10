@@ -70,34 +70,34 @@
 
 			function onControlUp() {
 				var status = new Paho.MQTT.Message("rotary:control delta=+1");
-				status.destinationName = "hal9000/arduino:event/rotary/control";
+				status.destinationName = "hal9000/event/arduino/rotary/control";
 				g_mqtt.send( status );
 			}
 			function onControlSelect() {
 				var status = new Paho.MQTT.Message("button:control status=1");
-				status.destinationName = "hal9000/arduino:event/button/control";
+				status.destinationName = "hal9000/event/arduino/button/control";
 				g_mqtt.send( status );
 			}
 			function onControlDown() {
 				var status = new Paho.MQTT.Message("rotary:control delta=-1");
-				status.destinationName = "hal9000/arduino:event/rotary/control";
+				status.destinationName = "hal9000/event/arduino/rotary/control";
 				g_mqtt.send( status );
 			}
 
 			function onVolumeUp() {
 				var status = new Paho.MQTT.Message("rotary:volume delta=+1");
-				status.destinationName = "hal9000/arduino:event/rotary/volume";
+				status.destinationName = "hal9000/event/arduino/rotary/volume";
 				g_mqtt.send( status );
 			}
 			function onVolumeSelect() {
 				g_audio_mute = !g_audio_mute;
 				var status = new Paho.MQTT.Message("toggle:volume status=" + (g_audio_mute ? "on" : "off"));
-				status.destinationName = "hal9000/arduino:event/toggle/volume";
+				status.destinationName = "hal9000/event/arduino/toggle/volume";
 				g_mqtt.send( status );
 			}
 			function onVolumeDown() {
 				var status = new Paho.MQTT.Message("rotary:volume delta=-1");
-				status.destinationName = "hal9000/arduino:event/rotary/volume";
+				status.destinationName = "hal9000/event/arduino/rotary/volume";
 				g_mqtt.send( status );
 			}
 

@@ -28,9 +28,10 @@ class Driver(HAL9000_Driver):
 		self.config['trace'] = configuration.getboolean('driver:webserial', 'trace', fallback=False)
 		self.config['tty']  = configuration.getstring(str(self), 'driver-tty', fallback='/dev/ttyHAL9000')
 #todo: pin-sda,pin-scl from config
+		if Driver.serial is None:
+			self.logger.info(f"driver:webserial => Connecting to '{self.config['tty']}'...")
 		while Driver.serial is None:
 			try:
-				self.logger.info(f"driver:webserial => Connecting to '{self.config['tty']}'...")
 				Driver.serial = serial.Serial(port=self.config['tty'], timeout=0.01, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
 				self.logger.debug('driver:webserial => ...opened, waiting for heartbeat...')
 				while Driver.heartbeat_online is False:
@@ -41,7 +42,6 @@ class Driver(HAL9000_Driver):
 				self.send('["device/mcp23X17", {"init": {}}]')
 			except:
 				time.sleep(0.1)
-				raise
 		peripheral_type, peripheral_name = str(self).split(':', 1)
 		if peripheral_type in ["rotary"]:
 			input_pins = configuration.getlist(str(self), 'driver-pins', fallback="")
