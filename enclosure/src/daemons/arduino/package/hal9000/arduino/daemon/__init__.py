@@ -21,7 +21,7 @@ class Daemon(HAL9000):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
-		self.mqtt.subscribe("hal9000/arduino:command/#")
+		self.mqtt.subscribe("hal9000/command/arduino/#")
 		self.mqtt.on_message = self.on_command
 		self.logger.info("Configuring device '{}'...".format(self))
 		for peripheral_name in configuration.getlist(str(self), 'peripherals'):
@@ -72,7 +72,7 @@ class Daemon(HAL9000):
 	def on_command(self, client, userdata, message) -> None:
 		HAL9000.on_mqtt(self, client, userdata, message)
 		command = None
-		if message.topic.startswith("hal9000/arduino:command/"):
+		if message.topic.startswith("hal9000/command/arduino/"):
 			topic = message.topic[24:]
 			payload = message.payload.decode('utf-8')
 			self.logger.info("COMMAND: {} => {}".format(topic, payload))

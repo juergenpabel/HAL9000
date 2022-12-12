@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-from hal9000.brain import HAL9000_Trigger
+from hal9000.brain.modules import HAL9000_Trigger
 from configparser import ConfigParser
 
 class Trigger(HAL9000_Trigger):

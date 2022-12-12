@@ -11,6 +11,7 @@ from configparser import ConfigParser
 
 from paho.mqtt.publish import single as mqtt_publish_message
 from hal9000.daemon import HAL9000_Daemon
+from .modules import HAL9000_Module
 
 
 class ConfigurationError:
@@ -22,7 +23,6 @@ class Daemon(HAL9000_Daemon):
 	CONSCIOUSNESS_AWAKE = 'awake'
 	CONSCIOUSNESS_ASLEEP = 'asleep'
 	CONSCIOUSNESS_VALID = [CONSCIOUSNESS_AWAKE, CONSCIOUSNESS_ASLEEP]
-
 
 	def __init__(self) -> None:
 		HAL9000_Daemon.__init__(self, 'brain')
@@ -36,18 +36,21 @@ class Daemon(HAL9000_Daemon):
 		self.cortex['brain']['activity']['enclosure']['gui'] = dict()
 		self.cortex['brain']['activity']['enclosure']['gui']['screen'] = None
 		self.cortex['brain']['activity']['enclosure']['gui']['overlay'] = None
-		self.cortex['enclosure'] = dict()
-		self.cortex['kalliope'] = dict()
 		self.actions = dict()
 		self.triggers = dict()
 		self.synapses = dict()
 		self.callbacks = dict()
 		self.timeouts = dict()
-		self.queued_actions = list()
+		self.booting_timeout = None
+		self.booting_modules = dict()
+		self.actions_queued = list()
 
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000_Daemon.configure(self, configuration)
+		self.config['boot-timeout']  = configuration.getint('brain', 'boot-timeout', fallback=10)
+		self.config['boot-finished-mqtt-topic']  = configuration.get('brain', 'boot-finished-mqtt-topic', fallback=None)
+		self.config['error-database-base-url']  = configuration.get('help', 'error-database-base-url', fallback=None)
 		self.config['sleep-time']  = configuration.get('brain', 'sleep-time', fallback=None)
 		self.config['wakeup-time'] = configuration.get('brain', 'wakeup-time', fallback=None)
 		if self.config['sleep-time'] == self.config['wakeup-time']:
@@ -96,6 +99,11 @@ class Daemon(HAL9000_Daemon):
 
 
 	def loop(self) -> None:
+		self.booting_timeout = datetime.now() + timedelta(seconds=self.config['boot-timeout'])
+		for module in list(self.triggers.values()) + list(self.actions.values()):
+			cortex = self.cortex.copy()
+			if module.runlevel(cortex) == HAL9000_Module.MODULE_RUNLEVEL_BOOTING:
+				self.booting_modules[str(module)] = module
 		datetime_now = datetime.now()
 		datetime_sleep = None
 		datetime_wakeup = None
@@ -114,6 +122,31 @@ class Daemon(HAL9000_Daemon):
 
 	
 	def do_loop(self) -> bool:
+		if self.booting_timeout is not None:
+			for id in list(self.booting_modules.keys()):
+				cortex = self.cortex.copy()
+				if self.booting_modules[id].runlevel(cortex) != HAL9000_Module.MODULE_RUNLEVEL_BOOTING:
+					del self.booting_modules[id]
+			if datetime.now() > self.booting_timeout:
+				self.booting_timeout = None
+				self.logger.warn("Booting completed (modules that haven't finished bootup: {})". format(", ".join(self.booting_modules.keys())))
+				for id in self.booting_modules.keys():
+					error = self.booting_modules[id].runlevel_error(self.cortex.copy())
+					self.logger.warn("Error #{} for module '{}': {}".format(error['code'], id, error['message']))
+#TODO					if self.config['error-message-translation-file'] is not None:
+#TODO						error['message'] = self.translate(error['message'], self.config['error-message-translation-file'])
+					if self.config['error-database-base-url'] is not None:
+						error['url'] = self.config['error-database-base-url'] + error['code']
+					if "image" in error and error["image"] is not None:
+						self.arduino_show_gui_screen('error', error) #TODO
+					if "audio" in error and error["audio"] is not None:
+						self.kalliope_play_audio(error["audio"]) #TODO
+
+			if len(self.booting_modules) == 0:
+				self.booting_timeout = None
+				self.logger.info("Booting completed for all modules")
+				if self.config['boot-finished-mqtt-topic'] is not None:
+					mqtt_publish_message(self.config['boot-finished-mqtt-topic'])
 		for key in self.timeouts.copy().keys():
 			timeout, data = self.timeouts[key]
 			if datetime.now() > timeout:
@@ -159,17 +192,17 @@ class Daemon(HAL9000_Daemon):
 
 
 	def queue_action(self, action_name, signal_data) -> None:
-		self.queued_actions.append([action_name, signal_data])
+		self.actions_queued.append([action_name, signal_data])
 
 
 	def process_queued_actions(self) -> None:
-		for action_name, signal_data in self.queued_actions:
+		for action_name, signal_data in self.actions_queued:
 			if action_name in self.actions:
 				cortex = self.cortex.copy()
 				self.actions[action_name].process(signal_data, cortex)
 				if action_name in cortex:
 					self.cortex[action_name] = cortex[action_name]
-		self.queued_actions.clear()
+		self.actions_queued.clear()
 
 
 	def set_consciousness(self, new_state) -> None:
@@ -239,7 +272,11 @@ class Daemon(HAL9000_Daemon):
 
 
 	def arduino_send_command(self, topic, body) -> None:
-		mqtt_publish_message(f"hal9000/arduino:command/{topic}", body)
+		mqtt_publish_message(f"hal9000/command/arduino/{topic}", body)
+
+
+	def kalliope_play_audio(self, filename) -> None:
+		pass
 
 
 if __name__ == "__main__":

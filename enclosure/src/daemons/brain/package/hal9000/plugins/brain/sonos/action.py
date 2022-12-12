@@ -3,7 +3,7 @@
 import soco
 from paho.mqtt.publish import single as mqtt_publish_message
 
-from hal9000.brain import HAL9000_Action
+from hal9000.brain.modules import HAL9000_Action
 from configparser import ConfigParser
 
 

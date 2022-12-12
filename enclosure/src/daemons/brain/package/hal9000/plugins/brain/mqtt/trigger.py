@@ -4,7 +4,7 @@ import re
 import json
 from configparser import ConfigParser
 
-from hal9000.brain import HAL9000_Trigger
+from hal9000.brain.modules import HAL9000_Trigger
 
 
 class Trigger(HAL9000_Trigger):

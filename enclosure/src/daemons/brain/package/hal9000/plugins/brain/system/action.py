@@ -3,14 +3,14 @@
 from configparser import ConfigParser
 from paho.mqtt.publish import single as mqtt_publish_message
 
-from hal9000.brain import HAL9000_Action
+from hal9000.brain.modules import HAL9000_Action
 from hal9000.brain.daemon import Daemon
 
 
 class Action(HAL9000_Action):
 
-	SYSTEM_STATE_TIME_UNKNOWN   = 'unknown'
-	SYSTEM_STATE_TIME_SYNCED   = 'synced'
+	SYSTEM_STATE_TIME_UNKNOWN = 'unknown'
+	SYSTEM_STATE_TIME_SYNCED  = 'synced'
 	SYSTEM_STATES_VALID = [SYSTEM_STATE_TIME_UNKNOWN, SYSTEM_STATE_TIME_SYNCED]
 
 
@@ -22,6 +22,20 @@ class Action(HAL9000_Action):
 		HAL9000_Action.configure(self, configuration, section_name, cortex)
 		cortex['system'] = dict()
 		cortex['system']['time'] = Action.SYSTEM_STATE_TIME_UNKNOWN
+
+
+	def runlevel(self, cortex: dict) -> str:
+		if cortex['system']['time'] == Action.SYSTEM_STATE_TIME_SYNCED:
+			return Action.MODULE_RUNLEVEL_RUNNING
+		return Action.MODULE_RUNLEVEL_BOOTING
+
+
+	def runlevel_error(self, cortex: dict) -> dict:
+		return {"code": "101",
+		        "level": "warning",
+		        "message": "Failed to sync time. System time may be wrong.",
+		        "level": "warning",
+		        "image": "error/101-time-unsynced.png"}
 
 
 	def process(self, signal: dict, cortex: dict) -> None:

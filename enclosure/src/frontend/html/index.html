@@ -18,11 +18,11 @@
 			}
 
 			function onConnect() {
-				g_mqtt.subscribe("hal9000/arduino:command/#");
+				g_mqtt.subscribe("hal9000/command/arduino/#");
 			}
 
 			function onCommand(message) {
-				if( message.destinationName == "hal9000/arduino:command/gui/overlay" ) {
+				if( message.destinationName == "hal9000/command/arduino/gui/overlay" ) {
 					var event = JSON.parse(message.payloadString);
 					if(event["overlay"] === "hide") {
 						document.getElementById('overlay').innerHTML = "";

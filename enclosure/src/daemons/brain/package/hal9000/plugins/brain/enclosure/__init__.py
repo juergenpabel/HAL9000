@@ -2,7 +2,7 @@
 
 from configparser import ConfigParser
 
-from hal9000.brain import HAL9000_Action
+from hal9000.brain.modules import HAL9000_Action
 from hal9000.brain.daemon import Daemon
 
 
@@ -29,14 +29,17 @@ class Action(HAL9000_Action):
 
 	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
 		HAL9000_Action.configure(self, configuration, section_name, cortex)
+		cortex['enclosure'] = dict()
 		for identifier in configuration.options('enclosure:components'):
 			module_id = configuration.get('enclosure:components', identifier, fallback=None)
 			if module_id is not None:
+				print(module_id)
 				module_path, module_class = module_id.rsplit('.', 1)
 				Component = self.daemon.import_plugin(module_path, module_class)
 				if Component is not None:
 					self.components[identifier] = Component(daemon=self.daemon)
 		for identifier in self.components.keys():
+			cortex['enclosure'][identifier] = dict()
 			self.components[identifier].configure(configuration, section_name, cortex)
 
 
