@@ -71,14 +71,14 @@ class Driver(HAL9000_Driver):
 			line += data.strip()
 		if line is not None:
 			if len(line) == 0:
-				Driver.heartbeat_recv = time.time()
+				Driver.heartbeat_recv = time.monotonic()
 				line = None
 			else:
 				if self.config['trace'] is True:
 					self.logger.debug(f"USB(D->H): {line}")
-		if (time.time()-Driver.heartbeat_recv) < (2*self.config['heartbeat-period']) and Driver.heartbeat_online == False:
+		if (time.monotonic()-Driver.heartbeat_recv) < (2*self.config['heartbeat-period']) and Driver.heartbeat_online == False:
 			Driver.heartbeat_online = True
-		if (time.time()-Driver.heartbeat_recv) >= (2*self.config['heartbeat-period']) and Driver.heartbeat_online == True:
+		if (time.monotonic()-Driver.heartbeat_recv) >= (2*self.config['heartbeat-period']) and Driver.heartbeat_online == True:
 			Driver.heartbeat_online = False
 		return line
 
@@ -90,9 +90,9 @@ class Driver(HAL9000_Driver):
 
 
 	def heartbeat(self):
-		if time.time()-Driver.heartbeat_send > self.config['heartbeat-period']:
+		if time.monotonic()-Driver.heartbeat_send > self.config['heartbeat-period']:
 			self.send("")
-			Driver.heartbeat_send = time.time()
+			Driver.heartbeat_send = time.monotonic()
 
 
 	def send(self, line: str):
@@ -108,7 +108,7 @@ class Driver(HAL9000_Driver):
 		if Driver.serial_ready == False:
 			self.send('["device/mcp23X17", {"start": true}]')
 			Driver.serial_ready = True
-		if time.time()-Driver.heartbeat_send >= 1:
+		if time.monotonic()-Driver.heartbeat_send >= 1:
 			self.heartbeat()
 		Driver.received_line = self.receive()
 		return Driver.heartbeat_online

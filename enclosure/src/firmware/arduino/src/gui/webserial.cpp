@@ -72,6 +72,18 @@ void on_gui_screen(const JsonVariant& body) {
 			}
 		}
 	}
+	if(body.containsKey("error")) {
+		if(body["error"].containsKey("message")) {
+			g_system_runtime["gui/screen:error/message"] = body["error"]["message"].as<const char*>();
+		}
+		if(body["error"].containsKey("image")) {
+			g_system_runtime["gui/screen:error/filename"] = body["error"]["image"].as<const char*>();
+		}
+		if(body["error"].containsKey("url")) {
+			g_system_runtime["gui/screen:error/url"] = body["error"]["url"].as<const char*>();
+		}
+		screen = gui_screen_error;
+	}
 	if(screen != gui_screen_none) {
 		gui_screen_set(screen);
 	}

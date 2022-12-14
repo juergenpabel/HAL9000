@@ -45,6 +45,4 @@ class Action(HAL9000_Action):
 				webserial_state = signal['arduino']['webserial']
 				if webserial_state in Action.WEBSERIAL_STATES_VALID:
 					cortex['arduino']['webserial'] = webserial_state
-				if webserial_state == Action.WEBSERIAL_STATE_ONLINE:
-					self.daemon.arduino_set_system_time()
 

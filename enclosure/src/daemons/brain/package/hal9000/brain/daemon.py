@@ -48,8 +48,8 @@ class Daemon(HAL9000_Daemon):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000_Daemon.configure(self, configuration)
-		self.config['boot-timeout']  = configuration.getint('brain', 'boot-timeout', fallback=10)
-		self.config['boot-finished-mqtt-topic']  = configuration.get('brain', 'boot-finished-mqtt-topic', fallback=None)
+		self.config['boot-timeout']  = configuration.getint('runlevel', 'boot-timeout', fallback=10)
+		self.config['boot-finished-mqtt-topic']  = configuration.get('runlevel', 'boot-finished-mqtt-topic', fallback=None)
 		self.config['error-database-base-url']  = configuration.get('help', 'error-database-base-url', fallback=None)
 		self.config['sleep-time']  = configuration.get('brain', 'sleep-time', fallback=None)
 		self.config['wakeup-time'] = configuration.get('brain', 'wakeup-time', fallback=None)
@@ -99,7 +99,7 @@ class Daemon(HAL9000_Daemon):
 
 
 	def loop(self) -> None:
-		self.booting_timeout = datetime.now() + timedelta(seconds=self.config['boot-timeout'])
+		self.booting_timeout = time.monotonic() + self.config['boot-timeout']
 		for module in list(self.triggers.values()) + list(self.actions.values()):
 			cortex = self.cortex.copy()
 			if module.runlevel(cortex) == HAL9000_Module.MODULE_RUNLEVEL_BOOTING:
@@ -127,9 +127,9 @@ class Daemon(HAL9000_Daemon):
 				cortex = self.cortex.copy()
 				if self.booting_modules[id].runlevel(cortex) != HAL9000_Module.MODULE_RUNLEVEL_BOOTING:
 					del self.booting_modules[id]
-			if datetime.now() > self.booting_timeout:
+			if time.monotonic() > self.booting_timeout:
 				self.booting_timeout = None
-				self.logger.warn("Booting completed (modules that haven't finished bootup: {})". format(", ".join(self.booting_modules.keys())))
+				self.logger.warn("Startup completed (modules that haven't finished startup: {})". format(", ".join(self.booting_modules.keys())))
 				for id in self.booting_modules.keys():
 					error = self.booting_modules[id].runlevel_error(self.cortex.copy())
 					self.logger.warn("Error #{} for module '{}': {}".format(error['code'], id, error['message']))
@@ -141,10 +141,9 @@ class Daemon(HAL9000_Daemon):
 						self.arduino_show_gui_screen('error', error) #TODO
 					if "audio" in error and error["audio"] is not None:
 						self.kalliope_play_audio(error["audio"]) #TODO
-
 			if len(self.booting_modules) == 0:
+				self.logger.info("Startup completed for all modules ({:.2f} seconds)".format(time.monotonic()-(self.booting_timeout-self.config['boot-timeout'])))
 				self.booting_timeout = None
-				self.logger.info("Booting completed for all modules")
 				if self.config['boot-finished-mqtt-topic'] is not None:
 					mqtt_publish_message(self.config['boot-finished-mqtt-topic'])
 		for key in self.timeouts.copy().keys():

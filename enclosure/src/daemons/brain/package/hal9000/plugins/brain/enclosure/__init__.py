@@ -33,7 +33,6 @@ class Action(HAL9000_Action):
 		for identifier in configuration.options('enclosure:components'):
 			module_id = configuration.get('enclosure:components', identifier, fallback=None)
 			if module_id is not None:
-				print(module_id)
 				module_path, module_class = module_id.rsplit('.', 1)
 				Component = self.daemon.import_plugin(module_path, module_class)
 				if Component is not None:
