@@ -21,7 +21,7 @@ static int                        g_current_frame = 0;
 
 
 static void gui_screen_animations(bool refresh) {
-	if(g_current_frame == g_animation.front().frames) {
+	if(g_current_frame >= g_animation.front().frames) {
 		g_animation.pop_front();
 		g_current_frame = 0;
 		if(g_animation.empty() == true) {
@@ -41,9 +41,9 @@ static void gui_screen_animations(bool refresh) {
 		filename += ".jpg";
 		util_jpeg_decode565_littlefs(filename.c_str(), g_gui_buffer, GUI_SCREEN_WIDTH*GUI_SCREEN_HEIGHT*sizeof(uint16_t));
 		g_gui.pushImage((TFT_WIDTH-GUI_SCREEN_WIDTH)/2, (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT, (uint16_t*)g_gui_buffer);
+		delay(g_animation.front().delay);
+		g_current_frame++;
 	}
-	delay(g_animation.front().delay);
-	g_current_frame++;
 }
 
 

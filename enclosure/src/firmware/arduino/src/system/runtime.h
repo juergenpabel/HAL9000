@@ -8,12 +8,13 @@
 
 typedef enum {
 	StatusUnknown   = 0x00,
-	StatusBooting   = 0x01,
-	StatusOffline   = 0x02,
-	StatusOnline    = 0x03,
-	StatusResetting = 0x04,
-	StatusRebooting = 0x05,
-	StatusHalting   = 0x06,
+	StatusPowerOn   = 0x01,
+	StatusBooting   = 0x02,
+	StatusOffline   = 0x03,
+	StatusOnline    = 0x04,
+	StatusResetting = 0x05,
+	StatusRebooting = 0x06,
+	StatusHalting   = 0x07,
 	StatusMask      = 0x0f,
 	StatusUnchanged = 0xff,
 } Status;

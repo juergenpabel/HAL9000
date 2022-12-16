@@ -41,20 +41,16 @@ void loop() {
 	if(newStatus != oldStatus) {
 		switch(newStatus) {
 			case StatusBooting:
-				g_util_webserial.send("system/application", "booting");
-				gui_screen_set(gui_screen_animation_startup);
-				while(gui_screen_get() == gui_screen_animation_startup) {
-					int serial_data = '\n';
-
-					while(serial_data == '\n' && Serial.available() > 1) {
-						serial_data = Serial.peek();
-						if(serial_data == '\n') {
-							Serial.read();
-						}
-					}
-					gui_screen_update(true);
+				if(oldStatus == StatusUnknown) {
+					oldStatus = StatusPowerOn;
+					g_util_webserial.send("system/application", "booting");
+					gui_screen_set(gui_screen_animation_startup);
 				}
-				g_system_runtime.setStatus(StatusOffline);
+				gui_screen_update(true);
+				if(gui_screen_get() != gui_screen_animation_startup) {
+					g_system_runtime.setStatus(StatusOffline);
+				}
+				newStatus = StatusUnchanged;
 				break;
 			case StatusOffline:
 				if(oldStatus == StatusBooting) {

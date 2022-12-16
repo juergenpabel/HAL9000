@@ -86,6 +86,12 @@ void WebSerial::update() {
 		serial_heartbeat_millis = 0;
 		return;
 	}
+	if(g_system_runtime.getStatus() == StatusBooting) {
+		while(Serial.available() > 0) {
+			Serial.read();
+		}
+		return;
+	}
 	if(g_device_microcontroller.mutex_try_enter("webserial::update") == true) {
 		size_t        serial_available = 0;
 		unsigned long now = 0;
