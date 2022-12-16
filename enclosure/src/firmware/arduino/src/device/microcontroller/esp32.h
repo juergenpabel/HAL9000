@@ -2,12 +2,14 @@
 #define __DEVICE_MICROCONTROLLER_ESP32_H__
 
 #ifdef ARDUINO_ARCH_ESP32
+#include <esp_log.h>
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/semphr.h>
 #include <etl/string.h>
 #include <etl/map.h>
 
+#include "system/runtime.h"
 #include "microcontroller.h"
 
 typedef struct {
@@ -23,13 +25,19 @@ class TwoWire;
 
 class Microcontroller : AbstractMicrocontroller {
 	private:
-		MutexMap     mutex_map;
+		static bool           reset_booting;
+		static Condition      reset_condition;
+		static uint32_t       reset_timestamp;
+		static vprintf_like_t original_vprintf;
+		       MutexMap       mutex_map;
 	public:
 		Microcontroller();
 
 		virtual void start(uint32_t& timestamp, bool& booting);
 		virtual void reset(uint32_t timestamp, bool rebooting);
 		virtual void halt();
+
+		static int vprintf(const char* format, va_list message);
 
 		virtual bool thread_create(void (*function)(), uint8_t core);
 

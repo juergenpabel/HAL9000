@@ -9,6 +9,13 @@ AbstractBoard::AbstractBoard() {
 
 
 void AbstractBoard::start(bool& host_booting) {
+	uint32_t  epoch = 0;
+
+	g_device_microcontroller.start(epoch, host_booting);
+	if(epoch > 0) {
+		setTime(epoch);
+		g_util_webserial.send("syslog/debug", "recovered system time from before microcontroller was resetted");
+	}
 	g_device_microcontroller.mutex_create("Serial", true);
 	Serial.begin(115200);
 	delay(100);
@@ -24,7 +31,7 @@ void AbstractBoard::reset(bool host_rebooting) {
 		delay(100);
 	}
 	this->displayOff();
-        g_device_microcontroller.reset(now(), host_rebooting);
+	g_device_microcontroller.reset(now(), host_rebooting);
 }
 
 

@@ -1,6 +1,7 @@
 #include <TimeLib.h>
 
 #include "gui/screen/screen.h"
+#include "gui/screen/error/screen.h"
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/menu/screen.h"
 #include "gui/screen/splash/screen.h"

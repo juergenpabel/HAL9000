@@ -3,6 +3,8 @@
 
 #include <etl/string.h>
 #include <etl/map.h>
+#include <ArduinoJson.h>
+
 
 typedef enum {
 	StatusUnknown   = 0x00,
@@ -12,7 +14,8 @@ typedef enum {
 	StatusResetting = 0x04,
 	StatusRebooting = 0x05,
 	StatusHalting   = 0x06,
-	StatusMask      = 0x0f
+	StatusMask      = 0x0f,
+	StatusUnchanged = 0xff,
 } Status;
 
 typedef enum {
@@ -38,7 +41,7 @@ class Runtime {
 		void       setCondition(Condition condition) { this->m_condition = condition; };
 		Condition  getCondition() { return this->m_condition; };
 
-		void       setStatus(Status status) { this->m_status = status; };
+		void       setStatus(Status status) { if(status != StatusUnchanged) { this->m_status = status; } };
 		Status     getStatus() { return this->m_status; };
 
 		const etl::string<GLOBAL_VALUE_SIZE>& get(const etl::string<GLOBAL_KEY_SIZE>& key);
@@ -47,6 +50,7 @@ class Runtime {
 		etl::string<GLOBAL_VALUE_SIZE>&       operator[](const etl::string<GLOBAL_KEY_SIZE>& key);
 
 		bool                                  exists(const etl::string<GLOBAL_KEY_SIZE>& key);
+
 	friend class RuntimeWriter;
 	friend void on_system_runtime(const JsonVariant& data);
 	static const etl::string<GLOBAL_VALUE_SIZE> Null;

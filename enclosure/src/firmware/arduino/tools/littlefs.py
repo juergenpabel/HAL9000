@@ -4,6 +4,7 @@ import os
 import os.path
 import sys
 import glob
+import shutil
 import subprocess
 
 SRC_BASEDIR="./resources/images/sequences"
@@ -34,9 +35,14 @@ if os.path.exists(DST_BASEDIR) is False:
 SRC_BASEDIR="./resources/images/animations"
 DST_BASEDIR="./data/images/animations"
 if os.path.exists(DST_BASEDIR) is False:
-	for DIR in ['startup/countdown','startup/fadeout','shutdown']:
+	for DIR in ['startup','shutdown']:
 		if os.path.exists("{}/{}".format(DST_BASEDIR,DIR)) is False:
 			os.makedirs("{}/{}".format(DST_BASEDIR,DIR))
+		shutil.copy("{}/{}.json".format(SRC_BASEDIR,DIR), DST_BASEDIR)
+	for DIR in ['startup/boot','startup/countdown','shutdown']:
+		if os.path.exists("{}/{}".format(DST_BASEDIR,DIR)) is False:
+			os.makedirs("{}/{}".format(DST_BASEDIR,DIR))
+		shutil.copy("{}/{}/animation.json".format(SRC_BASEDIR,DIR), "{}/{}".format(DST_BASEDIR,DIR))
 		for SRC in glob.glob("{}/{}/*.jpg".format(SRC_BASEDIR,DIR)):
 			print(SRC)
 			DST = "{}/{}/{}".format(DST_BASEDIR, DIR, os.path.basename(SRC))

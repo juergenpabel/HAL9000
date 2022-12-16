@@ -94,7 +94,9 @@ void loop() {
 				g_util_webserial.send("syslog/error", "invalid runtime status => resetting");
 				system_reset();
 		}
-		oldStatus = newStatus;
+		if(newStatus != StatusUnchanged) {
+			oldStatus = newStatus;
+		}
 	}
 	gui_screen_update(false);
 }

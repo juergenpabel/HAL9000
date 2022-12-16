@@ -44,7 +44,6 @@ void Board::start(bool& host_booting) {
 	PMU.setDC3Voltage(2800); //backlight
 	PMU.setLDO2Voltage(3300); //display
 	PMU.enableDC2();
-//	PMU.enableDC3();
 	PMU.enableLDO2();
 	delay(120);
 	this->displayOff();

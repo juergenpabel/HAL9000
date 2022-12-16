@@ -13,14 +13,7 @@ Board::Board()
 
 
 void Board::start(bool& host_booting) {
-	uint32_t  epoch = 0;
-
 	AbstractBoard::start(host_booting);
-	g_device_microcontroller.start(epoch, host_booting);
-	if(epoch > 0) {
-		setTime(epoch);
-		g_util_webserial.send("syslog/debug", "recovered system time from before microcontroller was resetted");
-	}
 	if(TFT_BL >= 0) {
 		pinMode(TFT_BL, OUTPUT);
 		this->displayOff();
