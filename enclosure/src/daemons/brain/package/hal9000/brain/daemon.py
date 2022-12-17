@@ -49,7 +49,8 @@ class Daemon(HAL9000_Daemon):
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000_Daemon.configure(self, configuration)
 		self.config['boot-timeout']  = configuration.getint('runlevel', 'boot-timeout', fallback=10)
-		self.config['boot-finished-mqtt-topic']  = configuration.get('runlevel', 'boot-finished-mqtt-topic', fallback=None)
+		self.config['boot-finished-action-name']  = configuration.get('runlevel', 'boot-finished-action-name', fallback=None)
+		self.config['boot-finished-signal-data']  = configuration.get('runlevel', 'boot-finished-signal-data', fallback=None)
 		self.config['error-database-base-url']  = configuration.get('help', 'error-database-base-url', fallback=None)
 		self.config['sleep-time']  = configuration.get('brain', 'sleep-time', fallback=None)
 		self.config['wakeup-time'] = configuration.get('brain', 'wakeup-time', fallback=None)
@@ -144,8 +145,12 @@ class Daemon(HAL9000_Daemon):
 			if len(self.booting_modules) == 0:
 				self.logger.info("Startup completed for all modules ({:.2f} seconds)".format(time.monotonic()-(self.booting_timeout-self.config['boot-timeout'])))
 				self.booting_timeout = None
-				if self.config['boot-finished-mqtt-topic'] is not None:
-					mqtt_publish_message(self.config['boot-finished-mqtt-topic'])
+				action_name = self.config['boot-finished-action-name']
+				if action_name in self.actions:
+					signal_data = json.loads(self.config['boot-finished-signal-data'])
+					self.logger.info(signal_data)
+					self.queue_action(action_name, signal_data)
+		self.process_queued_actions()
 		for key in self.timeouts.copy().keys():
 			timeout, data = self.timeouts[key]
 			if datetime.now() > timeout:
@@ -198,9 +203,11 @@ class Daemon(HAL9000_Daemon):
 		for action_name, signal_data in self.actions_queued:
 			if action_name in self.actions:
 				cortex = self.cortex.copy()
+				self.logger.debug("CORTEX before (postponed) action '{}' = {}".format(action_name, self.cortex))
 				self.actions[action_name].process(signal_data, cortex)
 				if action_name in cortex:
 					self.cortex[action_name] = cortex[action_name]
+				self.logger.debug("CORTEX after  (postponed) action '{}' = {}".format(action_name, self.cortex))
 		self.actions_queued.clear()
 
 

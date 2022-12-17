@@ -22,6 +22,7 @@ class Action(HAL9000_Action):
 		HAL9000_Action.configure(self, configuration, section_name, cortex)
 		cortex['system'] = dict()
 		cortex['system']['time'] = Action.SYSTEM_STATE_TIME_UNKNOWN
+		cortex['system']['time'] = Action.SYSTEM_STATE_TIME_SYNCED ## TODO
 
 
 	def runlevel(self, cortex: dict) -> str:
