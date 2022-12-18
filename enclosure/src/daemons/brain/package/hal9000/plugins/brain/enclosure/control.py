@@ -20,10 +20,9 @@ class Control(EnclosureComponent):
 
 	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
 		EnclosureComponent.configure(self, configuration, section_name, cortex)
-		if 'control' not in cortex['enclosure']:
-			cortex['enclosure']['control'] = dict()
-			cortex['enclosure']['control']['menu-name'] = None
-			cortex['enclosure']['control']['menu-item'] = None
+		cortex['enclosure']['control'] = dict()
+		cortex['enclosure']['control']['menu-name'] = None
+		cortex['enclosure']['control']['menu-item'] = None
 		menu_files = configuration.getlist('enclosure:control', 'menu-files', fallback=[])
 		item_files = configuration.getlist('enclosure:control', 'item-files', fallback=[])
 		files = [file for file in menu_files+item_files if file is not None]
