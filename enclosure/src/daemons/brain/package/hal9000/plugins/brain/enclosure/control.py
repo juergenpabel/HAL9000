@@ -20,9 +20,11 @@ class Control(EnclosureComponent):
 
 	def configure(self, configuration: ConfigParser, section_name: str, cortex: dict) -> None:
 		EnclosureComponent.configure(self, configuration, section_name, cortex)
-		cortex['enclosure']['control'] = dict()
-		cortex['enclosure']['control']['menu-name'] = None
-		cortex['enclosure']['control']['menu-item'] = None
+		if 'volume' not in cortex['enclosure']:
+			cortex['enclosure']['control'] = dict()
+			cortex['enclosure']['control']['menu-name'] = None
+			cortex['enclosure']['control']['menu-item'] = None
+		self.config['menu']['timeout'] = configuration.getint('enclosure:control', 'timeout', fallback=15)
 		menu_files = configuration.getlist('enclosure:control', 'menu-files', fallback=[])
 		item_files = configuration.getlist('enclosure:control', 'item-files', fallback=[])
 		files = [file for file in menu_files+item_files if file is not None]
@@ -50,6 +52,11 @@ class Control(EnclosureComponent):
 
 	def process(self, signal: dict, cortex: dict) -> None:
 		EnclosureComponent.process(self, signal, cortex)
+		if 'cancel' in signal['control']:
+			cortex['enclosure']['control']['menu-name'] = None
+			cortex['enclosure']['control']['menu-item'] = None
+			self.daemon.arduino_show_gui_screen('idle', {})
+			return
 		if 'delta' in signal['control']:
 			if cortex['enclosure']['control']['menu-name'] is None:
 				cortex['enclosure']['control']['menu-name'] = 'menu-main'
@@ -70,40 +77,42 @@ class Control(EnclosureComponent):
 			menu_item  = self.config['menu'][menu_name]['items'][position]["item"]
 			menu_text  = self.config['menu'][menu_name]['items'][position]["text"]
 			self.daemon.arduino_show_gui_screen('menu', {"title": menu_title, "text": menu_text})
-			self.daemon.timeouts['action'] = datetime.now()+timedelta(seconds=15), ['enclosure', {"control": {"cancel": {}}}]
+			self.daemon.set_timeout(self.config['menu']['timeout'], 'action', ['enclosure', {"control": {"cancel": {}}}])
 			cortex['enclosure']['control']['menu-name'] = menu_name
 			cortex['enclosure']['control']['menu-item'] = menu_item
 		if 'select' in signal['control']:
 			if 'action' in self.daemon.timeouts:
 				del self.daemon.timeouts['action']
 			if cortex['enclosure']['control']['menu-name'] is not None:
-				menu_name = cortex['enclosure']['control']['menu-name'] 
 				menu_item = cortex['enclosure']['control']['menu-item'] 
-				if menu_item is not None and menu_item.startswith("item-"):
-					if menu_item in self.config['action']:
+				cortex['enclosure']['control']['menu-name'] = None
+				cortex['enclosure']['control']['menu-item'] = None
+				if menu_item is not None:
+					if menu_item.startswith("item-"):
+						if menu_item not in self.config['action']:
+							self.daemon.arduino_show_gui_screen('error', {"menu": "TODO:{}".format(menu_item)}, 10)
+							self.daemon.logger.error("plugin enclosure: invalid menu item '{}', check configuration".format(menu_item))
+							return
 						action_name = self.config['action'][menu_item]["action-name"]
-						if action_name in self.daemon.actions:
-							signal_data = json.loads(self.config['action'][menu_item]['signal-data'])
-							self.daemon.queue_action(action_name, signal_data)
-						else:
-							self.daemon.logger.error("plugin enclosure: menu item '{}' refers to nonexistant action '{}'"
-							                         .format(menu_item, action_name))
-					cortex['enclosure']['control']['menu-name'] = None
-					cortex['enclosure']['control']['menu-item'] = None
-					self.daemon.arduino_show_gui_screen('idle', {})
-				if menu_item is not None and menu_item.startswith("menu-"):
-					if menu_item in self.config['menu']:
+						if action_name not in self.daemon.actions:
+							self.daemon.arduino_show_gui_screen('error', {"menu": "TODO"}, 10)
+							self.daemon.logger.error("plugin enclosure: invalid action '{}', check configuration".format(action_name))
+							return
+						self.daemon.queue_action(action_name, json.loads(self.config['action'][menu_item]['signal-data']))
+						self.daemon.arduino_show_gui_screen('idle', {})
+					elif menu_item.startswith("menu-"):
+						if menu_item not in self.config['menu']:
+							self.daemon.arduino_show_gui_screen('error', {"menu": "TODO:{}".format(menu_item)}, 10)
+							self.daemon.logger.error("plugin enclosure: invalid menu item '{}', check configuration".format(menu_item))
+							return
 						cortex['enclosure']['control']['menu-name'] = menu_item
 						cortex['enclosure']['control']['menu-item'] = self.config['menu'][menu_item]['items'][0]["item"]
 						menu_title = self.config['menu'][menu_item]['title']
 						menu_text  = self.config['menu'][menu_item]['items'][0]["text"]
 						self.daemon.arduino_show_gui_screen('menu', {"title": menu_title, "text": menu_text})
-						self.daemon.timeouts['action']  = datetime.now()+timedelta(seconds=15), ['enclosure', {"control": {"cancel": {}}}]
-		if 'cancel' in signal['control']:
-			self.daemon.arduino_show_gui_screen('idle', {})
-			if 'action' in self.daemon.timeouts:
-				del self.daemon.timeouts['action']
-			cortex['enclosure']['control']['menu-name'] = None
-			cortex['enclosure']['control']['menu-item'] = None
-			self.daemon.logger.debug("enclosure/control: exited menu mode")
+						self.daemon.set_timeout(self.config['menu']['timeout'], 'action', ['enclosure', {"control": {"cancel": {}}}])
+					else:
+						self.daemon.arduino_show_gui_screen('error', {"menu": "TODO:{}".format(menu_item)}, 10)
+						self.daemon.logger.error("plugin enclosure: invalid menu item '{}', check configuration".format(menu_item))
+						return
 

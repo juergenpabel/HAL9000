@@ -3,6 +3,7 @@
 import soco
 from paho.mqtt.publish import single as mqtt_publish_message
 
+from hal9000.brain.daemon import Activity
 from hal9000.brain.modules import HAL9000_Action
 from configparser import ConfigParser
 
@@ -28,10 +29,10 @@ class Action(HAL9000_Action):
 			return
 		if 'sonos' in signal:
 			if 'trigger' in signal['sonos']:
-				cortex['brain']['activity']['enclosure']['audio'] = str(self)
+				cortex['#activity']['audio'] = Activity('sonos', player=self.config['sonos-name'])
 				self.daemon.arduino_show_gui_overlay('message', {"text": "<SONOS>"})
 			return
-		if cortex['brain']['activity']['enclosure']['audio'] == str(self):
+		if cortex['#activity']['audio'] == Activity('sonos', player=self.config['sonos-name']):
 			if 'volume' in signal:
 				if 'delta' in signal['volume']:
 					delta = int(signal['volume']['delta'])
@@ -44,6 +45,6 @@ class Action(HAL9000_Action):
 						self.sonos.mute = False
 			if 'control' in signal:
 				if 'select' in signal['control']:
-					cortex['brain']['activity']['enclosure']['audio'] = None
+					cortex['#activity']['audio'] = Activity()
 					self.daemon.arduino_hide_gui_overlay('message')
 

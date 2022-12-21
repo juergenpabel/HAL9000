@@ -70,7 +70,7 @@ class Action(HAL9000_Action):
 							self.daemon.arduino_show_gui_screen('hal9000', {"queue": "append",  "sequence": {"name": "active", "loop": "true"}})
 						if kalliope_state == Action.KALLIOPE_STATE_WAITING:
 							self.daemon.arduino_show_gui_screen('hal9000', {"queue": "replace", "sequence": {"name": "sleep",  "loop": "false"}})
-							self.daemon.cortex['brain']['activity']['enclosure']['gui']['screen'] = None
+							self.daemon.cortex['#activity']['video'].screen = 'none'
 					if cortex['brain']['consciousness'] == Daemon.CONSCIOUSNESS_ASLEEP:
 						if self.config['kalliope-trigger-multiplexer-mqtt-topic'] is not None:
 							mqtt_publish_message(self.config['kalliope-trigger-multiplexer-mqtt-topic'], "pause")

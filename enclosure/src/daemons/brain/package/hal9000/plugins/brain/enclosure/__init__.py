@@ -38,7 +38,6 @@ class Action(HAL9000_Action):
 				if Component is not None:
 					self.components[identifier] = Component(daemon=self.daemon)
 		for identifier in self.components.keys():
-			cortex['enclosure'][identifier] = dict()
 			self.components[identifier].configure(configuration, section_name, cortex)
 
 
