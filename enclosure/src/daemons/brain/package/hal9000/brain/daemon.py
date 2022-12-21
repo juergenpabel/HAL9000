@@ -23,7 +23,12 @@ class Activity:
 	def __getattr__(self, item):
 		return 'none'
 	def __repr__(self):
-		return f"'{self.module}'"
+		result = "{"
+		result += f"module='{self.module}'"
+		for key, value in self.__dict__.items():
+			result += f", {key}='{value}'"
+		result += "}"
+		return result
 
 
 class ConfigurationError:
@@ -223,7 +228,8 @@ class Daemon(HAL9000_Daemon):
 					self.arduino_show_gui_screen(data, {})
 				if key == 'gui/overlay':
 					self.arduino_hide_gui_overlay(data)
-				del self.timeouts[key]
+				if key in self.timeouts:
+					del self.timeouts[key]
 
 
 	def set_consciousness(self, new_state) -> None:
@@ -247,7 +253,7 @@ class Daemon(HAL9000_Daemon):
 			#TODO:error log
 			return
 		self.logger.info("GUI: screen '{}' activated (previously '{}')".format(screen, self.cortex['#activity']['video'].screen))
-		self.cortex['#activity']['video'].screen = screen
+		self.cortex['#activity']['video'] = Activity('gui', screen=screen, overlay=self.cortex['#activity']['video'].overlay)
 		if timeout is not None and timeout > 0:
 			self.set_timeout(timeout, 'gui/screen', 'idle')
 		self.arduino_send_command('gui/screen', json.dumps({screen: parameter}))
@@ -270,7 +276,7 @@ class Daemon(HAL9000_Daemon):
 			#TODO:error log
 			return
 		self.logger.info("GUI: overlay '{}' activated (previously '{}')".format(overlay, self.cortex['#activity']['video'].overlay))
-		self.cortex['#activity']['video'].overlay = overlay
+		self.cortex['#activity']['video'] = Activity('gui', screen=self.cortex['#activity']['video'].screen, overlay=overlay)
 		if timeout is not None and timeout > 0:
 			self.set_timeout(timeout, 'gui/overlay', overlay)
 		self.arduino_send_command('gui/overlay', json.dumps({overlay: parameter}))
