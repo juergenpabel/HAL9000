@@ -50,7 +50,8 @@ class Control(EnclosureComponent):
 
 	def process(self, signal: dict, cortex: dict) -> None:
 		EnclosureComponent.process(self, signal, cortex)
-		if cortex['#activity']['video'].module != 'gui':
+		if 'cancel' in signal['control']:
+			self.daemon.arduino_show_gui_screen('idle', {})
 			return
 		if 'delta' in signal['control']:
 			if cortex['#activity']['video'].screen != 'menu':

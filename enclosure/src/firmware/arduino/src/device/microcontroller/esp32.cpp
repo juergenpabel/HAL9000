@@ -23,8 +23,6 @@ Microcontroller::Microcontroller()
 
 
 void Microcontroller::start(uint32_t& timestamp, bool& host_booting) {
-	Microcontroller::original_vprintf = esp_log_set_vprintf(Microcontroller::vprintf);
-
 	if(esp_reset_reason() == ESP_RST_POWERON) {
 		host_booting = true;
 		timestamp = 0;
@@ -37,6 +35,7 @@ void Microcontroller::start(uint32_t& timestamp, bool& host_booting) {
 			g_system_runtime.setCondition(Microcontroller::reset_condition);
 		}
 	}
+	Microcontroller::original_vprintf = esp_log_set_vprintf(Microcontroller::vprintf);
 }
 
 

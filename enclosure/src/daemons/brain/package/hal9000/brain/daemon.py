@@ -249,9 +249,9 @@ class Daemon(HAL9000_Daemon):
 
 
 	def arduino_show_gui_screen(self, screen, parameter, timeout: int = None) -> None:
-		if self.cortex['#activity']['video'].module != 'gui':
-			#TODO:error log
-			return
+#TODO		if self.cortex['#activity']['video'].module != 'gui':
+#TODO			#TODO:error log
+#TODO			return
 		self.logger.info("GUI: screen '{}' activated (previously '{}')".format(screen, self.cortex['#activity']['video'].screen))
 		self.cortex['#activity']['video'] = Activity('gui', screen=screen, overlay=self.cortex['#activity']['video'].overlay)
 		if timeout is not None and timeout > 0:
@@ -260,9 +260,9 @@ class Daemon(HAL9000_Daemon):
 
 
 	def arduino_hide_gui_screen(self, screen, parameter) -> None:
-		if self.cortex['#activity']['video'].module != 'gui':
-			#TODO:error log
-			return
+#TODO		if self.cortex['#activity']['video'].module != 'gui':
+#TODO			#TODO:error log
+#TODO			return
 		if self.cortex['#activity']['video'].screen == screen:
 			self.logger.info("GUI: screen 'idle' activated (previously '{}')".format(screen))
 			self.cortex['#activity']['video'].screen = 'idle'
@@ -272,9 +272,9 @@ class Daemon(HAL9000_Daemon):
 
 
 	def arduino_show_gui_overlay(self, overlay, parameter, timeout: int = None) -> None:
-		if self.cortex['#activity']['video'].module != 'gui':
-			#TODO:error log
-			return
+#TODO		if self.cortex['#activity']['video'].module != 'gui':
+#TODO			#TODO:error log
+#TODO			return
 		self.logger.info("GUI: overlay '{}' activated (previously '{}')".format(overlay, self.cortex['#activity']['video'].overlay))
 		self.cortex['#activity']['video'] = Activity('gui', screen=self.cortex['#activity']['video'].screen, overlay=overlay)
 		if timeout is not None and timeout > 0:
@@ -283,9 +283,9 @@ class Daemon(HAL9000_Daemon):
 
 
 	def arduino_hide_gui_overlay(self, overlay) -> None:
-		if self.cortex['#activity']['video'].module != 'gui':
-			#TODO:error log
-			return
+#TODO		if self.cortex['#activity']['video'].module != 'gui':
+#TODO			#TODO:error log
+#TODO			return
 		if self.cortex['#activity']['video'].overlay == overlay:
 			self.logger.info("GUI: overlay 'none' activated (previously '{}')".format(overlay))
 			self.cortex['#activity']['video'].overlay = 'none'
