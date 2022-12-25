@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import json
 from configparser import ConfigParser
 
 from hal9000.brain.modules import HAL9000_Action
@@ -44,7 +45,7 @@ class Action(HAL9000_Action):
 	def process(self, signal: dict, cortex: dict) -> None:
 		if 'brain' in signal:
 			if 'consciousness' in signal['brain']:
-				self.daemon.arduino_set_system_runtime("system/state:consciousness", signal['brain']['consciousness'])
+				self.daemon.arduino_send_command('system/runtime', json.dumps({"condition": signal['brain']['consciousness']}))
 		for identifier in signal.keys():
 			if identifier in self.components:
 				self.components[identifier].process(signal, cortex)

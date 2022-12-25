@@ -117,20 +117,7 @@ class Daemon(HAL9000_Daemon):
 			cortex = self.cortex.copy()
 			if module.runlevel(cortex) == HAL9000_Module.MODULE_RUNLEVEL_BOOTING:
 				self.booting_modules[str(module)] = module
-		datetime_now = datetime.now()
-		datetime_sleep = None
-		datetime_wakeup = None
-		if self.config['sleep-time'] is not None and self.config['wakeup-time'] is not None:
-			datetime_sleep = datetime.combine(date.today(), timeformat.fromisoformat(self.config['sleep-time']))
-			if(datetime_now > datetime_sleep):
-				datetime_sleep += timedelta(hours=24)
-			self.timeouts[Daemon.CONSCIOUSNESS_ASLEEP] = datetime_sleep, None
-			datetime_wakeup = datetime.combine(date.today(), timeformat.fromisoformat(self.config['wakeup-time']))
-			if(datetime_now > datetime_wakeup):
-				datetime_wakeup += timedelta(hours=24)
-			self.timeouts[Daemon.CONSCIOUSNESS_AWAKE] = datetime_wakeup, None
-		if datetime_wakeup == datetime_sleep or datetime_sleep < datetime_wakeup:
-			self.set_consciousness(Daemon.CONSCIOUSNESS_AWAKE)
+		self.set_system_time(datetime.now())
 		HAL9000_Daemon.loop(self)
 
 	
@@ -157,10 +144,11 @@ class Daemon(HAL9000_Daemon):
 			if len(self.booting_modules) == 0:
 				self.logger.info("Startup completed for all modules ({:.2f} seconds)".format(time.monotonic()-(self.booting_timeout-self.config['boot-timeout'])))
 				self.booting_timeout = None
-				action_name = self.config['boot-finished-action-name']
-				if action_name in self.actions:
-					self.queue_action(action_name, json.loads(self.config['boot-finished-signal-data']))
-					self.cortex['#activity']['video'] = Activity('gui', screen='idle', overlay='none')
+				if self.cortex['#consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
+					action_name = self.config['boot-finished-action-name']
+					if action_name in self.actions:
+						self.queue_action(action_name, json.loads(self.config['boot-finished-signal-data']))
+				self.cortex['#activity']['video'] = Activity('gui', screen='idle', overlay='none')
 		self.process_queued_actions()
 		self.process_timeouts()
 		return True
@@ -173,7 +161,7 @@ class Daemon(HAL9000_Daemon):
 			if consciousness_state in Daemon.CONSCIOUSNESS_VALID:
 				self.set_consciousness(consciousness_state)
 			return
-		if self.cortex['#consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
+		if self.cortex['#consciousness'] == Daemon.CONSCIOUSNESS_AWAKE or self.booting_timeout is not None:
 			if 'mqtt' in self.callbacks and message.topic in self.callbacks['mqtt']:
 				self.logger.info("SYNAPSES fired: {}".format(', '.join(str(x).split(':',2)[2] for x in self.callbacks['mqtt'][message.topic])))
 				self.logger.debug("CORTEX before triggers = {}".format(self.cortex))
@@ -248,6 +236,23 @@ class Daemon(HAL9000_Daemon):
 			self.logger.debug("CORTEX after state change  = {}".format(self.cortex))
 
 
+	def set_system_time(self, datetime_now) -> None:
+		self.arduino_set_system_time(datetime_now)
+		datetime_sleep = None
+		datetime_wakeup = None
+		if self.config['sleep-time'] is not None and self.config['wakeup-time'] is not None:
+			datetime_sleep = datetime.combine(date.today(), timeformat.fromisoformat(self.config['sleep-time']))
+			if(datetime_now > datetime_sleep):
+				datetime_sleep += timedelta(hours=24)
+			self.timeouts[Daemon.CONSCIOUSNESS_ASLEEP] = datetime_sleep, None
+			datetime_wakeup = datetime.combine(date.today(), timeformat.fromisoformat(self.config['wakeup-time']))
+			if(datetime_now > datetime_wakeup):
+				datetime_wakeup += timedelta(hours=24)
+			self.timeouts[Daemon.CONSCIOUSNESS_AWAKE] = datetime_wakeup, None
+		if datetime_wakeup == datetime_sleep or datetime_sleep < datetime_wakeup:
+			self.set_consciousness(Daemon.CONSCIOUSNESS_AWAKE)
+
+
 	def arduino_show_gui_screen(self, screen, parameter, timeout: int = None) -> None:
 #TODO		if self.cortex['#activity']['video'].module != 'gui':
 #TODO			#TODO:error log
@@ -294,11 +299,12 @@ class Daemon(HAL9000_Daemon):
 			self.arduino_send_command('gui/overlay', json.dumps({'none': {}}))
 
 
-	def arduino_set_system_time(self) -> None:
-		self.arduino_send_command("system/time", json.dumps({"config": {"epoch": int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds)}}))
+	def arduino_set_system_time(self, datetime_now) -> None:
+		self.arduino_send_command("system/time", json.dumps({"config": {"epoch": int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)}}))
 		if self.config['sleep-time'] != self.config['wakeup-time']:
-			self.arduino_set_system_setting('system/state:time/sleep',  self.config['sleep-time'])
-			self.arduino_set_system_setting('system/state:time/wakeup', self.config['wakeup-time'])
+#TODO			self.arduino_send_command('system/runtime', json.dumps({"condition": self.cortex['#consciousness']}))
+			self.arduino_set_system_setting('system/state:app/condition:time-sleep',  self.config['sleep-time'])
+			self.arduino_set_system_setting('system/state:app/condition:time-wakeup', self.config['wakeup-time'])
 			self.arduino_save_system_setting()
 
 

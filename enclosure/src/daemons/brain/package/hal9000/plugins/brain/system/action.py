@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+from datetime import datetime
 from configparser import ConfigParser
 from paho.mqtt.publish import single as mqtt_publish_message
 
@@ -46,5 +47,5 @@ class Action(HAL9000_Action):
 				if system_time_state in Action.SYSTEM_STATES_VALID:
 					cortex['system']['time'] = system_time_state
 				if system_time_state == Action.SYSTEM_STATE_TIME_SYNCED:
-					self.daemon.arduino_set_system_time()
+					self.daemon.set_system_time(datetime.now())
 

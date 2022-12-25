@@ -11,7 +11,7 @@ const etl::string<GLOBAL_VALUE_SIZE> Runtime::Null;
 
 Runtime::Runtime() {
 	this->m_status = StatusBooting;
-	this->m_condition = ConditionAsleep;
+	this->m_condition = ConditionAwake;
 }
 
 

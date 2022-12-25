@@ -82,6 +82,21 @@ void on_system_runtime(const JsonVariant& data) {
 			g_util_webserial.send("syslog/debug", "system/runtime#set => ERROR");
 		}
 	}
+	if(data.containsKey("condition")) {
+		static etl::string<GLOBAL_VALUE_SIZE> awake("awake");
+		static etl::string<GLOBAL_VALUE_SIZE> asleep("asleep");
+
+		if(awake.compare(data["condition"].as<const char*>()) == 0) {
+			g_system_runtime.setCondition(ConditionAwake);
+			g_device_board.displayOn();
+			g_util_webserial.send("syslog/debug", "system/runtime#condition => OK");
+		}
+		if(asleep.compare(data["condition"].as<const char*>()) == 0) {
+			g_system_runtime.setCondition(ConditionAsleep);
+			g_device_board.displayOff();
+			g_util_webserial.send("syslog/debug", "system/runtime#condition => OK");
+		}
+	}
 }
 
 
