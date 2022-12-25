@@ -28,6 +28,7 @@ void gui_screen_hal9000(bool refresh) {
 		static StaticJsonDocument<1024> queue;
 
 		frame_next = 0;
+		g_sequence_frames[frame_next].size = 0;
 		queue.clear();
 		deserializeJson(queue, g_system_runtime["gui/screen:hal9000/queue"].c_str());
 		if(queue.is<JsonArray>() == false || queue.as<JsonArray>().size() == 0) {
