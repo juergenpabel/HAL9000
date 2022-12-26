@@ -302,9 +302,8 @@ class Daemon(HAL9000_Daemon):
 	def arduino_set_system_time(self, datetime_now) -> None:
 		self.arduino_send_command("system/time", json.dumps({"config": {"epoch": int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)}}))
 		if self.config['sleep-time'] != self.config['wakeup-time']:
-#TODO			self.arduino_send_command('system/runtime', json.dumps({"condition": self.cortex['#consciousness']}))
-			self.arduino_set_system_setting('system/state:app/condition:time-sleep',  self.config['sleep-time'])
-			self.arduino_set_system_setting('system/state:app/condition:time-wakeup', self.config['wakeup-time'])
+			self.arduino_set_system_setting('runtime/condition:time-sleep',  self.config['sleep-time'])
+			self.arduino_set_system_setting('runtime/condition:time-wakeup', self.config['wakeup-time'])
 			self.arduino_save_system_setting()
 
 

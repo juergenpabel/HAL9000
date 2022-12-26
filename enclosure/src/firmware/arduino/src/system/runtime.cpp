@@ -17,14 +17,14 @@ Runtime::Runtime() {
 
 uint8_t Runtime::update() {
 	if(this->m_status == StatusOnline && year() > 2001) {
-		if((g_system_settings.find("system/state:app/condition:time-sleep") != g_system_settings.end())
-		&& (g_system_settings.find("system/state:app/condition:time-wakeup") != g_system_settings.end())) {
+		if((g_system_settings.find("runtime/condition:time-sleep") != g_system_settings.end())
+		&& (g_system_settings.find("runtime/condition:time-wakeup") != g_system_settings.end())) {
 			static etl::string<GLOBAL_VALUE_SIZE> time_sleep;
 			static etl::string<GLOBAL_VALUE_SIZE> time_wakeup;
 			       etl::string<9>                 time_now("00:00:00");
 
-			time_sleep  = g_system_settings["system/state:app/condition:time-sleep"];
-			time_wakeup = g_system_settings["system/state:app/condition:time-wakeup"];
+			time_sleep  = g_system_settings["runtime/condition:time-sleep"];
+			time_wakeup = g_system_settings["runtime/condition:time-wakeup"];
 			if((time_sleep.length() >= 5) && (time_wakeup.length() >= 5)) {
 				Condition condition_now = ConditionUnknown;
 				Condition condition_new = ConditionUnknown;
