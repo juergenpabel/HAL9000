@@ -13,7 +13,7 @@
 static XPowersPMU PMU;
 
 Board::Board()
-      :AbstractBoard() {
+      :AbstractBoard("m5stack-core2") {
 }
 
 
@@ -46,7 +46,12 @@ void Board::start(bool& host_booting) {
 	PMU.enableDC2();
 	PMU.enableLDO2();
 	delay(120);
-	this->displayOff();
+	this->displayOn();
+}
+
+
+bool Board::configure(const JsonVariant& configuration) {
+	return g_device_microcontroller.configure(configuration);
 }
 
 
@@ -76,6 +81,10 @@ void Board::displayOff() {
 	g_gui.writecommand(0x10);
 	PMU.disableDC3();
 	delay(10);
+}
+
+
+void Board::webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 }
 
 

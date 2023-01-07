@@ -4,7 +4,7 @@
 #include <etl/to_string.h>
 
 #include "gui/screen/screen.h"
-#include "system/system.h"
+#include "gui/screen/idle/screen.h"
 #include "util/json.h"
 #include "util/jpeg.h"
 #include "globals.h"
@@ -25,7 +25,7 @@ static void gui_screen_animations(bool refresh) {
 		g_animation.pop_front();
 		g_current_frame = 0;
 		if(g_animation.empty() == true) {
-			gui_screen_set(gui_screen_none);
+			gui_screen_set(gui_screen_idle);
 			return;
 		}
 	}

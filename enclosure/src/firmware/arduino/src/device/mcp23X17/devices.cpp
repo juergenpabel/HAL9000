@@ -3,10 +3,10 @@
 #include "devices.h"
 
 
-MCP23X17_Device* MCP23X17_Device::instances[SYSTEM_SETTINGS_MCP23X17_DEVICES] = { nullptr };
+MCP23X17_Device* MCP23X17_Device::instances[APPLICATION_CONFIGURATION_MCP23X17_DEVICES] = { nullptr };
 
 
-bool MCP23X17_Device::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name) {
+bool MCP23X17_Device::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name) {
 	bool  result = false;
 
 	if(this->isConfigured()) {
@@ -16,7 +16,7 @@ bool MCP23X17_Device::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_nam
 		return false;
 	}
 	this->device_name = device_name;
-	for(uint8_t i=0; i<SYSTEM_SETTINGS_MCP23X17_DEVICES; i++) {
+	for(uint8_t i=0; i<APPLICATION_CONFIGURATION_MCP23X17_DEVICES; i++) {
 		if(result == false && MCP23X17_Device::instances[i] == nullptr) {
 			MCP23X17_Device::instances[i] = this;
 			result = true;
@@ -36,7 +36,7 @@ bool MCP23X17_Device::isOutputDevice() {
 }
 
 
-MCP23X17_OutputDevice::MCP23X17_OutputDevice(const etl::string<GLOBAL_VALUE_SIZE>& device_type)
+MCP23X17_OutputDevice::MCP23X17_OutputDevice(const etl::string<GLOBAL_KEY_SIZE>& device_type)
                       :MCP23X17_Device(device_type) {
 }
 
@@ -46,7 +46,7 @@ bool MCP23X17_OutputDevice::isOutputDevice() {
 }
 
 
-bool MCP23X17_OutputDevice::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& outputs) {
+bool MCP23X17_OutputDevice::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& outputs) {
 	bool  result = false;
 
 	if(this->isConfigured()) {
@@ -94,7 +94,7 @@ bool MCP23X17_OutputDevice::configure(const etl::string<GLOBAL_VALUE_SIZE>& devi
 }
 
 
-MCP23X17_InputDevice::MCP23X17_InputDevice(const etl::string<GLOBAL_VALUE_SIZE>& device_type)
+MCP23X17_InputDevice::MCP23X17_InputDevice(const etl::string<GLOBAL_KEY_SIZE>& device_type)
                      :MCP23X17_Device(device_type) {
 }
 
@@ -104,7 +104,7 @@ bool MCP23X17_InputDevice::isInputDevice() {
 }
 
 
-bool MCP23X17_InputDevice::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
+bool MCP23X17_InputDevice::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
 	bool  result = false;
 
 	if(this->isConfigured()) {
@@ -114,7 +114,7 @@ bool MCP23X17_InputDevice::configure(const etl::string<GLOBAL_VALUE_SIZE>& devic
 		return false;
 	}
 	this->device_name = device_name;
-	for(uint8_t i=0; i<SYSTEM_SETTINGS_MCP23X17_DEVICES; i++) {
+	for(uint8_t i=0; i<APPLICATION_CONFIGURATION_MCP23X17_DEVICES; i++) {
 		if(result == false && MCP23X17_Device::instances[i] == nullptr) {
 			MCP23X17_Device::instances[i] = this;
 			result = true;
@@ -163,7 +163,7 @@ static const unsigned char ttable[7][4] = {
 };
 
 
-bool MCP23X17_Rotary::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
+bool MCP23X17_Rotary::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
 	this->rotary_state = R_START;
 	if(MCP23X17_InputDevice::configure(device_name, mcp23X17, inputs, events) == false) {
 		g_util_webserial.send("syslog/error", "MCP23X17_Rotary::configure() failed");
@@ -225,7 +225,7 @@ void MCP23X17_Rotary::process(const etl::string<2>& pin_name, const etl::string<
 }
 
 
-bool MCP23X17_Switch::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
+bool MCP23X17_Switch::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
 	bool result = false;
 
 	result = MCP23X17_InputDevice::configure(device_name, mcp23X17, inputs, events);
@@ -283,7 +283,7 @@ void MCP23X17_Switch::process(const etl::string<2>& pin_name, const etl::string<
 }
 
 
-bool MCP23X17_Button::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
+bool MCP23X17_Button::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
 	return MCP23X17_Switch::configure(device_name, mcp23X17, inputs, events);
 }
 
@@ -298,7 +298,7 @@ void MCP23X17_Button::process(const etl::string<2>& pin_name, const etl::string<
 };
 
 
-bool MCP23X17_Toggle::configure(const etl::string<GLOBAL_VALUE_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
+bool MCP23X17_Toggle::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
 	bool result = false;
 
 	result = MCP23X17_Switch::configure(device_name, mcp23X17, inputs, events);

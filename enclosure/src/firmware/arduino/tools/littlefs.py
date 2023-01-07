@@ -60,9 +60,9 @@ if os.path.exists("./data/images/overlay") is False:
 		for JPG in glob.glob("{}/{}/*.jpg".format(SRC_BASEDIR,DIR)):
 			subprocess.run(["convert", JPG, "-quality", "95%", "-resize", "28x28", "{}/{}/{}".format(DST_BASEDIR,DIR,os.path.basename(JPG))])
 
-if os.path.exists("./data/system") is False:
-	os.makedirs("./data/system")
-	fd = os.open("./data/system/settings.ini", os.O_CREAT|os.O_WRONLY)
-	if fd > 0:
-		os.close(fd)
+
+SRC_BASEDIR="./resources/system"
+DST_BASEDIR="./data/system"
+if os.path.exists(DST_BASEDIR) is False:
+	shutil.copytree(SRC_BASEDIR, DST_BASEDIR)
 

@@ -4,10 +4,6 @@
 #include "globals.h"
 
 
-AbstractBoard::AbstractBoard() {
-}
-
-
 void AbstractBoard::start(bool& host_booting) {
 	uint32_t  epoch = 0;
 

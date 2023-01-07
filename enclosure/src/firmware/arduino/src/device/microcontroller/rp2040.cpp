@@ -10,6 +10,13 @@
 #include "device/microcontroller/rp2040.h"
 #include "globals.h"
 
+Microcontroller::Microcontroller()
+                :AbstractMicrocontroller("rp2040")
+                ,mutex_map()
+                ,twowire_init{false, false}
+                ,twowire_data{i2c0, i2c1} {
+}
+
 
 void Microcontroller::start(uint32_t& timestamp, bool& booting) {
 	booting = true;
@@ -22,6 +29,30 @@ void Microcontroller::start(uint32_t& timestamp, bool& booting) {
 		watchdog_hw->scratch[6] = 0x00000000;
 		watchdog_hw->scratch[7] = 0x00000000;
 	}
+}
+
+
+bool Microcontroller::configure(const JsonVariant& configuration) {
+	uint8_t pin_sda;
+	uint8_t pin_scl;
+
+	if(configuration.containsKey("i2c") == true) {
+		if(configuration["i2c"].containsKey("i2c-0") == true) {
+			pin_sda = configuration["i2c"]["i2c-0"]["pin-sda"].as<unsigned char>();
+			pin_scl = configuration["i2c"]["i2c-0"]["pin-scl"].as<unsigned char>();
+			this->twowire_data[0].setSDA(pin_sda);
+			this->twowire_data[0].setSCL(pin_scl);
+			this->twowire_init[0] = true;
+		}
+		if(configuration["i2c"].containsKey("i2c-1") == true) {
+			pin_sda = configuration["i2c"]["i2c-1"]["pin-sda"].as<unsigned char>();
+			pin_scl = configuration["i2c"]["i2c-1"]["pin-scl"].as<unsigned char>();
+			this->twowire_data[1].setSDA(pin_sda);
+			this->twowire_data[1].setSCL(pin_scl);
+			this->twowire_init[1] = true;
+		}
+	}
+	return true;
 }
 
 
@@ -121,15 +152,11 @@ bool Microcontroller::mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name) {
 
 
 
-TwoWire* Microcontroller::twowire_get(uint8_t instance, uint8_t pin_sda, uint8_t pin_scl) {
-	static TwoWire  twowire(i2c0, TWOWIRE_PIN_SDA, TWOWIRE_PIN_SCL);
-
-	if(instance > 0) {
+TwoWire* Microcontroller::twowire_get(uint8_t instance) {
+	if(instance >= 2 || this->twowire_init[instance] == false) {
 		return nullptr;
 	}
-	twowire.setSDA(pin_sda);
-	twowire.setSCL(pin_scl);
-	return &twowire;
+	return &this->twowire_data[instance];
 }
 
 
@@ -141,6 +168,10 @@ bool Microcontroller::thread_create(void (*function)(), uint8_t core) {
 		result = true;
 	}
 	return result;
+}
+
+
+void Microcontroller::webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 }
 
 

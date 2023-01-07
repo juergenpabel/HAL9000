@@ -1,94 +1,115 @@
+#include <LittleFS.h>
+
 #include "globals.h"
-#include "system/webserial.h"
+#include "application/webserial.h"
 #include "device/webserial.h"
 #include "gui/webserial.h"
-#include "system/system.h"
 #include "gui/screen/screen.h"
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/splash/screen.h"
 #include "gui/screen/animations/screen.h"
-
 #include "util/webserial.h"
 #include "util/jpeg.h"
+#include "system/system.h"
 
 
 void setup() {
-	system_start();
-	if(g_system_settings.load() == false) {
-		g_util_webserial.send("syslog/error", "setup() failed to load settings from littlefs");
-		g_system_settings.reset();
-	}
-	g_util_webserial.set("system/application", on_system_application);
-	g_util_webserial.set("system/microcontroller", on_system_microcontroller);
-	g_util_webserial.set("system/time", on_system_time);
-	g_util_webserial.set("system/runtime", on_system_runtime);
-	g_util_webserial.set("system/settings", on_system_settings);
-	g_util_webserial.set("device/sdcard", on_device_sdcard);
-	g_util_webserial.set("device/mcp23X17", on_device_mcp23X17);
-	g_util_webserial.set("device/display", on_device_display);
-	g_util_webserial.set("gui/screen", on_gui_screen);
-	g_util_webserial.set("gui/overlay", on_gui_overlay);
+	System::start();
+	System::configure();
 }
 
 
 void loop() {
-	static int oldStatus = StatusUnknown;
-	       int newStatus = StatusUnknown;
+	static Status oldStatus = StatusUnknown;
+	       Status newStatus = StatusUnknown;
 
 	g_util_webserial.update();
-	g_system_runtime.update();
-	newStatus = g_system_runtime.getStatus();
+	newStatus = g_application.getStatus();
 	if(newStatus != oldStatus) {
 		switch(newStatus) {
 			case StatusBooting:
-				if(oldStatus == StatusUnknown) {
-					oldStatus = StatusPowerOn;
-					g_util_webserial.send("system/application", "booting");
+				if(gui_screen_get() == gui_screen_none) {
+					g_util_webserial.send("application/runtime", "booting");
 					gui_screen_set(gui_screen_animation_startup);
 				}
-				gui_screen_update(true);
-				if(gui_screen_get() != gui_screen_animation_startup) {
-					g_system_runtime.setStatus(StatusOffline);
+				if(gui_screen_get() == gui_screen_animation_startup) {
+					gui_screen_set_refresh();
+					newStatus = StatusUnchanged;
+				}
+				if(gui_screen_get() == gui_screen_idle) {
+					g_application.setStatus(StatusConfiguring);
+				}
+				break;
+			case StatusConfiguring:
+				if(g_application.hasEnv("application/configuration") == false) {
+					g_util_webserial.send("application/runtime", "configuring");
+					g_application.setEnv("application/configuration", "true");
+					g_util_webserial.setCommand("*", Application::onConfiguration);
+				}
+				if(g_application.getEnv("application/configuration").compare("false") == 0) {
+					g_application.setStatus(StatusRunning);
+					oldStatus = StatusConfiguring;
 				}
 				newStatus = StatusUnchanged;
 				break;
-			case StatusOffline:
-				if(oldStatus == StatusBooting) {
-					g_util_webserial.send("system/application", "offline");
-					g_system_runtime.set("gui/screen:splash/filename", "error.jpg");
-					gui_screen_set(gui_screen_splash);
+			case StatusRunning:
+				g_util_webserial.send("application/runtime", "running");
+				if(oldStatus == StatusConfiguring) {
+					g_util_webserial.setCommand("*", nullptr);
 				}
-				if(oldStatus == StatusOnline) {
-					g_system_runtime.setStatus(StatusResetting);
+				g_util_webserial.setCommand("application/runtime", on_application_runtime);
+				g_util_webserial.setCommand("application/environment", on_application_environment);
+				g_util_webserial.setCommand("application/settings", on_application_settings);
+				g_util_webserial.setCommand("device/board", on_device_board);
+				g_util_webserial.setCommand("device/microcontroller", on_device_microcontroller);
+				g_util_webserial.setCommand("device/mcp23X17", on_device_mcp23X17);
+				g_util_webserial.setCommand("device/display", on_device_display);
+				g_util_webserial.setCommand("device/sdcard", on_device_sdcard);
+				g_util_webserial.setCommand("gui/screen", on_gui_screen);
+				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
+				if(LittleFS.exists("/system/application/configuration.json") == true) {
+					static StaticJsonDocument<UTIL_JSON_FILESIZE_MAX> configuration;
+					       File                     file;
+
+					g_util_webserial.send("syslog/debug", "loading application configuration...");
+					configuration.clear();
+					file = LittleFS.open("/system/application/configuration.json", "r");
+					if(file == true) {
+						deserializeJson(configuration, file);
+						for(JsonObject item : configuration.as<JsonArray>()) {
+							if(item.containsKey("command") == true && item.containsKey("data") == true) {
+								g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
+							}
+						}
+						file.close();
+					}
 				}
-				break;
-			case StatusOnline:
-				g_util_webserial.send("system/application", "online");
+				g_application.loadSettings();
 				gui_screen_set(gui_screen_idle);
 				break;
 			case StatusResetting:
-				g_util_webserial.send("system/application", "resetting");
-				system_reset();
+				g_util_webserial.send("application/runtime", "resetting");
+				System::reset();
 				break;
 			case StatusRebooting:
-				g_util_webserial.send("system/application", "rebooting");
+				g_util_webserial.send("application/runtime", "rebooting");
 				gui_screen_set(gui_screen_animation_shutdown);
 				while(gui_screen_get() == gui_screen_animation_shutdown) {
 					gui_screen_update(true);
 				}
-				system_reset();
+				System::reset();
 				break;
 			case StatusHalting:
-				g_util_webserial.send("system/application", "halting");
+				g_util_webserial.send("application/runtime", "halting");
 				gui_screen_set(gui_screen_animation_shutdown);
 				while(gui_screen_get() == gui_screen_animation_shutdown) {
 					gui_screen_update(true);
 				}
-				system_halt();
+				System::halt();
 				break;
 			default:
-				g_util_webserial.send("syslog/error", "invalid runtime status => resetting");
-				system_reset();
+				g_util_webserial.send("syslog/error", "invalid application status => resetting");
+				System::reset();
 		}
 		if(newStatus != StatusUnchanged) {
 			oldStatus = newStatus;

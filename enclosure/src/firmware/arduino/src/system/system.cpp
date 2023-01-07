@@ -1,20 +1,21 @@
 #include <TimeLib.h>
 
+#include "system/system.h"
 #include "device/microcontroller/include.h"
+#include "util/json.h"
 #include "globals.h"
 
 
-void system_start() {
-	bool  host_booting = true;
+void System::start() {
+	bool  booting = true;
 
-	g_device_board.start(host_booting);
-	if(host_booting == false) {
-		g_system_runtime.setStatus(StatusOffline);
-		g_util_webserial.send("syslog/debug", "host system not booting, waiting for serial connection");
-	}
-	if(host_booting == true) {
-		g_util_webserial.send("syslog/debug", "host system is booting, turning display on");
-		g_device_board.displayOn();
+	g_device_board.start(booting);
+	if(booting == true) {
+		g_application.setStatus(StatusBooting);
+		g_util_webserial.send("syslog/debug", "system was powered on (booting, provisioning)");
+	} else {
+		g_application.setStatus(StatusConfiguring);
+		g_util_webserial.send("syslog/debug", "system was resetted (not booting, configuring)");
 	}
 	g_gui_buffer = (uint16_t*)malloc(GUI_SCREEN_HEIGHT*GUI_SCREEN_WIDTH*sizeof(uint16_t));
 	if(g_gui_buffer == nullptr) {
@@ -40,10 +41,26 @@ void system_start() {
 }
 
 
-void system_reset() {
+void System::configure() {
+	static etl::string<GLOBAL_FILENAME_SIZE> filename;
+	static JSON                              configuration;
+
+	filename  = "/system/board/";
+	filename += g_device_board.getIdentifier();
+	filename += "/configuration.json";
+	if(configuration.load(filename) == false) {
+		return;
+	}
+	if(g_device_board.configure(configuration.as<JsonVariant>()) == false) {
+		return;
+	}
+}
+
+
+void System::reset() {
 	bool      host_rebooting = false;
 
-	if(g_system_runtime.getStatus() == StatusRebooting) {
+	if(g_application.getStatus() == StatusRebooting) {
 		host_rebooting = true;
 	}
 	g_device_board.reset(host_rebooting);
@@ -58,7 +75,7 @@ void system_reset() {
 }
 
 
-void system_halt() {
+void System::halt() {
 	g_device_board.halt();
 	//this codepath should never be taken 
 	g_device_board.displayOn();

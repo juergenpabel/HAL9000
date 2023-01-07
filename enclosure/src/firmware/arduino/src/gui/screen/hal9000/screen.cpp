@@ -7,6 +7,7 @@
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/hal9000/screen.h"
 #include "gui/screen/hal9000/frame.h"
+#include "application/environment.h"
 #include "globals.h"
 
 static void sequence_load(const char* name);
@@ -25,14 +26,14 @@ void gui_screen_hal9000(bool refresh) {
 	static bool    frame_loop = false;
 
 	if(frame_next == GUI_SCREEN_HAL9000_SEQUENCE_FRAMES_MAX) {
-		static StaticJsonDocument<1024> queue;
+		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> queue;
 
 		frame_next = 0;
 		g_sequence_frames[frame_next].size = 0;
 		queue.clear();
-		deserializeJson(queue, g_system_runtime["gui/screen:hal9000/queue"].c_str());
+		deserializeJson(queue, g_application.getEnv("gui/screen:hal9000/queue").c_str());
 		if(queue.is<JsonArray>() == false || queue.as<JsonArray>().size() == 0) {
-			g_system_runtime["gui/screen:hal9000/queue"] = "[]";
+			g_application.setEnv("gui/screen:hal9000/queue", "[]");
 			if(frame_loop == false) {
 				g_util_webserial.send("syslog/debug", "gui_screen_hal9000() => empty queue and loop=false, switching to screen 'idle'");
 				frame_next = GUI_SCREEN_HAL9000_SEQUENCE_FRAMES_MAX;
@@ -51,8 +52,8 @@ void gui_screen_hal9000(bool refresh) {
 				}
 				queue.remove(0);
 			}
-			RuntimeWriter runtimewriter(g_system_runtime, "gui/screen:hal9000/queue");
-			serializeJson(queue, runtimewriter);
+			EnvironmentWriter environmentwriter(g_application, "gui/screen:hal9000/queue");
+			serializeJson(queue, environmentwriter);
 		}
 	}
 	if(g_sequence_frames[frame_next].size > 0) {
@@ -81,12 +82,12 @@ static void sequence_load(const char* name) {
 			g_sequence_frames[i].size = file.size();
 			if(g_sequence_frames[i].size > sizeof(jpg_t::data)) {
 				g_sequence_frames[i].size = 0;
-				g_util_webserial.send("syslog/warn", etl::string<UTIL_WEBSERIAL_DATA_SIZE>("JPEG file '").append(filename).append("' too big, skipping"));
+				g_util_webserial.send("syslog/warn", etl::string<GLOBAL_VALUE_SIZE>("JPEG file '").append(filename).append("' too big, skipping"));
 			}
 			file.read(g_sequence_frames[i].data, g_sequence_frames[i].size);
 			file.close();
 		}
 	}
-	g_util_webserial.send("syslog/debug", etl::string<UTIL_WEBSERIAL_DATA_SIZE>("Frames '").append(name).append("' loaded from littlefs:").append(directory));
+	g_util_webserial.send("syslog/debug", etl::string<GLOBAL_VALUE_SIZE>("Frames '").append(name).append("' loaded from littlefs:").append(directory));
 }
 

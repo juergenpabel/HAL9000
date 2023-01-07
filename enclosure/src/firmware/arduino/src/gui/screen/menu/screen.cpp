@@ -12,9 +12,9 @@ void gui_screen_menu(bool refresh) {
 		menu_item.clear();
 		g_gui.fillScreen(TFT_BLACK);
 	}
-	if(menu_title != g_system_runtime["gui/screen:menu/title"] || menu_item != g_system_runtime["gui/screen:menu/text"]) {
-		menu_title = g_system_runtime["gui/screen:menu/title"];
-		menu_item  = g_system_runtime["gui/screen:menu/text"];
+	if(menu_title != g_application.getEnv("gui/screen:menu/title") || menu_item != g_application.getEnv("gui/screen:menu/text")) {
+		menu_title = g_application.getEnv("gui/screen:menu/title");
+		menu_item  = g_application.getEnv("gui/screen:menu/text");
 		g_gui.setTextColor(TFT_WHITE, TFT_BLACK, true);
 		g_gui.setTextDatum(MC_DATUM);
 		g_gui.setTextSize(1);

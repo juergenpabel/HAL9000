@@ -6,7 +6,7 @@
 #include "device/board/board.h"
 
 
-class Board : AbstractBoard {
+class Board : public AbstractBoard {
 	public:
 		Board();
 		virtual void start(bool& host_booting);

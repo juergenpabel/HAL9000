@@ -10,8 +10,8 @@ void gui_overlay_message(bool refresh) {
 	if(refresh) {
 		message.clear();
 	}
-	if(message.compare(g_system_runtime["gui/overlay:message/text"]) != 0) {
-		message = g_system_runtime["gui/overlay:message/text"];
+	if(message.compare(g_application.getEnv("gui/overlay:message/text")) != 0) {
+		message = g_application.getEnv("gui/overlay:message/text");
 		g_gui_overlay.fillRect((TFT_WIDTH-GUI_SCREEN_WIDTH)/2, (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*5)-g_gui_overlay.fontHeight()/2, GUI_SCREEN_WIDTH, g_gui_overlay.fontHeight()/2, TFT_BLACK);
 		g_gui_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
 		g_gui_overlay.setTextFont(1);

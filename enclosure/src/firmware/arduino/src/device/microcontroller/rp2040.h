@@ -14,12 +14,15 @@ typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, recursive_mutex_t, 4> MutexMap;
 class TwoWire;
 
 
-class Microcontroller : AbstractMicrocontroller {
-	private:
-		MutexMap mutex_map;
+class Microcontroller : public AbstractMicrocontroller {
+        protected:
+		MutexMap  mutex_map;
+		bool      twowire_init[2];
+		TwoWire   twowire_data[2];
 	public:
-		Microcontroller() {};
+		Microcontroller();
 		virtual void start(uint32_t& timestamp, bool& booting);
+		virtual bool configure(const JsonVariant& configuration);
 		virtual void reset(uint32_t timestamp, bool rebooting);
 		virtual void halt();
 		void reset_uf2();
@@ -32,7 +35,9 @@ class Microcontroller : AbstractMicrocontroller {
 		virtual bool mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name);
 
-		virtual TwoWire* twowire_get(uint8_t instance, uint8_t pin_sda, uint8_t pin_scl);
+		virtual TwoWire* twowire_get(uint8_t instance);
+		virtual void     webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+
 };
 
 #endif

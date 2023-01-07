@@ -4,7 +4,7 @@
 #include "globals.h"
 
 
-static gui_screen_func  g_gui_screen = gui_screen_idle;
+static gui_screen_func  g_gui_screen = gui_screen_none;
 static bool             g_gui_screen_forced_refresh = false;
 
 

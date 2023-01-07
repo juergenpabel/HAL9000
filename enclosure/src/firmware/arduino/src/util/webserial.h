@@ -6,21 +6,26 @@
 #include <etl/map.h>
 
 
-typedef void (*webserial_command_func)(const JsonVariant& data);
+typedef void (*webserial_command_func)(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 
 
 class WebSerial {
 	private:
-		etl::map<etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>, webserial_command_func, UTIL_WEBSERIAL_COMMANDS_MAX> commands;
-		etl::queue<etl::string<UTIL_WEBSERIAL_LINE_SIZE>, UTIL_WEBSERIAL_QUEUE_RECV_MAX> queue_recv;
-		etl::queue<etl::string<UTIL_WEBSERIAL_LINE_SIZE>, UTIL_WEBSERIAL_QUEUE_SEND_MAX> queue_send;
+		etl::map<etl::string<GLOBAL_KEY_SIZE>, webserial_command_func, UTIL_WEBSERIAL_COMMANDS_MAX> commands;
+		etl::queue<etl::string<GLOBAL_VALUE_SIZE>, UTIL_WEBSERIAL_QUEUE_RECV_MAX> queue_recv;
+		etl::queue<etl::string<GLOBAL_VALUE_SIZE>, UTIL_WEBSERIAL_QUEUE_SEND_MAX> queue_send;
+	protected:
+		void handle(const etl::string<GLOBAL_VALUE_SIZE>& line);
+		void handle(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 	public:
 		WebSerial();
 		void begin();
 		void update();
-		void set(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, webserial_command_func handler);
-		void send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const JsonVariant& data);
-		void send(const etl::string<UTIL_WEBSERIAL_TOPIC_SIZE>& topic, const etl::string<UTIL_WEBSERIAL_DATA_SIZE>& data, bool data_stringify = true);
+		void setCommand(const etl::string<GLOBAL_KEY_SIZE>& command, webserial_command_func handler);
+		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::string<GLOBAL_VALUE_SIZE>& data, bool data_stringify = true);
+
+	friend void loop();
 };
 
 #endif

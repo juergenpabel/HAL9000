@@ -8,8 +8,9 @@
 #include <freertos/semphr.h>
 #include <etl/string.h>
 #include <etl/map.h>
+#include <Wire.h>
 
-#include "system/runtime.h"
+#include "application/application.h"
 #include "microcontroller.h"
 
 typedef struct {
@@ -23,17 +24,21 @@ typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, Semaphore, 16> MutexMap;
 class TwoWire;
 
 
-class Microcontroller : AbstractMicrocontroller {
+class Microcontroller : public AbstractMicrocontroller {
 	private:
 		static bool           reset_booting;
 		static Condition      reset_condition;
 		static uint32_t       reset_timestamp;
 		static vprintf_like_t original_vprintf;
-		       MutexMap       mutex_map;
+	protected:
+		MutexMap  mutex_map;
+		bool      twowire_init[2];
+		TwoWire   twowire_data[2];
 	public:
 		Microcontroller();
 
 		virtual void start(uint32_t& timestamp, bool& booting);
+		virtual bool configure(const JsonVariant& configuration);
 		virtual void reset(uint32_t timestamp, bool rebooting);
 		virtual void halt();
 
@@ -47,7 +52,8 @@ class Microcontroller : AbstractMicrocontroller {
 		virtual bool mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name);
 
-		virtual TwoWire* twowire_get(uint8_t instance, uint8_t pin_sda, uint8_t pin_scl);
+		virtual TwoWire* twowire_get(uint8_t instance);
+		virtual void     webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 };
 
 #endif

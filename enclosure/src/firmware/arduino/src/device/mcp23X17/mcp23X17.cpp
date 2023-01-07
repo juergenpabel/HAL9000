@@ -27,32 +27,28 @@ MCP23X17::MCP23X17()
 
 
 void MCP23X17::init() {
-	int i2c_address = SYSTEM_SETTINGS_MCP23X17_ADDRESS;
-	int i2c_pin_sda = TWOWIRE_PIN_SDA;
-	int i2c_pin_scl = TWOWIRE_PIN_SCL;
+	int i2c_bus     = 0;
+	int i2c_address = 0;
 
-	if(g_system_settings.count("device/mcp23X17:i2c/address") == 1) {
-		i2c_address = atoi(g_system_settings["device/mcp23X17:i2c/address"].c_str());
+	if(g_application.hasSetting("device/mcp23X17:i2c/bus") == true) {
+		i2c_bus = atoi(g_application.getSetting("device/mcp23X17:i2c/bus").c_str());
 	}
-	if(g_system_settings.count("device/mcp23X17:i2c/pin-sda") == 1) {
-		i2c_pin_sda = atoi(g_system_settings["device/mcp23X17:i2c/pin-sda"].c_str());
+	if(g_application.hasSetting("device/mcp23X17:i2c/address") == true) {
+		i2c_address = atoi(g_application.getSetting("device/mcp23X17:i2c/address").c_str());
 	}
-	if(g_system_settings.count("device/mcp23X17:i2c/pin-scl") == 1) {
-		i2c_pin_scl = atoi(g_system_settings["device/mcp23X17:i2c/pin-scl"].c_str());
-	}
-	this->init(i2c_address, i2c_pin_sda, i2c_pin_scl);
+	this->init(i2c_bus, i2c_address);
 
 }
 
 
-void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
+void MCP23X17::init(uint8_t i2c_bus, uint8_t i2c_addr) {
 	TwoWire* twowire = nullptr;
 
 	if(this->status != MCP23X17_STATE_UNINITIALIZED) {
 		g_util_webserial.send("syslog/warn", "MCP23X17 already initialized");
 		return;
 	}
-	twowire = g_device_microcontroller.twowire_get(0, pin_sda, pin_scl);
+	twowire = g_device_microcontroller.twowire_get(i2c_bus);
 	if(twowire == nullptr) {
 		g_util_webserial.send("syslog/error", "MCP23X17 could not obtain TwoWire instance");
 		return;
@@ -66,7 +62,7 @@ void MCP23X17::init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl) {
 }
 
 
-void MCP23X17::config_inputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, const etl::string<GLOBAL_VALUE_SIZE>& device_name, const JsonArray& inputs, const JsonObject& events) {
+void MCP23X17::config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& inputs, const JsonObject& events) {
 	MCP23X17_InputDevice* device = nullptr;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
@@ -122,7 +118,7 @@ void MCP23X17::config_inputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, 
 }
 
 
-void MCP23X17::config_outputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, const etl::string<GLOBAL_VALUE_SIZE>& device_name, const JsonArray& outputs) {
+void MCP23X17::config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& outputs) {
 	MCP23X17_OutputDevice* device = nullptr;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
@@ -169,14 +165,14 @@ void MCP23X17::check() {
 			old_value = (this->mcp23X17_gpio_values >> nr) & 0x01;
 			new_value = (      mcp23X17_gpio_values >> nr) & 0x01;
 			if(old_value != new_value) {
-				for(uint8_t i=0; i<SYSTEM_SETTINGS_MCP23X17_DEVICES; i++) {
+				for(uint8_t i=0; i<APPLICATION_CONFIGURATION_MCP23X17_DEVICES; i++) {
 					MCP23X17_Device*      device;
 					MCP23X17_InputDevice* input_device;
 
 					device = MCP23X17_Device::instances[i];
 					if(device != nullptr) {
 						if(device->isInputDevice() == true) {
-							static StaticJsonDocument<1024> data;
+							static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> data;
 
 							data.clear();
 							input_device = (MCP23X17_InputDevice*)device;

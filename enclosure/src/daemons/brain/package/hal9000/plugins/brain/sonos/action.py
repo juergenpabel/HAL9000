@@ -30,7 +30,7 @@ class Action(HAL9000_Action):
 		if 'sonos' in signal:
 			if 'trigger' in signal['sonos']:
 				cortex['#activity']['audio'] = Activity('sonos', player=self.config['sonos-name'])
-				self.daemon.arduino_show_gui_overlay('message', {"text": "<SONOS>"})
+				self.daemon.show_gui_overlay('message', {"text": "<SONOS>"})
 			return
 		if cortex['#activity']['audio'] == Activity('sonos', player=self.config['sonos-name']):
 			if 'volume' in signal:
@@ -46,5 +46,5 @@ class Action(HAL9000_Action):
 			if 'control' in signal:
 				if 'select' in signal['control']:
 					cortex['#activity']['audio'] = Activity()
-					self.daemon.arduino_hide_gui_overlay('message')
+					self.daemon.hide_gui_overlay('message')
 

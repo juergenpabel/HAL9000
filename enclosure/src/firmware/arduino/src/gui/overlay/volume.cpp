@@ -10,16 +10,16 @@
 
 
 void gui_overlay_volume(bool refresh) {
-	if(g_system_runtime.exists("gui/overlay:volume/mute") == true) {
-		if(g_system_runtime["gui/overlay:volume/mute"].compare("false") == 0) {
-			uint8_t  volume_level = SYSTEM_RUNTIME_VOLUME;
+	if(g_application.hasEnv("gui/overlay:volume/mute") == true) {
+		if(g_application.getEnv("gui/overlay:volume/mute").compare("false") == 0) {
+			uint8_t  volume_level = 100/2;
 			uint16_t log_ctr_x = GUI_SCREEN_WIDTH /2;
 			uint16_t log_ctr_y = GUI_SCREEN_HEIGHT/2;
 			uint16_t phy_ctr_x = TFT_WIDTH /2;
 			uint16_t phy_ctr_y = TFT_HEIGHT/2;
 
-			if(g_system_runtime.exists("gui/overlay:volume/level") == true) {
-				volume_level = atoi(g_system_runtime["gui/overlay:volume/level"].c_str());
+			if(g_application.hasEnv("gui/overlay:volume/level") == true) {
+				volume_level = atoi(g_application.getEnv("gui/overlay:volume/level").c_str());
 			}
 			for(uint8_t d=0; d<=100; d+=1) {
 				double dx;

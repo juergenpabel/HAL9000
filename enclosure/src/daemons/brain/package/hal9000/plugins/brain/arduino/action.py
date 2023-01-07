@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+import json
+
 from configparser import ConfigParser
 from paho.mqtt.publish import single as mqtt_publish_message
 
@@ -23,6 +25,7 @@ class Action(HAL9000_Action):
 		HAL9000_Action.configure(self, configuration, section_name, cortex)
 		cortex['arduino'] = dict()
 		cortex['arduino']['webserial'] = Action.WEBSERIAL_STATE_UNKNOWN
+		cortex['arduino']['webserial'] = Action.WEBSERIAL_STATE_ONLINE
 
 
 	def runlevel(self, cortex: dict) -> str:
@@ -40,9 +43,30 @@ class Action(HAL9000_Action):
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
+		if 'brain' in signal:
+			if 'time' in signal['brain']:
+				datetime_now = signal['brain']['time']
+				body = {"time": {"epoch": int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)}}
+				self.send_command("system/application", json.dumps(body));
+			if 'consciousness' in signal['brain']:
+				self.send_command("system/application", json.dumps({"condition": signal['brain']['consciousness']}))
+		if 'activity' in signal:
+			if 'gui' in signal['activity']:
+				if 'screen' in signal['activity']['gui']:
+					screen = signal['activity']['gui']['screen']['name']
+					parameter = signal['activity']['gui']['screen']['parameter']
+					self.send_command("gui/screen", json.dumps({screen: parameter}))
+				if 'overlay' in signal['activity']['gui']:
+					overlay = signal['activity']['gui']['overlay']['name']
+					parameter = signal['activity']['gui']['overlay']['parameter']
+					self.send_command("gui/overlay", json.dumps({overlay: parameter}))
 		if 'arduino' in signal:
 			if 'webserial' in signal['arduino']:
 				webserial_state = signal['arduino']['webserial']
 				if webserial_state in Action.WEBSERIAL_STATES_VALID:
 					cortex['arduino']['webserial'] = webserial_state
+
+
+	def send_command(self, topic, body) -> None:
+		mqtt_publish_message(f"hal9000/command/arduino/{topic}", body)
 

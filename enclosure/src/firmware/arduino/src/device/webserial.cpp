@@ -6,7 +6,29 @@
 #include "globals.h"
 
 
-void on_device_display(const JsonVariant& data) {
+void on_device_board(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
+	if(data.containsKey("identify")) {
+		g_util_webserial.send("device/board#identify", g_device_board.getIdentifier());
+	}
+}
+
+
+void on_device_microcontroller(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
+	if(data.containsKey("identify")) {
+		g_util_webserial.send("device/microcontroller#identify", g_device_microcontroller.getIdentifier());
+	}
+	if(data.containsKey("reset")) {
+		g_util_webserial.send("syslog/debug", "device/microcontroller#reset");
+		g_device_microcontroller.reset(now(), false);
+	}
+	if(data.containsKey("halt")) {
+		g_util_webserial.send("syslog/debug", "device/microcontroller#halt");
+		g_device_microcontroller.halt();
+	}
+}
+
+
+void on_device_display(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	if(data.containsKey("backlight")) {
 		bool  backlight = true;
 
@@ -24,7 +46,8 @@ void on_device_display(const JsonVariant& data) {
 }
 
 
-void on_device_sdcard(const JsonVariant& data) {
+void on_device_sdcard(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
+/*TODO
 	static StaticJsonDocument<1024> json;
 
 	json.clear();
@@ -65,34 +88,22 @@ void on_device_sdcard(const JsonVariant& data) {
 			g_util_webserial.send("device/sdcard#remove", result);
 		}
 	}
+*/
 }
 
 
-void on_device_mcp23X17(const JsonVariant& data) {
+void on_device_mcp23X17(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	if(data.containsKey("init")) {
-		uint8_t i2c_address = SYSTEM_SETTINGS_MCP23X17_ADDRESS;
-		uint8_t i2c_pin_sda = TWOWIRE_PIN_SDA;
-		uint8_t i2c_pin_scl = TWOWIRE_PIN_SCL;
+		uint8_t i2c_bus = 0;
+		uint8_t i2c_address = 0;
 
-		if(g_system_settings.count("device/mcp23X17:i2c/address") == 1) {
-			i2c_address = atoi(g_system_settings["device/mcp23X17:i2c/address"].c_str());
-		}
-		if(g_system_settings.count("device/mcp23X17:i2c/pin-sda") == 1) {
-			i2c_pin_sda = atoi(g_system_settings["device/mcp23X17:i2c/pin-sda"].c_str());
-		}
-		if(g_system_settings.count("device/mcp23X17:i2c/pin-scl") == 1) {
-			i2c_pin_scl = atoi(g_system_settings["device/mcp23X17:i2c/pin-scl"].c_str());
+		if(data["init"].containsKey("i2c-bus")) {
+			i2c_bus = data["init"]["i2c-bus"].as<int>();
 		}
 		if(data["init"].containsKey("i2c-address")) {
 			i2c_address = data["init"]["i2c-address"].as<int>();
 		}
-		if(data["init"].containsKey("i2c-pin-sda")) {
-			i2c_pin_sda = data["init"]["pin-sda"].as<int>();
-		}
-		if(data["init"].containsKey("i2c-pin-scl")) {
-			i2c_pin_scl = data["init"]["pin-scl"].as<int>();
-		}
-		g_device_mcp23X17.init(i2c_address, i2c_pin_sda, i2c_pin_scl);
+		g_device_mcp23X17.init(i2c_bus, i2c_address);
 	}
 	if(data.containsKey("config")) {
 		const char*  device_type = nullptr;

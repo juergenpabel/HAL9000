@@ -12,8 +12,8 @@ void gui_screen_idle(bool refresh) {
 		clock_previous = 0;
 		g_gui.fillScreen(TFT_BLACK);
 	}
-	if(g_system_runtime.exists("gui/screen:idle/clock") == true) {
-		if(g_system_runtime["gui/screen:idle/clock"].compare("false") == 0) {
+	if(g_application.hasEnv("gui/screen:idle/clock") == true) {
+		if(g_application.getEnv("gui/screen:idle/clock").compare("false") == 0) {
 			clock_show = false;
 		}
 	}

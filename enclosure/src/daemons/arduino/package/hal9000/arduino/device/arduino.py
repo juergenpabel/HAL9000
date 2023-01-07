@@ -30,10 +30,6 @@ class Device(HAL9000_Device):
 							if hasattr(logging, level.upper()):
 								log_level = getattr(logging, level.upper())
 						self.logger.log(log_level, payload)
-					if topic == "system/time" and 'sync' in payload:
-						if payload['sync']['format'] == "epoch":
-							data = {"sync": {"epoch": int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds)}}
-							self.driver.send(json.dumps([topic, data]))
 					if topic == "device/event" and 'device' in payload:
 						device_type=payload["device"]["type"]
 						device_name=payload["device"]["name"]

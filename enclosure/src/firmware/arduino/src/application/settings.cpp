@@ -1,12 +1,12 @@
 #include <LittleFS.h>
 #include <etl/string.h>
 
-#include "system/settings.h"
+#include "application/settings.h"
 #include "globals.h"
 
 #define LINE_SIZE (GLOBAL_KEY_SIZE + 1 + GLOBAL_VALUE_SIZE + 1)
 
-typedef etl::string<UTIL_WEBSERIAL_DATA_SIZE> LogString;
+typedef etl::string<GLOBAL_VALUE_SIZE> LogString;
 
 
 Settings::Settings(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
@@ -74,7 +74,7 @@ bool Settings::save() {
 		g_util_webserial.send("syslog/error", LogString("Settings::save('").append(this->filename).append(LogString("') => failed to open file")));
 		return false;
 	}
-	for(Settings::iterator iter=this->begin(); iter!=this->end(); ++iter) {
+	for(SettingsMap::iterator iter=this->begin(); iter!=this->end(); ++iter) {
 		file.write((uint8_t*)iter->first.c_str(), iter->first.size());
 		file.write((uint8_t*)"=", 1);
 		file.write((uint8_t*)iter->second.c_str(), iter->second.size());

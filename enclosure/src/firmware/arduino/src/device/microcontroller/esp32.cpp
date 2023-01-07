@@ -18,7 +18,10 @@ RTC_NOINIT_ATTR uint32_t       Microcontroller::reset_timestamp;
 
 
 Microcontroller::Microcontroller()
-                :AbstractMicrocontroller() {
+                :AbstractMicrocontroller("esp32")
+                ,mutex_map()
+                ,twowire_init{false,false}
+                ,twowire_data{0,1} {
 }
 
 
@@ -32,17 +35,43 @@ void Microcontroller::start(uint32_t& timestamp, bool& host_booting) {
 			timestamp = Microcontroller::reset_timestamp;
 		}
 		if(Microcontroller::reset_condition != ConditionUnknown) {
-			g_system_runtime.setCondition(Microcontroller::reset_condition);
+			g_application.setCondition(Microcontroller::reset_condition);
 		}
 	}
 	Microcontroller::original_vprintf = esp_log_set_vprintf(Microcontroller::vprintf);
 }
 
 
+bool Microcontroller::configure(const JsonVariant& configuration) {
+	uint8_t pin_sda;
+	uint8_t pin_scl;
+
+	if(configuration.containsKey("i2c") == true) {
+		if(configuration["i2c"].containsKey("i2c-0") == true) {
+			pin_sda = configuration["i2c"]["i2c-0"]["pin-sda"].as<unsigned char>();
+			pin_scl = configuration["i2c"]["i2c-0"]["pin-scl"].as<unsigned char>();
+			this->twowire_data[0].setPins(pin_sda, pin_scl);
+			this->twowire_init[0] = true;
+		}
+		if(configuration["i2c"].containsKey("i2c-1") == true) {
+			pin_sda = configuration["i2c"]["i2c-1"]["pin-sda"].as<unsigned char>();
+			pin_scl = configuration["i2c"]["i2c-1"]["pin-scl"].as<unsigned char>();
+			this->twowire_data[1].setPins(pin_sda, pin_scl);
+			this->twowire_init[1] = true;
+		}
+	}
+	return true;
+}
+
+
 void Microcontroller::reset(uint32_t timestamp, bool rebooting) {
-	this->twowire_get(0, TWOWIRE_PIN_SDA, TWOWIRE_PIN_SCL)->end();
-	Microcontroller::reset_booting = rebooting;
-	Microcontroller::reset_condition = g_system_runtime.getCondition();
+	for(uint8_t i=0; i<2; i++) {
+		if(this->twowire_init[i] == true) {
+			this->twowire_data[i].end();
+		}
+	}
+	Microcontroller::reset_booting   = rebooting;
+	Microcontroller::reset_condition = g_application.getCondition();
 	Microcontroller::reset_timestamp = timestamp;
 	esp_restart();
 }
@@ -149,15 +178,11 @@ bool Microcontroller::mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name) {
 }
 
 
-TwoWire* Microcontroller::twowire_get(uint8_t instance, uint8_t pin_sda, uint8_t pin_scl) {
-	static TwoWire twowire(0);
-	static bool    twowire_init = false;
-
-	if(twowire_init == false) {
-		twowire.setPins(pin_sda, pin_scl);
-		twowire_init = true;
+TwoWire* Microcontroller::twowire_get(uint8_t instance) {
+	if(instance >= 2 || this->twowire_init[instance] == false) {
+		return nullptr;
 	}
-	return &twowire;
+	return &this->twowire_data[instance];
 }
 
 
@@ -190,6 +215,10 @@ int Microcontroller::vprintf(const char* format, va_list message) {
 		format = webserial_format;
 	}
 	return Microcontroller::original_vprintf(format, message);
+}
+
+
+void Microcontroller::webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 }
 
 

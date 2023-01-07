@@ -1,4 +1,8 @@
-void system_start();
-void system_reset();
-void system_halt();
+class System {
+	public:
+		static void start();
+		static void configure();
+		static void reset();
+		static void halt();
+};
 

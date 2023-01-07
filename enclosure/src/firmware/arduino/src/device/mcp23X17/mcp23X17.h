@@ -26,9 +26,9 @@ class MCP23X17 {
 	public:
 		MCP23X17();
 		void init();
-		void init(uint8_t i2c_addr, uint8_t pin_sda, uint8_t pin_scl);
-		void config_inputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, const etl::string<GLOBAL_VALUE_SIZE>& device_name, const JsonArray& inputs, const JsonObject& status);
-		void config_outputs(const etl::string<GLOBAL_VALUE_SIZE>& device_type, const etl::string<GLOBAL_VALUE_SIZE>& device_name, const JsonArray& outputs);
+		void init(uint8_t i2c_bus, uint8_t i2c_addr);
+		void config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& inputs, const JsonObject& status);
+		void config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& outputs);
 
 		void start();
 		void check();
