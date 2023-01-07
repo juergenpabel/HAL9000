@@ -1,8 +1,9 @@
+#include <FS.h>
+#include <LittleFS.h>
 #include <TimeLib.h>
 
 #include "system/system.h"
 #include "device/microcontroller/include.h"
-#include "util/json.h"
 #include "globals.h"
 
 
@@ -43,16 +44,22 @@ void System::start() {
 
 void System::configure() {
 	static etl::string<GLOBAL_FILENAME_SIZE> filename;
-	static JSON                              configuration;
+	static StaticJsonDocument<UTIL_JSON_FILESIZE_MAX> configuration;
+	       File file;
 
 	filename  = "/system/board/";
 	filename += g_device_board.getIdentifier();
 	filename += "/configuration.json";
-	if(configuration.load(filename) == false) {
-		return;
-	}
-	if(g_device_board.configure(configuration.as<JsonVariant>()) == false) {
-		return;
+	if(LittleFS.exists(filename.c_str()) == true) {
+		file = LittleFS.open(filename.c_str(), "r");
+		if(deserializeJson(configuration, file) != DeserializationError::Ok) {
+			file.close();
+			return;
+		}
+		file.close();
+		if(g_device_board.configure(configuration.as<JsonVariant>()) == false) {
+			return;
+		}
 	}
 }
 

@@ -3,9 +3,10 @@
 #define XPOWERS_CHIP_AXP192
 
 #include <Arduino.h>
+#include <FS.h>
 #include <LittleFS.h>
-#include <XPowersLib.h>
 #include <TimeLib.h>
+#include <XPowersLib.h>
 
 #include "globals.h"
 #include "device/board/m5stack-core2.h"

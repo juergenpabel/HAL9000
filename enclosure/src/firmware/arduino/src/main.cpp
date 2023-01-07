@@ -1,3 +1,4 @@
+#include <FS.h>
 #include <LittleFS.h>
 
 #include "globals.h"

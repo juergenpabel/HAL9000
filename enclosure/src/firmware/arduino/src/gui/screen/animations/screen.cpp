@@ -1,3 +1,5 @@
+#include <FS.h>
+#include <LittleFS.h>
 #include <etl/list.h>
 #include <etl/string.h>
 #include <etl/format_spec.h>
@@ -5,7 +7,6 @@
 
 #include "gui/screen/screen.h"
 #include "gui/screen/idle/screen.h"
-#include "util/json.h"
 #include "util/jpeg.h"
 #include "globals.h"
 
@@ -48,27 +49,38 @@ static void gui_screen_animations(bool refresh) {
 
 
 static void gui_screen_animation_load(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
-	static JSON configJSON;
-	static JSON folderJSON;
-	JsonArray   folders;
+	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> configJSON;
+	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> folderJSON;
+	       JsonArray                                folders;
+	       File file;
 
-	if(configJSON.load(filename) == false) {
-		//TODO:gui_screen_set(error);
+	if(LittleFS.exists(filename.c_str()) == false) {
 		return;
 	}
+	file = LittleFS.open(filename.c_str(), "r");
+	if(deserializeJson(configJSON, file) != DeserializationError::Ok) {
+		//TODO:gui_screen_set(error);
+		file.close();
+		return;
+	}
+	file.close();
 	folders = configJSON.as<JsonArray>();
 	for(JsonVariant folder : folders) {
-		static etl::string<GLOBAL_FILENAME_SIZE> filename;
+		static etl::string<GLOBAL_FILENAME_SIZE> filename2;
 		static animation_t animation;
 
 		animation.directory = "/images/animations/";
 		animation.directory += folder.as<const char*>();
-		filename = animation.directory;
-		filename += "/animation.json";
-		if(folderJSON.load(filename) == true) {
-			animation.frames = folderJSON.getNumber("frames");
-			animation.delay  = folderJSON.getNumber("delay");
-			g_animation.push_back(animation);
+		filename2 = animation.directory;
+		filename2 += "/animation.json";
+		if(LittleFS.exists(filename2.c_str()) == true) {
+			file = LittleFS.open(filename2.c_str(), "r");
+			if(deserializeJson(folderJSON, file) == DeserializationError::Ok) {
+				animation.frames = folderJSON["frames"].as<int>();
+				animation.delay  = folderJSON["delay"].as<int>();
+				g_animation.push_back(animation);
+			}
+			file.close();
 		}
 	}
 	g_current_frame = 0;

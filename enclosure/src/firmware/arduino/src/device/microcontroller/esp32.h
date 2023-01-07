@@ -21,7 +21,6 @@ typedef struct {
 
 
 typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, Semaphore, 16> MutexMap;
-class TwoWire;
 
 
 class Microcontroller : public AbstractMicrocontroller {

@@ -14,7 +14,7 @@ Microcontroller::Microcontroller()
                 :AbstractMicrocontroller("rp2040")
                 ,mutex_map()
                 ,twowire_init{false, false}
-                ,twowire_data{i2c0, i2c1} {
+                ,twowire_data{TwoWire(i2c0,0,0), TwoWire(i2c1,0,0)} {
 }
 
 

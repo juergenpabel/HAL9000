@@ -6,12 +6,12 @@
 #include <pico/mutex.h>
 #include <etl/string.h>
 #include <etl/map.h>
+#include <Wire.h>
 
 #include "device/microcontroller/microcontroller.h"
 
 
 typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, recursive_mutex_t, 4> MutexMap;
-class TwoWire;
 
 
 class Microcontroller : public AbstractMicrocontroller {

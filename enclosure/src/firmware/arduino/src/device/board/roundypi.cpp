@@ -8,7 +8,7 @@
 
 
 Board::Board()
-      :AbstractBoard() {
+      :AbstractBoard("roundypi") {
 }
 
 
@@ -18,6 +18,11 @@ void Board::start(bool& host_booting) {
 		pinMode(TFT_BL, OUTPUT);
 		this->displayOff();
 	}
+}
+
+
+bool Board::configure(const JsonVariant& configuration) {
+	return g_device_microcontroller.configure(configuration);
 }
 
 
@@ -44,6 +49,9 @@ void Board::displayOff() {
 	}
 }
 
+
+void Board::webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
+}
 
 #endif
 

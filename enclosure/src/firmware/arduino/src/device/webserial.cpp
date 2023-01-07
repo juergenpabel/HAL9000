@@ -48,7 +48,7 @@ void on_device_display(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVa
 
 void on_device_sdcard(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 /*TODO
-	static StaticJsonDocument<1024> json;
+//	static StaticJsonDocument<1024> json;
 
 	json.clear();
 	if(data.containsKey("list")) {

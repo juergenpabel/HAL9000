@@ -1,8 +1,10 @@
+#include <FS.h>
+#include <LittleFS.h>
+#include <TimeLib.h>
 #include <etl/string.h>
 #include <etl/to_string.h>
 #include <etl/format_spec.h>
-#include <TimeLib.h>
-#include <LittleFS.h>
+
 #include "gui/screen/screen.h"
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/hal9000/screen.h"
