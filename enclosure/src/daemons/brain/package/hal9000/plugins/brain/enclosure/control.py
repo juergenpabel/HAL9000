@@ -102,11 +102,11 @@ class Control(EnclosureComponent):
 							self.daemon.show_gui_screen('error', {"menu": "TODO:{}".format(menu_item)}, 10)
 							self.daemon.logger.error("plugin enclosure: invalid menu item '{}', check configuration".format(menu_item))
 							return
-						cortex['#activity']['video'].menu_name = menu_item
-						cortex['#activity']['video'].menu_item = self.config['menu'][menu_item]['items'][0]["item"]
 						menu_title = self.config['menu'][menu_item]['title']
 						menu_text  = self.config['menu'][menu_item]['items'][0]["text"]
 						self.daemon.show_gui_screen('menu', {"title": menu_title, "text": menu_text}, self.config['menu']['timeout'])
+						cortex['#activity']['video'].menu_name = menu_item
+						cortex['#activity']['video'].menu_item = self.config['menu'][menu_item]['items'][0]["item"]
 					else:
 						self.daemon.show_gui_screen('error', {"menu": "TODO:{}".format(menu_item)}, 10)
 						self.daemon.logger.error("plugin enclosure: invalid menu item '{}', check configuration".format(menu_item))
