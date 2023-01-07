@@ -7,13 +7,10 @@ import select
 import json
 from datetime import datetime, timezone
 
-def handler(self, line: str):
-	if line.startswith('['):
-		if json.loads(line)[0] == "system/time":
-			self.send('["system/time",{"sync":{"epoch":'+str(int(time.time() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))+'}}]')
 
-roundypi = webserial()
-roundypi.connect()
-roundypi.send('["system/time", {"config":{"interval":10}}]')
-roundypi.run(handler)
+hal9000 = webserial(True, True)
+hal9000.connect()
+hal9000.send('["application/runtime",  {"time": {"epoch": %d}}]' % (int(datetime.now().timestamp() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds)))
+hal9000.send('["gui/screen", {"idle": {}}]')
+hal9000.run()
 

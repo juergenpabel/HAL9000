@@ -263,8 +263,6 @@ class Daemon(HAL9000_Daemon):
 
 
 	def show_gui_screen(self, screen, parameter, timeout: int = None) -> None:
-		if self.cortex['#activity']['video'].screen == screen:
-			return
 		self.logger.info("GUI: screen '{}' activated (previously '{}')".format(screen, self.cortex['#activity']['video'].screen))
 		self.cortex['#activity']['video'] = Activity('gui', screen=screen, overlay=self.cortex['#activity']['video'].overlay)
 		if timeout is not None and timeout > 0:
@@ -273,8 +271,6 @@ class Daemon(HAL9000_Daemon):
 
 
 	def hide_gui_screen(self, screen) -> None:
-		if self.cortex['#activity']['video'].screen != screen:
-			return
 		self.logger.info("GUI: screen 'idle' activated (previously '{}')".format(screen))
 		self.cortex['#activity']['video'] = Activity('gui', screen='idle', overlay=self.cortex['#activity']['video'].overlay)
 		if 'gui/screen' in self.timeouts:

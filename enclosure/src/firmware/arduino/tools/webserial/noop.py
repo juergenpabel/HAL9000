@@ -2,7 +2,7 @@
 
 from webserial import webserial
 
-mcu = webserial(True, True)
-mcu.connect()
-mcu.run()
+hal9000 = webserial(True, True)
+hal9000.connect()
+hal9000.run()
 

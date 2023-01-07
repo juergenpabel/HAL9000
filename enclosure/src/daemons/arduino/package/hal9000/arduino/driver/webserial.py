@@ -3,6 +3,7 @@
 import logging
 import time
 import serial
+import json
 from configparser import ConfigParser
 
 from . import HAL9000_Driver
@@ -30,9 +31,30 @@ class Driver(HAL9000_Driver):
 			try:
 				Driver.serial = serial.Serial(port=self.config['tty'], timeout=0.01, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
 				self.logger.debug('driver:webserial => ...ready')
-				self.send('["device/mcp23X17", {"init": {}}]')
+				data = {}
+				while "status" not in data or data["status"] == "booting":
+					self.send('["application/runtime", {"status": {}}]')
+					line = self.receive()
+					if line is not None and line.startswith('["application/runtime"'):
+						data = json.loads(line)
+						if len(data) == 2:
+							data = data[1]
+						else:
+							data = {}
+					time.sleep(1)
+				print("TODO")
+				print(data)
+				if data["status"] == "configuring":
+					i2c_bus  = configuration.getint('mcp23X17', 'i2c-bus', fallback=0)
+					i2c_addr = configuration.getint('mcp23X17', 'i2c-address', fallback=32)
+					self.send('["device/mcp23X17", {"init": {"i2c-bus": %d, "i2c-address": %d}}]' % (i2c_bus, i2c_addr))
+				if data["status"] == "running":
+					Driver.serial_ready = True
 			except:
 				time.sleep(0.1)
+				raise
+		if Driver.serial_ready is True:
+			return
 		peripheral_type, peripheral_name = str(self).split(':', 1)
 		if peripheral_type in ["rotary"]:
 			input_pins = configuration.getlist(str(self), 'driver-pins', fallback="")
@@ -83,8 +105,9 @@ class Driver(HAL9000_Driver):
 
 
 	def do_loop(self) -> bool:
-		if Driver.serial_ready == False:
+		if Driver.serial_ready is False:
 			self.send('["device/mcp23X17", {"start": true}]')
+			self.send('["", ""]')
 			Driver.serial_ready = True
 		Driver.received_line = self.receive()
 		return True

@@ -31,7 +31,7 @@ void loop() {
 		switch(newStatus) {
 			case StatusBooting:
 				if(gui_screen_get() == gui_screen_none) {
-					g_util_webserial.send("application/runtime", "{\"status\": \"booting\"}");
+					g_util_webserial.send("application/runtime", "{\"status\": \"booting\"}", false);
 					gui_screen_set(gui_screen_animation_startup);
 				}
 				if(gui_screen_get() == gui_screen_animation_startup) {
@@ -44,7 +44,7 @@ void loop() {
 				break;
 			case StatusConfiguring:
 				if(g_application.hasEnv("application/configuration") == false) {
-					g_util_webserial.send("application/runtime", "{\"status\": \"configuring\"}");
+					g_util_webserial.send("application/runtime", "{\"status\": \"configuring\"}", false);
 					g_application.setEnv("application/configuration", "true");
 					g_util_webserial.setCommand("*", Application::onConfiguration);
 				}
@@ -55,7 +55,7 @@ void loop() {
 				newStatus = StatusUnchanged;
 				break;
 			case StatusRunning:
-				g_util_webserial.send("application/runtime", "{\"status\": \"running\"}");
+				g_util_webserial.send("application/runtime", "{\"status\": \"running\"}", false);
 				g_util_webserial.setCommand("*", nullptr);
 				g_util_webserial.setCommand("application/environment", on_application_environment);
 				g_util_webserial.setCommand("application/settings", on_application_settings);
@@ -70,11 +70,11 @@ void loop() {
 				gui_screen_set(gui_screen_idle);
 				break;
 			case StatusResetting:
-				g_util_webserial.send("application/runtime", "{\"status\": \"resetting\"}");
+				g_util_webserial.send("application/runtime", "{\"status\": \"resetting\"}", false);
 				System::reset();
 				break;
 			case StatusRebooting:
-				g_util_webserial.send("application/runtime", "{\"status\": \"rebooting\"}");
+				g_util_webserial.send("application/runtime", "{\"status\": \"rebooting\"}", false);
 				gui_screen_set(gui_screen_animation_shutdown);
 				while(gui_screen_get() == gui_screen_animation_shutdown) {
 					gui_screen_update(true);
@@ -82,7 +82,7 @@ void loop() {
 				System::reset();
 				break;
 			case StatusHalting:
-				g_util_webserial.send("application/runtime", "{\"status\": \"halting\"}");
+				g_util_webserial.send("application/runtime", "{\"status\": \"halting\"}", false);
 				gui_screen_set(gui_screen_animation_shutdown);
 				while(gui_screen_get() == gui_screen_animation_shutdown) {
 					gui_screen_update(true);

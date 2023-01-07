@@ -2,8 +2,8 @@
 
 from webserial import webserial
 
-mcu = webserial(True, True)
-mcu.connect()
-mcu.send('["system/microcontroller", {"reset": "true"}]')
-mcu.run()
+hal9000 = webserial(True, True)
+hal9000.connect()
+hal9000.send('["device/microcontroller", {"reset": true}]')
+hal9000.run()
 
