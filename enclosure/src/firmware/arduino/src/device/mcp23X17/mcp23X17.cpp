@@ -172,13 +172,13 @@ void MCP23X17::check() {
 					device = MCP23X17_Device::instances[i];
 					if(device != nullptr) {
 						if(device->isInputDevice() == true) {
-							static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> data;
+							static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
-							data.clear();
+							json.clear();
 							input_device = (MCP23X17_InputDevice*)device;
-							input_device->process(MCP23X17::PIN_NAMES[nr], MCP23X17::PIN_VALUES[new_value], data);
-							if(data.size() > 0) {
-								g_util_webserial.send("device/event", data);
+							input_device->process(MCP23X17::PIN_NAMES[nr], MCP23X17::PIN_VALUES[new_value], json);
+							if(json.size() > 0) {
+								g_util_webserial.send("device/event", json);
 							}
 						}
 					}

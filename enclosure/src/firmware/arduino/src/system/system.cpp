@@ -44,7 +44,7 @@ void System::start() {
 
 void System::configure() {
 	static etl::string<GLOBAL_FILENAME_SIZE> filename;
-	static StaticJsonDocument<UTIL_JSON_FILESIZE_MAX> configuration;
+	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> json;
 	       File file;
 
 	filename  = "/system/board/";
@@ -52,12 +52,12 @@ void System::configure() {
 	filename += "/configuration.json";
 	if(LittleFS.exists(filename.c_str()) == true) {
 		file = LittleFS.open(filename.c_str(), "r");
-		if(deserializeJson(configuration, file) != DeserializationError::Ok) {
+		if(deserializeJson(json, file) != DeserializationError::Ok) {
 			file.close();
 			return;
 		}
 		file.close();
-		if(g_device_board.configure(configuration.as<JsonVariant>()) == false) {
+		if(g_device_board.configure(json.as<JsonVariant>()) == false) {
 			return;
 		}
 	}

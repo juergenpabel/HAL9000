@@ -17,6 +17,7 @@
 void setup() {
 	System::start();
 	System::configure();
+	g_util_webserial.setCommand("application/runtime", on_application_runtime);
 }
 
 
@@ -30,7 +31,7 @@ void loop() {
 		switch(newStatus) {
 			case StatusBooting:
 				if(gui_screen_get() == gui_screen_none) {
-					g_util_webserial.send("application/runtime", "booting");
+					g_util_webserial.send("application/runtime", "{\"status\": \"booting\"}");
 					gui_screen_set(gui_screen_animation_startup);
 				}
 				if(gui_screen_get() == gui_screen_animation_startup) {
@@ -43,7 +44,7 @@ void loop() {
 				break;
 			case StatusConfiguring:
 				if(g_application.hasEnv("application/configuration") == false) {
-					g_util_webserial.send("application/runtime", "configuring");
+					g_util_webserial.send("application/runtime", "{\"status\": \"configuring\"}");
 					g_application.setEnv("application/configuration", "true");
 					g_util_webserial.setCommand("*", Application::onConfiguration);
 				}
@@ -54,11 +55,8 @@ void loop() {
 				newStatus = StatusUnchanged;
 				break;
 			case StatusRunning:
-				g_util_webserial.send("application/runtime", "running");
-				if(oldStatus == StatusConfiguring) {
-					g_util_webserial.setCommand("*", nullptr);
-				}
-				g_util_webserial.setCommand("application/runtime", on_application_runtime);
+				g_util_webserial.send("application/runtime", "{\"status\": \"running\"}");
+				g_util_webserial.setCommand("*", nullptr);
 				g_util_webserial.setCommand("application/environment", on_application_environment);
 				g_util_webserial.setCommand("application/settings", on_application_settings);
 				g_util_webserial.setCommand("device/board", on_device_board);
@@ -68,32 +66,15 @@ void loop() {
 				g_util_webserial.setCommand("device/sdcard", on_device_sdcard);
 				g_util_webserial.setCommand("gui/screen", on_gui_screen);
 				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
-				if(LittleFS.exists("/system/application/configuration.json") == true) {
-					static StaticJsonDocument<UTIL_JSON_FILESIZE_MAX> configuration;
-					       File                     file;
-
-					g_util_webserial.send("syslog/debug", "loading application configuration...");
-					configuration.clear();
-					file = LittleFS.open("/system/application/configuration.json", "r");
-					if(file == true) {
-						deserializeJson(configuration, file);
-						for(JsonObject item : configuration.as<JsonArray>()) {
-							if(item.containsKey("command") == true && item.containsKey("data") == true) {
-								g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
-							}
-						}
-						file.close();
-					}
-				}
-				g_application.loadSettings();
+				g_application.onRunning();
 				gui_screen_set(gui_screen_idle);
 				break;
 			case StatusResetting:
-				g_util_webserial.send("application/runtime", "resetting");
+				g_util_webserial.send("application/runtime", "{\"status\": \"resetting\"}");
 				System::reset();
 				break;
 			case StatusRebooting:
-				g_util_webserial.send("application/runtime", "rebooting");
+				g_util_webserial.send("application/runtime", "{\"status\": \"rebooting\"}");
 				gui_screen_set(gui_screen_animation_shutdown);
 				while(gui_screen_get() == gui_screen_animation_shutdown) {
 					gui_screen_update(true);
@@ -101,7 +82,7 @@ void loop() {
 				System::reset();
 				break;
 			case StatusHalting:
-				g_util_webserial.send("application/runtime", "halting");
+				g_util_webserial.send("application/runtime", "{\"status\": \"halting\"}");
 				gui_screen_set(gui_screen_animation_shutdown);
 				while(gui_screen_get() == gui_screen_animation_shutdown) {
 					gui_screen_update(true);

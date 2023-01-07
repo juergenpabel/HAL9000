@@ -62,6 +62,7 @@ class Application {
 	friend void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 
 	static void onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+	       void onRunning();
 };
 
 

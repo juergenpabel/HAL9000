@@ -10,7 +10,6 @@
 static const char* APPLICATION_STATUS[] = {
 	"unknown",
 	"booting",
-	"provisioning",
 	"configuring",
 	"running",
 	"resetting",
@@ -21,11 +20,14 @@ static const char* APPLICATION_STATUS[] = {
 
 void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	if(data.containsKey("status") == true) {
-		g_util_webserial.send("application/runtime#status", APPLICATION_STATUS[g_application.getStatus()]);
+		StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
+
+		json["status"] = APPLICATION_STATUS[g_application.getStatus()];
+		g_util_webserial.send("application/runtime", json);
 	}
 	if(data.containsKey("condition") == true) {
-		static etl::string<GLOBAL_VALUE_SIZE> awake("awake");
-		static etl::string<GLOBAL_VALUE_SIZE> asleep("asleep");
+		etl::string<GLOBAL_VALUE_SIZE> awake("awake");
+		etl::string<GLOBAL_VALUE_SIZE> asleep("asleep");
 
 		if(awake.compare(data["condition"].as<const char*>()) == 0) {
 			g_application.setCondition(ConditionAwake);
@@ -75,16 +77,16 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 
 void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	if(data.containsKey("list") == true) {
-		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> result;
+		StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
-		result.clear();
+		json.clear();
 		for(EnvironmentMap::iterator iter=g_application.m_environment.begin(); iter!=g_application.m_environment.end(); ++iter) {
-			result[iter->first.c_str()] = iter->second.c_str();
+			json[iter->first.c_str()] = iter->second.c_str();
 		}
-		g_util_webserial.send("application/environment#list", result.as<JsonVariant>());
+		g_util_webserial.send("application/environment#list", json.as<JsonVariant>());
 	}
 	if(data.containsKey("get") == true) {
-		static etl::string<GLOBAL_KEY_SIZE> key;
+		etl::string<GLOBAL_KEY_SIZE> key;
 
 		key = data["env"]["key"].as<const char*>();
 		if(key.length() > 0) {
@@ -95,8 +97,8 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 		}
 	}
 	if(data.containsKey("set") == true) {
-		static etl::string<GLOBAL_KEY_SIZE> key;
-		static etl::string<GLOBAL_VALUE_SIZE> value;
+		etl::string<GLOBAL_KEY_SIZE> key;
+		etl::string<GLOBAL_VALUE_SIZE> value;
 
 		key = data["env"]["key"].as<const char*>();
 		value = data["env"]["value"].as<const char*>();
@@ -111,27 +113,27 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 
 
 void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> result;
+	StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
 	if(data.containsKey("list") == true) {
-		result.clear();
+		json.clear();
 
 		for(SettingsMap::iterator iter=g_application.m_settings.begin(); iter!=g_application.m_settings.end(); ++iter) {
-			result[iter->first.c_str()] = iter->second.c_str();
+			json[iter->first.c_str()] = iter->second.c_str();
 		}
-		g_util_webserial.send("application/settings#list", result);
+		g_util_webserial.send("application/settings#list", json);
 	}
 	if(data.containsKey("get") == true) {
 		etl::string<GLOBAL_KEY_SIZE> key;
 
-		result.clear();
+		json.clear();
 		key = data["get"]["key"].as<const char*>();
 		if(key.length() > 0) {
 			if(g_application.m_settings.count(key) == 1) {
-				result["key"] = key.c_str();
-				result["value"] = g_application.m_settings[key].c_str();
+				json["key"] = key.c_str();
+				json["value"] = g_application.m_settings[key].c_str();
 			}
-			g_util_webserial.send("application/settings#get", result);
+			g_util_webserial.send("application/settings#get", json);
 			g_util_webserial.send("syslog/debug", "application/settings#get => OK");
 		} else {
 			g_util_webserial.send("syslog/debug", "application/settings#get => ERROR");

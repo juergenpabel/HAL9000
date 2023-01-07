@@ -25,7 +25,7 @@ class WebSerial {
 		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::string<GLOBAL_VALUE_SIZE>& data, bool data_stringify = true);
 
-	friend void loop();
+	friend class Application;
 };
 
 #endif

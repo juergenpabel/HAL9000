@@ -88,13 +88,14 @@ void Application::setSetting(const etl::string<GLOBAL_KEY_SIZE>& key, const etl:
 }
 
 
-void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-	static StaticJsonDocument<UTIL_JSON_FILESIZE_MAX> configuration;
+static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> g_application_configuration;
 
+
+void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	if(command.size() > 0) {
 		JsonObject current;
 
-		current = configuration.createNestedObject();
+		current = g_application_configuration.createNestedObject();
 		current["command"].set((char*)command.c_str());
 		current["data"].set(data);
 	} else {
@@ -102,11 +103,32 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 
 		file = LittleFS.open("/system/application/configuration.json", "w");
 		if(file == true) {
-			serializeJson(configuration, file);
+			serializeJson(g_application_configuration, file);
 			file.close();
 		}
-		configuration.clear();
+		g_application_configuration.clear();
 		g_application.setEnv("application/configuration", "false");
 	}
+}
+
+
+void Application::onRunning() {
+	File file;
+
+	g_application_configuration.clear();
+	if(LittleFS.exists("/system/application/configuration.json") == true) {
+		file = LittleFS.open("/system/application/configuration.json", "r");
+		if(file == true) {
+			deserializeJson(g_application_configuration, file);
+			for(JsonObject item : g_application_configuration.as<JsonArray>()) {
+				if(item.containsKey("command") == true && item.containsKey("data") == true) {
+					g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
+				}
+			}
+			file.close();
+		}
+	}
+	this->resetSettings();
+	this->loadSettings();
 }
 

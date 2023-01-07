@@ -120,12 +120,12 @@ void WebSerial::update() {
 
 
 void WebSerial::handle(const etl::string<GLOBAL_VALUE_SIZE>& line) {
-	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> message;
+	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
-	message.clear();
-	deserializeJson(message, line.c_str());
-	if(message.is<JsonArray>() && message.size() == 2) {
-		this->handle(message[0].as<const char*>(), message[1].as<JsonVariant>());
+	json.clear();
+	deserializeJson(json, line.c_str());
+	if(json.is<JsonArray>() && json.size() == 2) {
+		this->handle(json[0].as<const char*>(), json[1].as<JsonVariant>());
 	}
 }
 
