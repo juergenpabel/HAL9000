@@ -5,9 +5,9 @@ from hal9000.daemon.plugin import HAL9000_Plugin
 
 
 class HAL9000_Module(HAL9000_Plugin):
-	MODULE_RUNLEVEL_BOOTING = "booting"
-	MODULE_RUNLEVEL_RUNNING = "running"
-	MODULE_RUNLEVEL_HALTING = "halting"
+	MODULE_RUNLEVEL_STARTING = "starting"
+	MODULE_RUNLEVEL_RUNNING  = "running"
+	MODULE_RUNLEVEL_HALTING  = "halting"
 
 
 	def __init__(self, module_type: str, module_class: str, module_name: str, **kwargs) -> None:
@@ -22,6 +22,7 @@ class HAL9000_Module(HAL9000_Plugin):
 
 	def runlevel(self, cortex: dict) -> str:
 		return HAL9000_Module.MODULE_RUNLEVEL_RUNNING
+
 
 	def runlevel_error_info(self, cortex: dict) -> dict:
 		return None

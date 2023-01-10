@@ -20,14 +20,6 @@ Board::Board()
 
 void Board::start(bool& host_booting) {
 	AbstractBoard::start(host_booting);
-	if(LittleFS.begin() != true) {
-		while(true) {
-			if(Serial == true) {
-				Serial.println("[\"syslog/fatal\", \"LittleFS.begin(), halting.\"]");
-			}
-			delay(1000);
-		}
-	}
 	if(PMU.begin(Wire1, AXP192_SLAVE_ADDRESS, 21, 22) != true) {
 		Serial.println("[\"syslog/error\", \"PMU.begin() failed\"");
 		return;
@@ -57,7 +49,6 @@ bool Board::configure(const JsonVariant& configuration) {
 
 
 void Board::reset(bool host_rebooting) {
-	LittleFS.end();
 	AbstractBoard::reset(host_rebooting);
 }
 
@@ -66,7 +57,6 @@ void Board::halt() {
 	PMU.disableDC2();
 	PMU.disableDC3();
 	PMU.disableLDO2();
-	LittleFS.end();
 	AbstractBoard::halt();
 }
 

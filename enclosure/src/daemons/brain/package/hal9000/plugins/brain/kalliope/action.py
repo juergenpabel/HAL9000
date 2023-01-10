@@ -31,7 +31,7 @@ class Action(HAL9000_Action):
 
 	def runlevel(self, cortex: dict) -> str:
 		if cortex['kalliope']['state'] == Action.KALLIOPE_STATE_UNKNOWN:
-			return Action.MODULE_RUNLEVEL_BOOTING
+			return Action.MODULE_RUNLEVEL_STARTING
 		return Action.MODULE_RUNLEVEL_RUNNING
 
 

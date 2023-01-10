@@ -20,7 +20,7 @@ static const char* APPLICATION_STATUS[] = {
 
 void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	if(data.containsKey("status") == true) {
-		StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
+		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
 		json["status"] = APPLICATION_STATUS[g_application.getStatus()];
 		g_util_webserial.send("application/runtime", json);
@@ -77,7 +77,7 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 
 void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	if(data.containsKey("list") == true) {
-		StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
+		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
 		json.clear();
 		for(EnvironmentMap::iterator iter=g_application.m_environment.begin(); iter!=g_application.m_environment.end(); ++iter) {
@@ -113,7 +113,7 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 
 
 void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-	StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
+	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
 	if(data.containsKey("list") == true) {
 		json.clear();

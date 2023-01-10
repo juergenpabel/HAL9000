@@ -29,7 +29,7 @@ class Action(HAL9000_Action):
 	def runlevel(self, cortex: dict) -> str:
 		if cortex['system']['time'] == Action.SYSTEM_STATE_TIME_SYNCED:
 			return Action.MODULE_RUNLEVEL_RUNNING
-		return Action.MODULE_RUNLEVEL_BOOTING
+		return Action.MODULE_RUNLEVEL_STARTING
 
 
 	def runlevel_error(self, cortex: dict) -> dict:

@@ -44,7 +44,7 @@ class Daemon(HAL9000_Daemon):
 	def __init__(self) -> None:
 		HAL9000_Daemon.__init__(self, 'brain')
 		self.cortex = dict()
-		self.cortex['#consciousness'] = Daemon.CONSCIOUSNESS_ASLEEP
+		self.cortex['#consciousness'] = Daemon.CONSCIOUSNESS_AWAKE
 		self.cortex['#activity'] = dict()
 		self.cortex['#activity']['audio'] = Activity()
 		self.cortex['#activity']['video'] = Activity()
@@ -115,7 +115,7 @@ class Daemon(HAL9000_Daemon):
 		self.booting_timeout = time.monotonic() + self.config['boot-timeout']
 		for module in list(self.triggers.values()) + list(self.actions.values()):
 			cortex = self.cortex.copy()
-			if module.runlevel(cortex) == HAL9000_Module.MODULE_RUNLEVEL_BOOTING:
+			if module.runlevel(cortex) == HAL9000_Module.MODULE_RUNLEVEL_STARTING:
 				self.booting_modules[str(module)] = module
 		self.set_system_time(datetime.now())
 		HAL9000_Daemon.loop(self)
@@ -125,7 +125,7 @@ class Daemon(HAL9000_Daemon):
 		if self.booting_timeout is not None:
 			for id in list(self.booting_modules.keys()):
 				cortex = self.cortex.copy()
-				if self.booting_modules[id].runlevel(cortex) != HAL9000_Module.MODULE_RUNLEVEL_BOOTING:
+				if self.booting_modules[id].runlevel(cortex) != HAL9000_Module.MODULE_RUNLEVEL_STARTING:
 					del self.booting_modules[id]
 			if time.monotonic() > self.booting_timeout:
 				self.booting_timeout = None
@@ -148,7 +148,6 @@ class Daemon(HAL9000_Daemon):
 					action_name = self.config['boot-finished-action-name']
 					if action_name in self.actions:
 						self.queue_signal(action_name, json.loads(self.config['boot-finished-signal-data']))
-				self.show_gui_screen('idle', '')
 		self.process_queued_signals()
 		self.process_timeouts()
 		return True
@@ -232,17 +231,18 @@ class Daemon(HAL9000_Daemon):
 	def set_consciousness(self, new_state) -> None:
 		if new_state in Daemon.CONSCIOUSNESS_VALID:
 			old_state = self.cortex['#consciousness']
-			self.logger.info("CONSCIOUSNESS state changing from '{}' to '{}'".format(old_state, new_state))
-			self.logger.debug("CORTEX before state change = {}".format(self.cortex))
-			self.cortex['#consciousness'] = new_state
-			for action_name in self.actions.keys():
-				signal = {"brain": {"consciousness": new_state}}
-				cortex = self.cortex.copy()
-				self.actions[action_name].process(signal, cortex)
-				if action_name in cortex:
-					self.cortex[action_name] = cortex[action_name]
-			self.process_queued_signals()
-			self.logger.debug("CORTEX after state change  = {}".format(self.cortex))
+			if old_state != new_state:
+				self.logger.info("CONSCIOUSNESS state changing from '{}' to '{}'".format(old_state, new_state))
+				self.logger.debug("CORTEX before state change = {}".format(self.cortex))
+				self.cortex['#consciousness'] = new_state
+				for action_name in self.actions.keys():
+					signal = {"brain": {"consciousness": new_state}}
+					cortex = self.cortex.copy()
+					self.actions[action_name].process(signal, cortex)
+					if action_name in cortex:
+						self.cortex[action_name] = cortex[action_name]
+				self.process_queued_signals()
+				self.logger.debug("CORTEX after state change  = {}".format(self.cortex))
 
 
 	def set_system_time(self, datetime_now) -> None:

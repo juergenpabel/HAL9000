@@ -16,8 +16,8 @@ void Board::start(bool& host_booting) {
 	AbstractBoard::start(host_booting);
 	if(TFT_BL >= 0) {
 		pinMode(TFT_BL, OUTPUT);
-		this->displayOff();
 	}
+	this->displayOn();
 }
 
 
@@ -32,6 +32,7 @@ void Board::reset(bool host_rebooting) {
 
 
 void Board::halt() {
+	this->displayOff();
 	AbstractBoard::halt();
 }
 

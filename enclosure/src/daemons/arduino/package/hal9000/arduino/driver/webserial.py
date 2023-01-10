@@ -18,6 +18,7 @@ class Driver(HAL9000_Driver):
 			Driver.serial = None
 			Driver.serial_ready = False
 			Driver.received_line = None
+			Driver.send_queue = []
 
 
 	def configure(self, configuration: ConfigParser) -> None:
@@ -33,7 +34,7 @@ class Driver(HAL9000_Driver):
 				self.logger.debug('driver:webserial => ...ready')
 				data = {}
 				while "status" not in data or data["status"] == "booting":
-					self.send('["application/runtime", {"status": {}}]')
+					self.send('["application/runtime", {"status": {}}]', True)
 					line = self.receive()
 					if line is not None and line.startswith('["application/runtime"'):
 						data = json.loads(line)
@@ -42,35 +43,33 @@ class Driver(HAL9000_Driver):
 						else:
 							data = {}
 					time.sleep(1)
-				print("TODO")
-				print(data)
 				if data["status"] == "configuring":
 					i2c_bus  = configuration.getint('mcp23X17', 'i2c-bus', fallback=0)
 					i2c_addr = configuration.getint('mcp23X17', 'i2c-address', fallback=32)
-					self.send('["device/mcp23X17", {"init": {"i2c-bus": %d, "i2c-address": %d}}]' % (i2c_bus, i2c_addr))
+					self.send('["device/mcp23X17", {"init": {"i2c-bus": %d, "i2c-address": %d}}]' % (i2c_bus, i2c_addr), True)
 				if data["status"] == "running":
 					Driver.serial_ready = True
+					self.send('["application/runtime", {"status": {}}]', True)
 			except:
 				time.sleep(0.1)
-				raise
 		if Driver.serial_ready is True:
 			return
 		peripheral_type, peripheral_name = str(self).split(':', 1)
 		if peripheral_type in ["rotary"]:
-			input_pins = configuration.getlist(str(self), 'driver-pins', fallback="")
+			input_pins = configuration.getlist(str(self), 'mcp23X17-pins', fallback="")
 			if len(input_pins) != 2:
-				self.logger.error('driver:webserial => invalid configuration for driver-pins, must be a list with two elements')
+				self.logger.error('driver:webserial => invalid configuration for mcp23X17-pins, must be a list with two elements')
 				return
-			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s", "name": "%s", "inputs": [{"pin": "%s", "label": "sigA"},{"pin": "%s", "label": "sigB"}]}}}]' % (peripheral_type, peripheral_name, input_pins[0], input_pins[1]))
+			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s", "name": "%s", "inputs": [{"pin": "%s", "label": "sigA"},{"pin": "%s", "label": "sigB"}]}}}]' % (peripheral_type, peripheral_name, input_pins[0], input_pins[1]), True)
 		if peripheral_type in ["switch", "button", "toggle"]:
-			input_pin = configuration.get(str(self), 'driver-pin', fallback="")
+			input_pin = configuration.get(str(self), 'mcp23X17-pin', fallback="")
 			if len(input_pin) != 2:
-				self.logger.error('driver:webserial => invalid configuration for driver-pin, must be a single pin name (A0-A7,B0-B7)')
+				self.logger.error('driver:webserial => invalid configuration for mcp23X17-pin, must be a single pin name (A0-A7,B0-B7)')
 				return
-			input_pin_pullup = configuration.getboolean(str(self), 'driver-pin-pullup', fallback=True)
+			input_pin_pullup = configuration.getboolean(str(self), 'mcp23X17-pin-pullup', fallback=True)
 			event_low  = configuration.getstring(str(self), 'event-low', fallback='on')
 			event_high = configuration.getstring(str(self), 'event-high', fallback='off')
-			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s", "name": "%s", "inputs": [{"pin": "%s", "pullup": "%s", "label": "sigX"}], "events": {"low": "%s", "high": "%s"}}}}]' % (peripheral_type, peripheral_name, input_pin, str(input_pin_pullup).lower(), event_low, event_high))
+			self.send('["device/mcp23X17", {"config": {"device": {"type": "%s", "name": "%s", "inputs": [{"pin": "%s", "pullup": "%s", "label": "sigX"}], "events": {"low": "%s", "high": "%s"}}}}]' % (peripheral_type, peripheral_name, input_pin, str(input_pin_pullup).lower(), event_low, event_high), True)
 
 
 	def receive(self):
@@ -94,7 +93,10 @@ class Driver(HAL9000_Driver):
 		return line
 
 
-	def send(self, line: str):
+	def send(self, line: str, force = False):
+		if Driver.serial_ready is False and force is False:
+			Driver.send_queue.append(line)
+			return
 		if self.config['trace'] is True and len(line) > 0:
 			self.logger.debug("USB(H->D): {}".format(line))
 		if not line.endswith("\n"):
@@ -106,9 +108,13 @@ class Driver(HAL9000_Driver):
 
 	def do_loop(self) -> bool:
 		if Driver.serial_ready is False:
-			self.send('["device/mcp23X17", {"start": true}]')
-			self.send('["", ""]')
+			self.send('["device/mcp23X17", {"start": true}]', True)
+			self.send('["", ""]', True)
 			Driver.serial_ready = True
+			for line in Driver.send_queue:
+				self.send(line)
+			Driver.send_queue.clear()
+			self.send('["application/runtime", {"status": {}}]', True)
 		Driver.received_line = self.receive()
 		return True
 

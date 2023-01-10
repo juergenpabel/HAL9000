@@ -46,17 +46,10 @@ class Daemon(HAL9000):
 			device.configure(configuration)
 
 
-	def loop(self) -> None:
-		self.on_webserial('online')
-		HAL9000.loop(self)
-
-
 	def do_loop(self) -> bool:
 		result = True
 		for device in self.devices.values():
 			result &= device.do_loop(self.on_event)
-		if result is False:
-			self.on_webserial('offline')
 		return result
 
 
@@ -77,14 +70,6 @@ class Daemon(HAL9000):
 			payload = message.payload.decode('utf-8')
 			self.logger.info("COMMAND: {} => {}".format(topic, payload))
 			self.webserial.send('["%s", %s]' % (topic, payload))
-
-
-	def on_webserial(self, status: str) -> None:
-		if self.mqtt is not None:
-			mqtt_topic = 'hal9000/event/arduino/webserial/state'
-			mqtt_payload = status
-			self.mqtt.publish(mqtt_topic, mqtt_payload)
-			self.logger.debug('MQTT published: {} => {}'.format(mqtt_topic, mqtt_payload))
 
 
 	def import_device(self, module_name:str) -> HAL9000_Plugin:

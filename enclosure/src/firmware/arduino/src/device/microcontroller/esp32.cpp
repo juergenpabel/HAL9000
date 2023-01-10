@@ -79,7 +79,7 @@ void Microcontroller::reset(uint32_t timestamp, bool rebooting) {
 
 void Microcontroller::halt() {
 	esp_deep_sleep_start();
-	//this code should never be taken
+	//this code should never be executed
 	while(true) {
 		delay(1000);
 	}

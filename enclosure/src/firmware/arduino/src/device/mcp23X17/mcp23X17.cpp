@@ -57,7 +57,6 @@ void MCP23X17::init(uint8_t i2c_bus, uint8_t i2c_addr) {
 		g_util_webserial.send("syslog/error", "MCP23X17 failed to initialize");
 		return;
 	}
-	this->mcp23X17.setupInterrupts(false, true, LOW);
 	this->status = MCP23X17_STATE_INITIALIZED;
 }
 
