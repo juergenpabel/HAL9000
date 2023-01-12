@@ -33,8 +33,8 @@ class Driver(HAL9000_Driver):
 				Driver.serial = serial.Serial(port=self.config['tty'], timeout=0.01, baudrate=115200, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
 				self.logger.debug('driver:webserial => ...ready')
 				data = {}
+				self.send('["application/runtime", {"status": "?"}]', True)
 				while "status" not in data or data["status"] == "booting":
-					self.send('["application/runtime", {"status": {}}]', True)
 					line = self.receive()
 					if line is not None and line.startswith('["application/runtime"'):
 						data = json.loads(line)
@@ -42,14 +42,13 @@ class Driver(HAL9000_Driver):
 							data = data[1]
 						else:
 							data = {}
-					time.sleep(1)
 				if data["status"] == "configuring":
 					i2c_bus  = configuration.getint('mcp23X17', 'i2c-bus', fallback=0)
 					i2c_addr = configuration.getint('mcp23X17', 'i2c-address', fallback=32)
 					self.send('["device/mcp23X17", {"init": {"i2c-bus": %d, "i2c-address": %d}}]' % (i2c_bus, i2c_addr), True)
 				if data["status"] == "running":
 					Driver.serial_ready = True
-					self.send('["application/runtime", {"status": {}}]', True)
+					self.send('["application/runtime", {"status": "?"}]', True)
 			except:
 				time.sleep(0.1)
 		if Driver.serial_ready is True:
@@ -103,7 +102,6 @@ class Driver(HAL9000_Driver):
 			line += "\n"
 		Driver.serial.write(line.encode('utf-8'))
 		Driver.serial.flush()
-		time.sleep(0.01)
 
 
 	def do_loop(self) -> bool:
@@ -114,7 +112,7 @@ class Driver(HAL9000_Driver):
 			for line in Driver.send_queue:
 				self.send(line)
 			Driver.send_queue.clear()
-			self.send('["application/runtime", {"status": {}}]', True)
+			self.send('["application/runtime", {"status": "?"}]', True)
 		Driver.received_line = self.receive()
 		return True
 

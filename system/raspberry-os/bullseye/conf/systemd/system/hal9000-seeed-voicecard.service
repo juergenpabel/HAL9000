@@ -1,0 +1,13 @@
+[Unit]
+Description=HAL9000: start seeed-voicecard before uwsgi.service
+After=seeed-voicecard.service
+Before=uwsgi.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/true
+RemainAfterExit=true
+StandardOutput=journal
+
+[Install]
+WantedBy=multi-user.target

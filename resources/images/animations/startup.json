@@ -1,1 +1,1 @@
-[ "startup/boot", "startup/countdown" ]
+[ "startup/power-on", "startup/boot", "startup/countdown" ]

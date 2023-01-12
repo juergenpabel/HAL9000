@@ -77,7 +77,7 @@ void loop() {
 		switch(newStatus) {
 			case StatusBooting:
 				if(gui_screen_get() == gui_screen_none) {
-					g_util_webserial.send("application/runtime", "{\"status\": \"booting\"}", false);
+					g_util_webserial.send("application/runtime", "{\"status\":\"booting\"}", false);
 					gui_screen_set(gui_screen_animation_startup);
 				}
 				if(gui_screen_get() == gui_screen_animation_startup) {
@@ -93,7 +93,7 @@ void loop() {
 				if(g_application.hasEnv("application/configuration") == false) {
 					g_application.setEnv("application/configuration", "true");
 					g_util_webserial.setCommand("*", Application::onConfiguration);
-					g_util_webserial.send("application/runtime", "{\"status\": \"configuring\"}", false);
+					g_util_webserial.send("application/runtime", "{\"status\":\"configuring\"}", false);
 				}
 				if(g_application.getEnv("application/configuration").compare("false") == 0) {
 					g_application.setStatus(StatusRunning);
@@ -102,7 +102,7 @@ void loop() {
 				newStatus = StatusUnchanged;
 				break;
 			case StatusRunning:
-				g_util_webserial.send("application/runtime", "{\"status\": \"running\"}", false);
+				g_util_webserial.send("application/runtime", "{\"status\":\"running\"}", false);
 				g_util_webserial.setCommand("*", nullptr);
 				g_util_webserial.setCommand("application/environment", on_application_environment);
 				g_util_webserial.setCommand("application/settings", on_application_settings);
@@ -116,16 +116,20 @@ void loop() {
 				g_application.onRunning();
 				break;
 			case StatusResetting:
-				g_util_webserial.send("application/runtime", "{\"status\": \"resetting\"}", false);
+				g_util_webserial.send("application/runtime", "{\"status\":\"resetting\"}", false);
+				gui_screen_set(gui_screen_none);
 				g_device_board.reset(false);
 				break;
 			case StatusRebooting:
-				g_util_webserial.send("application/runtime", "{\"status\": \"rebooting\"}", false);
-				gui_screen_set(gui_screen_none);
+				g_util_webserial.send("application/runtime", "{\"status\":\"rebooting\"}", false);
+				gui_screen_set(gui_screen_animation_shutdown);
+				while(gui_screen_get() == gui_screen_animation_shutdown) {
+					gui_screen_update(true);
+				}
 				g_device_board.reset(true);
 				break;
 			case StatusHalting:
-				g_util_webserial.send("application/runtime", "{\"status\": \"halting\"}", false);
+				g_util_webserial.send("application/runtime", "{\"status\":\"halting\"}", false);
 				gui_screen_set(gui_screen_animation_shutdown);
 				while(gui_screen_get() == gui_screen_animation_shutdown) {
 					gui_screen_update(true);
@@ -134,7 +138,7 @@ void loop() {
 				break;
 			default:
 				g_util_webserial.send("syslog/error", "invalid application status => resetting");
-				g_util_webserial.send("application/runtime", "{\"status\": \"resetting\"}", false);
+				g_util_webserial.send("application/runtime", "{\"status\":\"resetting\"}", false);
 				g_device_board.reset(false);
 		}
 		if(newStatus != StatusUnchanged) {

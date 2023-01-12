@@ -39,7 +39,7 @@ if os.path.exists(DST_BASEDIR) is False:
 		if os.path.exists("{}/{}".format(DST_BASEDIR,DIR)) is False:
 			os.makedirs("{}/{}".format(DST_BASEDIR,DIR))
 		shutil.copy("{}/{}.json".format(SRC_BASEDIR,DIR), DST_BASEDIR)
-	for DIR in ['startup/boot','startup/countdown','shutdown']:
+	for DIR in ['startup/power-on', 'startup/boot','startup/countdown','shutdown']:
 		if os.path.exists("{}/{}".format(DST_BASEDIR,DIR)) is False:
 			os.makedirs("{}/{}".format(DST_BASEDIR,DIR))
 		shutil.copy("{}/{}/animation.json".format(SRC_BASEDIR,DIR), "{}/{}".format(DST_BASEDIR,DIR))

@@ -66,10 +66,6 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 				g_util_webserial.send("syslog/debug", "application/runtime#shutdown=reboot");
 				g_application.setStatus(StatusRebooting);
 			}
-			g_device_microcontroller.mutex_enter("Serial"); //TODO: move to webserial class
-			Serial.flush(); //TODO: move to webserial class
-			Serial.end(); //TODO: move to webserial class
-			g_device_microcontroller.mutex_exit("Serial"); //TODO: move to webserial class
 		}
 	}
 }
