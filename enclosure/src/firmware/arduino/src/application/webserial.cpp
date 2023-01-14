@@ -113,9 +113,8 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 
 	if(data.containsKey("list") == true) {
 		json.clear();
-
 		for(SettingsMap::iterator iter=g_application.m_settings.begin(); iter!=g_application.m_settings.end(); ++iter) {
-			json[iter->first.c_str()] = iter->second.c_str();
+			json[iter->first.c_str()].set((char*)iter->second.c_str());
 		}
 		g_util_webserial.send("application/settings#list", json);
 	}
@@ -125,9 +124,9 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 		json.clear();
 		key = data["get"]["key"].as<const char*>();
 		if(key.length() > 0) {
-			if(g_application.m_settings.count(key) == 1) {
+			if(g_application.hasSetting(key) == true) {
 				json["key"] = key.c_str();
-				json["value"] = g_application.m_settings[key].c_str();
+				json["value"] = g_application.getSetting(key).c_str();
 			}
 			g_util_webserial.send("application/settings#get", json);
 			g_util_webserial.send("syslog/debug", "application/settings#get => OK");
@@ -142,28 +141,28 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 		key = data["set"]["key"].as<const char*>();
 		value = data["set"]["value"].as<const char*>();
 		if(key.length() > 0 && value.length() > 0) {
-			g_application.m_settings[key] = value;
+			g_application.setSetting(key, value);
 			g_util_webserial.send("syslog/debug", "application/settings#set => OK");
 		} else {
 			g_util_webserial.send("syslog/debug", "application/settings#set => ERROR");
 		}
 	}
 	if(data.containsKey("load") == true) {
-		if(g_application.m_settings.load() == true) {
+		if(g_application.loadSettings() == true) {
 			g_util_webserial.send("syslog/debug", "application/settings#load => OK");
 		} else {
 			g_util_webserial.send("syslog/debug", "application/settings#load => ERROR");
 		}
 	}
 	if(data.containsKey("save") == true) {
-		if(g_application.m_settings.save() == true) {
+		if(g_application.saveSettings() == true) {
 			g_util_webserial.send("syslog/debug", "application/settings#save => OK");
 		} else {
 			g_util_webserial.send("syslog/debug", "application/settings#save => ERROR");
 		}
 	}
 	if(data.containsKey("reset") == true) {
-		if(g_application.m_settings.reset() == true) {
+		if(g_application.resetSettings() == true) {
 			g_util_webserial.send("syslog/debug", "application/settings#reset => OK");
 		} else {
 			g_util_webserial.send("syslog/debug", "application/settings#reset => ERROR");

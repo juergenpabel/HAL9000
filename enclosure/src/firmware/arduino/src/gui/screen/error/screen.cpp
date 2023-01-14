@@ -1,15 +1,111 @@
-#include "util/jpeg.h"
+#include <etl/string.h>
+#include <etl/format_spec.h>
+#include <etl/to_string.h>
+#include <qrcodegen.h>
+
 #include "gui/screen/screen.h"
+#include "gui/screen/idle/screen.h"
 #include "globals.h"
+
+#define QRCODE_VERSION APPLICATION_ERROR_QRCODE_VERSION
+#define QRCODE_SIZE    qrcodegen_BUFFER_LEN_FOR_VERSION(QRCODE_VERSION)
 
 
 void gui_screen_error(bool refresh) {
-	if(refresh == true) {
-		etl::string<GLOBAL_FILENAME_SIZE> filename("/images/error/");
+	static unsigned long timeout = 0;
 
-		filename += g_application.getEnv("gui/screen:error/filename");
-		util_jpeg_decode565_littlefs(filename, g_gui_buffer, GUI_SCREEN_WIDTH*GUI_SCREEN_HEIGHT*sizeof(uint16_t));
-		g_gui.pushImage((TFT_WIDTH-GUI_SCREEN_WIDTH)/2, (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT, (uint16_t*)g_gui_buffer);
+	if(refresh == false && timeout > 0) {
+		unsigned long now;
+
+		now = millis();
+		if(now < timeout) {
+			etl::string<16>  countdown_message;
+			etl::format_spec countdown_format(10, 2, 0, false, false, false, false, '0');
+
+			etl::to_string((timeout-now)/1000, countdown_message, countdown_format, false);
+			g_gui.setTextPadding(TFT_WIDTH);
+			g_gui.drawString(countdown_message.c_str(), TFT_WIDTH/2, (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*7));
+		} else {
+			timeout = 0;
+			g_gui.setTextPadding(0);
+			gui_screen_set(gui_screen_idle);
+		}
+	}
+	if(refresh == true) {
+		static etl::string<GLOBAL_VALUE_SIZE> error_message;
+		static etl::string<GLOBAL_VALUE_SIZE> error_code;
+		static etl::string<GLOBAL_VALUE_SIZE> error_url;
+
+		if(g_application.hasEnv("gui/screen:error/timeout") == true) {
+			timeout = atoi(g_application.getEnv("gui/screen:error/timeout").c_str());
+			if(timeout > 0) {
+				timeout *= 1000;
+				timeout += millis();
+			}
+		}
+		error_message.empty();
+		error_code.empty();
+		error_url.empty();
+		if(g_application.hasEnv("gui/screen:error/message") == true) {
+			error_message = g_application.getEnv("gui/screen:error/message");
+		}
+		if(g_application.hasEnv("gui/screen:error/code") == true) {
+			error_code = g_application.getEnv("gui/screen:error/code");
+			if(g_application.hasSetting("application/help:error/base-url") == true) {
+				error_url  = g_application.getSetting("application/help:error/base-url");
+				error_url += error_code;
+			}
+		}
+		g_gui.fillScreen(TFT_RED);
+		if(error_message.size() > 0) {
+			uint16_t pos_x;
+			uint16_t pos_y;
+
+			pos_x = (TFT_WIDTH -GUI_SCREEN_WIDTH )/2+(GUI_SCREEN_WIDTH /2);
+			pos_y = (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*1);
+			g_gui.setTextColor(TFT_WHITE, TFT_RED, false);
+			g_gui.setTextFont(1);
+			g_gui.setTextSize(1);
+			g_gui.setTextDatum(MC_DATUM);
+			g_gui.drawString(error_message.c_str(), pos_x, pos_y);
+		}
+		if(error_code.size() > 0) {
+			uint16_t pos_x;
+			uint16_t pos_y;
+
+			pos_x = (TFT_WIDTH -GUI_SCREEN_WIDTH )/2+(GUI_SCREEN_WIDTH /2);
+			pos_y = (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*7);
+			g_gui.setTextColor(TFT_WHITE, TFT_RED, false);
+			g_gui.setTextFont(1);
+			g_gui.setTextSize(2);
+			g_gui.setTextDatum(MC_DATUM);
+			g_gui.drawString(error_code.insert(0, "Error #").c_str(), pos_x, pos_y);
+		}
+		if(error_url.size() > 0) {
+			static uint8_t qr_temp[QRCODE_SIZE];
+			static uint8_t qr_final[QRCODE_SIZE];
+
+			if(qrcodegen_encodeText(error_url.c_str(), qr_temp, qr_final, qrcodegen_Ecc_LOW, QRCODE_VERSION, QRCODE_VERSION, qrcodegen_Mask_AUTO, true) == true) {
+				int      qr_size;
+				uint16_t qr_dotsize;
+				uint16_t offset_x;
+				uint16_t offset_y;
+
+				qr_size = qrcodegen_getSize(qr_final);
+				qr_dotsize = (min(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT) / 8 * 5) / qr_size;
+
+				offset_x = ((TFT_WIDTH -GUI_SCREEN_WIDTH )/2)+(((GUI_SCREEN_WIDTH )-(qr_dotsize*qr_size))/2);
+				offset_y = ((TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2)+(((GUI_SCREEN_HEIGHT)-(qr_dotsize*qr_size))/2);
+				g_gui.fillRoundRect(offset_x-(qr_dotsize*1), offset_y-(qr_dotsize*1), (1+qr_size+1)*qr_dotsize, (1+qr_size+1)*qr_dotsize, qr_dotsize*1, TFT_WHITE);
+				for(uint8_t y=0; y<qr_size; y++) {
+					for(uint8_t x=0; x<qr_size; x++) {
+						if(qrcodegen_getModule(qr_final, x, y) == true) {
+							g_gui.fillRect(offset_x+(qr_dotsize*x), offset_y+(qr_dotsize*y), qr_dotsize, qr_dotsize, TFT_BLACK);
+						}
+					}
+				}
+			}
+		}
 	}
 }
 

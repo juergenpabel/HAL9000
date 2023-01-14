@@ -50,9 +50,5 @@ void Board::displayOff() {
 	}
 }
 
-
-void Board::webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-}
-
 #endif
 

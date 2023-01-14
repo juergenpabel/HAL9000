@@ -16,8 +16,6 @@ class Board : public AbstractBoard {
 
 		virtual void displayOn();
                 virtual void displayOff();
-
-		virtual void webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 };
 
 #endif

@@ -36,8 +36,6 @@ class Microcontroller : public AbstractMicrocontroller {
 		virtual bool mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name);
 
 		virtual TwoWire* twowire_get(uint8_t instance);
-		virtual void     webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
-
 };
 
 #endif

@@ -16,6 +16,7 @@ typedef enum {
 	StatusResetting    = 0x04,
 	StatusRebooting    = 0x05,
 	StatusHalting      = 0x06,
+	StatusPanicing     = 0x07,
 	StatusUnchanged    = 0xff,
 } Status;
 

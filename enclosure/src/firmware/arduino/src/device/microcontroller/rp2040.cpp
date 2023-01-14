@@ -170,10 +170,5 @@ bool Microcontroller::thread_create(void (*function)(), uint8_t core) {
 	return result;
 }
 
-
-void Microcontroller::webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-}
-
-
 #endif
 

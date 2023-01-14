@@ -74,10 +74,5 @@ void Board::displayOff() {
 	delay(10);
 }
 
-
-void Board::webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-}
-
-
 #endif
 

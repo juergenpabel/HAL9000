@@ -18,6 +18,7 @@ Application::Application()
 
 
 bool Application::loadSettings() {
+	this->m_settings.reset();
 	return this->m_settings.load();
 }
 
@@ -53,9 +54,15 @@ void Application::setEnv(const etl::string<GLOBAL_KEY_SIZE>& key, const etl::str
 
 	item = this->m_environment.find(key);
 	if(item == this->m_environment.end()) {
-		this->m_environment.insert({key, value});
+		if(value != Application::Null) {
+			this->m_environment.insert({key, value});
+		}
 	} else {
-		item->second = value;
+		if(value != Application::Null) {
+			item->second = value;
+		} else {
+			this->m_environment.erase(item);
+		}
 	}
 }
 
@@ -81,9 +88,15 @@ void Application::setSetting(const etl::string<GLOBAL_KEY_SIZE>& key, const etl:
 
 	item = this->m_settings.find(key);
 	if(item == this->m_settings.end()) {
-		this->m_settings.insert({key, value});
+		if(value != Application::Null) {
+			this->m_settings.insert({key, value});
+		}
 	} else {
-		item->second = value;
+		if(value != Application::Null) {
+			item->second = value;
+		} else {
+			this->m_settings.erase(item);
+		}
 	}
 }
 
@@ -119,16 +132,25 @@ void Application::onRunning() {
 	if(LittleFS.exists("/system/application/configuration.json") == true) {
 		file = LittleFS.open("/system/application/configuration.json", "r");
 		if(file == true) {
-			deserializeJson(g_application_configuration, file);
-			for(JsonObject item : g_application_configuration.as<JsonArray>()) {
-				if(item.containsKey("command") == true && item.containsKey("data") == true) {
-					g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
+			if(deserializeJson(g_application_configuration, file) != DeserializationError::Ok) {
+				const char* error_code = "TODO";
+				const char* error_message = "JSON error in application configuration";
+
+				g_application.setEnv("gui/screen:error/code", error_code);
+				g_application.setEnv("gui/screen:error/message", error_message);
+				g_util_webserial.send("syslog/error", error_message);
+				g_application_configuration.clear();
+			}
+			if(g_application_configuration.isNull() == false) {
+				for(JsonObject item : g_application_configuration.as<JsonArray>()) {
+					if(item.containsKey("command") == true && item.containsKey("data") == true) {
+						g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
+					}
 				}
 			}
 			file.close();
 		}
 	}
-	this->resetSettings();
 	this->loadSettings();
 }
 

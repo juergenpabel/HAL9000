@@ -27,6 +27,13 @@ void gui_screen_hal9000(bool refresh) {
 	static uint8_t frame_next = GUI_SCREEN_HAL9000_SEQUENCE_FRAMES_MAX;
 	static bool    frame_loop = false;
 
+	if(g_gui_buffer == nullptr) {
+		if(refresh == true) {
+			g_gui.fillScreen(TFT_BLACK);
+			g_gui.fillCircle(TFT_WIDTH/2, TFT_HEIGHT/2, min(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT)/10, TFT_RED);
+		}
+		return;
+	}
 	if(frame_next == GUI_SCREEN_HAL9000_SEQUENCE_FRAMES_MAX) {
 		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> queue;
 

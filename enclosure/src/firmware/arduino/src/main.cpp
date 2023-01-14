@@ -7,6 +7,7 @@
 #include "device/webserial.h"
 #include "gui/webserial.h"
 #include "gui/screen/screen.h"
+#include "gui/screen/error/screen.h"
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/splash/screen.h"
 #include "gui/screen/animations/screen.h"
@@ -34,19 +35,27 @@ void setup() {
 	if(LittleFS.exists(filename.c_str()) == true) {
 		file = LittleFS.open(filename.c_str(), "r");
 		if(deserializeJson(json, file) != DeserializationError::Ok) {
-			file.close();
-			return;
+			const char* error_code = "TODO";
+			const char* error_message = "JSON error in board configuration";
+
+			g_application.setEnv("gui/screen:error/code", error_code);
+			g_application.setEnv("gui/screen:error/message", error_message);
+			g_application.setEnv("gui/screen:error/timeout", "60");
+			g_util_webserial.send("syslog/error", error_message);
+			json.clear();
 		}
 		file.close();
-		if(g_device_board.configure(json.as<JsonVariant>()) == false) {
-			return;
-		}
 	}
-	g_gui_buffer = (uint16_t*)malloc(GUI_SCREEN_HEIGHT*GUI_SCREEN_WIDTH*sizeof(uint16_t));
-	if(g_gui_buffer == nullptr) {
-		while(true) {
-			g_util_webserial.send("syslog/fatal", "g_gui_buffer could not be malloc()ed, halting");
-			delay(1000);
+	if(json.isNull() == false) {
+		g_util_webserial.send("syslog/error", json);
+		if(g_device_board.configure(json.as<JsonVariant>()) == false) {
+			const char* error_code = "TODO";
+			const char* error_message = "Failed to apply board configuration";
+
+			g_application.setEnv("gui/screen:error/code", error_code);
+			g_application.setEnv("gui/screen:error/message", error_message);
+			g_application.setEnv("gui/screen:error/timeout", "60");
+			g_util_webserial.send("syslog/error", error_message);
 		}
 	}
 	g_gui.begin();
@@ -63,11 +72,22 @@ void setup() {
 	g_gui_overlay.setTextFont(1);
 	g_gui_overlay.setTextSize(2);
 	g_gui_overlay.setTextDatum(MC_DATUM);
+	g_gui_buffer = (uint16_t*)malloc(GUI_SCREEN_HEIGHT*GUI_SCREEN_WIDTH*sizeof(uint16_t));
+	if(g_gui_buffer == nullptr) {
+		const char* error_code = "TODO";
+		const char* error_message = "No images/animations";
+
+		g_application.setEnv("gui/screen:error/code", error_code);
+		g_application.setEnv("gui/screen:error/message", error_message);
+		g_application.setEnv("gui/screen:error/timeout", "60");
+		g_util_webserial.send("syslog/error", error_message);
+	}
 	g_util_webserial.setCommand("application/runtime", on_application_runtime);
 }
 
 
 void loop() {
+	static unsigned long timeout_offline = 0;
 	static Status oldStatus = StatusUnknown;
 	       Status newStatus = StatusUnknown;
 
@@ -92,12 +112,30 @@ void loop() {
 			case StatusConfiguring:
 				if(g_application.hasEnv("application/configuration") == false) {
 					g_application.setEnv("application/configuration", "true");
+					g_application.loadSettings();
 					g_util_webserial.setCommand("*", Application::onConfiguration);
 					g_util_webserial.send("application/runtime", "{\"status\":\"configuring\"}", false);
+					timeout_offline = millis() + 10000; //TODO:config option
 				}
 				if(g_application.getEnv("application/configuration").compare("false") == 0) {
+					if(gui_screen_get() == gui_screen_error) {
+						g_application.setEnv("gui/screen:error/code", Application::Null);
+						g_application.setEnv("gui/screen:error/message", Application::Null);
+						g_application.setEnv("gui/screen:error/timeout", Application::Null);
+					}
 					g_application.setStatus(StatusRunning);
 					oldStatus = StatusConfiguring;
+				}
+				if(timeout_offline > 0 && millis() > timeout_offline) {
+					const char* error_code = "TODO";
+					const char* error_message = "No connection to host";
+
+					g_application.setEnv("gui/screen:error/code", error_code);
+					g_application.setEnv("gui/screen:error/message", error_message);
+					g_application.setEnv("gui/screen:error/timeout", Application::Null);
+					g_util_webserial.send("syslog/error", error_message);
+					gui_screen_set(gui_screen_error);
+					timeout_offline = 0;
 				}
 				newStatus = StatusUnchanged;
 				break;
@@ -114,6 +152,9 @@ void loop() {
 				g_util_webserial.setCommand("gui/screen", on_gui_screen);
 				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
 				g_application.onRunning();
+				if(g_application.hasEnv("gui/screen:error/code") == true || g_application.hasEnv("gui/screen:error/message") == true) {
+					gui_screen_set(gui_screen_error);
+				}
 				break;
 			case StatusResetting:
 				g_util_webserial.send("application/runtime", "{\"status\":\"resetting\"}", false);

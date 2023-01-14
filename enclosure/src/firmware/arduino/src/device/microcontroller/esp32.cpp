@@ -217,10 +217,5 @@ int Microcontroller::vprintf(const char* format, va_list message) {
 	return Microcontroller::original_vprintf(format, message);
 }
 
-
-void Microcontroller::webserial_execute(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-}
-
-
 #endif
 

@@ -78,6 +78,8 @@ void WebSerial::update() {
 	static size_t serial_buffer_pos = 0;
 
 	if(Serial == false) {
+		//TODO: set env error code
+		//TODOgui_set_screen(gui_screen_error);
 		return;
 	}
 	if(g_device_microcontroller.mutex_try_enter("webserial::update") == true) {

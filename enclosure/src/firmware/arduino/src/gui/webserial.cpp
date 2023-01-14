@@ -79,8 +79,8 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		if(body["error"].containsKey("message") == true) {
 			g_application.setEnv("gui/screen:error/message", body["error"]["message"].as<const char*>());
 		}
-		if(body["error"].containsKey("image") == true) {
-			g_application.setEnv("gui/screen:error/filename", body["error"]["image"].as<const char*>());
+		if(body["error"].containsKey("code") == true) {
+			g_application.setEnv("gui/screen:error/code", body["error"]["code"].as<const char*>());
 		}
 		if(body["error"].containsKey("url") == true) {
 			g_application.setEnv("gui/screen:error/url", body["error"]["url"].as<const char*>());

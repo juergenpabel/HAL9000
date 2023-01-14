@@ -55,6 +55,7 @@ static void gui_screen_animation_load(const etl::string<GLOBAL_FILENAME_SIZE>& f
 	       File file;
 
 	if(LittleFS.exists(filename.c_str()) == false) {
+		//TODO:gui_screen_set(error);
 		return;
 	}
 	file = LittleFS.open(filename.c_str(), "r");
@@ -88,6 +89,19 @@ static void gui_screen_animation_load(const etl::string<GLOBAL_FILENAME_SIZE>& f
 
 
 void gui_screen_animation_startup(bool refresh) {
+	if(g_gui_buffer == nullptr) {
+		if(refresh == true) {
+			g_gui.fillScreen(TFT_BLACK);
+			g_gui.setTextColor(TFT_RED, TFT_BLACK, false);
+			g_gui.setTextFont(1);
+			g_gui.setTextSize(2);
+			g_gui.setTextDatum(MC_DATUM);
+			g_gui.drawString("Startup...", TFT_WIDTH/2, TFT_HEIGHT/2);
+			delay(10000);
+			gui_screen_set(gui_screen_idle);
+		}
+		return;
+	}
 	if(g_animation.empty() == true) {
 		gui_screen_animation_load("/images/animations/startup.json");
 	}
@@ -96,6 +110,19 @@ void gui_screen_animation_startup(bool refresh) {
 
 
 void gui_screen_animation_shutdown(bool refresh) {
+	if(g_gui_buffer == nullptr) {
+		if(refresh == true) {
+			g_gui.fillScreen(TFT_BLACK);
+			g_gui.setTextColor(TFT_RED, TFT_BLACK, false);
+			g_gui.setTextFont(1);
+			g_gui.setTextSize(2);
+			g_gui.setTextDatum(MC_DATUM);
+			g_gui.drawString("Shutdown...", TFT_WIDTH/2, TFT_HEIGHT/2);
+			delay(5000);
+			gui_screen_set(gui_screen_none);
+		}
+		return;
+	}
 	if(g_animation.empty() == true) {
 		gui_screen_animation_load("/images/animations/shutdown.json");
 	}
