@@ -5,6 +5,7 @@
 #include <etl/map.h>
 #include <ArduinoJson.h>
 
+#include "application/error.h"
 #include "application/settings.h"
 #include "application/environment.h"
 
@@ -33,6 +34,7 @@ class Application {
 		Status      m_status;
 		Condition   m_condition;
 	protected:
+		ErrorQueue  m_errors;
 		Environment m_environment;
 		Settings    m_settings;
 
@@ -56,14 +58,17 @@ class Application {
 		const etl::string<GLOBAL_VALUE_SIZE>& getSetting(const etl::string<GLOBAL_KEY_SIZE>& key);
 		void                                  setSetting(const etl::string<GLOBAL_KEY_SIZE>& key, const etl::string<GLOBAL_VALUE_SIZE>& value);
 
+		void addError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& code, const etl::string<GLOBAL_VALUE_SIZE>& message, uint16_t timeout = 0);
+		bool hasErrors();
+		void showNextError();
+
+	static void onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+	       void onRunning();
 
 	static const etl::string<GLOBAL_VALUE_SIZE> Null;
 	friend class EnvironmentWriter;
 	friend void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 	friend void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
-
-	static void onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
-	       void onRunning();
 };
 
 

@@ -24,7 +24,7 @@ void gui_screen_error(bool refresh) {
 
 			etl::to_string((timeout-now)/1000, countdown_message, countdown_format, false);
 			g_gui.setTextPadding(TFT_WIDTH);
-			g_gui.drawString(countdown_message.c_str(), TFT_WIDTH/2, (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*7));
+			g_gui.drawString(countdown_message.c_str(), TFT_WIDTH/2, (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT-10));
 		} else {
 			timeout = 0;
 			g_gui.setTextPadding(0);

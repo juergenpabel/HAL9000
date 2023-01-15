@@ -69,7 +69,6 @@ bool Settings::load() {
 bool Settings::save() {
 	File    file;
 
-	//TODO:LittleFS.remove(this->filename.c_str());
 	file = LittleFS.open(this->filename.c_str(), "w");
 	if(!file) {
 		g_util_webserial.send("syslog/error", LogString("Settings::save('").append(this->filename).append(LogString("') => failed to open file")));

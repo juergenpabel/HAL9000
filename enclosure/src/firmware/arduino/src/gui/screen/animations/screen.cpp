@@ -55,12 +55,12 @@ static void gui_screen_animation_load(const etl::string<GLOBAL_FILENAME_SIZE>& f
 	       File file;
 
 	if(LittleFS.exists(filename.c_str()) == false) {
-		//TODO:gui_screen_set(error);
+		g_application.addError("error", "TODO", "Animation file not found", 15);
 		return;
 	}
 	file = LittleFS.open(filename.c_str(), "r");
 	if(deserializeJson(configJSON, file) != DeserializationError::Ok) {
-		//TODO:gui_screen_set(error);
+		g_application.addError("error", "TODO", "JSON error in animation file", 15);
 		file.close();
 		return;
 	}
@@ -97,7 +97,7 @@ void gui_screen_animation_startup(bool refresh) {
 			g_gui.setTextSize(2);
 			g_gui.setTextDatum(MC_DATUM);
 			g_gui.drawString("Startup...", TFT_WIDTH/2, TFT_HEIGHT/2);
-			delay(10000);
+			delay(30000);
 			gui_screen_set(gui_screen_idle);
 		}
 		return;

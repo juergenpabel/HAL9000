@@ -35,27 +35,14 @@ void setup() {
 	if(LittleFS.exists(filename.c_str()) == true) {
 		file = LittleFS.open(filename.c_str(), "r");
 		if(deserializeJson(json, file) != DeserializationError::Ok) {
-			const char* error_code = "TODO";
-			const char* error_message = "JSON error in board configuration";
-
-			g_application.setEnv("gui/screen:error/code", error_code);
-			g_application.setEnv("gui/screen:error/message", error_message);
-			g_application.setEnv("gui/screen:error/timeout", "60");
-			g_util_webserial.send("syslog/error", error_message);
+			g_application.addError("error", "TODO", "JSON error in board configuration", 60);
 			json.clear();
 		}
 		file.close();
 	}
 	if(json.isNull() == false) {
-		g_util_webserial.send("syslog/error", json);
 		if(g_device_board.configure(json.as<JsonVariant>()) == false) {
-			const char* error_code = "TODO";
-			const char* error_message = "Failed to apply board configuration";
-
-			g_application.setEnv("gui/screen:error/code", error_code);
-			g_application.setEnv("gui/screen:error/message", error_message);
-			g_application.setEnv("gui/screen:error/timeout", "60");
-			g_util_webserial.send("syslog/error", error_message);
+			g_application.addError("error", "TODO", "Failed to apply board configuration", 60);
 		}
 	}
 	g_gui.begin();
@@ -74,13 +61,7 @@ void setup() {
 	g_gui_overlay.setTextDatum(MC_DATUM);
 	g_gui_buffer = (uint16_t*)malloc(GUI_SCREEN_HEIGHT*GUI_SCREEN_WIDTH*sizeof(uint16_t));
 	if(g_gui_buffer == nullptr) {
-		const char* error_code = "TODO";
-		const char* error_message = "No images/animations";
-
-		g_application.setEnv("gui/screen:error/code", error_code);
-		g_application.setEnv("gui/screen:error/message", error_message);
-		g_application.setEnv("gui/screen:error/timeout", "60");
-		g_util_webserial.send("syslog/error", error_message);
+		g_application.addError("warn", "TODO", "No images/animations", 30);
 	}
 	g_util_webserial.setCommand("application/runtime", on_application_runtime);
 }
@@ -118,11 +99,6 @@ void loop() {
 					timeout_offline = millis() + 10000; //TODO:config option
 				}
 				if(g_application.getEnv("application/configuration").compare("false") == 0) {
-					if(gui_screen_get() == gui_screen_error) {
-						g_application.setEnv("gui/screen:error/code", Application::Null);
-						g_application.setEnv("gui/screen:error/message", Application::Null);
-						g_application.setEnv("gui/screen:error/timeout", Application::Null);
-					}
 					g_application.setStatus(StatusRunning);
 					oldStatus = StatusConfiguring;
 				}
@@ -132,7 +108,7 @@ void loop() {
 
 					g_application.setEnv("gui/screen:error/code", error_code);
 					g_application.setEnv("gui/screen:error/message", error_message);
-					g_application.setEnv("gui/screen:error/timeout", Application::Null);
+					g_application.setEnv("gui/screen:error/timeout", "0");
 					g_util_webserial.send("syslog/error", error_message);
 					gui_screen_set(gui_screen_error);
 					timeout_offline = 0;
@@ -152,9 +128,6 @@ void loop() {
 				g_util_webserial.setCommand("gui/screen", on_gui_screen);
 				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
 				g_application.onRunning();
-				if(g_application.hasEnv("gui/screen:error/code") == true || g_application.hasEnv("gui/screen:error/message") == true) {
-					gui_screen_set(gui_screen_error);
-				}
 				break;
 			case StatusResetting:
 				g_util_webserial.send("application/runtime", "{\"status\":\"resetting\"}", false);
@@ -184,6 +157,11 @@ void loop() {
 		}
 		if(newStatus != StatusUnchanged) {
 			oldStatus = newStatus;
+		}
+	}
+	if(g_application.getStatus() == StatusRunning) {
+		if(g_application.hasErrors() == true) {
+			g_application.showNextError();
 		}
 	}
 	gui_screen_update(false);
