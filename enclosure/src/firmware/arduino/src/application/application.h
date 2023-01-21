@@ -34,10 +34,9 @@ class Application {
 		Status      m_status;
 		Condition   m_condition;
 	protected:
-		ErrorQueue  m_errors;
 		Environment m_environment;
 		Settings    m_settings;
-
+		ErrorQueue  m_errors;
 	public:
 		Application();
 		bool loadSettings();
@@ -58,9 +57,7 @@ class Application {
 		const etl::string<GLOBAL_VALUE_SIZE>& getSetting(const etl::string<GLOBAL_KEY_SIZE>& key);
 		void                                  setSetting(const etl::string<GLOBAL_KEY_SIZE>& key, const etl::string<GLOBAL_VALUE_SIZE>& value);
 
-		void addError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& code, const etl::string<GLOBAL_VALUE_SIZE>& message, uint16_t timeout = 0);
-		bool hasErrors();
-		void showNextError();
+		void notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& code, const etl::string<GLOBAL_VALUE_SIZE>& message, uint16_t timeout = 0);
 
 	static void onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 	       void onRunning();

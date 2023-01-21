@@ -38,6 +38,10 @@ class Device(HAL9000_Device):
 							self.mqtt_publish_status('online')
 						if payload["status"] in ["resetting", "halting"]:
 							self.mqtt_publish_status('offline')
+					if topic == "application/event" and 'error' in payload:
+						self.mqtt_publish_error(payload)
+					if topic == "gui/event" and 'screen' in payload:
+						self.mqtt_publish_screen(payload)
 					if topic == "device/event" and 'device' in payload:
 						device_type=payload["device"]["type"]
 						device_name=payload["device"]["name"]
@@ -59,4 +63,18 @@ class Device(HAL9000_Device):
 			mqtt_payload = status
 			mqtt_publish_message(mqtt_topic, mqtt_payload)
 			self.logger.debug('MQTT published: {} => {}'.format(mqtt_topic, mqtt_payload))
+
+
+	def mqtt_publish_screen(self, screen):
+		mqtt_topic = 'hal9000/event/arduino/gui/screen'
+		mqtt_payload = json.dumps(screen)
+		mqtt_publish_message(mqtt_topic, mqtt_payload)
+		self.logger.debug('MQTT published: {} => {}'.format(mqtt_topic, mqtt_payload))
+
+
+	def mqtt_publish_error(self, error):
+		mqtt_topic = 'hal9000/event/arduino/application/error'
+		mqtt_payload = json.dumps(error)
+		mqtt_publish_message(mqtt_topic, mqtt_payload)
+		self.logger.debug('MQTT published: {} => {}'.format(mqtt_topic, mqtt_payload))
 

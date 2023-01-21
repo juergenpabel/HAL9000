@@ -76,14 +76,14 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		}
 	}
 	if(body.containsKey("error") == true) {
-		if(body["error"].containsKey("message") == true) {
-			g_application.setEnv("gui/screen:error/message", body["error"]["message"].as<const char*>());
-		}
 		if(body["error"].containsKey("code") == true) {
 			g_application.setEnv("gui/screen:error/code", body["error"]["code"].as<const char*>());
 		}
-		if(body["error"].containsKey("url") == true) {
-			g_application.setEnv("gui/screen:error/url", body["error"]["url"].as<const char*>());
+		if(body["error"].containsKey("message") == true) {
+			g_application.setEnv("gui/screen:error/message", body["error"]["message"].as<const char*>());
+		}
+		if(body["error"].containsKey("timeout") == true) {
+			g_application.setEnv("gui/screen:error/timeout", body["error"]["timeout"].as<const char*>());
 		}
 		screen = gui_screen_error;
 	}

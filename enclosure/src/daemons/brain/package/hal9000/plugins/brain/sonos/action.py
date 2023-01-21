@@ -29,10 +29,11 @@ class Action(HAL9000_Action):
 			return
 		if 'sonos' in signal:
 			if 'trigger' in signal['sonos']:
-				cortex['#activity']['audio'] = Activity('sonos', player=self.config['sonos-name'])
-				self.daemon.show_gui_overlay('message', {"text": "<SONOS>"})
+				cortex['#activity']['audio'].module = 'sonos'
+				cortex['#activity']['audio'].player = self.config['sonos-name']
+				self.daemon.video_gui_overlay_show('message', {"text": "<SONOS>"})
 			return
-		if cortex['#activity']['audio'] == Activity('sonos', player=self.config['sonos-name']):
+		if cortex['#activity']['audio'].module == 'sonos' and cortex['#activity']['audio'].player == self.config['sonos-name']:
 			if 'volume' in signal:
 				if 'delta' in signal['volume']:
 					delta = int(signal['volume']['delta'])
@@ -45,6 +46,6 @@ class Action(HAL9000_Action):
 						self.sonos.mute = False
 			if 'control' in signal:
 				if 'select' in signal['control']:
-					cortex['#activity']['audio'] = Activity()
-					self.daemon.hide_gui_overlay('message')
+					cortex['#activity']['audio'].module = 'none'
+					self.daemon.video_screen_overlay_hide('message')
 

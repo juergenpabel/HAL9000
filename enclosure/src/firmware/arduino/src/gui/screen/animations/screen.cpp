@@ -27,6 +27,7 @@ static void gui_screen_animations(bool refresh) {
 		g_current_frame = 0;
 		if(g_animation.empty() == true) {
 			gui_screen_set(gui_screen_idle);
+			g_util_webserial.send("gui/event", "{\"screen\":\"idle\"}", false);
 			return;
 		}
 	}
@@ -55,12 +56,12 @@ static void gui_screen_animation_load(const etl::string<GLOBAL_FILENAME_SIZE>& f
 	       File file;
 
 	if(LittleFS.exists(filename.c_str()) == false) {
-		g_application.addError("error", "TODO", "Animation file not found", 15);
+		g_application.notifyError("error", "005", "Animation file: not found", 15);
 		return;
 	}
 	file = LittleFS.open(filename.c_str(), "r");
 	if(deserializeJson(configJSON, file) != DeserializationError::Ok) {
-		g_application.addError("error", "TODO", "JSON error in animation file", 15);
+		g_application.notifyError("error", "006", "Animation file: JSON error", 15);
 		file.close();
 		return;
 	}
@@ -97,8 +98,9 @@ void gui_screen_animation_startup(bool refresh) {
 			g_gui.setTextSize(2);
 			g_gui.setTextDatum(MC_DATUM);
 			g_gui.drawString("Startup...", TFT_WIDTH/2, TFT_HEIGHT/2);
-			delay(30000);
+			delay(30000); //TODO
 			gui_screen_set(gui_screen_idle);
+			g_util_webserial.send("gui/event", "{\"screen\":\"idle\"}", false);
 		}
 		return;
 	}
@@ -120,6 +122,7 @@ void gui_screen_animation_shutdown(bool refresh) {
 			g_gui.drawString("Shutdown...", TFT_WIDTH/2, TFT_HEIGHT/2);
 			delay(5000);
 			gui_screen_set(gui_screen_none);
+			g_util_webserial.send("gui/event", "{\"screen\":\"none\"}", false);
 		}
 		return;
 	}

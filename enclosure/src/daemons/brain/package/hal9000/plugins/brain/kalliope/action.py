@@ -36,11 +36,10 @@ class Action(HAL9000_Action):
 
 
 	def runlevel_error(self, cortex: dict) -> dict:
-		return {"code": "002",
+		return {"code": "TODO",
 		        "level": "error",
 		        "message": "No connection to kalliope. Voice commands will not work.",
-		        "audio": None,
-		        "image": "error/002-kalliope.png"}
+		        "audio": None}
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
@@ -66,11 +65,11 @@ class Action(HAL9000_Action):
 					cortex['kalliope']['state'] = kalliope_state
 					if cortex['#consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
 						if kalliope_state == Action.KALLIOPE_STATE_LISTENING:
-							self.daemon.show_gui_screen('hal9000', {"queue": "replace", "sequence": {"name": "wakeup", "loop": "false"}})
-							self.daemon.show_gui_screen('hal9000', {"queue": "append",  "sequence": {"name": "active", "loop": "true"}})
+							self.daemon.video_gui_screen_show('hal9000', {"queue": "replace", "sequence": {"name": "wakeup", "loop": "false"}})
+							self.daemon.video_gui_screen_show('hal9000', {"queue": "append",  "sequence": {"name": "active", "loop": "true"}})
 						if kalliope_state == Action.KALLIOPE_STATE_WAITING:
-							self.daemon.show_gui_screen('hal9000', {"queue": "replace", "sequence": {"name": "sleep",  "loop": "false"}})
-							self.daemon.cortex['#activity']['video'].screen = 'none'
+							self.daemon.video_gui_screen_show('hal9000', {"queue": "replace", "sequence": {"name": "sleep",  "loop": "false"}})
+							self.daemon.cortex['#activity']['video'].screen = 'idle'
 					if cortex['#consciousness'] == Daemon.CONSCIOUSNESS_ASLEEP:
 						if self.config['kalliope-trigger-multiplexer-mqtt-topic'] is not None:
 							mqtt_publish_message(self.config['kalliope-trigger-multiplexer-mqtt-topic'], "pause")

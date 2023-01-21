@@ -2,12 +2,8 @@
 #include <FS.h>
 #include <LittleFS.h>
 #include <etl/string.h>
-#include <etl/to_string.h>
-#include <etl/format_spec.h>
 
 #include "application/application.h"
-#include "gui/screen/screen.h"
-#include "gui/screen/error/screen.h"
 #include "globals.h"
 
 
@@ -131,14 +127,20 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 
 
 void Application::onRunning() {
-	File file;
+	while(this->m_errors.empty() == false) {
+		const Error& error = this->m_errors.front();
 
+		this->notifyError(error.level, error.code, error.message, error.timeout);
+		this->m_errors.pop();
+	}
 	g_application_configuration.clear();
 	if(LittleFS.exists("/system/application/configuration.json") == true) {
+		File file;
+
 		file = LittleFS.open("/system/application/configuration.json", "r");
 		if(file == true) {
 			if(deserializeJson(g_application_configuration, file) != DeserializationError::Ok) {
-				g_application.addError("error", "TODO", "JSON error in application configuration");
+				g_application.notifyError("error", "004", "JSON error in application config");
 				g_application_configuration.clear();
 			}
 			if(g_application_configuration.isNull() == false) {
@@ -151,48 +153,25 @@ void Application::onRunning() {
 			file.close();
 		}
 	}
-	this->loadSettings();
-	if(this->hasErrors() == true) {
-	}
 }
 
 
-void Application::addError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& code, const etl::string<GLOBAL_VALUE_SIZE>& message, uint16_t timeout) {
-	static etl::string<GLOBAL_KEY_SIZE>   webserial_level;
-	static etl::string<GLOBAL_VALUE_SIZE> webserial_message;
+void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& code, const etl::string<GLOBAL_VALUE_SIZE>& message, uint16_t timeout) {
+	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> webserial_body;
 
-	webserial_level.clear();
-	webserial_message.clear();
-	if(level.compare(0, 7, "syslog/") != 0) {
-		webserial_level = "syslog/";
-	}
-	webserial_level.append(level);
-	webserial_message = code;
-	webserial_message.append(": ");
-	webserial_message.append(message);
-	g_util_webserial.send(webserial_level, webserial_message);
-	if(this->m_errors.full() == false) {
+	if(this->getStatus() != StatusRunning) {
+		if(this->m_errors.full() == true) {
+			this->m_errors.pop();
+		}
 		this->m_errors.push(Error(level, code, message, timeout));
+		return;
 	}
-}
-
-
-bool Application::hasErrors() {
-	return (this->m_errors.size() > 0);
-}
-
-
-void Application::showNextError() {
-	if(this->m_errors.empty() == false) {
-		etl::string<8> timeout;
-		const Error&   error = this->m_errors.front();
-
-		g_application.setEnv("gui/screen:error/code",    error.code);
-		g_application.setEnv("gui/screen:error/message", error.message);
-		etl::to_string(error.timeout, timeout, etl::format_spec());
-		g_application.setEnv("gui/screen:error/timeout", timeout);
-		this->m_errors.pop();
-		gui_screen_set(gui_screen_error);
-	}
+	webserial_body.clear();
+	webserial_body.createNestedObject("error");
+	webserial_body["error"]["level"] = level.c_str();
+	webserial_body["error"]["code"] = code.c_str();
+	webserial_body["error"]["message"] = message.c_str();
+	webserial_body["error"]["timeout"] = timeout;
+	g_util_webserial.send("application/event", webserial_body);
 }
 

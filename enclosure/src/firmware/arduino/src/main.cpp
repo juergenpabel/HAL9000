@@ -35,14 +35,14 @@ void setup() {
 	if(LittleFS.exists(filename.c_str()) == true) {
 		file = LittleFS.open(filename.c_str(), "r");
 		if(deserializeJson(json, file) != DeserializationError::Ok) {
-			g_application.addError("error", "TODO", "JSON error in board configuration", 60);
+			g_application.notifyError("error", "002", "JSON error in board configuration", 60);
 			json.clear();
 		}
 		file.close();
 	}
 	if(json.isNull() == false) {
-		if(g_device_board.configure(json.as<JsonVariant>()) == false) {
-			g_application.addError("error", "TODO", "Failed to apply board configuration", 60);
+		if(g_device_board.configure(json) == false) {
+			g_application.notifyError("error", "003", "Failed to apply board configuration", 60);
 		}
 	}
 	g_gui.begin();
@@ -61,7 +61,7 @@ void setup() {
 	g_gui_overlay.setTextDatum(MC_DATUM);
 	g_gui_buffer = (uint16_t*)malloc(GUI_SCREEN_HEIGHT*GUI_SCREEN_WIDTH*sizeof(uint16_t));
 	if(g_gui_buffer == nullptr) {
-		g_application.addError("warn", "TODO", "No images/animations", 30);
+		g_application.notifyError("warn", "001", "Not enough RAM: animations off", 10);
 	}
 	g_util_webserial.setCommand("application/runtime", on_application_runtime);
 }
@@ -99,11 +99,13 @@ void loop() {
 					timeout_offline = millis() + 10000; //TODO:config option
 				}
 				if(g_application.getEnv("application/configuration").compare("false") == 0) {
+					g_application.setEnv("application/configuration", Application::Null);
 					g_application.setStatus(StatusRunning);
 					oldStatus = StatusConfiguring;
+					timeout_offline = 0;
 				}
 				if(timeout_offline > 0 && millis() > timeout_offline) {
-					const char* error_code = "TODO";
+					const char* error_code = "020";
 					const char* error_message = "No connection to host";
 
 					g_application.setEnv("gui/screen:error/code", error_code);
@@ -157,11 +159,6 @@ void loop() {
 		}
 		if(newStatus != StatusUnchanged) {
 			oldStatus = newStatus;
-		}
-	}
-	if(g_application.getStatus() == StatusRunning) {
-		if(g_application.hasErrors() == true) {
-			g_application.showNextError();
 		}
 	}
 	gui_screen_update(false);

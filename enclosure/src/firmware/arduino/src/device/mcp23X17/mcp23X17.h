@@ -5,6 +5,11 @@
 #include <ArduinoJson.h>
 #include <etl/string.h>
 
+#define MCP23X17_PIN_NAMES_COUNT 16
+#define MCP23X17_PIN_NAMES_SIZE 2
+#define MCP23X17_PIN_VALUES_COUNT  2
+#define MCP23X17_PIN_VALUES_SIZE  4
+
 #define MCP23X17_PIN_VALUE_LOW  "LOW"
 #define MCP23X17_PIN_VALUE_HIGH "HIGH"
 
@@ -17,8 +22,8 @@ class MCP23X17 {
 	friend class MCP23X17_OutputDevice;
 	friend class MCP23X17_DigitalOut;
 	protected:
-		static etl::string<2> PIN_NAMES[16];
-		static etl::string<4> PIN_VALUES[2];
+		static etl::string<MCP23X17_PIN_NAMES_SIZE>  PIN_NAMES[MCP23X17_PIN_NAMES_COUNT];
+		static etl::string<MCP23X17_PIN_VALUES_SIZE> PIN_VALUES[MCP23X17_PIN_VALUES_COUNT];
 	private:
 		uint8_t            status;
 		Adafruit_MCP23X17  mcp23X17;

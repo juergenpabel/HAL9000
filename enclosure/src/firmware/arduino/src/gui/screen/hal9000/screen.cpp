@@ -47,6 +47,7 @@ void gui_screen_hal9000(bool refresh) {
 				g_util_webserial.send("syslog/debug", "gui_screen_hal9000() => empty queue and loop=false, switching to screen 'idle'");
 				frame_next = GUI_SCREEN_HAL9000_SEQUENCE_FRAMES_MAX;
 				gui_screen_set(gui_screen_idle);
+				g_util_webserial.send("gui/event", "{\"screen\":\"idle\"}", false);
 				return;
 			}
 		}

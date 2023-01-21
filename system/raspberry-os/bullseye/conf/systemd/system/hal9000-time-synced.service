@@ -1,6 +1,7 @@
 [Unit]
 Description=HAL9000 time sync
 After=time-sync.target
+After=mosquitto.service
 
 [Service]
 Type=oneshot

@@ -23,21 +23,6 @@ class Action(HAL9000_Action):
 		HAL9000_Action.configure(self, configuration, section_name, cortex)
 		cortex['system'] = dict()
 		cortex['system']['time'] = Action.SYSTEM_STATE_TIME_UNKNOWN
-		cortex['system']['time'] = Action.SYSTEM_STATE_TIME_SYNCED ## TODO
-
-
-	def runlevel(self, cortex: dict) -> str:
-		if cortex['system']['time'] == Action.SYSTEM_STATE_TIME_SYNCED:
-			return Action.MODULE_RUNLEVEL_RUNNING
-		return Action.MODULE_RUNLEVEL_STARTING
-
-
-	def runlevel_error(self, cortex: dict) -> dict:
-		return {"code": "101",
-		        "level": "warning",
-		        "message": "Failed to sync time. System time may be wrong.",
-		        "level": "warning",
-		        "image": "error/101-time-unsynced.png"}
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
@@ -47,5 +32,5 @@ class Action(HAL9000_Action):
 				if system_time_state in Action.SYSTEM_STATES_VALID:
 					cortex['system']['time'] = system_time_state
 				if system_time_state == Action.SYSTEM_STATE_TIME_SYNCED:
-					self.daemon.set_system_time(datetime.now())
+					self.daemon.set_system_time(True)
 

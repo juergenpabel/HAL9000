@@ -67,12 +67,12 @@ class Volume(EnclosureComponent):
 		if 'gui/overlay' in self.daemon.timeouts:
 			timeout, overlay = self.daemon.timeouts['gui/overlay']
 			if overlay != 'volume':
-				self.daemon.hide_gui_overlay(overlay)
+				self.daemon.video_gui_overlay_hide(overlay)
 				del self.daemon.timeouts['gui/overlay']
 		if cortex['#activity']['audio'].module == "none":
 			if 'volume' in signal:
 				if self.alsamixer is None:
-					self.daemon.show_gui_overlay('error', {"text": "NO SOUND DEVICE"}, 10)
+					self.daemon.video_gui_overlay_show('error', {"text": "NO SOUND DEVICE"}, 10)
 					return
 				if 'delta' in signal['volume']:
 					if cortex['enclosure']['volume']['mute'] is False:
@@ -84,16 +84,16 @@ class Volume(EnclosureComponent):
 							volume = self.config['volume-maximum']
 						cortex['enclosure']['volume']['level'] = volume
 						self.set_alsa_volume(volume)
-						self.daemon.show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": "false"}), 3)
+						self.daemon.video_gui_overlay_show('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": "false"}), 3)
 				if 'mute' in signal['volume']:
 					if signal['volume']['mute'] == "on":
 						cortex['enclosure']['volume']['mute'] = True
 						self.set_alsa_volume(0)
-						self.daemon.show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": "true"}), 0)
+						self.daemon.video_gui_overlay_show('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": "true"}), 0)
 					if signal['volume']['mute'] == "off":
 						cortex['enclosure']['volume']['mute'] = False
 						self.set_alsa_volume(cortex['enclosure']['volume']['level'])
-						self.daemon.show_gui_overlay('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": "false"}), 3)
+						self.daemon.video_gui_overlay_show('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": "false"}), 3)
 					self.daemon.logger.info('AUDIO: mute={}'.format(str(cortex['enclosure']['volume']['mute']).lower()))
 
 

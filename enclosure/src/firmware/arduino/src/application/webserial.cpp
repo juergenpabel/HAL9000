@@ -1,9 +1,13 @@
 #include <TimeLib.h>
 #include <ArduinoJson.h>
+#include <etl/string.h>
 #include <etl/to_string.h>
+#include <etl/format_spec.h>
 
 #include "device/microcontroller/include.h"
 #include "application/application.h"
+#include "gui/screen/screen.h"
+#include "gui/screen/error/screen.h"
 #include "globals.h"
 
 
@@ -19,9 +23,10 @@ static const char* APPLICATION_STATUS[] = {
 
 
 void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-	if(data.containsKey("status") == true) {
-		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
+	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
+	json.clear();
+	if(data.containsKey("status") == true) {
 		json["status"] = APPLICATION_STATUS[g_application.getStatus()];
 		g_util_webserial.send("application/runtime", json);
 	}
@@ -50,7 +55,13 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 				return;
 			}
 			setTime(timestamp);
+			g_application.setEnv("application/runtime#time", "unsynced");
 			g_util_webserial.send("syslog/debug", "application/runtime#time => OK");
+		}
+		if(data["time"].containsKey("synced") == true) {
+			if(data["time"]["synced"].as<bool>() == true) {
+				g_application.setEnv("application/runtime#time", Application::Null);
+			}
 		}
 	}
 	if(data.containsKey("shutdown") == true) {
@@ -72,10 +83,10 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 
 
 void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-	if(data.containsKey("list") == true) {
-		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
+	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
-		json.clear();
+	json.clear();
+	if(data.containsKey("list") == true) {
 		for(EnvironmentMap::iterator iter=g_application.m_environment.begin(); iter!=g_application.m_environment.end(); ++iter) {
 			json[iter->first.c_str()] = iter->second.c_str();
 		}
@@ -111,8 +122,8 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
+	json.clear();
 	if(data.containsKey("list") == true) {
-		json.clear();
 		for(SettingsMap::iterator iter=g_application.m_settings.begin(); iter!=g_application.m_settings.end(); ++iter) {
 			json[iter->first.c_str()].set((char*)iter->second.c_str());
 		}
@@ -121,7 +132,6 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 	if(data.containsKey("get") == true) {
 		etl::string<GLOBAL_KEY_SIZE> key;
 
-		json.clear();
 		key = data["get"]["key"].as<const char*>();
 		if(key.length() > 0) {
 			if(g_application.hasSetting(key) == true) {

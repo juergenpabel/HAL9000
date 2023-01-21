@@ -12,37 +12,11 @@
 
 
 void gui_screen_error(bool refresh) {
-	static unsigned long timeout = 0;
-
-	if(refresh == false && timeout > 0) {
-		unsigned long now;
-
-		now = millis();
-		if(now < timeout) {
-			etl::string<16>  countdown_message;
-			etl::format_spec countdown_format(10, 2, 0, false, false, false, false, '0');
-
-			etl::to_string((timeout-now)/1000, countdown_message, countdown_format, false);
-			g_gui.setTextPadding(TFT_WIDTH);
-			g_gui.drawString(countdown_message.c_str(), TFT_WIDTH/2, (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT-10));
-		} else {
-			timeout = 0;
-			g_gui.setTextPadding(0);
-			gui_screen_set(gui_screen_idle);
-		}
-	}
 	if(refresh == true) {
 		static etl::string<GLOBAL_VALUE_SIZE> error_message;
 		static etl::string<GLOBAL_VALUE_SIZE> error_code;
 		static etl::string<GLOBAL_VALUE_SIZE> error_url;
 
-		if(g_application.hasEnv("gui/screen:error/timeout") == true) {
-			timeout = atoi(g_application.getEnv("gui/screen:error/timeout").c_str());
-			if(timeout > 0) {
-				timeout *= 1000;
-				timeout += millis();
-			}
-		}
 		error_message.empty();
 		error_code.empty();
 		error_url.empty();
@@ -62,24 +36,25 @@ void gui_screen_error(bool refresh) {
 			uint16_t pos_y;
 
 			pos_x = (TFT_WIDTH -GUI_SCREEN_WIDTH )/2+(GUI_SCREEN_WIDTH /2);
-			pos_y = (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*1);
+			pos_y = (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*2);
 			g_gui.setTextColor(TFT_WHITE, TFT_RED, false);
 			g_gui.setTextFont(1);
 			g_gui.setTextSize(1);
 			g_gui.setTextDatum(MC_DATUM);
-			g_gui.drawString(error_message.c_str(), pos_x, pos_y);
+			g_gui.setTextWrap(true);
+			g_gui.drawString(error_message.c_str(), pos_x, pos_y-g_gui.fontHeight()-5);
 		}
 		if(error_code.size() > 0) {
 			uint16_t pos_x;
 			uint16_t pos_y;
 
 			pos_x = (TFT_WIDTH -GUI_SCREEN_WIDTH )/2+(GUI_SCREEN_WIDTH /2);
-			pos_y = (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*7);
+			pos_y = (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*6);
 			g_gui.setTextColor(TFT_WHITE, TFT_RED, false);
 			g_gui.setTextFont(1);
 			g_gui.setTextSize(2);
 			g_gui.setTextDatum(MC_DATUM);
-			g_gui.drawString(error_code.insert(0, "Error #").c_str(), pos_x, pos_y);
+			g_gui.drawString(error_code.insert(0, "Error #").c_str(), pos_x, pos_y+g_gui.fontHeight()+5);
 		}
 		if(error_url.size() > 0) {
 			static uint8_t qr_temp[QRCODE_SIZE];
@@ -92,7 +67,7 @@ void gui_screen_error(bool refresh) {
 				uint16_t offset_y;
 
 				qr_size = qrcodegen_getSize(qr_final);
-				qr_dotsize = (min(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT) / 8 * 5) / qr_size;
+				qr_dotsize = (min(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT) / 8 * 4) / qr_size;
 
 				offset_x = ((TFT_WIDTH -GUI_SCREEN_WIDTH )/2)+(((GUI_SCREEN_WIDTH )-(qr_dotsize*qr_size))/2);
 				offset_y = ((TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2)+(((GUI_SCREEN_HEIGHT)-(qr_dotsize*qr_size))/2);
