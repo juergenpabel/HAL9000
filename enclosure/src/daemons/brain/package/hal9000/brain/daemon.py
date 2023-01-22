@@ -144,7 +144,7 @@ class Daemon(HAL9000_Daemon):
 		for module in list(self.triggers.values()) + list(self.actions.values()):
 			if module.runlevel(self.cortex) == HAL9000_Module.MODULE_RUNLEVEL_STARTING:
 				self.booting_modules[str(module)] = module
-		self.set_system_time(False)
+		self.set_system_time()
 		HAL9000_Daemon.loop(self)
 
 	
@@ -241,6 +241,8 @@ class Daemon(HAL9000_Daemon):
 				if key in Daemon.CONSCIOUSNESS_VALID:
 					self.set_consciousness(key)
 					self.set_timeout(86400, key, data)
+				if key == 'system/time':
+					self.set_system_time()
 				if key == 'action':
 					self.queue_signal(data[0], data[1])
 				if key == 'gui/screen':
@@ -266,8 +268,9 @@ class Daemon(HAL9000_Daemon):
 				self.logger.debug("CORTEX after state change  = {}".format(self.cortex))
 
 
-	def set_system_time(self, datetime_synced: bool) -> None:
+	def set_system_time(self) -> None:
 		datetime_now = datetime.now()
+		datetime_synced = os.path.exists('/run/systemd/timesync/synchronized')
 		datetime_sleep = None
 		datetime_wakeup = None
 		if self.config['sleep-time'] is not None and self.config['wakeup-time'] is not None:
@@ -282,6 +285,10 @@ class Daemon(HAL9000_Daemon):
 		if datetime_wakeup == datetime_sleep or datetime_sleep < datetime_wakeup:
 			self.set_consciousness(Daemon.CONSCIOUSNESS_AWAKE)
 		self.queue_signal("*", {"brain": {"time": {"synced": datetime_synced}}})
+		if datetime_synced is True:
+			self.set_timeout(3600, 'system/time', None)
+		else:
+			self.set_timeout(60, 'system/time', None)
 
 
 	def video_gui_screen_show(self, screen, parameter, timeout: int = None) -> None:
