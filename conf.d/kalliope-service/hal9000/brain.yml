@@ -1,54 +1,93 @@
----
-
   - name: "on-start"
     signals: []
-    neurons: []
+    neurons:
+      - mqtt_publisher:
+          broker_ip: "127.0.0.1"
+          topic: "hal9000/daemon/kalliope-service/event:kalliope/state"
+          payload: "started"
+
+
+  - name: "on-ready"
+    signals:
+      - mqtt_subscriber:
+          broker_ip: "127.0.0.1"
+          topic: "hal9000/daemon/arduino-agent/ready"
+    neurons:
+      - play:
+          filename: "resources/data/hal9000_i-am-completely-operational-and-my-circuits-are-functioning-perfectly.wav"
+
 
   - name: "on-waiting-for-trigger"
     signals: []
-    neurons: []
+    neurons:
+      - mqtt_publisher:
+          broker_ip: "127.0.0.1"
+          topic: "hal9000/daemon/kalliope-service/event:kalliope/state"
+          payload: "waiting"
+
 
   - name: "on-triggered"
     signals: []
     neurons: []
 
+
   - name: "on-start-listening"
     signals: []
-    neurons: []
+    neurons:
+      - mqtt_publisher:
+          broker_ip: "127.0.0.1"
+          topic: "hal9000/daemon/kalliope-service/event:kalliope/state"
+          payload: "listening"
+      - play:
+          filename: "resources/data/dong.wav"
+
 
   - name: "on-stop-listening"
     signals: []
-    neurons: []
+    neurons:
+      - mqtt_publisher:
+          broker_ip: "127.0.0.1"
+          topic: "hal9000/daemon/kalliope-service/event:kalliope/state"
+          payload: "thinking"
+
+
+  - name: "on-start-speaking"
+    signals: []
+    neurons:
+      - mqtt_publisher:
+          broker_ip: "127.0.0.1"
+          topic: "hal9000/daemon/kalliope-service/event:kalliope/state"
+          payload: "speaking"
+
+
+  - name: "on-stt-error"
+    signals: []
+    neurons:
+      - play:
+          filename: "resources/data/hal9000_i-am-sorry-dave-i-dont-have-enough-information.wav"
+
 
   - name: "on-order-found"
     signals: []
     neurons: []
 
+
   - name: "on-order-not-found"
     signals: []
-    neurons: []
+    neurons:
+      - play:
+          filename: "resources/data/hal9000_i-am-sorry-dave-i-am-afraid-i-cant-do-that.wav"
+
 
   - name: "on-processed-synapses"
     signals: []
     neurons: []
 
-  - name: "on-start-speaking"
-    signals: []
-    neurons: []
 
-  - name: "on-stop-speaking"
-    signals: []
-    neurons: []
-
-  - name: "on-deaf"
-    signals: []
-    neurons: []
-
-  - name: "on-undeaf"
-    signals: []
-    neurons: []
-
-  - name: "on-stt-error"
-    signals: []
-    neurons: []
+  - name: "dummy-order-workaround"
+    signals:
+      - order: "open the bay pod door"
+    neurons:
+      - play:
+          filename: "resources/data/hal9000_i-am-sorry-dave-i-am-afraid-i-cant-do-that.wav"
 

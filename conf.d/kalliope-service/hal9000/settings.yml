@@ -14,6 +14,7 @@ default_speech_to_text: "vosk"
 speech_to_text:
   - vosk:
       sample_frequency: 16000
+      model_path: "resources/data/vosk/vosk-model-small-de-0.15"
       model_paths:
         en: "resources/data/vosk/vosk-model-small-en-0.21"
         de: "resources/data/vosk/vosk-model-small-de-0.15"
@@ -46,7 +47,7 @@ hooks:
   on_deaf: "on-deaf"
   on_undeaf: "on-undeaf"
   on_start_speaking: "on-start-speaking"
-  on_stop_speaking:
+  on_stop_speaking: "on-stop-speaking"
   on_stt_error: "on-stt-error"
 
 
@@ -66,10 +67,6 @@ resource_directory:
   stt:     "resources/stt"
   tts:     "resources/tts"
   neuron:  "resources/neurons"
-
-
-var_files:
-
 
 options:
   recognizer_recording_timeout: 7.5

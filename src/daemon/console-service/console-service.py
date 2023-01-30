@@ -46,5 +46,5 @@ def main(page: ft.Page):
                                on_click=menu_clicked))
     page.update()
 
-ft.app(target=main, port=8088, view=None, assets_dir="assets")
+ft.app(target=main, name="", host='127.0.0.1', port=9000, route_url_strategy="path", view=None, assets_dir="assets")
 
