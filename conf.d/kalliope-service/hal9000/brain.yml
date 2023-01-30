@@ -1,0 +1,54 @@
+---
+
+  - name: "on-start"
+    signals: []
+    neurons: []
+
+  - name: "on-waiting-for-trigger"
+    signals: []
+    neurons: []
+
+  - name: "on-triggered"
+    signals: []
+    neurons: []
+
+  - name: "on-start-listening"
+    signals: []
+    neurons: []
+
+  - name: "on-stop-listening"
+    signals: []
+    neurons: []
+
+  - name: "on-order-found"
+    signals: []
+    neurons: []
+
+  - name: "on-order-not-found"
+    signals: []
+    neurons: []
+
+  - name: "on-processed-synapses"
+    signals: []
+    neurons: []
+
+  - name: "on-start-speaking"
+    signals: []
+    neurons: []
+
+  - name: "on-stop-speaking"
+    signals: []
+    neurons: []
+
+  - name: "on-deaf"
+    signals: []
+    neurons: []
+
+  - name: "on-undeaf"
+    signals: []
+    neurons: []
+
+  - name: "on-stt-error"
+    signals: []
+    neurons: []
+
