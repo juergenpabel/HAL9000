@@ -21,7 +21,7 @@ class Daemon(HAL9000):
 
 	def configure(self, configuration: ConfigParser) -> None:
 		HAL9000.configure(self, configuration)
-		self.mqtt.subscribe("hal9000/daemon/enclosure-service/#")
+		self.mqtt.subscribe("hal9000/daemon/enclosure-service/command/#")
 		self.mqtt.on_message = self.on_command
 		self.logger.info("Configuring device '{}'...".format(self))
 		for peripheral_name in configuration.getlist(str(self), 'peripherals'):
