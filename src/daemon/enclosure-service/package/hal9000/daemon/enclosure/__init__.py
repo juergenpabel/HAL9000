@@ -12,7 +12,7 @@ from hal9000.daemon.abstract import HAL9000_Plugin
 class Daemon(HAL9000):
 
 	def __init__(self) -> None:
-		HAL9000.__init__(self, 'arduino')
+		HAL9000.__init__(self, 'enclosure')
 		self.Devices = dict()
 		self.Drivers = dict()
 		self.devices = dict()
@@ -68,7 +68,7 @@ class Daemon(HAL9000):
 			self.logger.error(f"COMMAND '{message.topic}' received, but webserial connection not established")
 			return
 		if message.topic.startswith("hal9000/daemon/enclosure-service/command/"):
-			topic = message.topic[39:]
+			topic = message.topic[41:]
 			payload = message.payload.decode('utf-8')
 			self.logger.info("COMMAND: {} => {}".format(topic, payload))
 			self.webserial.send('["%s", %s]' % (topic, payload))

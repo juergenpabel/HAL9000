@@ -10,7 +10,7 @@ from datetime import datetime, date, timedelta, time as timeformat
 from configparser import ConfigParser
 
 from paho.mqtt.publish import single as mqtt_publish_message
-from hal9000.daemon import HAL9000_Daemon
+from hal9000.daemon.abstract import HAL9000_Daemon
 from .modules import HAL9000_Module
 
 
@@ -63,7 +63,7 @@ class Activity(object):
 		return result
 
 
-class ConfigurationError:
+class ConfigurationError(BaseException):
 	pass
 
 
@@ -74,7 +74,7 @@ class Daemon(HAL9000_Daemon):
 	CONSCIOUSNESS_VALID = [CONSCIOUSNESS_AWAKE, CONSCIOUSNESS_ASLEEP]
 
 	def __init__(self) -> None:
-		HAL9000_Daemon.__init__(self, 'agent')
+		HAL9000_Daemon.__init__(self, 'kalliope-agent')
 		self.cortex = dict()
 		self.cortex['#consciousness'] = Daemon.CONSCIOUSNESS_AWAKE
 		self.cortex['#activity'] = dict()
@@ -95,12 +95,12 @@ class Daemon(HAL9000_Daemon):
 		self.config['boot-timeout']  = configuration.getint('runlevel', 'boot-timeout', fallback=10)
 		self.config['boot-finished-action-name']  = configuration.get('runlevel', 'boot-finished-action-name', fallback=None)
 		self.config['boot-finished-signal-data']  = configuration.get('runlevel', 'boot-finished-signal-data', fallback=None)
-		self.config['sleep-time']  = configuration.get('agent', 'sleep-time', fallback=None)
-		self.config['wakeup-time'] = configuration.get('agent', 'wakeup-time', fallback=None)
+		self.config['sleep-time']  = configuration.get('kalliope-agent', 'sleep-time', fallback=None)
+		self.config['wakeup-time'] = configuration.get('kalliope-agent', 'wakeup-time', fallback=None)
 		if self.config['sleep-time'] == self.config['wakeup-time']:
 			#TODO: error message
 			raise ConfigurationError
-		self.mqtt.subscribe('hal9000/daemon/agent/consciousness/state')
+		self.mqtt.subscribe('hal9000/daemon/kalliope-agent/consciousness/state')
 		for section_name in configuration.sections():
 			module_path = configuration.getstring(section_name, 'module', fallback=None)
 			if module_path is not None:
@@ -117,11 +117,12 @@ class Daemon(HAL9000_Daemon):
 						trigger = Trigger(module_id)
 						trigger.configure(configuration, section_name)
 						self.triggers[module_id] = trigger
-		for synapse_name in configuration.options('synapses'):
-			self.synapses[synapse_name] = list()
-			actions = configuration.getlist('synapses', synapse_name)
-			for action in actions:
-				self.synapses[synapse_name].append(action)
+		if configuration.has_section('synapses') is True:
+			for synapse_name in configuration.options('synapses'):
+				self.synapses[synapse_name] = list()
+				actions = configuration.getlist('synapses', synapse_name)
+				for action in actions:
+					self.synapses[synapse_name].append(action)
 		for trigger_id in self.triggers.keys():
 			trigger = self.triggers[trigger_id]
 			callbacks = trigger.callbacks()
@@ -184,7 +185,7 @@ class Daemon(HAL9000_Daemon):
 	
 	def on_mqtt(self, client, userdata, message) -> None:
 		HAL9000_Daemon.on_mqtt(self, client, userdata, message)
-		if message.topic == 'hal9000/daemon/agent/consciousness/state':
+		if message.topic == 'hal9000/daemon/kalliope-agent/consciousness/state':
 			consciousness_state = message.payload.decode('utf-8')
 			if consciousness_state in Daemon.CONSCIOUSNESS_VALID:
 				self.set_consciousness(consciousness_state)
@@ -262,7 +263,7 @@ class Daemon(HAL9000_Daemon):
 				self.logger.debug("CORTEX before state change = {}".format(self.cortex))
 				self.cortex['#consciousness'] = new_state
 				for action_name in self.actions.keys():
-					signal = {"agent": {"consciousness": new_state}}
+					signal = {"kalliope-agent": {"consciousness": new_state}}
 					self.actions[action_name].process(signal, self.cortex)
 				self.process_queued_signals()
 				self.logger.debug("CORTEX after state change  = {}".format(self.cortex))
@@ -284,7 +285,7 @@ class Daemon(HAL9000_Daemon):
 			self.timeouts[Daemon.CONSCIOUSNESS_AWAKE] = datetime_wakeup, None
 		if datetime_wakeup == datetime_sleep or datetime_sleep < datetime_wakeup:
 			self.set_consciousness(Daemon.CONSCIOUSNESS_AWAKE)
-		self.queue_signal("*", {"agent": {"time": {"synced": datetime_synced}}})
+		self.queue_signal("*", {"kalliope-agent": {"time": {"synced": datetime_synced}}})
 		if datetime_synced is True:
 			self.set_timeout(3600, 'system/time', None)
 		else:

@@ -2,7 +2,7 @@
 
 import sys
 
-from hal9000.agent.daemon import Daemon
+from hal9000.daemon.kalliope.agent.daemon import Daemon
 
 daemon = Daemon()
 daemon.load(sys.argv[1])
