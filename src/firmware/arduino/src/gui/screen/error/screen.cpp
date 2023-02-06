@@ -20,13 +20,13 @@ void gui_screen_error(bool refresh) {
 		error_message.empty();
 		error_code.empty();
 		error_url.empty();
-		if(g_application.hasEnv("gui/screen:error/message") == true) {
-			error_message = g_application.getEnv("gui/screen:error/message");
+		if(g_application.hasEnv("gui:screen#error/message") == true) {
+			error_message = g_application.getEnv("gui:screen#error/message");
 		}
-		if(g_application.hasEnv("gui/screen:error/code") == true) {
-			error_code = g_application.getEnv("gui/screen:error/code");
-			if(g_application.hasSetting("application/help:error/base-url") == true) {
-				error_url  = g_application.getSetting("application/help:error/base-url");
+		if(g_application.hasEnv("gui:screen#error/code") == true) {
+			error_code = g_application.getEnv("gui:screen#error/code");
+			if(g_application.hasSetting("application:help#error/base-url") == true) {
+				error_url  = g_application.getSetting("application:help#error/base-url");
 				error_url += error_code;
 			}
 		}

@@ -1,28 +1,28 @@
 #include <ArduinoJson.h>
 #include <TimeLib.h>
 
-//TODO:include "device/sdcard/sdcard.h"
+//TODO:include "device:sdcard/sdcard.h"
 #include "device/mcp23X17/mcp23X17.h"
 #include "globals.h"
 
 
 void on_device_board(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	if(data.containsKey("identify")) {
-		g_util_webserial.send("device/board#identify", g_device_board.getIdentifier());
+		g_util_webserial.send("device:board#identify", g_device_board.getIdentifier());
 	}
 }
 
 
 void on_device_microcontroller(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	if(data.containsKey("identify")) {
-		g_util_webserial.send("device/microcontroller#identify", g_device_microcontroller.getIdentifier());
+		g_util_webserial.send("device:microcontroller#identify", g_device_microcontroller.getIdentifier());
 	}
 	if(data.containsKey("reset")) {
-		g_util_webserial.send("syslog/debug", "device/microcontroller#reset");
+		g_util_webserial.send("syslog:debug", "device:microcontroller#reset");
 		g_device_microcontroller.reset(now(), false);
 	}
 	if(data.containsKey("halt")) {
-		g_util_webserial.send("syslog/debug", "device/microcontroller#halt");
+		g_util_webserial.send("syslog:debug", "device:microcontroller#halt");
 		g_device_microcontroller.halt();
 	}
 }
@@ -37,10 +37,10 @@ void on_device_display(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVa
 		}
 		if(backlight == true) {
 			g_device_board.displayOn();
-			g_util_webserial.send("device/display#backlight", "\"on\"");
+			g_util_webserial.send("device:display#backlight", "\"on\"");
 		} else {
 			g_device_board.displayOff();
-			g_util_webserial.send("device/display#backlight", "\"off\"");
+			g_util_webserial.send("device:display#backlight", "\"off\"");
 		}
 	}
 }
@@ -61,7 +61,7 @@ void on_device_sdcard(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVar
 		}
 //TODO		g_device_sdcard.list(directory, result);
 		for(JsonVariant entry : result) {
-			g_util_webserial.send("device/sdcard#list", entry);
+			g_util_webserial.send("device:sdcard#list", entry);
 		}
 	}
 	if(data.containsKey("read")) {
@@ -73,7 +73,7 @@ void on_device_sdcard(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVar
 			filename = data["read"]["filename"].as<const char*>();
 //TODO			g_device_sdcard.read(filename, result);
 			for(JsonVariant entry : result) {
-				g_util_webserial.send("device/sdcard#read", entry);
+				g_util_webserial.send("device:sdcard#read", entry);
 			}
 		}
 	}
@@ -85,7 +85,7 @@ void on_device_sdcard(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVar
 			result = json.as<JsonArray>();
 			filename = data["remove"]["filename"].as<const char*>();
 //TODO			g_device_sdcard.remove(filename, result);
-			g_util_webserial.send("device/sdcard#remove", result);
+			g_util_webserial.send("device:sdcard#remove", result);
 		}
 	}
 */

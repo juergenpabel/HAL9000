@@ -1,15 +1,12 @@
 #!/usr/bin/python3
 
 import flet as ft
+import logging
 
 def main(page: ft.Page):
-    def page_resize(e):
-        print("New page size:", page.width, page.height)
-
     page.title = "HAL9000 Console"
     page.theme_mode = ft.ThemeMode.DARK
     page.padding = 50
-    page.on_resize = page_resize
     page.update()
 
     hal9000 = ft.Image(src="HAL9000.jpg", width=160)
@@ -26,6 +23,7 @@ def main(page: ft.Page):
     def menu_clicked(e):
         screen.content = ft.Container(content=ft.Image(src=e.control.content.src, width=800, height=600, border_radius=ft.border_radius.all(10)))
         screen.update()
+        page.go("/"+e.control.content.src[0:-5])
 
 
     for filename, tooltip in {'COM.jpeg': 'Kalliope: Orders', 'CNT.jpeg': 'Kalliope: Configuration', 'MEM.jpeg': 'Kalliope: Status'}.items():
@@ -46,5 +44,6 @@ def main(page: ft.Page):
                                on_click=menu_clicked))
     page.update()
 
+logging.getLogger().setLevel(logging.DEBUG)
 ft.app(target=main, name="", host='127.0.0.1', port=9000, route_url_strategy="path", view=None, assets_dir="assets")
 

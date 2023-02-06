@@ -20,18 +20,18 @@ void util_jpeg_decode565_ram(uint8_t* jpeg_data, uint32_t jpeg_size, uint16_t* i
 
 	if(image565_func == nullptr) {
 		if(image565_data == nullptr || image565_size == 0) {
-			g_util_webserial.send("syslog/error", "util_jpeg_decode565_ram() -> no buffer provided, JPEG_DRAW_CALLBACK must not be NULL");
+			g_util_webserial.send("syslog:error", "util_jpeg_decode565_ram() -> no buffer provided, JPEG_DRAW_CALLBACK must not be NULL");
 			return;
 		}
 		image565_func = render2buffer;
 	}
 	if(g_util_jpeg.openRAM(jpeg_data, jpeg_size, image565_func) == false) {
-		g_util_webserial.send("syslog/error", "util_jpeg_decode565_ram() -> g_util_jpeg.openRAM() failed");
+		g_util_webserial.send("syslog:error", "util_jpeg_decode565_ram() -> g_util_jpeg.openRAM() failed");
 		return;
 	}
 	if(image565_data != nullptr && image565_size > 0) {
 		if(g_util_jpeg.getWidth()*g_util_jpeg.getHeight()*sizeof(uint16_t) > image565_size) {
-			g_util_webserial.send("syslog/error", "util_jpeg_decode565_ram() -> provided buffer is too small (jpeg.width*jpeg.height*sizeof(uint16_t))");
+			g_util_webserial.send("syslog:error", "util_jpeg_decode565_ram() -> provided buffer is too small (jpeg.width*jpeg.height*sizeof(uint16_t))");
 			g_util_jpeg.close();
 			return;
 		}
@@ -48,27 +48,27 @@ void util_jpeg_decode565_littlefs(const etl::string<GLOBAL_FILENAME_SIZE>& filen
 
 	file = LittleFS.open(filename.c_str(), "r");
 	if(file == false) {
-		g_util_webserial.send("syslog/warn", "util_jpeg_decode565_littlefs(): file not found");
-		g_util_webserial.send("syslog/warn", filename);
+		g_util_webserial.send("syslog:warn", "util_jpeg_decode565_littlefs(): file not found");
+		g_util_webserial.send("syslog:warn", filename);
 		return;
 	}
 	if(image565_func == nullptr) {
 		if(image565_data == nullptr || image565_size == 0) {
-			g_util_webserial.send("syslog/error", "util_jpeg_decode565_littlefs() -> no buffer provided, JPEG_DRAW_CALLBACK must not be NULL");
-			g_util_webserial.send("syslog/error", filename);
+			g_util_webserial.send("syslog:error", "util_jpeg_decode565_littlefs() -> no buffer provided, JPEG_DRAW_CALLBACK must not be NULL");
+			g_util_webserial.send("syslog:error", filename);
 			return;
 		}
 		image565_func = render2buffer;
 	}
 	if(g_util_jpeg.open(file, image565_func) == false) {
-		g_util_webserial.send("syslog/error", "util_jpeg_decode565_littlefs() -> g_util_jpeg.open() failed");
-		g_util_webserial.send("syslog/error", filename);
+		g_util_webserial.send("syslog:error", "util_jpeg_decode565_littlefs() -> g_util_jpeg.open() failed");
+		g_util_webserial.send("syslog:error", filename);
 		return;
 	}
 	if(image565_data != nullptr && image565_size > 0) {
 		if((g_util_jpeg.getWidth()*g_util_jpeg.getHeight()) > (int)image565_size) {
-			g_util_webserial.send("syslog/error", "util_jpeg_decode565_littlefs() -> provided buffer is not the correct size (jpeg:width*height)");
-			g_util_webserial.send("syslog/error", filename);
+			g_util_webserial.send("syslog:error", "util_jpeg_decode565_littlefs() -> provided buffer is not the correct size (jpeg:width*height)");
+			g_util_webserial.send("syslog:error", filename);
 			g_util_jpeg.close();
 		}
 	}

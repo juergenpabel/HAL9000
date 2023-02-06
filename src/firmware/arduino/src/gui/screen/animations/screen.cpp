@@ -27,7 +27,7 @@ static void gui_screen_animations(bool refresh) {
 		g_current_frame = 0;
 		if(g_animation.empty() == true) {
 			gui_screen_set(gui_screen_idle);
-			g_util_webserial.send("gui/event", "{\"screen\":\"idle\"}", false);
+			g_util_webserial.send("gui:event", "{\"screen\":\"idle\"}", false);
 			return;
 		}
 	}
@@ -100,7 +100,7 @@ void gui_screen_animation_startup(bool refresh) {
 			g_gui.drawString("Startup...", TFT_WIDTH/2, TFT_HEIGHT/2);
 			delay(30000); //TODO
 			gui_screen_set(gui_screen_idle);
-			g_util_webserial.send("gui/event", "{\"screen\":\"idle\"}", false);
+			g_util_webserial.send("gui:event", "{\"screen\":\"idle\"}", false);
 		}
 		return;
 	}
@@ -122,7 +122,7 @@ void gui_screen_animation_shutdown(bool refresh) {
 			g_gui.drawString("Shutdown...", TFT_WIDTH/2, TFT_HEIGHT/2);
 			delay(5000);
 			gui_screen_set(gui_screen_none);
-			g_util_webserial.send("gui/event", "{\"screen\":\"none\"}", false);
+			g_util_webserial.send("gui:event", "{\"screen\":\"none\"}", false);
 		}
 		return;
 	}

@@ -20,16 +20,16 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 	}
 	if(body.containsKey("idle") == true) {
 		if(body["idle"].containsKey("clock") == true) {
-			g_application.setEnv("gui/screen:idle/clock", body["idle"]["clock"].as<const char*>());
+			g_application.setEnv("gui:screen#idle/clock", body["idle"]["clock"].as<const char*>());
 		}
 		screen = gui_screen_idle;
 	}
 	if(body.containsKey("menu") == true) {
 		if(body["menu"].containsKey("title") == true) {
-			g_application.setEnv("gui/screen:menu/title", body["menu"]["title"].as<const char*>());
+			g_application.setEnv("gui:screen#menu/title", body["menu"]["title"].as<const char*>());
 		}
 		if(body["menu"].containsKey("text") == true) {
-			g_application.setEnv("gui/screen:menu/text",  body["menu"]["text"].as<const char*>());
+			g_application.setEnv("gui:screen#menu/text",  body["menu"]["text"].as<const char*>());
 		}
 		screen = gui_screen_menu;
 	}
@@ -38,11 +38,11 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 			etl::string<GLOBAL_FILENAME_SIZE> filename = body["splash"]["filename"].as<const char*>();
 
 			if(filename.substr(filename.size()-4,4).compare(".jpg") != 0) {
-				g_util_webserial.send("syslog/warn", "on_gui_screen() => 'splash' screen called with non-jpeg filename (*.jpg)");
-				g_util_webserial.send("syslog/warn", filename);
+				g_util_webserial.send("syslog:warn", "on_gui_screen() => 'splash' screen called with non-jpeg filename (*.jpg)");
+				g_util_webserial.send("syslog:warn", filename);
 				return;
 			}
-			g_application.setEnv("gui/screen:splash/filename", filename);
+			g_application.setEnv("gui:screen#splash/filename", filename);
 		}
 		screen = gui_screen_splash;
 	}
@@ -52,8 +52,8 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 			       int                                     queue_pos = -1;
 
 			queue.clear();
-			if(g_application.hasEnv("gui/screen:hal9000/queue") == true) {
-				deserializeJson(queue, g_application.getEnv("gui/screen:hal9000/queue"));
+			if(g_application.hasEnv("gui:screen#hal9000/queue") == true) {
+				deserializeJson(queue, g_application.getEnv("gui:screen#hal9000/queue"));
 			}
 			if((body["hal9000"]["sequence"].containsKey("name") == true) && (body["hal9000"]["sequence"].containsKey("loop") == true)) {
 				if(strncmp(body["hal9000"]["queue"].as<const char*>(), "replace", 8) == 0) {
@@ -69,7 +69,7 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 				queue[queue_pos] = JsonArray();
 				queue[queue_pos]["name"] = body["hal9000"]["sequence"]["name"];
 				queue[queue_pos]["loop"] = body["hal9000"]["sequence"]["loop"];
-				EnvironmentWriter environmentwriter(g_application, "gui/screen:hal9000/queue");
+				EnvironmentWriter environmentwriter(g_application, "gui:screen#hal9000/queue");
 				serializeJson(queue, environmentwriter);
 				screen = gui_screen_hal9000;
 			}
@@ -77,13 +77,13 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 	}
 	if(body.containsKey("error") == true) {
 		if(body["error"].containsKey("code") == true) {
-			g_application.setEnv("gui/screen:error/code", body["error"]["code"].as<const char*>());
+			g_application.setEnv("gui:screen#error/code", body["error"]["code"].as<const char*>());
 		}
 		if(body["error"].containsKey("message") == true) {
-			g_application.setEnv("gui/screen:error/message", body["error"]["message"].as<const char*>());
+			g_application.setEnv("gui:screen#error/message", body["error"]["message"].as<const char*>());
 		}
 		if(body["error"].containsKey("timeout") == true) {
-			g_application.setEnv("gui/screen:error/timeout", body["error"]["timeout"].as<const char*>());
+			g_application.setEnv("gui:screen#error/timeout", body["error"]["timeout"].as<const char*>());
 		}
 		screen = gui_screen_error;
 	}
@@ -101,16 +101,16 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 	}
 	if(body.containsKey("volume") == true) {
 		if(body["volume"].containsKey("level") == true) {
-			g_application.setEnv("gui/overlay:volume/level", body["volume"]["level"].as<const char*>());
+			g_application.setEnv("gui:overlay#volume/level", body["volume"]["level"].as<const char*>());
 		}
 		if(body["volume"].containsKey("mute") == true) {
-			g_application.setEnv("gui/overlay:volume/mute", body["volume"]["mute"].as<const char*>());
+			g_application.setEnv("gui:overlay#volume/mute", body["volume"]["mute"].as<const char*>());
 		}
 		overlay = gui_overlay_volume;
 	}
 	if(body.containsKey("message") == true) {
 		if(body["message"].containsKey("text") == true) {
-			g_application.setEnv("gui/overlay:message/text", body["message"]["text"].as<const char*>());
+			g_application.setEnv("gui:overlay#message/text", body["message"]["text"].as<const char*>());
 		}
 		overlay = gui_overlay_message;
 	}

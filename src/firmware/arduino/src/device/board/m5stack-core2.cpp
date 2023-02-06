@@ -21,7 +21,7 @@ Board::Board()
 void Board::start(bool& host_booting) {
 	AbstractBoard::start(host_booting);
 	if(PMU.begin(Wire1, AXP192_SLAVE_ADDRESS, 21, 22) != true) {
-		Serial.println("[\"syslog/error\", \"PMU.begin() failed\"");
+		Serial.println("[\"syslog:error\", \"PMU.begin() failed\"");
 		return;
 	}
 	PMU.setSysPowerDownVoltage(2700);

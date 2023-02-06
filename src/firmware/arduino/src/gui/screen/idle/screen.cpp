@@ -13,13 +13,13 @@ void gui_screen_idle(bool refresh) {
 		clock_previous = 0;
 		g_gui.fillScreen(TFT_BLACK);
 	}
-	if(g_application.hasEnv("gui/screen:idle/clock") == true) {
-		if(g_application.getEnv("gui/screen:idle/clock").compare("false") == 0) {
+	if(g_application.hasEnv("gui:screen#idle/clock") == true) {
+		if(g_application.getEnv("gui:screen#idle/clock").compare("false") == 0) {
 			clock_show = false;
 		}
 	}
-	if(g_application.hasEnv("application/runtime#time") == true) {
-		if(g_application.getEnv("application/runtime#time").compare("unsynced") == 0) {
+	if(g_application.hasEnv("application:runtime#time/status") == true) {
+		if(g_application.getEnv("application:runtime#time/status").compare("unsynced") == 0) {
 			clock_synced = false;
 		}
 	}

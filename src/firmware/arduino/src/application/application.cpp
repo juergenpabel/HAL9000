@@ -121,7 +121,7 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 			file.close();
 		}
 		g_application_configuration.clear();
-		g_application.setEnv("application/configuration", "false");
+		g_application.setEnv("application:runtime#configuration/status", "finished");
 	}
 }
 
@@ -172,6 +172,6 @@ void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const e
 	webserial_body["error"]["code"] = code.c_str();
 	webserial_body["error"]["message"] = message.c_str();
 	webserial_body["error"]["timeout"] = timeout;
-	g_util_webserial.send("application/event", webserial_body);
+	g_util_webserial.send("application:event", webserial_body);
 }
 

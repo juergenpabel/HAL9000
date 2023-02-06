@@ -24,10 +24,10 @@ void setup() {
 	g_device_board.start(booting);
 	if(booting == true) {
 		g_application.setStatus(StatusBooting);
-		g_util_webserial.send("syslog/debug", "system was powered on (booting, configuring)");
+		g_util_webserial.send("syslog:debug", "system was powered on (booting, configuring)");
 	} else {
 		g_application.setStatus(StatusRunning);
-		g_util_webserial.send("syslog/debug", "system was resetted (not booting, running)");
+		g_util_webserial.send("syslog:debug", "system was resetted (not booting, running)");
 	}
 	filename  = "/system/board/";
 	filename += g_device_board.getIdentifier();
@@ -63,7 +63,7 @@ void setup() {
 	if(g_gui_buffer == nullptr) {
 		g_application.notifyError("warn", "001", "Not enough RAM: animations off", 10);
 	}
-	g_util_webserial.setCommand("application/runtime", on_application_runtime);
+	g_util_webserial.setCommand("application:runtime", on_application_runtime);
 }
 
 
@@ -78,7 +78,7 @@ void loop() {
 		switch(newStatus) {
 			case StatusBooting:
 				if(gui_screen_get() == gui_screen_none) {
-					g_util_webserial.send("application/runtime", "{\"status\":\"booting\"}", false);
+					g_util_webserial.send("application:runtime", "{\"status\":\"booting\"}", false);
 					gui_screen_set(gui_screen_animation_startup);
 				}
 				if(gui_screen_get() == gui_screen_animation_startup) {
@@ -91,15 +91,15 @@ void loop() {
 				}
 				break;
 			case StatusConfiguring:
-				if(g_application.hasEnv("application/configuration") == false) {
-					g_application.setEnv("application/configuration", "true");
+				if(g_application.hasEnv("application:runtime#configuration/status") == false) {
+					g_application.setEnv("application:runtime#configuration/status", "configuring");
 					g_application.loadSettings();
 					g_util_webserial.setCommand("*", Application::onConfiguration);
-					g_util_webserial.send("application/runtime", "{\"status\":\"configuring\"}", false);
+					g_util_webserial.send("application:runtime", "{\"status\":\"configuring\"}", false);
 					timeout_offline = millis() + 10000; //TODO:config option
 				}
-				if(g_application.getEnv("application/configuration").compare("false") == 0) {
-					g_application.setEnv("application/configuration", Application::Null);
+				if(g_application.getEnv("application:runtime#configuration/status").compare("finished") == 0) {
+					g_application.setEnv("application:runtime#configuration/status", Application::Null);
 					g_application.setStatus(StatusRunning);
 					oldStatus = StatusConfiguring;
 					timeout_offline = 0;
@@ -108,36 +108,36 @@ void loop() {
 					const char* error_code = "020";
 					const char* error_message = "No connection to host";
 
-					g_application.setEnv("gui/screen:error/code", error_code);
-					g_application.setEnv("gui/screen:error/message", error_message);
-					g_application.setEnv("gui/screen:error/timeout", "0");
-					g_util_webserial.send("syslog/error", error_message);
+					g_application.setEnv("gui:screen#error/code", error_code);
+					g_application.setEnv("gui:screen#error/message", error_message);
+					g_application.setEnv("gui:screen#error/timeout", "0");
+					g_util_webserial.send("syslog:error", error_message);
 					gui_screen_set(gui_screen_error);
 					timeout_offline = 0;
 				}
 				newStatus = StatusUnchanged;
 				break;
 			case StatusRunning:
-				g_util_webserial.send("application/runtime", "{\"status\":\"running\"}", false);
+				g_util_webserial.send("application:runtime", "{\"status\":\"running\"}", false);
 				g_util_webserial.setCommand("*", nullptr);
-				g_util_webserial.setCommand("application/environment", on_application_environment);
-				g_util_webserial.setCommand("application/settings", on_application_settings);
-				g_util_webserial.setCommand("device/board", on_device_board);
-				g_util_webserial.setCommand("device/microcontroller", on_device_microcontroller);
-				g_util_webserial.setCommand("device/mcp23X17", on_device_mcp23X17);
-				g_util_webserial.setCommand("device/display", on_device_display);
-				g_util_webserial.setCommand("device/sdcard", on_device_sdcard);
-				g_util_webserial.setCommand("gui/screen", on_gui_screen);
-				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
+				g_util_webserial.setCommand("application:environment", on_application_environment);
+				g_util_webserial.setCommand("application:settings", on_application_settings);
+				g_util_webserial.setCommand("device:board", on_device_board);
+				g_util_webserial.setCommand("device:microcontroller", on_device_microcontroller);
+				g_util_webserial.setCommand("device:mcp23X17", on_device_mcp23X17);
+				g_util_webserial.setCommand("device:display", on_device_display);
+				g_util_webserial.setCommand("device:sdcard", on_device_sdcard);
+				g_util_webserial.setCommand("gui:screen", on_gui_screen);
+				g_util_webserial.setCommand("gui:overlay", on_gui_overlay);
 				g_application.onRunning();
 				break;
 			case StatusResetting:
-				g_util_webserial.send("application/runtime", "{\"status\":\"resetting\"}", false);
+				g_util_webserial.send("application:runtime", "{\"status\":\"resetting\"}", false);
 				gui_screen_set(gui_screen_none);
 				g_device_board.reset(false);
 				break;
 			case StatusRebooting:
-				g_util_webserial.send("application/runtime", "{\"status\":\"rebooting\"}", false);
+				g_util_webserial.send("application:runtime", "{\"status\":\"rebooting\"}", false);
 				gui_screen_set(gui_screen_animation_shutdown);
 				while(gui_screen_get() == gui_screen_animation_shutdown) {
 					gui_screen_update(true);
@@ -145,7 +145,7 @@ void loop() {
 				g_device_board.reset(true);
 				break;
 			case StatusHalting:
-				g_util_webserial.send("application/runtime", "{\"status\":\"halting\"}", false);
+				g_util_webserial.send("application:runtime", "{\"status\":\"halting\"}", false);
 				gui_screen_set(gui_screen_animation_shutdown);
 				while(gui_screen_get() == gui_screen_animation_shutdown) {
 					gui_screen_update(true);
@@ -153,8 +153,8 @@ void loop() {
 				g_device_board.halt();
 				break;
 			default:
-				g_util_webserial.send("syslog/error", "invalid application status => resetting");
-				g_util_webserial.send("application/runtime", "{\"status\":\"resetting\"}", false);
+				g_util_webserial.send("syslog:error", "invalid application status => resetting");
+				g_util_webserial.send("application:runtime", "{\"status\":\"resetting\"}", false);
 				g_device_board.reset(false);
 		}
 		if(newStatus != StatusUnchanged) {

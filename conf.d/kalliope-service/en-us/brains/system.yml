@@ -9,7 +9,7 @@
     neurons:
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
-          topic: "hal9000/daemon/brain/command"
+          topic: "hal9000/daemon/enclosure-agent/command"
           payload: "shutdown"
 
   - name: "system-reboot"
@@ -19,6 +19,6 @@
     neurons:
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
-          topic: "hal9000/daemon/brain/command"
+          topic: "hal9000/daemon/enclosure-agent/command"
           payload: "restart"
 

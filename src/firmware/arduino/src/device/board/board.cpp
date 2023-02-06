@@ -11,7 +11,7 @@ void AbstractBoard::start(bool& host_booting) {
 	g_device_microcontroller.start(epoch, host_booting);
 	if(epoch > 0) {
 		setTime(epoch);
-		g_util_webserial.send("syslog/debug", "recovered system time from before microcontroller was resetted");
+		g_util_webserial.send("syslog:debug", "recovered system time from before microcontroller was resetted");
 	}
 	g_device_microcontroller.mutex_create("Serial", true);
 	Serial.begin(115200);
@@ -19,7 +19,7 @@ void AbstractBoard::start(bool& host_booting) {
 	if(LittleFS.begin() != true) {
 		while(true) {
 			if(Serial == true) {
-				Serial.println("[\"syslog/fatal\", \"LittleFS.begin() failed, halting.\"]");
+				Serial.println("[\"syslog:fatal\", \"LittleFS.begin() failed, halting.\"]");
 			}
 			delay(1000);
 		}
@@ -30,7 +30,7 @@ void AbstractBoard::start(bool& host_booting) {
 void AbstractBoard::reset(bool host_rebooting) {
 	LittleFS.end();
 	if(Serial == true) {
-		Serial.println("[\"syslog/info\", \"resetting NOW.\"");
+		Serial.println("[\"syslog:info\", \"resetting NOW.\"");
 		Serial.flush();
 		Serial.end();
 		delay(100);
@@ -42,7 +42,7 @@ void AbstractBoard::reset(bool host_rebooting) {
 void AbstractBoard::halt() {
 	LittleFS.end();
 	if(Serial == true) {
-		Serial.println("[\"syslog/info\", \"halting NOW.\"");
+		Serial.println("[\"syslog:info\", \"halting NOW.\"");
 		Serial.flush();
 		Serial.end();
 		delay(100);

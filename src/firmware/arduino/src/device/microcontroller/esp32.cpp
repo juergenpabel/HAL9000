@@ -209,7 +209,7 @@ bool Microcontroller::thread_create(void (*function)(), uint8_t core) {
 
 
 int Microcontroller::vprintf(const char* format, va_list message) {
-	const char* webserial_format = "[\"syslog/error\", \"%s\"]";
+	const char* webserial_format = "[\"syslog:error\", \"%s\"]";
 
 	if(strncmp(format, "%s", 3) == 0) {
 		format = webserial_format;

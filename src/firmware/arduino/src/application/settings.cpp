@@ -26,7 +26,7 @@ bool Settings::load() {
 	this->clear();
 	file = LittleFS.open(this->filename.c_str(), "r");
 	if(!file) {
-		g_util_webserial.send("syslog/error", LogString("Settings::load('").append(this->filename).append(LogString("') => could not open file")));
+		g_util_webserial.send("syslog:error", LogString("Settings::load('").append(this->filename).append(LogString("') => could not open file")));
 		return false;
 	}
 	if(file.size() == 0) {
@@ -43,7 +43,7 @@ bool Settings::load() {
 		if(line_end_pos == line.npos) {
 			file.close();
 			this->clear();
-			g_util_webserial.send("syslog/error", LogString("Settings::load('").append(this->filename).append(LogString("') => no newline")));
+			g_util_webserial.send("syslog:error", LogString("Settings::load('").append(this->filename).append(LogString("') => no newline")));
 			return false;
 		}
 		line_sep_pos = line.find('=');
@@ -71,7 +71,7 @@ bool Settings::save() {
 
 	file = LittleFS.open(this->filename.c_str(), "w");
 	if(!file) {
-		g_util_webserial.send("syslog/error", LogString("Settings::save('").append(this->filename).append(LogString("') => failed to open file")));
+		g_util_webserial.send("syslog:error", LogString("Settings::save('").append(this->filename).append(LogString("') => failed to open file")));
 		return false;
 	}
 	for(SettingsMap::iterator iter=this->begin(); iter!=this->end(); ++iter) {
