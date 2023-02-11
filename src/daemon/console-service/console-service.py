@@ -1,49 +1,67 @@
 #!/usr/bin/python3
 
-import flet as ft
+import flet
+import flet.border
+import flet.colors
+
+import hal9000.console.screen.kalliope
+import hal9000.console.screen.enclosure
+import hal9000.console.screen.system
+import hal9000.console.screen.misc
+
+
+def hal9000_screens():
+	screens = {}
+	screens["kalliope"] = dict()
+	screens["kalliope"]["COM"]  = {"src": "COM.jpeg", "tooltip": "Kalliope: Orders",          "screen": hal9000.console.screen.kalliope.ScreenOrder()}
+	screens["kalliope"]["CNT"]  = {"src": "CNT.jpeg", "tooltip": "Kalliope: Configuration",   "screen": hal9000.console.screen.kalliope.ScreenConfiguration()}
+	screens["kalliope"]["MEM"]  = {"src": "MEM.jpeg", "tooltip": "Kalliope: Status",          "screen": hal9000.console.screen.kalliope.ScreenStatus()}
+	screens["enclosure"] = dict()
+	screens["enclosure"]["VEH"] = {"src": "VEH.jpeg", "tooltip": "Enclosure: Status",         "screen": hal9000.console.screen.enclosure.ScreenStatus()}
+	screens["enclosure"]["ATM"] = {"src": "ATM.jpeg", "tooltip": "Enclosure: Sensors",        "screen": hal9000.console.screen.enclosure.ScreenSensors()}
+	screens["enclosure"]["GDE"] = {"src": "GDE.jpeg", "tooltip": "Enclosure: Extensions",     "screen": hal9000.console.screen.enclosure.ScreenExtensions()}
+	screens["system"] = dict()
+	screens["system"]["HIB"]    = {"src": "HIB.jpeg", "tooltip": "System: Hibernation",       "screen": hal9000.console.screen.system.ScreenHibernation()}
+	screens["system"]["NUC"]    = {"src": "NUC.jpeg", "tooltip": "System: Power",             "screen": hal9000.console.screen.system.ScreenPower()}
+	screens["system"]["LIF"]    = {"src": "LIF.jpeg", "tooltip": "System: Updates",           "screen": hal9000.console.screen.system.ScreenUpdates()}
+	screens["misc"] = dict()
+	screens["misc"]["DMG"]      = {"src": "DMG.jpeg", "tooltip": "Miscellaneous: Logs",       "screen": hal9000.console.screen.misc.ScreenLogs()}
+	screens["misc"]["FLX"]      = {"src": "FLX.jpeg", "tooltip": "Miscellaneous: Statistics", "screen": hal9000.console.screen.misc.ScreenStatistics()}
+	screens["misc"]["NAV"]      = {"src": "NAV.jpeg", "tooltip": "Miscellaneous: Help",       "screen": hal9000.console.screen.misc.ScreenHelp()}
+	return screens
+
+
+def main(page: flet.Page):
+	page.title = "HAL9000 Console"
+	page.theme_mode = flet.ThemeMode.DARK
+
+	menu_lo = flet.Column(width=150)
+	menu_li = flet.Column(width=150)
+	hal9000 = flet.Column(width=110, controls=[flet.Image(src="HAL9000.jpg", fit=flet.ImageFit.FILL)],
+	                      horizontal_alignment=flet.CrossAxisAlignment.CENTER)
+	menu_ri = flet.Column(width=150)
+	menu_ro = flet.Column(width=150)
+	screen = flet.AnimatedSwitcher(content=flet.Container(width=750, height=500),
+	                               transition=flet.AnimatedSwitcherTransition.FADE,
+	                               switch_in_curve=flet.AnimationCurve.EASE_OUT,
+	                               switch_out_curve=flet.AnimationCurve.EASE_IN)
+	screens = hal9000_screens()
+	for subsystem, column in {"kalliope": menu_lo, "enclosure": menu_li, "system": menu_ri, "misc": menu_ro}.items():
+		if subsystem in screens:
+			for module in screens[subsystem].keys():
+				screens[subsystem][module]["screen"].setContext(page, screen)
+				column.controls.append(flet.Container(content=flet.Image(src=screens[subsystem][module]["src"],
+				                                                         tooltip=screens[subsystem][module]["tooltip"],
+				                                                         fit=flet.ImageFit.FILL,
+				                                                         border_radius=flet.border_radius.all(5)),
+				                                      on_click=screens[subsystem][module]["screen"].on_show))
+	page.add(flet.Row(controls=[menu_lo, menu_li, hal9000, menu_ri, menu_ro], alignment=flet.MainAxisAlignment.CENTER))
+	page.add(flet.Row(controls=[flet.Container()], height=25))
+	page.add(flet.Row(controls=[screen], alignment=flet.MainAxisAlignment.CENTER))
+	page.update()
+
+
 import logging
-
-def main(page: ft.Page):
-    page.title = "HAL9000 Console"
-    page.theme_mode = ft.ThemeMode.DARK
-    page.padding = 50
-    page.update()
-
-    hal9000 = ft.Image(src="HAL9000.jpg", width=160)
-    menu_lo = ft.Column(width=160)
-    menu_li = ft.Column(width=160)
-    menu_ri = ft.Column(width=160)
-    menu_ro = ft.Column(width=160)
-    row_menu = ft.Row(controls=[menu_lo, menu_li, hal9000, menu_ri, menu_ro])
-    screen = ft.AnimatedSwitcher(ft.Container(), transition=ft.AnimatedSwitcherTransition.FADE,switch_in_curve=ft.AnimationCurve.EASE_OUT,switch_out_curve=ft.AnimationCurve.EASE_IN, width=800, height=600)
-    row_screen = ft.Row(controls=[screen])
-    page.add(row_menu)
-    page.add(row_screen)
-
-    def menu_clicked(e):
-        screen.content = ft.Container(content=ft.Image(src=e.control.content.src, width=800, height=600, border_radius=ft.border_radius.all(10)))
-        screen.update()
-        page.go("/"+e.control.content.src[0:-5])
-
-
-    for filename, tooltip in {'COM.jpeg': 'Kalliope: Orders', 'CNT.jpeg': 'Kalliope: Configuration', 'MEM.jpeg': 'Kalliope: Status'}.items():
-        menu_lo.controls.append(ft.Container(
-                               content=ft.Image(src=f"{filename}", tooltip=tooltip, width=160, height=90, border_radius=ft.border_radius.all(5)),
-                               on_click=menu_clicked))
-    for filename, tooltip in {'VEH.jpeg': 'Enclosure: Status', 'ATM.jpeg': 'Enclosure: Sensors', 'GDE.jpeg': 'Enclosure: Extension'}.items():
-        menu_li.controls.append(ft.Container(
-                               content=ft.Image(src=f"{filename}", tooltip=tooltip, width=160, height=90, border_radius=ft.border_radius.all(5)),
-                               on_click=menu_clicked))
-    for filename, tooltip in {'HIB.jpeg': 'System: Hibernation', 'NUC.jpeg': 'System: Power', 'LIF.jpeg': 'System: Updates'}.items():
-        menu_ri.controls.append(ft.Container(
-                               content=ft.Image(src=f"{filename}", tooltip=tooltip, width=160, height=90, border_radius=ft.border_radius.all(5)),
-                               on_click=menu_clicked))
-    for filename, tooltip in {'DMG.jpeg': 'Misc: logs', 'FLX.jpeg': 'Misc: statistics', 'NAV.jpeg': 'Misc: Help'}.items():
-        menu_ro.controls.append(ft.Container(
-                               content=ft.Image(src=f"{filename}", tooltip=tooltip, width=160, height=90, border_radius=ft.border_radius.all(5)),
-                               on_click=menu_clicked))
-    page.update()
-
 logging.getLogger().setLevel(logging.DEBUG)
-ft.app(target=main, name="", host='127.0.0.1', port=9000, route_url_strategy="path", view=None, assets_dir="assets")
+flet.app(target=main, name="", host='127.0.0.1', port=9000, route_url_strategy="path", view=None, assets_dir="assets")
 

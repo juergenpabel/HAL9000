@@ -18,8 +18,8 @@ class Agent:
 	def configure(self, configuration: ConfigParser) -> None:
 		self.config['agent:trace']   = configuration.getboolean('agent', 'trace', fallback=False)
 		self.config['agent:address'] = configuration.getstring('agent', 'device', fallback='127.0.0.1')
-		self.config['agent:event-topic-base']   = configuration.getstring('agent', 'event-topic-base',   fallback='hal9000/daemon/enclosure-service/event')
-		self.config['agent:command-topic-base'] = configuration.getstring('agent', 'command-topic-base', fallback='hal9000/daemon/enclosure-service/command')
+		self.config['agent:event-topic-base']   = configuration.getstring('agent', 'event-topic-base',   fallback='hal9000/enclosure/webserial/event')
+		self.config['agent:command-topic-base'] = configuration.getstring('agent', 'command-topic-base', fallback='hal9000/enclosure/webserial/command')
 
 
 	async def send(self, topic: str, payload, quote_payload: bool = False) -> None:

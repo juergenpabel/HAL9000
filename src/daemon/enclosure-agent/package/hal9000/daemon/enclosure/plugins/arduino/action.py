@@ -76,7 +76,7 @@ class Action(HAL9000_Action):
 
 
 	def send_command(self, topic, body) -> None:
-		mqtt_publish_message(f"hal9000/daemon/enclosure-service/command/{topic}", body)
+		mqtt_publish_message(f"hal9000/enclosure/webserial/command/{topic}", body)
 
 
 	def send_system_time(self, synced: bool = False):

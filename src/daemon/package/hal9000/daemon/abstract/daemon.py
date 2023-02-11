@@ -77,11 +77,11 @@ class HAL9000_Daemon(HAL9000_Abstract):
 			if self.config['mqtt-enabled']:
 				self.mqtt = mqtt_client.Client(self.config['mqtt-client'])
 				self.mqtt.connect(self.config['mqtt-server'], self.config['mqtt-port'])
-				self.mqtt.subscribe("hal9000/daemon/{}/status".format(str(self)))
-				self.mqtt.subscribe("hal9000/daemon/{}/command".format(str(self)))
+				self.mqtt.subscribe(f"hal9000/{self}/status")
+				self.mqtt.subscribe(f"hal9000/{self}/system")
 				self.mqtt.on_message = self.on_mqtt
 		for section_name in configuration.sections():
-			if section_name.startswith('command:'):
+			if section_name.startswith('system:'):
 				command_exec = configuration.getstring(section_name, 'exec', fallback=None)
 				if command_exec is not None:
 					command_name = section_name[8:]
@@ -131,13 +131,18 @@ class HAL9000_Daemon(HAL9000_Abstract):
 		topic = message.topic
 		payload = message.payload.decode('utf-8')
 		self.logger.debug('MQTT received: {} => {}'.format(topic, payload))
-		if topic == "hal9000/daemon/{}/status".format(str(self)):
+		if topic == f"hal9000/{self}/status":
 			if payload in Daemon.STATUS_VALID:
 				self.status = payload
-		if topic == "hal9000/daemon/{}/command".format(str(self)):
-			if payload in self.commands:
-				self.logger.info("executing configured command with id '{}'".format(payload))
-				os.system(self.commands[payload])
+		if topic == f"hal9000/{self}/system":
+			payload = json.loads(payload)
+			if "system" in payload and "name" in payload["system"]:
+				name = payload["system"]["name"]
+				if name in self.commands:
+					self.logger.info(f"executing configured system command '{self.commands[name]}' (with name '{name}')")
+					os.system(self.commands[name])
+				else:
+					self.logger.info(f"system command with name '{name}' not configured")
 
 
 	@property

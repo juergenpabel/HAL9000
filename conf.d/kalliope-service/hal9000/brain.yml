@@ -3,7 +3,7 @@
     neurons:
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
-          topic: "hal9000/daemon/kalliope-service/event/kalliope:state"
+          topic: "hal9000/kalliope/event/kalliope:state"
           payload: "started"
 
 
@@ -11,7 +11,7 @@
     signals:
       - mqtt_subscriber:
           broker_ip: "127.0.0.1"
-          topic: "hal9000/daemon/enclosure-agent/ready"
+          topic: "hal9000/enclosure/ready"
     neurons:
       - play:
           filename: "resources/data/hal9000_i-am-completely-operational-and-my-circuits-are-functioning-perfectly.wav"
@@ -22,7 +22,7 @@
     neurons:
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
-          topic: "hal9000/daemon/kalliope-service/event/kalliope:state"
+          topic: "hal9000/kalliope/event/kalliope:state"
           payload: "waiting"
 
 
@@ -36,7 +36,7 @@
     neurons:
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
-          topic: "hal9000/daemon/kalliope-service/event/kalliope:state"
+          topic: "hal9000/kalliope/event/kalliope:state"
           payload: "listening"
       - play:
           filename: "resources/data/dong.wav"
@@ -47,7 +47,7 @@
     neurons:
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
-          topic: "hal9000/daemon/kalliope-service/event/kalliope:state"
+          topic: "hal9000/kalliope/event/kalliope:state"
           payload: "thinking"
 
 
@@ -56,7 +56,7 @@
     neurons:
       - mqtt_publisher:
           broker_ip: "127.0.0.1"
-          topic: "hal9000/daemon/kalliope-service/event/kalliope:state"
+          topic: "hal9000/kalliope/event/kalliope:state"
           payload: "speaking"
 
 

@@ -100,7 +100,7 @@ class Daemon(HAL9000_Daemon):
 		if self.config['sleep-time'] == self.config['wakeup-time']:
 			#TODO: error message
 			raise ConfigurationError
-		self.mqtt.subscribe('hal9000/daemon/enclosure-agent/consciousness/state')
+		self.mqtt.subscribe('hal9000/enclosure/consciousness/state') #TODO
 		for section_name in configuration.sections():
 			module_path = configuration.getstring(section_name, 'module', fallback=None)
 			if module_path is not None:
@@ -184,7 +184,7 @@ class Daemon(HAL9000_Daemon):
 	
 	def on_mqtt(self, client, userdata, message) -> None:
 		HAL9000_Daemon.on_mqtt(self, client, userdata, message)
-		if message.topic == 'hal9000/daemon/enclosure-agent/consciousness/state':
+		if message.topic == 'hal9000/enclosure/consciousness/state':
 			consciousness_state = message.payload.decode('utf-8')
 			if consciousness_state in Daemon.CONSCIOUSNESS_VALID:
 				self.set_consciousness(consciousness_state)

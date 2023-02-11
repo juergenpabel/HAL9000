@@ -35,7 +35,12 @@ class EnclosureDaemon(HAL9000_Daemon):
 
 
 if __name__ == '__main__':
-	daemon = EnclosureDaemon()
-	daemon.load(sys.argv[1])
-	asyncio.run(daemon.loop())
+	try:
+		daemon = EnclosureDaemon()
+		daemon.load(sys.argv[1])
+		asyncio.run(daemon.loop())
+	except BaseException as e:
+		print(f"{type(e)}({str(e)})")
+		time.sleep(1)
+		sys.exit(-1)
 

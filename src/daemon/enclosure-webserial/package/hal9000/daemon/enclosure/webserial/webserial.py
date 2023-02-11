@@ -12,6 +12,7 @@ class Webserial:
 
 	def __init__(self):
 		self.logger = logging.getLogger()
+		self.logger.setLevel(logging.DEBUG)
 		self.config = dict()
 
 
@@ -21,13 +22,14 @@ class Webserial:
 		self.config['mcp23X17:i2c-bus']     = configuration.getint('mcp23X17', 'i2c-bus',     fallback=0)
 		self.config['mcp23X17:i2c-address'] = configuration.getint('mcp23X17', 'i2c-address', fallback=32)
 
-		self.config['mcp23X17:peripherals'] = configuration.getlist('mcp23X17', 'peripherals', fallback=[])
-		for peripheral in self.config['mcp23X17:peripherals']:
+		self.config['enclosure:peripherals'] = configuration.getlist('enclosure', 'peripherals', fallback=[])
+		for peripheral in self.config['enclosure:peripherals']:
+			self.logger.debug(f"loading config for peripheral '{peripheral}'")
 			peripheral_type, peripheral_name = peripheral.split(':', 1)
 			if peripheral_type in ["rotary"]:
-				input_pins = configuration.getlist(peripheral, 'mcp23X17-pins', fallback=[])
-				if type(input_pins) == list and len(input_pins) == 2:
-					self.config[f"{peripheral}:mcp23X17-pins"] = input_pins
+				peripheral_pins = configuration.getlist(peripheral, 'mcp23X17-pins', fallback=[])
+				if type(peripheral_pins) == list and len(peripheral_pins) == 2:
+					self.config[f"{peripheral}:mcp23X17-pins"] = peripheral_pins
 				else:
 					self.logger.error(f"invalid configuration in section '{peripheral}' for option 'mcp23X17-pins': must be a list with exactly two pin names")
 #TODO					return
@@ -82,23 +84,22 @@ class Webserial:
 				self.logger.error(str(e))
 				self.logger.error(type(e))
 		if runtime["status"] == "configuring":
-			await self.send('["device:mcp23X17", {"init":{"i2c-bus":%d,"i2c-address":%d}}]' % (self.config['mcp23X17:i2c-bus'], self.config['mcp23X17:i2c-address']))
-			for peripheral in self.config['mcp23X17:peripherals']:
+			await self.send("device:mcp23X17", {"init": {"i2c-bus": self.config['mcp23X17:i2c-bus'], "i2c-address": self.config['mcp23X17:i2c-address']}})
+			for peripheral in self.config['enclosure:peripherals']:
 				peripheral_type, peripheral_name = peripheral.split(':', 1)
-				peripheral_pins = self.config[f"{peripheral}:mcp23X17-pins"]
 				if peripheral_type in ["rotary"]:
-					await self.send('["device:mcp23X17", {"config":{"device":{"type":"%s","name":"%s","inputs":[{"pin":"%s","label":"sigA"},{"pin":"%s","label":"sigB"}]}}}]'
-					                %(peripheral_type, peripheral_name, input_pins[0], input_pins[1]))
+					input_pins = self.config[f"{peripheral}:mcp23X17-pins"]
+					await self.send("device:mcp23X17", {"config":{"device":{"type":peripheral_type,"name":peripheral_name,"inputs":[{"pin":input_pins[0],"label":"sigA"},{"pin":input_pins[1],"label":"sigB"}]}}})
 				if peripheral_type in ["switch", "button", "toggle"]:
 					input_pin    = self.config[f"{peripheral}:mcp23X17-pin"]
 					input_pullup = self.config[f"{peripheral}:mcp23X17-pullup"]
 					event_low    = self.config[f"{peripheral}:event-low"]
 					event_high   = self.config[f"{peripheral}:event-high"]
-					await self.send('["device:mcp23X17", {"config":{"device":{"type":"%s","name":"%s","inputs":[{"pin":"%s","pullup":"%s","label":"sigX"}]'
-					                                                                                ',"events":{"low":"%s","high":"%s"}}}}]'
-					                %(peripheral_type, peripheral_name, input_pin, str(input_pullup).lower(), event_low, event_high))
-			await self.send("device:mcp23X17", {"start":true})
-			await self.send('["", ""]')
+					await self.send("device:mcp23X17", {"config":{"device":{"type":peripheral_type,"name":peripheral_name,
+					                                    "inputs":[{"pin":input_pin,"pullup":str(input_pullup).lower(),"label":"sigX"}],
+					                                    "events":{"low":event_low,"high":event_high}}}})
+			await self.send("device:mcp23X17", {"start": True})
+			await self.send("", "", True)
 		await self.send("application:runtime", {"status":"?"})
 		while True:
 			line = await self.recv()
