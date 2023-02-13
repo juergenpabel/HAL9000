@@ -69,7 +69,11 @@ class Webserial:
 
 	async def loop(self, target_writer):
 		self.logger.info(f"webserial => Connecting to '{self.config['webserial:device']}'...")
-		self.source_reader, self.source_writer = await serial_asyncio.open_serial_connection(url=self.config['webserial:device'], baudrate=115200)
+		while True:
+			try:
+				self.source_reader, self.source_writer = await serial_asyncio.open_serial_connection(url=self.config['webserial:device'], baudrate=115200)
+			except BaseException as e:
+				await asyncio.sleep(1)
 		await self.send("application:runtime", {"status":"?"})
 		runtime = {}
 		while "status" not in runtime or runtime["status"] == "booting":
