@@ -1,5 +1,5 @@
 # Required hardware
-- Raspberry Pi Zero2
+- Raspberry Pi Zero2 (I am currently working on support for Orange Pi Zero 2W & Radxa Zero 3W)
 - Respeaker 2-Mic HAT
 - IDC/40pin extender cable 25-30cm
 - 1.8" fisheye dome ([ebay.com](https://www.ebay.com/itm/301729022732)) # very hard to find/buy elsewhere
