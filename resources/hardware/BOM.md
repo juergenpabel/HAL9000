@@ -1,5 +1,5 @@
 # Required hardware
-- Raspberry Pi Zero2 (>= 32GB SD highly recommended, especially if developing on the device)
+- Raspberry Pi Zero2
 - Respeaker 2-Mic HAT
 - IDC/40pin extender cable 25-30cm
 - 1.8" fisheye dome ([ebay.com](https://www.ebay.com/itm/301729022732)) # very hard to find/buy elsewhere
