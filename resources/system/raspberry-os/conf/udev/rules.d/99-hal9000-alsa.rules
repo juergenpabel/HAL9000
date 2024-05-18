@@ -1,7 +1,0 @@
-SUBSYSTEM!="sound", GOTO="hal9000_alsa_end"
-ACTION!="add", GOTO="hal9000_alsa_end"
-
-DEVPATH=="/devices/platform/soc/soc:sound/sound/card?", ATTR{id}="HAL9000"
-DEVPATH=="/devices/pci0000:00/0000:00:08.1/0000:c1:00.6/sound/card?", ATTR{id}="HAL9000"
-
-LABEL="hal9000_alsa_end"

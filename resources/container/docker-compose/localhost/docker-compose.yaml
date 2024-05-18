@@ -6,8 +6,6 @@ services:
     container_name: hal9000-mosquitto
     image: docker.io/library/eclipse-mosquitto:latest
     hostname: mosquitto
-    volumes:
-      - ../../raspberry-os/conf/mosquitto/conf.d/hal9000.conf:/mosquitto/config/mosquitto.conf:ro
     ports:
       - "0.0.0.0:1883:1883"
     networks:

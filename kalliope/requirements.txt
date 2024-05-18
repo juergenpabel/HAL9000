@@ -1,0 +1,4 @@
+kalliope
+paho-mqtt<2
+pyaudio
+
