@@ -2,11 +2,11 @@
 
 
 $fn=120;
-conf_panel_rfid = false;
-conf_panel_rotary = false;
-conf_panel_motion = false;
+conf_panel_rfid = true;
+conf_panel_rotary = true;
+conf_panel_motion = true;
 
-conf_display = "m5core2";
+conf_display = "roundypi";
 
 
 module hal9000_enclosure() {
@@ -69,18 +69,6 @@ module hal9000_enclosure() {
 				translate([+59.0,+35.0,195.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
 				translate([+36.0,+35.0,195.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+02.0);
 				translate([+36.0,+35.0,195.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
-			}
-			//translate([154/2,30,170-33/2]) cube([23.0,5.0,38.0], center=true);
-			union(/*screws:ft232h*/) {
-				translate([+86.0,+35.0,137.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+02.0);
-				translate([+86.0,+35.0,137.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
-				translate([+68.0,+35.0,137.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+02.0);
-				translate([+68.0,+35.0,137.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
-
-				translate([+86.0,+35.0,170.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+02.0);
-				translate([+86.0,+35.0,170.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
-				translate([+68.0,+35.0,170.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+02.0);
-				translate([+68.0,+35.0,170.0]) rotate([+90,+90,+00]) cylinder(d=+03.0,h=+05.0);
 			}
 			union(/*screws:mcp23817*/) {
 				translate([+21.7,+34.0,137.0]) rotate([+90,+90,+00]) cylinder(d=+06.0,h=+02.0, center=true);
@@ -223,6 +211,9 @@ module hal9000_component_display_frame_top() {
     if(conf_display == "m5core2") {
         hal9000_component_display_frame_top_m5core2();
     }
+    if(conf_display == "waveshare") {
+        hal9000_component_display_frame_top_waveshare();
+    }
 }
 
 
@@ -292,6 +283,44 @@ module hal9000_component_display_frame_top_m5core2() {
 			translate([-30.0,+22.0,+17.5]) cylinder(d2=+02.0,d1=+01.5,h=+05.0, center=true);
 			translate([+30.0,+22.0,+17.5]) cylinder(d2=+02.0,d1=+01.5,h=+05.0, center=true);
 		}
+        union(/*rpi sd card overhang / gpio cable*/) {
+            translate([+00.0,-33.5,+07.5]) cube([+70.0,+03.0,+05.0], center=true);
+            translate([+00.0,+33.5,+07.5]) cube([+70.0,+03.0,+05.0], center=true);
+        }
+	}
+}
+
+module hal9000_component_display_frame_top_waveshare() {
+	color([0,0,0]) render()
+	difference() {
+		union() {
+			translate([+00.0,+00.0,+05.0]) cube([+74.5,+59.5,+10.0], center=true);
+			translate([+00.0,+00.0,+05.0]) cube([+84.5,+49.5,+10.0], center=true);
+		}
+		difference(/*fisheye inlet*/) {
+			translate([+00.0,+00.0,+01.0]) cylinder(d=+55.5,h=+02.0, center=true);
+			translate([+00.0,+00.0,+01.0]) cylinder(d=+41.3,h=+02.0, center=true);
+		}
+		union(/*waveshare display inlet*/) {
+			translate([+00.0,+00.0,+01.5]) cylinder(d=+33.0,h=+03.0, center=true);
+			hull() {
+				translate([+00.0,+00.0,+05.5]) cylinder(d=+37.5,h=+05.0, center=true);
+				translate([+00.0,+17.5,+05.5]) cube([+20.0,+10.0,+05.0], center=true);
+			}
+			translate([+00.0,+25.0,+07.5]) cube([+16.0,+20.0,+05.0], center=true);
+		}
+		union(/*frame cover inlet*/) {
+			hull() {
+				translate([+00.0,+00.0,+09.0]) cylinder(d=+52.0,h=+02.0, center=true);
+				translate([+00.0,+25.0,+09.0]) cube([+26.0,+17.0,+02.0], center=true);
+			}
+		}
+		union(/*screw holes*/) {
+			translate([-11.0,-20.5,+07.0]) cylinder(d2=+02.0,d1=+01.5,h=+06.0, center=true);
+			translate([+11.0,-20.5,+07.0]) cylinder(d2=+02.0,d1=+01.5,h=+06.0, center=true);
+			translate([-11.0,+25.5,+07.0]) cylinder(d2=+02.0,d1=+01.5,h=+06.0, center=true);
+			translate([+11.0,+25.5,+07.0]) cylinder(d2=+02.0,d1=+01.5,h=+06.0, center=true);
+		}
 	}
 }
 
@@ -319,6 +348,9 @@ module hal9000_component_display_cover() {
     }
     if(conf_display == "m5core2") {
         hal9000_component_display_cover_m5core2();
+    }
+    if(conf_display == "waveshare") {
+        hal9000_component_display_cover_waveshare();
     }
 }
 
@@ -377,6 +409,35 @@ module hal9000_component_display_cover_m5core2(){
     }
 }
 
+module hal9000_component_display_cover_waveshare(){
+	color([0,0,0]) render()
+	union() {
+		difference() {
+            union() {
+                hull() {
+                    translate([+00.0,+00.0,+01.0]) cylinder(d=+50.0,h=+02.0, center=true);
+                    translate([+00.0,+25.0,+01.0]) cube([+25.0,+15.0,+02.0], center=true);
+                }
+			}
+
+			union(/*frame screw holes*/) {
+				translate([-11.0,-20.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
+				translate([+11.0,-20.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
+				translate([-11.0,+29.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
+				translate([+11.0,+29.5,+01.0]) cylinder(d=+02.0,h=+02.0, center=true);
+			}
+            union(/*gpio headers & boot button, usb-c*/) {
+                translate([-13.5,+00.0,+01.0]) cube([+04.0,+14.0,+02.0], center=true);
+                translate([+13.5,+00.0,+01.0]) cube([+04.0,+14.0,+02.0], center=true);
+				translate([-11.0,-10.5,+01.0]) cylinder(d=+05.0,h=+02.0, center=true);
+				translate([+11.0,-10.5,+01.0]) cylinder(d=+05.0,h=+02.0, center=true);
+                translate([+00.0,+09.0,+01.0]) cube([+22.5,+05.0,+02.0], center=true);
+                translate([+00.0,+22.5,+01.0]) cube([+16.0,+25.0,+02.0], center=true);
+            }
+		}
+	}
+}
+
 
 module hal9000_component_display_ring() {
 	color([0.625,0.625,0.625]) render()
@@ -396,7 +457,7 @@ module hal9000_component_display_ring() {
 module hal9000_material_acryl() {
 	color([0,0,0,0.5]) render()
 	difference() {
-		translate([+00.0,+00.0,+01.5]) cube([+90.0,+185.0,+03.0], center=true);
+		translate([+00.0,+00.0,+01.5]) cube([+90.0,+182.5,+03.0], center=true);
 		translate([+00.0,+42.5,+01.5]) cylinder(d=+50.0,h=+03.0, center=true);
 	}
 }
@@ -412,8 +473,8 @@ module hal9000_material_fisheye() {
 
 
 module hal9000_material_wiremesh() {
-	color([1,1,1,0.5]) render()
+	color([1,1,1,0.2]) render()
 	difference() {
-		translate([+00.0,+00.0,+00.5]) cube([+90.0,+45.0,+01.0], center=true);
+		translate([+00.0,+00.0,+00.6]) cube([+90.0,+42.0,+01.2], center=true);
 	}
 }

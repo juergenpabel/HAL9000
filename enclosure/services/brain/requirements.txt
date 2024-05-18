@@ -1,0 +1,4 @@
+jsonpath-rw
+paho-mqtt<2
+requests
+dbus-fast

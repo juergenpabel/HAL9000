@@ -1,0 +1,4 @@
+flet>=0.22.0
+jsonpath-ng>=1.6.1
+paho-mqtt>=2.0.0
+requests>=2.31.0

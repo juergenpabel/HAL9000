@@ -1,0 +1,112 @@
+version: "3.7"
+
+services:
+
+  mosquitto:
+    container_name: hal9000-mosquitto
+    image: docker.io/library/eclipse-mosquitto:latest
+    hostname: mosquitto
+    volumes:
+      - ../../raspberry-os/conf/mosquitto/conf.d/hal9000.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "0.0.0.0:1883:1883"
+    networks:
+      - hal9000
+
+  brain:
+    container_name: hal9000-brain
+    build: 
+      context: ../../../../enclosure/services/brain/
+      dockerfile: Containerfile
+      args:
+        EXTRA_APT_INSTALL_PKGS: socat
+    hostname: brain
+    devices:
+      - /dev/snd:/dev/snd
+    environment:
+      - MQTT_SERVER=mosquitto
+      - MQTT_PORT=1883
+    command: /bin/sh -c "socat TCP4-LISTEN:1883,bind=127.0.0.1,fork,reuseaddr TCP4:mosquitto:1883 & python3 brain.py brain.ini"
+    networks:
+      - hal9000
+    depends_on:
+      - mosquitto
+      - kalliope
+      - frontend
+
+  console:
+    container_name: hal9000-console
+    build: 
+      context: ../../../../enclosure/services/console/
+      dockerfile: Containerfile
+      args:
+        EXTRA_APT_INSTALL_PKGS: socat
+    hostname: console
+    environment:
+      - KALLIOPE_SERVER=kalliope
+      - KALLIOPE_PORT=5000
+      - MQTT_SERVER=mosquitto
+      - MQTT_PORT=1883
+    command: /bin/sh -c "socat TCP4-LISTEN:1883,bind=127.0.0.1,fork,reuseaddr TCP4:mosquitto:1883 & python3 console.py console.ini"
+    ports:
+      - "0.0.0.0:8080:8080"
+    networks:
+      - hal9000
+    depends_on:
+      - mosquitto
+
+  frontend:
+    container_name: hal9000-frontend
+    build: 
+      context: ../../../../enclosure/services/frontend/
+      dockerfile: Containerfile
+      args:
+        EXTRA_APT_INSTALL_PKGS: socat
+    hostname: frontend
+# NOTICE: A "real" build of this HAL9000 makes use of a microcontroller with a display, the
+#         microcontroller will be present as a TTY device (and with the help of a udev rule
+#         there will be a symlink at /dev/ttyHAL9000). Since "real" builds probably won't
+#         use [docker|podman]-compose for deployment, per default the mounting of the TTY
+#         in the container is commented out.
+# NOTICE: If you have a /dev/ttyHAL9000 on your system, uncommend the next two lines to actually
+#         use it - no further configuration is required.
+#    devices:
+#      - /dev/ttyHAL9000:/dev/ttyHAL9000
+# NOTICE: end
+    environment:
+      - MQTT_SERVER=mosquitto
+      - MQTT_PORT=1883
+    command: /bin/sh -c "socat TCP4-LISTEN:1883,bind=127.0.0.1,fork,reuseaddr TCP4:mosquitto:1883 & python3 frontend.py frontend.ini"
+    ports:
+      - "0.0.0.0:9000:9000"
+    networks:
+      - hal9000
+    depends_on:
+      - mosquitto
+
+  kalliope:
+    container_name: hal9000-kalliope
+    build: 
+      context: ../../../../kalliope/
+      dockerfile: Containerfile
+      args:
+        EXTRA_APT_INSTALL_PKGS: socat
+    hostname: kalliope
+    devices:
+      - /dev/snd:/dev/snd
+    volumes:
+      - /etc/asound.conf:/etc/asound.conf:ro
+    environment:
+      - MQTT_SERVER=mosquitto
+      - MQTT_PORT=1883
+    command: /bin/sh -c "socat TCP4-LISTEN:1883,bind=127.0.0.1,fork,reuseaddr TCP4:mosquitto:1883 & kalliope --debug start"
+    ports:
+      - "0.0.0.0:5000:5000"
+    networks:
+      - hal9000
+    depends_on:
+      - mosquitto
+
+networks:
+  hal9000:
+

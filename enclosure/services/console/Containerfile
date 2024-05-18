@@ -1,0 +1,25 @@
+FROM python:3.11-slim
+ARG CONSOLE_CONFIG_DIRECTORY="demo-en_US"
+ARG EXTRA_APT_INSTALL_PKGS=""
+
+LABEL com.github.juergenpabel.HAL9000.console.config-directory=$CONSOLE_CONFIG_DIRECTORY
+
+RUN apt update
+RUN apt upgrade -y
+RUN apt install -y $EXTRA_APT_INSTALL_PKGS
+
+WORKDIR /console
+
+COPY ./console.py               ./console.py
+COPY ./package                  ./package
+COPY ./assets                   ./assets
+COPY $CONSOLE_CONFIG_DIRECTORY/ ./$CONSOLE_CONFIG_DIRECTORY/
+
+RUN pip install --no-cache-dir -r $CONSOLE_CONFIG_DIRECTORY/requirements.txt
+
+EXPOSE 8080
+
+ENV PYTHONPATH=/console/package
+WORKDIR /console/$CONSOLE_CONFIG_DIRECTORY/
+CMD python3 /console/console.py console.ini
+

@@ -1,0 +1,20 @@
+[submodule "kalliope-en_US"]
+	path = kalliope/demo-en_US
+	url = https://github.com/juergenpabel/HAL9000-demo-en_US
+	branch = kalliope
+	update = rebase
+[submodule "brain-en_US"]
+	path = enclosure/services/brain/demo-en_US
+	url = https://github.com/juergenpabel/HAL9000-demo-en_US
+	branch = brain
+	update = rebase
+[submodule "console-en_US"]
+	path = enclosure/services/console/demo-en_US
+	url = https://github.com/juergenpabel/HAL9000-demo-en_US
+	branch = console
+	update = rebase
+[submodule "frontend-en_US"]
+	path = enclosure/services/frontend/demo-en_US
+	url = https://github.com/juergenpabel/HAL9000-demo-en_US
+	branch = frontend
+	update = rebase

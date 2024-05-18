@@ -1,4 +1,0 @@
-kalliope
-precise-runner
-vosk
-soco

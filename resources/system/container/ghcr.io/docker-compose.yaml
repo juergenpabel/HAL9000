@@ -1,0 +1,87 @@
+version: "3.7"
+
+services:
+
+  mosquitto:
+    container_name: hal9000-mosquitto
+    image: docker.io/library/eclipse-mosquitto:latest
+    hostname: mosquitto
+    volumes:
+      - ../../raspberry-os/conf/mosquitto/conf.d/hal9000.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "127.0.0.1:1883:1883"
+    networks:
+      - hal9000
+    restart: unless-stopped
+
+  brain:
+    container_name: hal9000-brain
+    image: ghcr.io/juergenpabel/hal9000-brain:development
+    hostname: brain
+    environment:
+      - MQTT_SERVER=mosquitto
+      - MQTT_PORT=1883
+    command: /bin/sh -c 'socat TCP4-LISTEN:1883,bind=127.0.0.1,reuseaddr,nodelay,fork TCP4:mosquitto:1883 & python3 brain.py brain.ini'
+    networks:
+      - hal9000
+    depends_on:
+      - mosquitto
+      - frontend
+      - kalliope
+    restart: unless-stopped
+
+  console:
+    container_name: hal9000-console
+    image: ghcr.io/juergenpabel/hal9000-console:development
+    hostname: console
+    environment:
+      - MQTT_SERVER=mosquitto
+      - MQTT_PORT=1883
+      - KALLIOPE_SERVER=kalliope
+      - KALLIOPE_PORT=5000
+    command: /bin/sh -c 'socat TCP4-LISTEN:1883,bind=127.0.0.1,reuseaddr,nodelay,fork TCP4:mosquitto:1883 & python3 console.py console.ini'
+    ports:
+      - "127.0.0.1:8080:8080"
+    networks:
+      - hal9000
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+  frontend:
+    container_name: hal9000-frontend
+    image: ghcr.io/juergenpabel/hal9000-frontend:development
+    hostname: frontend
+    environment:
+      - MQTT_SERVER=mosquitto
+      - MQTT_PORT=1883
+    command: /bin/sh -c 'socat TCP4-LISTEN:1883,bind=127.0.0.1,reuseaddr,nodelay,fork TCP4:mosquitto:1883 & python3 frontend.py frontend.ini'
+    ports:
+      - "127.0.0.1:9000:9000"
+    networks:
+      - hal9000
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+  kalliope:
+    container_name: hal9000-kalliope
+    image: ghcr.io/juergenpabel/hal9000-kalliope:development
+    hostname: kalliope
+    devices:
+      - /dev/snd:/dev/snd
+    environment:
+      - MQTT_SERVER=mosquitto
+      - MQTT_PORT=1883
+    command: /bin/sh -c 'socat TCP4-LISTEN:1883,bind=127.0.0.1,reuseaddr,nodelay,fork TCP4:mosquitto:1883 & kalliope --debug start'
+    ports:
+      - "127.0.0.1:5000:5000"
+    networks:
+      - hal9000
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+networks:
+  hal9000:
+

@@ -1,0 +1,7 @@
+SUBSYSTEM!="tty", GOTO="hal9000_tty_end"
+ACTION!="add", GOTO="hal9000_tty_end"
+
+ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000a", SYMLINK+="ttyHAL9000"
+ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d4", SYMLINK+="ttyHAL9000"
+
+LABEL="hal9000_tty_end"
