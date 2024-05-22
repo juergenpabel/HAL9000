@@ -21,24 +21,21 @@ case `/usr/bin/uname -m` in
 		exit 1
 		;;
 esac
-if [ "x$BUILD_PLATFORMS" == "x" ]; then
-	BUILD_PLATFORMS="$HOST_PLATFORM_OS/$HOST_PLATFORM_HW"
-fi
-if [ "x$CONFIG_DIRECTORY" == "x" ]; then
-	CONFIG_DIRECTORY="demo-en_US"
-fi
+
+BUILD_PLATFORMS=${BUILD_PLATFORMS:-$HOST_PLATFORM_OS/$HOST_PLATFORM_HW}
+CONFIG_DIRECTORY=${CONFIG_DIRECTORY:-demo-en_US}
 
 echo "Building images for platforms '$BUILD_PLATFORMS' with language-related configurations from '$CONFIG_DIRECTORY'"
 echo " "
 
-SCRIPT_PATH=$(realpath "$0")
+SCRIPT_SRC=$(realpath -s "$0")
 SCRIPT_DIR=$(dirname "$SCRIPT_PATH")
 cd "$SCRIPT_DIR"
 GIT_REPODIR=`git rev-parse --show-toplevel`
 cd - >/dev/null
 echo "Using '$GIT_REPODIR' as the repository base directory"
 cd "$GIT_REPODIR"
-git submodule init
+git submodule update --init --recursive
 
 echo "Building image 'hal9000-mosquitto'..."
 podman manifest exists localhost/hal9000-mosquitto:latest >/dev/null
