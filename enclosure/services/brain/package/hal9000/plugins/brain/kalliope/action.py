@@ -12,6 +12,7 @@ from hal9000.brain.daemon import Daemon
 class Action(HAL9000_Action):
 
 	KALLIOPE_STATE_UNKNOWN   = 'unknown'
+	KALLIOPE_STATE_STARTING  = 'starting'
 	KALLIOPE_STATE_READY     = 'ready'
 	KALLIOPE_STATE_WAITING   = 'waiting'
 	KALLIOPE_STATE_LISTENING = 'listening'
@@ -60,10 +61,9 @@ class Action(HAL9000_Action):
 		if 'kalliope' in signal:
 			if 'state' in signal['kalliope']:
 				kalliope_state = signal['kalliope']['state']
-				if cortex['kalliope']['state'] == Action.KALLIOPE_STATE_UNKNOWN:
-					if kalliope_state == Action.KALLIOPE_STATE_READY or kalliope_state in Action.KALLIOPE_STATES_VALID:
+				if cortex['kalliope']['state'] in [Action.KALLIOPE_STATE_UNKNOWN, Action.KALLIOPE_STATE_STARTING]:
+					if kalliope_state in [Action.KALLIOPE_STATE_STARTING, Action.KALLIOPE_STATE_READY]:
 						cortex['kalliope']['state'] = kalliope_state
-					return
 				if kalliope_state in Action.KALLIOPE_STATES_VALID:
 					cortex['kalliope']['state'] = kalliope_state
 					if cortex['#consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
