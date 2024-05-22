@@ -252,8 +252,6 @@ class Daemon(HAL9000_Daemon):
 					self.set_system_time()
 				if key == 'action':
 					self.queue_signal(data[0], data[1])
-					if len(self.booting_modules) > 0 and data[0] == '*' and 'brain' in data[1]:
-						self.set_timeout(1, 'action', ['*', {"brain": {"status": {}}}])
 				if key == 'gui/screen':
 					self.video_gui_screen_show(data, {})
 				if key == 'gui/overlay':
