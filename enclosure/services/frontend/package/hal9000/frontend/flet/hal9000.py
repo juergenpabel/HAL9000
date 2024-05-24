@@ -1,25 +1,20 @@
 #!/usr/bin/env python3
 
-import os
-import math
-import json
-import datetime
-import fastapi
-import flet_core
-import flet_core.alignment
-import flet_core.border
-import flet_core.colors
+from os import getcwd as os_getcwd
+from math import pi as math_pi, sin as math_sin, cos as math_cos
+from json import dumps as json_dumps
+from datetime import datetime as datetime_datetime
+from asyncio import Queue as asyncio_Queue, sleep as asyncio_sleep, create_task as asyncio_create_task
+from fastapi import FastAPI as fastapi_FastAPI
 import flet
-import flet.canvas
 import flet.fastapi
-
-import asyncio
+import flet_core.alignment
 
 from hal9000.frontend import Frontend
 
 class HAL9000(Frontend):
 
-	def __init__(self, app: fastapi.FastAPI):
+	def __init__(self, app: fastapi_FastAPI):
 		super().__init__()
 		self.flet_app = app
 		self.command_listener_task = None
@@ -30,7 +25,7 @@ class HAL9000(Frontend):
 		if await super().configure(filename) is False:
 			print(f"[frontend:flet] parsing '{filename}' failed")
 			return False
-		self.flet_app.mount('/', flet.fastapi.app(self.flet, route_url_strategy='path', assets_dir=f'{os.getcwd()}/assets'))
+		self.flet_app.mount('/', flet.fastapi.app(self.flet, route_url_strategy='path', assets_dir=f'{os_getcwd()}/assets'))
 		return True
 
 
@@ -66,15 +61,15 @@ class HAL9000(Frontend):
 					elif screen == 'menu':
 						self.show_menu(display, command['payload']['menu'])
 					else:
-						print(json.dumps(command['payload'])) ##TODO
+						print(json_dumps(command['payload'])) ##TODO
 			elif command['topic'] == 'gui/overlay':
 				for overlay in command['payload'].keys():
 					display.content.shapes = list(filter(lambda shape: shape.data!='overlay', display.content.shapes))
 					if overlay == 'volume':
 						radius = display.radius
 						for level in range(0, int(command['payload']['volume']['level'])):
-							dx = math.cos(2*math.pi * level/100 * 6/8 + (2*math.pi*3/8));
-							dy = math.sin(2*math.pi * level/100 * 6/8 + (2*math.pi*3/8));
+							dx = math_cos(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
+							dy = math_sin(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
 							display.content.shapes.append(flet.canvas.Line(radius/2+(dx*radius*0.9), radius/2+(dy*radius*0.9),
 							                                               radius/2+(dx*radius*0.99), radius/2+(dy*radius*0.99),
 							                                               paint=flet.Paint(color='white'), data='overlay'))
@@ -82,19 +77,19 @@ class HAL9000(Frontend):
 					elif overlay == 'none':
 						display.content.update()
 					else:
-						self.show_menu(display, json.dumps(command['payload']))
+						self.show_menu(display, json_dumps(command['payload']))
 
 
 	async def run_gui_screen_idle(self, display):
 		while True:
 			if display.data['idle_clock'].current is not None:
-				now = datetime.datetime.now()
+				now = datetime_datetime.now()
 				if now.second % 2 == 0:
 					display.data['idle_clock'].current.text = now.strftime('%H:%M')
 				else:
 					display.data['idle_clock'].current.text = now.strftime('%H %M')
 				display.content.update()
-			await asyncio.sleep(1)
+			await asyncio_sleep(1)
 
 
 	async def run_gui_screen_hal9k(self, display):
@@ -106,12 +101,12 @@ class HAL9000(Frontend):
 					for nr in range(0,10):
 						display.background_image_src = f'/sequences/{sequence["name"]}/0{nr}.jpg'
 						display.update()
-						await asyncio.sleep(0.2)
+						await asyncio_sleep(0.2)
 				if sequence['name'] == 'sleep':
 					display.background_image_src = '/sequences/init/00.jpg'
 					display.update()
 					self.show_idle(display)
-			await asyncio.sleep(0.1)
+			await asyncio_sleep(0.1)
 
 
 	def show_none(self, display):
@@ -210,11 +205,11 @@ class HAL9000(Frontend):
 		                           ], alignment=flet.MainAxisAlignment.CENTER))
 		page.update()
 		if self.command_listener_task is None:
-			self.command_listener_task = asyncio.create_task(self.run_command_listener())
-		session_queue = asyncio.Queue()
-		page.session.set('session_task', asyncio.create_task(self.run_session_listener(session_queue, display)))
-		page.session.set('gui_idle_task',asyncio.create_task(self.run_gui_screen_idle(display)))
-		page.session.set('gui_hal9k_task', asyncio.create_task(self.run_gui_screen_hal9k(display)))
+			self.command_listener_task = asyncio_create_task(self.run_command_listener())
+		session_queue = asyncio_Queue()
+		page.session.set('session_task', asyncio_create_task(self.run_session_listener(session_queue, display)))
+		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(display)))
+		page.session.set('gui_hal9k_task', asyncio_create_task(self.run_gui_screen_hal9k(display)))
 		self.session_queues[page.session_id] = session_queue
 		self.show_idle(display)
 

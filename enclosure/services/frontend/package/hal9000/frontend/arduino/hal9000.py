@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
-import os
-import time
-import json
-import serial
-import fastapi
-
-import asyncio
+from os.path import exists as os_path_exists
+from time import monotonic as time_monotonic
+from json import loads as json_loads, dumps as json_dumps
+from serial import Serial as serial_Serial, EIGHTBITS as serial_EIGHTBITS, \
+                   PARITY_NONE as serial_PARITY_NONE, STOPBITS_ONE as serial_STOPBITS_ONE
+from fastapi import FastAPI as fastapi_FastAPI
+from asyncio import sleep as asyncio_sleep, create_task as asyncio_create_task
 
 from hal9000.frontend import Frontend
 
 class HAL9000(Frontend):
 
-	def __init__(self, app: fastapi.FastAPI):
+	def __init__(self, app: fastapi_FastAPI):
 		super().__init__()
 		self.serial = None
 
@@ -23,18 +23,18 @@ class HAL9000(Frontend):
 		arduino_device   = self.config.getstring('arduino', 'device',   fallback='/dev/ttyHAL9000')
 		arduino_baudrate = self.config.getint   ('arduino', 'baudrate', fallback=115200)
 		arduino_timeout  = self.config.getfloat ('arduino', 'timeout',  fallback=0.01)
-		if os.path.exists(arduino_device) is False:
+		if os_path_exists(arduino_device) is False:
 			print(f"Arduino: device '{arduino_device}' does not exist", flush=True)
 			return False
 		while self.serial is None:
 			try:
-				self.serial = serial.Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate,
-				                            bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE)
+				self.serial = serial_Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate,
+				                            bytesize=serial_EIGHTBITS, parity=serial_PARITY_NONE, stopbits=serial_STOPBITS_ONE)
 				print(f"Arduino: opened '{arduino_device}'", flush=True)
 				response = ['application/runtime', {'status': 'booting'}]
 				while response[0] != 'application/runtime' or response[1]['status'] == 'booting':
 					await self.serial_writeline('["application/runtime", {"status":"?"}]')
-					response = json.loads(await self.serial_readline(timeout=1))
+					response = json_loads(await self.serial_readline(timeout=1))
 				if response[0] == 'application/runtime' and response[1]['status'] == 'configuring':
 					#TODO i2c_bus  = configuration.getint('mcp23X17', 'i2c-bus', fallback=0)
 					#TODO i2c_addr = configuration.getint('mcp23X17', 'i2c-address', fallback=32)
@@ -42,14 +42,14 @@ class HAL9000(Frontend):
 					#TODO: device config
 					await self.serial_writeline('["device/mcp23X17", {"start":true}]')
 					await self.serial_writeline('["", ""]')
-					await asyncio.sleep(0.1) # give arduino time to process those commands
+					await asyncio_sleep(0.1) # give arduino time to process those commands
 					print(f"Arduino: configured '{arduino_device}'", flush=True)
 				while response[0] != 'application/runtime' or response[1]['status'] != 'running':
 					await self.serial_writeline('["application/runtime", {"status":"?"}]')
-					response = json.loads(await self.serial_readline(timeout=1))
+					response = json_loads(await self.serial_readline(timeout=1))
 				print(f"Arduino: '{arduino_device}' is now up and running, starting command and event listeners", flush=True)
-				self.command_task = asyncio.create_task(self.run_command_listener())
-				self.event_task   = asyncio.create_task(self.run_event_listener())
+				self.command_task = asyncio_create_task(self.run_command_listener())
+				self.event_task   = asyncio_create_task(self.run_event_listener())
 			except Exception as e:
 				print(f"Arduino: {e}", flush=True)
 				self.serial.close()
@@ -59,16 +59,16 @@ class HAL9000(Frontend):
 
 	async def serial_readline(self, timeout):
 		if timeout is not None:
-			timeout += time.monotonic()
+			timeout += time_monotonic()
 		line = None
 		if self.serial is not None:
 			line = ""
 			while len(line) == 0:
 				chunk = self.serial.readline().decode('utf-8')
 				while '\n' not in chunk:
-					if timeout is not None and time.monotonic() > timeout:
+					if timeout is not None and time_monotonic() > timeout:
 						return None
-					await asyncio.sleep(0.001)
+					await asyncio_sleep(0.001)
 					if len(chunk) > 0:
 						line += chunk.strip('\n')
 					chunk = self.serial.readline().decode('utf-8')
@@ -98,19 +98,19 @@ class HAL9000(Frontend):
 				if isinstance(payload, str) is True:
 					await self.serial_writeline(f'["{topic}", "{payload}"]')
 				else:
-					await self.serial_writeline(f'["{topic}", {json.dumps(payload)}]')
+					await self.serial_writeline(f'["{topic}", {json_dumps(payload)}]')
 
 	async def run_event_listener(self):
 		line = await self.serial_readline()
 		while line is not None:
 			try:
-				event = json.loads(line)
+				event = json_loads(line)
 				if isinstance(event, list) and len(event) == 2:
 					self.events.put_nowait({'topic': event[0], 'payload': event[1]})
 				else:
 					print(f"Arduino: unexpected (but valid) JSON structure received: {line}", flush=True)
 			except Exception as e:
 				print(f"Arduino: {e}", flush=True)
-			await asyncio.sleep(0.01)
+			await asyncio_sleep(0.01)
 			line = await self.serial_readline()
 
