@@ -1,3 +1,4 @@
 flet>=0.22.0
 paho-mqtt>=2.0.0
 pyserial
+pyusb
