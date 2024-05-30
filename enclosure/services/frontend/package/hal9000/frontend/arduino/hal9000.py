@@ -45,30 +45,30 @@ class HAL9000(Frontend):
 						for device in devices:
 							if arduino_name is None:
 								arduino_name = self.config.getstring('arduinos', f"{device.idVendor:04x}:{device.idProduct:04x}")
-					i2c_bus = self.config.getint(arduino_name, 'i2c-bus', fallback=0)
-					i2c_addr = self.config.getint(arduino_name, 'i2c-address', fallback=32)
-					await self.serial_writeline('["device/mcp23X17", {"init":{"i2c-bus":%d,"i2c-address":%d}}]' % (i2c_bus, i2c_addr))
-					for key in self.config.options(f'{arduino_name}:mcp23X17'):
-						value = self.config.getstring(f'{arduino_name}:mcp23X17', key)
-						if ':' in key:
-							input_type, input_name = key.split(':', 1)
-							input_list = value.replace(' ', '').split(',')
-							mcp23X17_data = {'config': {'device': {'type': input_type, 'name': input_name, 'inputs': []}}}
-							for input in input_list:
-								label, pin = input.split(':', 1)
-								if input_type == 'button' or input_type == 'switch':
-									mcp23X17_data['config']['device']['inputs'].append({'pin': pin, 'label': label, 'pullup': 'true'})
-									mcp23X17_data['config']['device']['events'] = {'low': 'on', 'high': 'off'}
-								elif input_type == 'rotary':
-									mcp23X17_data['config']['device']['inputs'].append({'pin': pin, 'label': label})
-								else:
-									raise configparser_ParsingError(f"Unknown prefix '{input_type}' in '{arduino_name}:mcp23X17')")
-							await self.serial_writeline('["device/mcp23X17", ' + json_dumps(mcp23X17_data) + ']')
-						else:
-							raise configparser_ParsingError(f"Unsupported item '{key}' in section '{arduino_name}:mcp23X17')")
-					await self.serial_writeline('["device/mcp23X17", {"start":true}]')
+					if arduino_name is not None:
+						i2c_bus = self.config.getint(arduino_name, 'i2c-bus', fallback=0)
+						i2c_addr = self.config.getint(arduino_name, 'i2c-address', fallback=32)
+						await self.serial_writeline('["device/mcp23X17", {"init":{"i2c-bus":%d,"i2c-address":%d}}]' % (i2c_bus, i2c_addr))
+						for key in self.config.options(f'{arduino_name}:mcp23X17'):
+							value = self.config.getstring(f'{arduino_name}:mcp23X17', key)
+							if ':' in key:
+								input_type, input_name = key.split(':', 1)
+								input_list = value.replace(' ', '').split(',')
+								mcp23X17_data = {'config': {'device': {'type': input_type, 'name': input_name, 'inputs': []}}}
+								for input in input_list:
+									label, pin = input.split(':', 1)
+									if input_type == 'button' or input_type == 'switch':
+										mcp23X17_data['config']['device']['inputs'].append({'pin': pin, 'label': label, 'pullup': 'true'})
+										mcp23X17_data['config']['device']['events'] = {'low': 'on', 'high': 'off'}
+									elif input_type == 'rotary':
+										mcp23X17_data['config']['device']['inputs'].append({'pin': pin, 'label': label})
+									else:
+										raise configparser_ParsingError(f"Unknown prefix '{input_type}' in '{arduino_name}:mcp23X17')")
+								await self.serial_writeline('["device/mcp23X17", ' + json_dumps(mcp23X17_data) + ']')
+							else:
+								raise configparser_ParsingError(f"Unsupported item '{key}' in section '{arduino_name}:mcp23X17')")
+						await self.serial_writeline('["device/mcp23X17", {"start":true}]')
 					await self.serial_writeline('["", ""]')
-					await asyncio_sleep(0.1) # give arduino time to process those commands
 					print(f"Arduino: configured '{arduino_device}'", flush=True)
 				while response[0] != 'application/runtime' or response[1]['status'] != 'running':
 					await self.serial_writeline('["application/runtime", {"status":"?"}]')
