@@ -33,15 +33,18 @@ class FrontendManager:
 
 
 	def on_mqtt_message(self, client, userdata, message):
+		topic = message.topic[25:] # remove 'hal9000/command/frontend/' prefix
 		payload = message.payload.decode('utf-8')
-		try:
-			payload = json_loads(payload)
-		except Exception:
-			pass
-		if self.startup is True:
-			self.startup = False
-		for frontend in self.frontends:
-			frontend.commands.put_nowait({"topic": message.topic[25:], "payload": payload})
+		if topic == 'status':
+			if self.startup is False:
+				self.mqtt_client.publish('hal9000/event/frontend/interface/state', 'online')
+		else:
+			try:
+				payload = json_loads(payload)
+			except Exception:
+				pass
+			for frontend in self.frontends:
+				frontend.commands.put_nowait({"topic": topic, "payload": payload})
 
 
 	async def command_listener(self):
@@ -50,7 +53,7 @@ class FrontendManager:
 			if self.startup is True:
 				if (time_monotonic() - startup_last_publish) > 1:
 					startup_last_publish = time_monotonic()
-					self.mqtt_client.publish('hal9000/event/frontend/interface/state', 'online')
+					self.mqtt_client.publish('hal9000/event/frontend/interface/state', 'starting')
 			status = self.mqtt_client.loop(timeout=0.01)
 			await asyncio_sleep(0.01)
 		raise Exception("ERROR: MQTT disconnected from '{os_getenv('MQTT_SERVER', default='127.0.0.1')}' for command_listener")
@@ -69,6 +72,7 @@ class FrontendManager:
 						except:
 							pass
 					self.mqtt_client.publish(f'hal9000/event/frontend/{topic}', payload)
+					self.startup = False
 			await asyncio_sleep(0.01)
 		raise Exception("ERROR: MQTT disconnected from '{os_getenv('MQTT_SERVER', default='127.0.0.1')}' for event_listener")
 
@@ -79,14 +83,14 @@ async def fastapi_lifespan(app: fastapi_FastAPI):
 		configuration = sys_argv[1]
 	print(configuration, flush=True)
 	manager = FrontendManager()
+	asyncio_create_task(manager.command_listener())
+	asyncio_create_task(manager.event_listener())
 	frontend_arduino = hal9000.frontend.arduino.HAL9000(app)
 	if await frontend_arduino.configure(configuration) is True:
 		manager.add_frontend(frontend_arduino)
 	frontend_flet = hal9000.frontend.flet.HAL9000(app)
 	if await frontend_flet.configure(configuration) is True:
 		manager.add_frontend(frontend_flet)
-	asyncio_create_task(manager.command_listener())
-	asyncio_create_task(manager.event_listener())
 	yield
 
 

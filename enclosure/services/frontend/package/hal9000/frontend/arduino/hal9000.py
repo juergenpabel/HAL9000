@@ -76,6 +76,7 @@ class HAL9000(Frontend):
 				print(f"Arduino: '{arduino_device}' is now up and running, starting command and event listeners", flush=True)
 				self.command_task = asyncio_create_task(self.run_command_listener())
 				self.event_task   = asyncio_create_task(self.run_event_listener())
+				self.events.put_nowait({'topic': 'interface/state', 'payload': 'online'})
 			except Exception as e:
 				print(f"Arduino: {e}", flush=True)
 				self.serial.close()
@@ -116,8 +117,6 @@ class HAL9000(Frontend):
 		while True:
 			command = await self.commands.get()
 			print(f"Arduino: COMMAND={command}", flush=True)
-			if command['topic'] == 'status':
-				self.events.put_nowait({'topic': 'interface/state', 'payload': 'online'})
 			if isinstance(command, dict) and 'topic' in command and 'payload' in command:
 				topic = command['topic']
 				payload = command['payload']
@@ -125,6 +124,7 @@ class HAL9000(Frontend):
 					await self.serial_writeline(f'["{topic}", "{payload}"]')
 				else:
 					await self.serial_writeline(f'["{topic}", {json_dumps(payload)}]')
+
 
 	async def run_event_listener(self):
 		line = await self.serial_readline()

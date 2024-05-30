@@ -32,12 +32,8 @@ class HAL9000(Frontend):
 	async def run_command_listener(self):
 		while True:
 			command = await self.commands.get()
-			if len(self.session_queues) == 0:
-				if command['topic'] == 'status':
-					self.events.put_nowait({'topic': 'interface/state', 'payload': 'offline'})
-			else:
-				for session_queue in self.session_queues.values():
-					session_queue.put_nowait(command.copy())
+			for session_queue in self.session_queues.values():
+				session_queue.put_nowait(command.copy())
 
 
 	async def run_session_listener(self, session_queue, display):
@@ -50,8 +46,6 @@ class HAL9000(Frontend):
 						self.show_none(display)
 					if command['payload']['condition'] == "awake":
 						self.show_idle(display)
-			if command['topic'] == 'status':
-				self.events.put_nowait({'topic': 'interface/state', 'payload': 'online'})
 			elif command['topic'] == 'gui/screen':
 				for screen in command['payload'].keys():
 					if screen == 'idle':
@@ -212,4 +206,5 @@ class HAL9000(Frontend):
 		page.session.set('gui_hal9k_task', asyncio_create_task(self.run_gui_screen_hal9k(display)))
 		self.session_queues[page.session_id] = session_queue
 		self.show_idle(display)
+		self.events.put_nowait({'topic': 'interface/state', 'payload': 'online'})
 

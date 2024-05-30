@@ -6,7 +6,7 @@ LABEL com.github.juergenpabel.HAL9000.frontend.config-directory=$FRONTEND_CONFIG
 
 RUN apt update
 RUN apt upgrade -y
-RUN apt install -y $EXTRA_APT_INSTALL_PKGS
+RUN apt install -y libusb-1.0-0 $EXTRA_APT_INSTALL_PKGS
 
 WORKDIR /frontend
 
