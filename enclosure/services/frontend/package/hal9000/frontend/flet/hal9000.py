@@ -4,11 +4,13 @@ from os import getcwd as os_getcwd
 from math import pi as math_pi, sin as math_sin, cos as math_cos
 from json import dumps as json_dumps
 from datetime import datetime as datetime_datetime
+from logging import getLogger as logging_getLogger
 from asyncio import Queue as asyncio_Queue, sleep as asyncio_sleep, create_task as asyncio_create_task
-from fastapi import FastAPI as fastapi_FastAPI
+
 import flet
 import flet.fastapi
 import flet_core.alignment
+from fastapi import FastAPI as fastapi_FastAPI
 
 from hal9000.frontend import Frontend
 
@@ -17,35 +19,36 @@ class HAL9000(Frontend):
 	def __init__(self, app: fastapi_FastAPI):
 		super().__init__()
 		self.flet_app = app
-		self.command_listener_task = None
 		self.session_queues = {}
 
 
-	async def configure(self, filename) -> bool:
-		if await super().configure(filename) is False:
-			print(f"[frontend:flet] parsing '{filename}' failed")
-			return False
+	async def configure(self, configuration) -> bool:
 		self.flet_app.mount('/', flet.fastapi.app(self.flet, route_url_strategy='path', assets_dir=f'{os_getcwd()}/assets'))
+		self.command_listener_task = asyncio_create_task(self.run_command_listener())
 		return True
 
 
 	async def run_command_listener(self):
+		logging_getLogger("uvicorn").debug(f"[frontend:flet] starting command-listener (event-listeners are started per flet-session")
 		while True:
 			command = await self.commands.get()
 			for session_queue in self.session_queues.values():
 				session_queue.put_nowait(command.copy())
 
 
-	async def run_session_listener(self, session_queue, display):
+	async def run_session_listener(self, session_id, session_queue, display):
+		logging_getLogger("uvicorn").debug(f"[frontend:flet] starting event-listener for session '{session_id}'")
 		while True:
 			command = await session_queue.get()
-			print(command)
+			logging_getLogger("uvicorn").debug(f"[frontend:flet] received command in session '{session_id}': command")
 			if command['topic'] == 'application/runtime':
 				if 'condition' in command['payload']:
 					if command['payload']['condition'] == "asleep":
 						self.show_none(display)
-					if command['payload']['condition'] == "awake":
+					elif command['payload']['condition'] == "awake":
 						self.show_idle(display)
+					else:
+						logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported condition '{command['payload']['condition']}' in application/runtime")
 			elif command['topic'] == 'gui/screen':
 				for screen in command['payload'].keys():
 					if screen == 'idle':
@@ -55,7 +58,7 @@ class HAL9000(Frontend):
 					elif screen == 'menu':
 						self.show_menu(display, command['payload']['menu'])
 					else:
-						print(json_dumps(command['payload'])) ##TODO
+						logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported screen '{json_dumps(command['payload'])}' in gui/screen")
 			elif command['topic'] == 'gui/overlay':
 				for overlay in command['payload'].keys():
 					display.content.shapes = list(filter(lambda shape: shape.data!='overlay', display.content.shapes))
@@ -72,6 +75,8 @@ class HAL9000(Frontend):
 						display.content.update()
 					else:
 						self.show_menu(display, json_dumps(command['payload']))
+			else:
+				logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported topic '{command['topic']}' in received command")
 
 
 	async def run_gui_screen_idle(self, display):
@@ -160,6 +165,7 @@ class HAL9000(Frontend):
 
 
 	def flet_on_disconnect(self, event):
+		logging_getLogger("uvicorn").info(f"[frontend:flet] terminating flet session '{page.session_id}'")
 		for task in ['session_task', 'gui_idle_task', 'gui_hal9k_task']:
 			if event.page.session.contains_key(task):
 				event.page.session.get(task).cancel()
@@ -169,6 +175,7 @@ class HAL9000(Frontend):
 		
 
 	async def flet(self, page: flet.Page):
+		logging_getLogger("uvicorn").info(f"[frontend:flet] starting new flet session '{page.session_id}'")
 		page.on_disconnect = self.flet_on_disconnect
 		page.title = "HAL9000"
 		page.theme_mode = flet.ThemeMode.DARK
@@ -198,10 +205,8 @@ class HAL9000(Frontend):
 		                                                 ]),
 		                           ], alignment=flet.MainAxisAlignment.CENTER))
 		page.update()
-		if self.command_listener_task is None:
-			self.command_listener_task = asyncio_create_task(self.run_command_listener())
 		session_queue = asyncio_Queue()
-		page.session.set('session_task', asyncio_create_task(self.run_session_listener(session_queue, display)))
+		page.session.set('session_task', asyncio_create_task(self.run_session_listener(page.session_id, session_queue, display)))
 		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(display)))
 		page.session.set('gui_hal9k_task', asyncio_create_task(self.run_gui_screen_hal9k(display)))
 		self.session_queues[page.session_id] = session_queue

@@ -4,7 +4,8 @@ from os import getenv as os_getenv
 from sys import argv as sys_argv
 from time import monotonic as time_monotonic
 from json import loads as json_loads, dumps as json_dumps
-
+from logging import getLogger as logging_getLogger
+from configparser import ConfigParser as configparser_ConfigParser
 from asyncio import sleep as asyncio_sleep, create_task as asyncio_create_task
 from fastapi import FastAPI as fastapi_FastAPI
 from uvicorn import run as uvicorn_run
@@ -78,23 +79,45 @@ class FrontendManager:
 
 
 async def fastapi_lifespan(app: fastapi_FastAPI):
-	configuration = None
-	if len(sys_argv) > 1:
-		configuration = sys_argv[1]
-	print(configuration, flush=True)
+	if len(sys_argv) != 2:
+		sys.exit(1)
+	logging_getLogger("uvicorn").info(f"[frontend] Using configuration file '{sys_argv[1]}'")
+	configuration = configparser_ConfigParser(delimiters='=', interpolation=None,
+	                                          converters={'list': lambda list: [item.strip().strip('"').strip("'") for item in list.split(',')],
+	                                                      'string': lambda string: string.strip('"').strip("'")})
+	configuration.read(sys_argv[1])
+	logging_getLogger("uvicorn").info(f"[frontend] Switching to configured log-level '{configuration.get('frontend', 'log-level', fallback='INFO')}'...")
+	logging_getLogger('uvicorn').setLevel(configuration.get('frontend', 'log-level', fallback='INFO'))
 	manager = FrontendManager()
 	asyncio_create_task(manager.command_listener())
 	asyncio_create_task(manager.event_listener())
+	logging_getLogger("uvicorn").info(f"[frontend] Starting frontend 'arduino'...")
 	frontend_arduino = hal9000.frontend.arduino.HAL9000(app)
-	if await frontend_arduino.configure(configuration) is True:
-		manager.add_frontend(frontend_arduino)
+	match await frontend_arduino.configure(configuration):
+		case True:
+			manager.add_frontend(frontend_arduino)
+			logging_getLogger("uvicorn").info(f"[frontend] ...frontend 'arduino' started")
+		case False:
+			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'arduino' failed, check the configuration ('{configuration}')' for potential issues")
+		case None:
+			logging_getLogger("uvicorn").info(f"[frontend] ...ignoring frontend 'arduino' (device not present)")
+	logging_getLogger("uvicorn").info(f"[frontend] Starting frontend 'flet'...'")
 	frontend_flet = hal9000.frontend.flet.HAL9000(app)
-	if await frontend_flet.configure(configuration) is True:
-		manager.add_frontend(frontend_flet)
+	match await frontend_flet.configure(configuration):
+		case True:
+			manager.add_frontend(frontend_flet)
+			logging_getLogger("uvicorn").info(f"[frontend] ...frontend 'flet' started")
+		case False:
+			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'flet' failed, check the configuration ('{configuration}')' for potential issues")
+		case None:
+			logging_getLogger("uvicorn").info(f"[frontend] ...ignoring frontend 'flet' (BUG?)")
 	yield
 
 
 app = fastapi_FastAPI(lifespan=fastapi_lifespan)
 if __name__ == '__main__':
-	uvicorn_run('frontend:app', host='0.0.0.0', port=9000, log_level='info')
+	try:
+		uvicorn_run('frontend:app', host='0.0.0.0', port=9000, log_level='info')
+	except KeyboardInterrupt:
+		print("[frontend] exiting due to CTRL-C")
 

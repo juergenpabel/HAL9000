@@ -1,16 +1,20 @@
 #!/usr/bin/env python3
 
-from usb import busses as usb_busses
 from os.path import exists as os_path_exists
 from time import monotonic as time_monotonic
 from json import loads as json_loads, dumps as json_dumps
 from configparser import ParsingError as configparser_ParsingError
+from logging import getLogger as logging_getLogger
 from serial import Serial as serial_Serial, EIGHTBITS as serial_EIGHTBITS, \
-                   PARITY_NONE as serial_PARITY_NONE, STOPBITS_ONE as serial_STOPBITS_ONE
-from fastapi import FastAPI as fastapi_FastAPI
+                   PARITY_NONE as serial_PARITY_NONE, STOPBITS_ONE as serial_STOPBITS_ONE, \
+                   SerialException as serial_SerialException
 from asyncio import sleep as asyncio_sleep, create_task as asyncio_create_task
+from usb import busses as usb_busses
+
+from fastapi import FastAPI as fastapi_FastAPI
 
 from hal9000.frontend import Frontend
+
 
 class HAL9000(Frontend):
 
@@ -18,39 +22,35 @@ class HAL9000(Frontend):
 		super().__init__()
 		self.serial = None
 
-	async def configure(self, filename) -> bool:
-		if await super().configure(filename) is False:
-			print(f"[frontend:arduino] parsing '{filename}' failed")
-			return False
-		arduino_device   = self.config.getstring('arduino', 'device',   fallback='/dev/ttyHAL9000')
-		arduino_baudrate = self.config.getint   ('arduino', 'baudrate', fallback=115200)
-		arduino_timeout  = self.config.getfloat ('arduino', 'timeout',  fallback=0.01)
+	async def configure(self, configuration) -> bool:
+		arduino_device   = configuration.getstring('arduino', 'device',   fallback='/dev/ttyHAL9000')
+		arduino_baudrate = configuration.getint   ('arduino', 'baudrate', fallback=115200)
+		arduino_timeout  = configuration.getfloat ('arduino', 'timeout',  fallback=0.01)
 		if os_path_exists(arduino_device) is False:
-			print(f"Arduino: device '{arduino_device}' does not exist", flush=True)
-			return False
+			logging_getLogger("uvicorn").info(f"[frontend:arduino] configured device '{arduino_device}' does not exist")
+			return None
 		while self.serial is None:
 			try:
 				self.serial = serial_Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate,
 				                            bytesize=serial_EIGHTBITS, parity=serial_PARITY_NONE, stopbits=serial_STOPBITS_ONE)
-				print(f"Arduino: opened '{arduino_device}'", flush=True)
+				logging_getLogger("uvicorn").info(f"[frontend:arduino] opened '{arduino_device}'")
 				response = ['application/runtime', {'status': 'booting'}]
 				while response[0] != 'application/runtime' or response[1]['status'] == 'booting':
 					await self.serial_writeline('["application/runtime", {"status":"?"}]')
-					response = json_loads(await self.serial_readline(timeout=1))
+					line = await self.serial_readline(timeout=1)
+					if line is not None:
+						response = json_loads(line)
 				if response[0] == 'application/runtime' and response[1]['status'] == 'configuring':
 					arduino_name = None
-					busses = usb_busses()
-					for bus in busses:
-						devices = bus.devices
-						for device in devices:
-							if arduino_name is None:
-								arduino_name = self.config.getstring('arduinos', f"{device.idVendor:04x}:{device.idProduct:04x}")
+					for bus in usb_busses():
+						for device in bus.devices:
+							arduino_name = configuration.get('arduinos', f'{device.idVendor:04x}:{device.idProduct:04x}', fallback=arduino_name)
 					if arduino_name is not None:
-						i2c_bus = self.config.getint(arduino_name, 'i2c-bus', fallback=0)
-						i2c_addr = self.config.getint(arduino_name, 'i2c-address', fallback=32)
+						i2c_bus = configuration.getint(arduino_name, 'i2c-bus', fallback=0)
+						i2c_addr = configuration.getint(arduino_name, 'i2c-address', fallback=32)
 						await self.serial_writeline('["device/mcp23X17", {"init":{"i2c-bus":%d,"i2c-address":%d}}]' % (i2c_bus, i2c_addr))
-						for key in self.config.options(f'{arduino_name}:mcp23X17'):
-							value = self.config.getstring(f'{arduino_name}:mcp23X17', key)
+						for key in configuration.options(f'{arduino_name}:mcp23X17'):
+							value = configuration.getstring(f'{arduino_name}:mcp23X17', key) #TODO: getlist()
 							if ':' in key:
 								input_type, input_name = key.split(':', 1)
 								input_list = value.replace(' ', '').split(',')
@@ -69,22 +69,28 @@ class HAL9000(Frontend):
 								raise configparser_ParsingError(f"Unsupported item '{key}' in section '{arduino_name}:mcp23X17')")
 						await self.serial_writeline('["device/mcp23X17", {"start":true}]')
 					await self.serial_writeline('["", ""]')
-					print(f"Arduino: configured '{arduino_device}'", flush=True)
+					logging_getLogger("uvicorn").info(f"[frontend:arduino] configured '{arduino_device}'")
 				while response[0] != 'application/runtime' or response[1]['status'] != 'running':
 					await self.serial_writeline('["application/runtime", {"status":"?"}]')
-					response = json_loads(await self.serial_readline(timeout=1))
-				print(f"Arduino: '{arduino_device}' is now up and running, starting command and event listeners", flush=True)
+					line = None
+					while line is None:
+						line = await self.serial_readline(timeout=1)
+					response = json_loads(line)
+				logging_getLogger("uvicorn").info(f"[frontend:arduino] '{arduino_device}' is now up and running")
 				self.command_task = asyncio_create_task(self.run_command_listener())
 				self.event_task   = asyncio_create_task(self.run_event_listener())
 				self.events.put_nowait({'topic': 'interface/state', 'payload': 'online'})
-			except Exception as e:
-				print(f"Arduino: {e}", flush=True)
-				self.serial.close()
-				self.serial = None
+			except (configparser_ParsingError, serial_SerialException) as e:
+				logging_getLogger("uvicorn").error(f"[frontend:arduino] {e}")
+				if self.serial is not None:
+					self.serial.close()
+					self.serial = None
+				return False
+
 		return True
 
 
-	async def serial_readline(self, timeout):
+	async def serial_readline(self, timeout=None):
 		if timeout is not None:
 			timeout += time_monotonic()
 		line = None
@@ -100,23 +106,24 @@ class HAL9000(Frontend):
 						line += chunk.strip('\n')
 					chunk = self.serial.readline().decode('utf-8')
 				line += chunk.strip('\n')
-				print(f"Arduino: D->H: {line}", flush=True)
+				logging_getLogger("uvicorn").debug(f"[frontend:arduino] D->H: {line}")
 				if len(line) < 8 or line[0] != '[' or line[-1] != ']':
-					print(f"Arduino: Skipping over non-webserial message (probably an arduino error message): {line}", flush=True)
+					logging_getLogger("uvicorn").warning(f"[frontend:arduino] skipping over non-webserial message (probably an arduino error message): {line}")
 					line = ""
 		return line
 
 
 	async def serial_writeline(self, line):
 		if self.serial is not None:
-			print(f"Arduino: H->D: {line}", flush=True)
+			logging_getLogger("uvicorn").debug(f"[frontend:arduino] H->D: {line}")
 			self.serial.write(f'{line}\n'.encode('utf-8'))
 
 
 	async def run_command_listener(self):
+		logging_getLogger("uvicorn").debug(f"[frontend:arduino] starting command-listener")
 		while True:
 			command = await self.commands.get()
-			print(f"Arduino: COMMAND={command}", flush=True)
+			logging_getLogger("uvicorn").debug(f"[frontend:arduino] received command: {command}")
 			if isinstance(command, dict) and 'topic' in command and 'payload' in command:
 				topic = command['topic']
 				payload = command['payload']
@@ -127,6 +134,7 @@ class HAL9000(Frontend):
 
 
 	async def run_event_listener(self):
+		logging_getLogger("uvicorn").debug(f"[frontend:arduino] starting event-listener")
 		line = await self.serial_readline()
 		while line is not None:
 			try:
@@ -134,9 +142,9 @@ class HAL9000(Frontend):
 				if isinstance(event, list) and len(event) == 2:
 					self.events.put_nowait({'topic': event[0], 'payload': event[1]})
 				else:
-					print(f"Arduino: unexpected (but valid) JSON structure received: {line}", flush=True)
+					logging_getLogger("uvicorn").warning(f"[frontend:arduino] unexpected (but valid) JSON structure received: {line}")
 			except Exception as e:
-				print(f"Arduino: {e}", flush=True)
+				logging_getLogger("uvicorn").error(f"[frontend:arduino] {e}")
 			await asyncio_sleep(0.01)
 			line = await self.serial_readline()
 
