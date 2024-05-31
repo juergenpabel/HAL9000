@@ -142,7 +142,7 @@ class Daemon(HAL9000_Daemon):
 		self.set_timeout(1, 'action', ['*', {"brain": {"status": {}}}])
 		self.booting_timeout = time.monotonic() + self.config['boot-timeout']
 		for module in list(self.triggers.values()) + list(self.actions.values()):
-			if module.runlevel(self.cortex) == HAL9000_Module.MODULE_RUNLEVEL_STARTING:
+			if module.runlevel(self.cortex) == HAL9000_Module.MODULE_RUNLEVEL_UNKNOWN:
 				self.booting_modules[str(module)] = module
 		self.set_system_time()
 		HAL9000_Daemon.loop(self)
@@ -151,7 +151,7 @@ class Daemon(HAL9000_Daemon):
 	def do_loop(self) -> bool:
 		if self.booting_timeout is not None:
 			for id in list(self.booting_modules.keys()):
-				if self.booting_modules[id].runlevel(self.cortex) != HAL9000_Module.MODULE_RUNLEVEL_STARTING:
+				if self.booting_modules[id].runlevel(self.cortex) != HAL9000_Module.MODULE_RUNLEVEL_UNKNOWN:
 					del self.booting_modules[id]
 			if time.monotonic() > self.booting_timeout:
 				self.booting_timeout = None

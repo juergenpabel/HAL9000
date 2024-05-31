@@ -5,7 +5,7 @@ import json
 from configparser import ConfigParser
 from paho.mqtt.publish import single as mqtt_publish_message
 
-from hal9000.brain.modules import HAL9000_Action
+from hal9000.brain.modules import HAL9000_Module, HAL9000_Action
 
 
 class Action(HAL9000_Action):
@@ -28,4 +28,7 @@ class Action(HAL9000_Action):
 				if isinstance(mqtt_payload, str) is False:
 					mqtt_payload = json.dumps(mqtt_payload)
 				mqtt_publish_message(mqtt_topic, mqtt_payload, hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
+
+	def runlevel(self, cortex: dict) -> str:
+		return HAL9000_Module.MODULE_RUNLEVEL_RUNNING
 

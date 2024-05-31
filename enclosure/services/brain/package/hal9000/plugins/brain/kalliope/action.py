@@ -18,7 +18,7 @@ class Action(HAL9000_Action):
 	KALLIOPE_STATE_LISTENING = 'listening'
 	KALLIOPE_STATE_THINKING  = 'thinking'
 	KALLIOPE_STATE_SPEAKING  = 'speaking'
-	KALLIOPE_STATES_VALID = [KALLIOPE_STATE_WAITING, KALLIOPE_STATE_LISTENING, KALLIOPE_STATE_THINKING, KALLIOPE_STATE_SPEAKING]
+	KALLIOPE_STATES_RUNNING = [KALLIOPE_STATE_WAITING, KALLIOPE_STATE_LISTENING, KALLIOPE_STATE_THINKING, KALLIOPE_STATE_SPEAKING]
 
 
 	def __init__(self, action_name: str, **kwargs) -> None:
@@ -34,8 +34,8 @@ class Action(HAL9000_Action):
 
 
 	def runlevel(self, cortex: dict) -> str:
-		if cortex['kalliope']['state'] == Action.KALLIOPE_STATE_UNKNOWN:
-			return Action.MODULE_RUNLEVEL_STARTING
+		if cortex['kalliope']['state'] in [Action.KALLIOPE_STATE_UNKNOWN, Action.KALLIOPE_STATE_STARTING]:
+			return cortex['kalliope']['state']
 		return Action.MODULE_RUNLEVEL_RUNNING
 
 
@@ -64,7 +64,7 @@ class Action(HAL9000_Action):
 				if cortex['kalliope']['state'] in [Action.KALLIOPE_STATE_UNKNOWN, Action.KALLIOPE_STATE_STARTING]:
 					if kalliope_state in [Action.KALLIOPE_STATE_STARTING, Action.KALLIOPE_STATE_READY]:
 						cortex['kalliope']['state'] = kalliope_state
-				if kalliope_state in Action.KALLIOPE_STATES_VALID:
+				if kalliope_state in Action.KALLIOPE_STATES_RUNNING:
 					cortex['kalliope']['state'] = kalliope_state
 					if cortex['#consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
 						if kalliope_state == Action.KALLIOPE_STATE_LISTENING:

@@ -12,10 +12,11 @@ from hal9000.brain.daemon import Daemon
 
 class Action(HAL9000_Action):
 
-	FRONTEND_STATE_UNKNOWN = 'unknown'
-	FRONTEND_STATE_OFFLINE = 'offline'
-	FRONTEND_STATE_ONLINE  = 'online'
-	FRONTEND_STATES_VALID = [FRONTEND_STATE_OFFLINE, FRONTEND_STATE_ONLINE]
+	FRONTEND_STATE_UNKNOWN  = 'unknown'
+	FRONTEND_STATE_STARTING = 'starting'
+	FRONTEND_STATE_OFFLINE  = 'offline'
+	FRONTEND_STATE_ONLINE   = 'online'
+	FRONTEND_STATES_VALID = [FRONTEND_STATE_STARTING, FRONTEND_STATE_OFFLINE, FRONTEND_STATE_ONLINE]
 
 
 	def __init__(self, action_name: str, **kwargs) -> None:
@@ -32,9 +33,9 @@ class Action(HAL9000_Action):
 
 
 	def runlevel(self, cortex: dict) -> str:
-		if cortex['frontend']['state'] == Action.FRONTEND_STATE_ONLINE:
-			return Action.MODULE_RUNLEVEL_RUNNING
-		return Action.MODULE_RUNLEVEL_STARTING
+		if cortex['frontend']['state'] in [Action.FRONTEND_STATE_UNKNOWN, Action.FRONTEND_STATE_STARTING]:
+			return cortex['frontend']['state']
+		return Action.MODULE_RUNLEVEL_RUNNING
 
 
 	def runlevel_error(self, cortex: dict) -> dict:

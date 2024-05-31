@@ -47,3 +47,6 @@ class Action(HAL9000_Action):
 			if identifier in self.components:
 				self.components[identifier].process(signal, cortex)
 
+	def runlevel(self, cortex: dict) -> str:
+		return HAL9000_Action.MODULE_RUNLEVEL_RUNNING
+
