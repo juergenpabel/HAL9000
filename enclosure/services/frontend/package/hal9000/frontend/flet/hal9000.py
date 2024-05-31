@@ -40,7 +40,7 @@ class HAL9000(Frontend):
 		logging_getLogger("uvicorn").debug(f"[frontend:flet] starting event-listener for session '{session_id}'")
 		while True:
 			command = await session_queue.get()
-			logging_getLogger("uvicorn").debug(f"[frontend:flet] received command in session '{session_id}': command")
+			logging_getLogger("uvicorn").debug(f"[frontend:flet] received command in session '{session_id}': {command}")
 			if command['topic'] == 'application/runtime':
 				if 'condition' in command['payload']:
 					if command['payload']['condition'] == "asleep":
