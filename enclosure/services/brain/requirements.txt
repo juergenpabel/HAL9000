@@ -1,4 +1,4 @@
-jsonpath-rw
+jsonpath-ng>=1.6.1
 paho-mqtt<2
 requests
 dbus-fast

@@ -155,22 +155,22 @@ class HAL9000(Frontend):
 
 
 	def on_control_up(self, event):
-		self.events.put_nowait({'topic': 'rotary/control', 'payload': 'rotary:control delta=+1'})
+		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "rotary", "name": "control"}, "event": {"delta": "+1"}}'})
 
 	def on_control_down(self, event):
-		self.events.put_nowait({'topic': 'rotary/control', 'payload': 'rotary:control delta=-1'})
+		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "rotary", "name": "control"}, "event": {"delta": "-1"}}'})
 
 	def on_control_select(self, event):
-		self.events.put_nowait({'topic': 'button/control', 'payload': 'button:control status=clicked'})
+		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "button", "name": "control"}, "event": {"status": "clicked"}}'})
 
 	def on_volume_up(self, event):
-		self.events.put_nowait({'topic': 'rotary/volume', 'payload': 'rotary:volume delta=+1'})
+		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "rotary", "name": "volume"}, "event": {"delta": "+1"}}'})
 
 	def on_volume_down(self, event):
-		self.events.put_nowait({'topic': 'rotary/volume', 'payload': 'rotary:volume delta=-1'})
+		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "rotary", "name": "volume"}, "event": {"delta": "-1"}}'})
 
 	def on_volume_mute(self, event):
-		self.events.put_nowait({'topic': 'button/volume', 'payload': 'button:volume status=clicked'})
+		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "button", "name": "volume"}, "event": {"status": "clicked"}}'})
 
 
 	def flet_on_disconnect(self, event):

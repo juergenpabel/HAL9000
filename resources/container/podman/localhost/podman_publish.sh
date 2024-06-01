@@ -29,7 +29,7 @@ echo "Publishing images to '$CONTAINER_REGISTRY/$CONTAINER_REPOSITORY/...' (with
 UPLOAD_FAILED=""
 for CONTAINER_NAME in hal9000-mosquitto hal9000-kalliope hal9000-frontend hal9000-brain hal9000-console ; do
 	echo "Publishing 'localhost/$CONTAINER_NAME:latest' to '$CONTAINER_REGISTRY/$CONTAINER_REPOSITORY/$CONTAINER_NAME:$CONTAINER_TAG'..."
-	podman manifest push -q localhost/$CONTAINER_NAME:latest $CONTAINER_REGISTRY/$CONTAINER_REPOSITORY/$CONTAINER_NAME:$CONTAINER_TAG
+	podman manifest push localhost/$CONTAINER_NAME:latest $CONTAINER_REGISTRY/$CONTAINER_REPOSITORY/$CONTAINER_NAME:$CONTAINER_TAG
 	if [ "x$?" != "x0" ]; then
 		UPLOAD_FAILED="$UPLOAD_FAILED$CONTAINER_NAME "
 		echo "NOTICE: Upload failed for $CONTAINER_NAME"

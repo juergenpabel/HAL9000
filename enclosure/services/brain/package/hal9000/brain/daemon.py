@@ -208,9 +208,10 @@ class Daemon(HAL9000_Daemon):
 						signals[synapse_name] = signal
 				for synapse_name in signals.keys():
 					signal = signals[synapse_name]
-					self.logger.debug("SIGNAL generated from triggers = {}".format(signal))
-					for action_name in self.synapses[synapse_name]:
-						self.actions[action_name].process(signal, self.cortex)
+					if signal is not None and bool(signal) is not False:
+						self.logger.debug("SIGNAL generated from triggers = {}".format(signal))
+						for action_name in self.synapses[synapse_name]:
+							self.actions[action_name].process(signal, self.cortex)
 				self.logger.debug("CORTEX after actions   = {}".format(self.cortex))
 				self.process_queued_signals()
 
