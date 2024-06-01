@@ -29,58 +29,67 @@ class HAL9000(Frontend):
 
 
 	async def run_command_listener(self):
-		logging_getLogger("uvicorn").debug(f"[frontend:flet] starting command-listener (event-listeners are started per flet-session")
-		while True:
-			command = await self.commands.get()
-			for session_queue in self.session_queues.values():
-				session_queue.put_nowait(command.copy())
+		logging_getLogger("uvicorn").debug(f"[frontend:flet] starting command-listener (event-listeners are started per flet-session)")
+		try:
+			while True:
+				command = await self.commands.get()
+				for session_queue in self.session_queues.values():
+					session_queue.put_nowait(command.copy())
+		except:
+			self.command_listener_task = None
+		logging_getLogger("uvicorn").debug(f"[frontend:flet] exiting command-listener ('flet' frontend becomes non-functional)")
 
 
-	async def run_session_listener(self, session_id, session_queue, display):
-		logging_getLogger("uvicorn").debug(f"[frontend:flet] starting event-listener for session '{session_id}'")
-		while True:
-			command = await session_queue.get()
-			logging_getLogger("uvicorn").debug(f"[frontend:flet] received command in session '{session_id}': {command}")
-			if command['topic'] == 'application/runtime':
-				if 'condition' in command['payload']:
-					if command['payload']['condition'] == "asleep":
-						self.show_none(display)
-					elif command['payload']['condition'] == "awake":
-						self.show_idle(display)
-					else:
-						logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported condition '{command['payload']['condition']}' in application/runtime")
-			elif command['topic'] == 'gui/screen':
-				for screen in command['payload'].keys():
-					if screen == 'idle':
-						self.show_idle(display)
-					elif screen == 'hal9000':
-						self.show_hal9k(display, command['payload']['hal9000'])
-					elif screen == 'menu':
-						self.show_menu(display, command['payload']['menu'])
-					else:
-						logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported screen '{json_dumps(command['payload'])}' in gui/screen")
-			elif command['topic'] == 'gui/overlay':
-				for overlay in command['payload'].keys():
-					display.content.shapes = list(filter(lambda shape: shape.data!='overlay', display.content.shapes))
-					if overlay == 'volume':
-						radius = display.radius
-						for level in range(0, int(command['payload']['volume']['level'])):
-							dx = math_cos(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
-							dy = math_sin(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
-							display.content.shapes.append(flet.canvas.Line(radius/2+(dx*radius*0.9), radius/2+(dy*radius*0.9),
-							                                               radius/2+(dx*radius*0.99), radius/2+(dy*radius*0.99),
-							                                               paint=flet.Paint(color='white'), data='overlay'))
-						display.content.update()
-					elif overlay == 'none':
-						display.content.update()
-					else:
-						self.show_menu(display, json_dumps(command['payload']))
-			else:
-				logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported topic '{command['topic']}' in received command")
+	async def run_session_listener(self, page, display):
+		logging_getLogger("uvicorn").debug(f"[frontend:flet] starting event-listener for session '{page.session_id}'")
+		try:
+			command = await self.session_queues[page.session_id].get()
+			while page.session_id in self.session_queues:
+				logging_getLogger("uvicorn").debug(f"[frontend:flet] received command in session '{page.session_id}': {command}")
+				if command['topic'] == 'application/runtime':
+					if 'condition' in command['payload']:
+						if command['payload']['condition'] == "asleep":
+							self.show_none(display)
+						elif command['payload']['condition'] == "awake":
+							self.show_idle(display)
+						else:
+							logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported condition '{command['payload']['condition']}' in application/runtime")
+				elif command['topic'] == 'gui/screen':
+					for screen in command['payload'].keys():
+						if screen == 'idle':
+							self.show_idle(display)
+						elif screen == 'hal9000':
+							self.show_hal9k(display, command['payload']['hal9000'])
+						elif screen == 'menu':
+							self.show_menu(display, command['payload']['menu'])
+						else:
+							logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported screen '{json_dumps(command['payload'])}' in gui/screen")
+				elif command['topic'] == 'gui/overlay':
+					for overlay in command['payload'].keys():
+						display.content.shapes = list(filter(lambda shape: shape.data!='overlay', display.content.shapes))
+						if overlay == 'volume':
+							radius = display.radius
+							for level in range(0, int(command['payload']['volume']['level'])):
+								dx = math_cos(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
+								dy = math_sin(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
+								display.content.shapes.append(flet.canvas.Line(radius/2+(dx*radius*0.9), radius/2+(dy*radius*0.9),
+								                                               radius/2+(dx*radius*0.99), radius/2+(dy*radius*0.99),
+								                                               paint=flet.Paint(color='white'), data='overlay'))
+							display.content.update()
+						elif overlay == 'none':
+							display.content.update()
+						else:
+							self.show_menu(display, json_dumps(command['payload']))
+				else:
+					logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported topic '{command['topic']}' in received command")
+				command = await self.session_queues[page.session_id].get()
+		except Exception as e:
+			logging_getLogger("uvicorn").error(f"[frontend:flet] exception in run_session_listener(): {e}")
+		logging_getLogger("uvicorn").debug(f"[frontend:flet] exiting event-listener for session '{page.session_id}' (command-listener is not session-bound)")
 
 
-	async def run_gui_screen_idle(self, display):
-		while True:
+	async def run_gui_screen_idle(self, page, display):
+		while page.session_id in self.session_queues:
 			if display.data['idle_clock'].current is not None:
 				now = datetime_datetime.now()
 				if now.second % 2 == 0:
@@ -91,8 +100,8 @@ class HAL9000(Frontend):
 			await asyncio_sleep(1)
 
 
-	async def run_gui_screen_hal9k(self, display):
-		while True:
+	async def run_gui_screen_hal9k(self, page, display):
+		while page.session_id in self.session_queues:
 			if len(display.data['hal9k_queue']) > 0:
 				sequence = display.data['hal9k_queue'].pop(0)
 				if sequence['name'] in ['wakeup', 'active', 'sleep']:
@@ -165,13 +174,11 @@ class HAL9000(Frontend):
 
 
 	def flet_on_disconnect(self, event):
-		logging_getLogger("uvicorn").info(f"[frontend:flet] terminating flet session '{page.session_id}'")
-		for task in ['session_task', 'gui_idle_task', 'gui_hal9k_task']:
-			if event.page.session.contains_key(task):
-				event.page.session.get(task).cancel()
-				event.page.session.remove(task)
+		logging_getLogger("uvicorn").info(f"[frontend:flet] terminating flet session '{event.page.session_id}'")
 		if event.page.session_id in self.session_queues:
+			session_queue = self.session_queues[event.page.session_id]
 			del self.session_queues[event.page.session_id]
+			session_queue.put_nowait(None)
 		
 
 	async def flet(self, page: flet.Page):
@@ -205,11 +212,10 @@ class HAL9000(Frontend):
 		                                                 ]),
 		                           ], alignment=flet.MainAxisAlignment.CENTER))
 		page.update()
-		session_queue = asyncio_Queue()
-		page.session.set('session_task', asyncio_create_task(self.run_session_listener(page.session_id, session_queue, display)))
-		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(display)))
-		page.session.set('gui_hal9k_task', asyncio_create_task(self.run_gui_screen_hal9k(display)))
-		self.session_queues[page.session_id] = session_queue
+		self.session_queues[page.session_id] = asyncio_Queue()
+		page.session.set('session_task', asyncio_create_task(self.run_session_listener(page, display)))
+		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(page, display)))
+		page.session.set('gui_hal9k_task', asyncio_create_task(self.run_gui_screen_hal9k(page, display)))
 		self.show_idle(display)
 		self.events.put_nowait({'topic': 'interface/state', 'payload': 'online'})
 

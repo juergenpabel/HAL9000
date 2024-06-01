@@ -22,6 +22,7 @@ class HAL9000(Frontend):
 		super().__init__()
 		self.serial = None
 
+
 	async def configure(self, configuration) -> bool:
 		arduino_device   = configuration.getstring('arduino', 'device',   fallback='/dev/ttyHAL9000')
 		arduino_baudrate = configuration.getint   ('arduino', 'baudrate', fallback=115200)
@@ -50,10 +51,9 @@ class HAL9000(Frontend):
 						i2c_addr = configuration.getint(arduino_name, 'i2c-address', fallback=32)
 						await self.serial_writeline('["device/mcp23X17", {"init":{"i2c-bus":%d,"i2c-address":%d}}]' % (i2c_bus, i2c_addr))
 						for key in configuration.options(f'{arduino_name}:mcp23X17'):
-							value = configuration.getstring(f'{arduino_name}:mcp23X17', key) #TODO: getlist()
 							if ':' in key:
 								input_type, input_name = key.split(':', 1)
-								input_list = value.replace(' ', '').split(',')
+								input_list = configuration.getlist(f'{arduino_name}:mcp23X17', key)
 								mcp23X17_data = {'config': {'device': {'type': input_type, 'name': input_name, 'inputs': []}}}
 								for input in input_list:
 									label, pin = input.split(':', 1)
@@ -120,31 +120,39 @@ class HAL9000(Frontend):
 
 
 	async def run_command_listener(self):
-		logging_getLogger("uvicorn").debug(f"[frontend:arduino] starting command-listener")
-		while True:
-			command = await self.commands.get()
-			logging_getLogger("uvicorn").debug(f"[frontend:arduino] received command: {command}")
-			if isinstance(command, dict) and 'topic' in command and 'payload' in command:
-				topic = command['topic']
-				payload = command['payload']
-				if isinstance(payload, str) is True:
-					await self.serial_writeline(f'["{topic}", "{payload}"]')
-				else:
-					await self.serial_writeline(f'["{topic}", {json_dumps(payload)}]')
+		logging_getLogger("uvicorn").info(f"[frontend:arduino] starting command-listener")
+		try:
+			while self.serial.is_open is True and os_path_exists(self.serial.port):
+				command = await self.commands.get()
+				logging_getLogger("uvicorn").debug(f"[frontend:arduino] received command: {command}")
+				if isinstance(command, dict) and 'topic' in command and 'payload' in command:
+					topic = command['topic']
+					payload = command['payload']
+					if isinstance(payload, str) is True:
+						await self.serial_writeline(f'["{topic}", "{payload}"]')
+					else:
+						await self.serial_writeline(f'["{topic}", {json_dumps(payload)}]')
+		except Exception as e:
+			logging_getLogger("uvicorn").error(f"[frontend:arduino] exception in run_command_listener(): {e}")
+		logging_getLogger("uvicorn").error(f"[frontend:arduino] exiting command-listener ('arduino' frontend becomes non-functional)")
 
 
 	async def run_event_listener(self):
-		logging_getLogger("uvicorn").debug(f"[frontend:arduino] starting event-listener")
-		line = await self.serial_readline()
-		while line is not None:
-			try:
-				event = json_loads(line)
-				if isinstance(event, list) and len(event) == 2:
-					self.events.put_nowait({'topic': event[0], 'payload': event[1]})
-				else:
-					logging_getLogger("uvicorn").warning(f"[frontend:arduino] unexpected (but valid) JSON structure received: {line}")
-			except Exception as e:
-				logging_getLogger("uvicorn").error(f"[frontend:arduino] {e}")
-			await asyncio_sleep(0.01)
-			line = await self.serial_readline()
+		logging_getLogger("uvicorn").info(f"[frontend:arduino] starting event-listener")
+		try:
+			while self.serial.is_open is True:
+				line = await self.serial_readline()
+				try:
+					event = json_loads(line)
+					if isinstance(event, list) and len(event) == 2:
+						self.events.put_nowait({'topic': event[0], 'payload': event[1]})
+					else:
+						logging_getLogger("uvicorn").warning(f"[frontend:arduino] unexpected (but valid) JSON structure received: {line}")
+				except Exception as e:
+					logging_getLogger("uvicorn").error(f"[frontend:arduino] {e}")
+				await asyncio_sleep(0.01)
+		except Exception as e:
+			logging_getLogger("uvicorn").error(f"[frontend:arduino] exception in run_event_listener(): {e}")
+		logging_getLogger("uvicorn").error(f"[frontend:arduino] exiting event-listener ('arduino' frontend becomes non-functional)")
+		self.commands.put_nowait(None) # to wake up run_command_listener()
 
