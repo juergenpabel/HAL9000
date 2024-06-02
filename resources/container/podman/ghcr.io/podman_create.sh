@@ -88,6 +88,7 @@ podman create --pod=hal9000 --name=hal9000-brain \
               --requires hal9000-kalliope,hal9000-frontend \
               --group-add=keep-groups \
               --tz=local \
+              -v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:rw \
               $SYSTEMD_TIMESYNC_ARGS \
               --pull=never \
               ghcr.io/juergenpabel/hal9000-brain:$TARGET_TAG
