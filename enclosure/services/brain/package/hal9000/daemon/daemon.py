@@ -110,7 +110,7 @@ class HAL9000_Daemon(HAL9000_Abstract):
 				self.uwsgi.accepting()
 			if mqtt_thread is True:
 				self.mqtt.loop_start()
-				self.mqtt._thread.name = 'uWSGIWorker1Mqtt0'
+				self.mqtt._thread.name = 'MqttThread'
 			try:
 				while self.do_loop() is True and self.loop_exit is False:
 					if mqtt_thread is False:
