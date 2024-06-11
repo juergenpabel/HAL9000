@@ -15,11 +15,15 @@ class Volume(EnclosureComponent):
 
 	def configure(self, configuration: configparser.ConfigParser, section_name: str, cortex: dict) -> None:
 		EnclosureComponent.configure(self, configuration, section_name, cortex)
-		if 'volume' not in cortex['enclosure']:
-			cortex['enclosure']['volume'] = dict()
 		self.config['volume-step']    = configuration.getint('enclosure:volume', 'volume-step',    fallback=5)
 		self.config['initial-mute']   = configuration.getboolean('enclosure:volume', 'initial-mute', fallback=False)
 		self.config['initial-volume'] = configuration.getint(    'enclosure:volume', 'initial-volume', fallback=50)
+		if 'volume' not in cortex['enclosure']:
+			cortex['enclosure']['volume'] = dict()
+		if 'level' not in cortex['enclosure']['volume']:
+			cortex['enclosure']['volume']['level'] = self.config['initial-volume']
+		if 'mute' not in cortex['enclosure']['volume']:
+			cortex['enclosure']['volume']['mute'] = self.config['initial-mute']
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
