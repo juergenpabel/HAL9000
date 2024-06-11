@@ -177,6 +177,7 @@ class Daemon(HAL9000_Daemon):
 				self.booting_timeout = None
 				if 'action' in self.timeouts:
 					del self.timeouts['action']
+				self.queue_signal("*", {"brain": {"ready": True}})
 				if self.cortex['#consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
 					action_name = self.config['boot-finished-action-name']
 					if action_name in self.actions:

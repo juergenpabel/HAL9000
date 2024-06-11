@@ -50,6 +50,8 @@ class Control(EnclosureComponent):
 
 	def process(self, signal: dict, cortex: dict) -> None:
 		EnclosureComponent.process(self, signal, cortex)
+		if 'brain' in signal:
+			return
 		if 'cancel' in signal['control']:
 			self.daemon.video_gui_screen_show('idle', {})
 			return

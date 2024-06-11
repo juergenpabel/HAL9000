@@ -43,9 +43,13 @@ class Action(HAL9000_Action):
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
-		for identifier in signal.keys():
-			if identifier in self.components:
+		if 'brain' in signal:
+			for identifier in self.components.keys():
 				self.components[identifier].process(signal, cortex)
+		else:
+			for identifier in signal.keys():
+				if identifier in self.components:
+					self.components[identifier].process(signal, cortex)
 
 	def runlevel(self, cortex: dict) -> str:
 		return HAL9000_Action.MODULE_RUNLEVEL_RUNNING
