@@ -26,7 +26,7 @@ class FrontendManager:
 		self.mqtt_client.on_message = self.on_mqtt_message
 		self.mqtt_client.loop(timeout=1)
 		if self.mqtt_client.is_connected() is False:
-			raise Exception("no mqtt")
+			raise Exception(f"ERROR: MQTT unavailable at '{os_getenv('MQTT_SERVER', default='127.0.0.1')}' for FrontendManager")
 
 
 	def add_frontend(self, frontend):
@@ -57,7 +57,7 @@ class FrontendManager:
 					self.mqtt_client.publish('hal9000/event/frontend/interface/state', 'starting')
 			status = self.mqtt_client.loop(timeout=0.01)
 			await asyncio_sleep(0.01)
-		raise Exception("ERROR: MQTT disconnected from '{os_getenv('MQTT_SERVER', default='127.0.0.1')}' for command_listener")
+		raise Exception(f"ERROR: MQTT disconnected from '{os_getenv('MQTT_SERVER', default='127.0.0.1')}' for command_listener")
 
 
 	async def event_listener(self):
@@ -75,7 +75,7 @@ class FrontendManager:
 					self.mqtt_client.publish(f'hal9000/event/frontend/{topic}', payload)
 					self.startup = False
 			await asyncio_sleep(0.01)
-		raise Exception("ERROR: MQTT disconnected from '{os_getenv('MQTT_SERVER', default='127.0.0.1')}' for event_listener")
+		raise Exception(f"ERROR: MQTT disconnected from '{os_getenv('MQTT_SERVER', default='127.0.0.1')}' for event_listener")
 
 
 async def fastapi_lifespan(app: fastapi_FastAPI):

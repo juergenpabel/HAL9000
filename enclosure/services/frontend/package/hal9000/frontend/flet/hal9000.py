@@ -29,7 +29,7 @@ class HAL9000(Frontend):
 
 
 	async def run_command_listener(self):
-		logging_getLogger("uvicorn").debug(f"[frontend:flet] starting command-listener (event-listeners are started per flet-session)")
+		logging_getLogger('uvicorn').debug(f"[frontend:flet] starting command-listener (event-listeners are started per flet-session)")
 		try:
 			while True:
 				command = await self.commands.get()
@@ -37,15 +37,15 @@ class HAL9000(Frontend):
 					session_queue.put_nowait(command.copy())
 		except:
 			self.command_listener_task = None
-		logging_getLogger("uvicorn").debug(f"[frontend:flet] exiting command-listener ('flet' frontend becomes non-functional)")
+		logging_getLogger('uvicorn').debug(f"[frontend:flet] exiting command-listener ('flet' frontend becomes non-functional)")
 
 
 	async def run_session_listener(self, page, display):
-		logging_getLogger("uvicorn").debug(f"[frontend:flet] starting event-listener for session '{page.session_id}'")
+		logging_getLogger('uvicorn').debug(f"[frontend:flet] starting event-listener for session '{page.session_id}'")
 		try:
 			command = await self.session_queues[page.session_id].get()
 			while page.session_id in self.session_queues:
-				logging_getLogger("uvicorn").debug(f"[frontend:flet] received command in session '{page.session_id}': {command}")
+				logging_getLogger('uvicorn').debug(f"[frontend:flet] received command in session '{page.session_id}': {command}")
 				if command['topic'] == 'application/runtime':
 					if 'condition' in command['payload']:
 						if command['payload']['condition'] == "asleep":
@@ -53,7 +53,7 @@ class HAL9000(Frontend):
 						elif command['payload']['condition'] == "awake":
 							self.show_idle(display)
 						else:
-							logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported condition '{command['payload']['condition']}' in application/runtime")
+							logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported condition '{command['payload']['condition']}' in application/runtime")
 				elif command['topic'] == 'gui/screen':
 					for screen in command['payload'].keys():
 						if screen == 'idle':
@@ -63,7 +63,7 @@ class HAL9000(Frontend):
 						elif screen == 'menu':
 							self.show_menu(display, command['payload']['menu'])
 						else:
-							logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported screen '{json_dumps(command['payload'])}' in gui/screen")
+							logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported screen '{json_dumps(command['payload'])}' in gui/screen")
 				elif command['topic'] == 'gui/overlay':
 					for overlay in command['payload'].keys():
 						display.content.shapes = list(filter(lambda shape: shape.data!='overlay', display.content.shapes))
@@ -81,11 +81,11 @@ class HAL9000(Frontend):
 						else:
 							self.show_menu(display, json_dumps(command['payload']))
 				else:
-					logging_getLogger("uvicorn").warning(f"[frontend:flet] BUG: unsupported topic '{command['topic']}' in received command")
+					logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported topic '{command['topic']}' in received command")
 				command = await self.session_queues[page.session_id].get()
 		except Exception as e:
-			logging_getLogger("uvicorn").error(f"[frontend:flet] exception in run_session_listener(): {e}")
-		logging_getLogger("uvicorn").debug(f"[frontend:flet] exiting event-listener for session '{page.session_id}' (command-listener is not session-bound)")
+			logging_getLogger('uvicorn').error(f"[frontend:flet] exception in run_session_listener(): {e}")
+		logging_getLogger('uvicorn').debug(f"[frontend:flet] exiting event-listener for session '{page.session_id}' (command-listener is not session-bound)")
 
 
 	async def run_gui_screen_idle(self, page, display):
@@ -174,7 +174,7 @@ class HAL9000(Frontend):
 
 
 	def flet_on_disconnect(self, event):
-		logging_getLogger("uvicorn").info(f"[frontend:flet] terminating flet session '{event.page.session_id}'")
+		logging_getLogger('uvicorn').info(f"[frontend:flet] terminating flet session '{event.page.session_id}'")
 		if event.page.session_id in self.session_queues:
 			session_queue = self.session_queues[event.page.session_id]
 			del self.session_queues[event.page.session_id]
@@ -182,7 +182,7 @@ class HAL9000(Frontend):
 		
 
 	async def flet(self, page: flet.Page):
-		logging_getLogger("uvicorn").info(f"[frontend:flet] starting new flet session '{page.session_id}'")
+		logging_getLogger('uvicorn').info(f"[frontend:flet] starting new flet session '{page.session_id}'")
 		page.on_disconnect = self.flet_on_disconnect
 		page.title = "HAL9000"
 		page.theme_mode = flet.ThemeMode.DARK
