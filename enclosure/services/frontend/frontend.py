@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-from os import getenv as os_getenv
-from sys import argv as sys_argv
+from sys import argv as sys_argv, exit as sys_exit
 from time import monotonic as time_monotonic
 from json import loads as json_loads, dumps as json_dumps
 from logging import getLogger as logging_getLogger
@@ -20,13 +19,35 @@ class FrontendManager:
 	def __init__(self):
 		self.startup = True
 		self.frontends = []
+
+
+	async def configure(self, filename):
+		logging_getLogger("uvicorn").info(f"[frontend] Using configuration file '{filename}'")
+		self.configuration = configparser_ConfigParser(delimiters='=', interpolation=None,
+		                                          converters={'list': lambda list: [item.strip().strip('"').strip("'") for item in list.split(',')],
+		                                                      'string': lambda string: string.strip('"').strip("'")})
+		self.configuration.read(filename)
+		logging_getLogger("uvicorn").info(f"[frontend] Switching to configured log-level '{self.configuration.get('frontend', 'log-level', fallback='INFO')}'...")
+		logging_getLogger('uvicorn').setLevel(self.configuration.get('frontend', 'log-level', fallback='INFO'))
+		logging_getLogger("uvicorn").info(f"[frontend] connecting to MQTT broker...")
 		self.mqtt_client = mqtt_Client(mqtt_CallbackAPIVersion.VERSION2, client_id='frontend')
-		self.mqtt_client.connect(os_getenv('MQTT_SERVER', default='127.0.0.1'), int(os_getenv('MQTT_PORT', default='1883')))
-		self.mqtt_client.subscribe('hal9000/command/frontend/#')
-		self.mqtt_client.on_message = self.on_mqtt_message
-		self.mqtt_client.loop(timeout=1)
+		for counter in range(self.configuration.get('frontend', 'mqtt-connection-attempts', fallback=10)):
+			if self.mqtt_client.is_connected() is False:
+				logging_getLogger("uvicorn").debug(f"[frontend] - MQTT connection attempt #{counter+1}")
+				try:
+					self.mqtt_client.connect(self.configuration.getstring('frontend', 'broker-ip', fallback='127.0.0.1'),
+					                         self.configuration.getstring('frontend', 'broker-port', fallback=1883))
+					self.mqtt_client.subscribe('hal9000/command/frontend/#')
+					self.mqtt_client.on_message = self.on_mqtt_message
+					self.mqtt_client.loop(timeout=1)
+				except ConnectionRefusedError:
+					await asyncio_sleep(1)
+					self.mqtt_client = mqtt_Client(mqtt_CallbackAPIVersion.VERSION2, client_id='frontend')
 		if self.mqtt_client.is_connected() is False:
-			raise Exception(f"ERROR: MQTT unavailable at '{os_getenv('MQTT_SERVER', default='127.0.0.1')}' for FrontendManager")
+			logging_getLogger("uvicorn").error(f"[frontend] ERROR: MQTT broker unavailable at '{self.configuration.getstring('frontend', 'broker-ip', fallback='127.0.0.1')}'")
+			return False
+		logging_getLogger("uvicorn").info(f"[frontend] ...connected to '{self.configuration.getstring('frontend', 'broker-ip', fallback='127.0.0.1')}'")
+		return True
 
 
 	def add_frontend(self, frontend):
@@ -57,7 +78,7 @@ class FrontendManager:
 					self.mqtt_client.publish('hal9000/event/frontend/interface/state', 'starting')
 			status = self.mqtt_client.loop(timeout=0.01)
 			await asyncio_sleep(0.01)
-		raise Exception(f"ERROR: MQTT disconnected from '{os_getenv('MQTT_SERVER', default='127.0.0.1')}' for command_listener")
+		raise Exception(f"ERROR: MQTT disconnected from '{self.configuration.getstring('frontend', 'broker-ip', fallback='127.0.0.1')}' for command_listener")
 
 
 	async def event_listener(self):
@@ -75,40 +96,36 @@ class FrontendManager:
 					self.mqtt_client.publish(f'hal9000/event/frontend/{topic}', payload)
 					self.startup = False
 			await asyncio_sleep(0.01)
-		raise Exception(f"ERROR: MQTT disconnected from '{os_getenv('MQTT_SERVER', default='127.0.0.1')}' for event_listener")
+		raise Exception(f"ERROR: MQTT disconnected from '{self.configuration.getstring('frontend', 'broker-ip', fallback='127.0.0.1')}' for event_listener")
 
 
 async def fastapi_lifespan(app: fastapi_FastAPI):
 	if len(sys_argv) != 2:
-		sys.exit(1)
-	logging_getLogger("uvicorn").info(f"[frontend] Using configuration file '{sys_argv[1]}'")
-	configuration = configparser_ConfigParser(delimiters='=', interpolation=None,
-	                                          converters={'list': lambda list: [item.strip().strip('"').strip("'") for item in list.split(',')],
-	                                                      'string': lambda string: string.strip('"').strip("'")})
-	configuration.read(sys_argv[1])
-	logging_getLogger("uvicorn").info(f"[frontend] Switching to configured log-level '{configuration.get('frontend', 'log-level', fallback='INFO')}'...")
-	logging_getLogger('uvicorn').setLevel(configuration.get('frontend', 'log-level', fallback='INFO'))
+		sys_exit(1)
 	manager = FrontendManager()
+	if await manager.configure(sys_argv[1]) is False:
+		logging_getLogger("uvicorn").critical(f"[frontend] configuration failed, exiting...")
+		sys_exit(1)
 	asyncio_create_task(manager.command_listener())
 	asyncio_create_task(manager.event_listener())
 	logging_getLogger("uvicorn").info(f"[frontend] Starting frontend 'arduino'...")
 	frontend_arduino = hal9000.frontend.arduino.HAL9000(app)
-	match await frontend_arduino.configure(configuration):
+	match await frontend_arduino.configure(manager.configuration):
 		case True:
 			manager.add_frontend(frontend_arduino)
 			logging_getLogger("uvicorn").info(f"[frontend] ...frontend 'arduino' started")
 		case False:
-			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'arduino' failed, check the configuration ('{configuration}')' for potential issues")
+			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'arduino' failed, check the configuration ('{manager.configuration}')' for potential issues")
 		case None:
 			logging_getLogger("uvicorn").info(f"[frontend] ...ignoring frontend 'arduino' (device not present)")
 	logging_getLogger("uvicorn").info(f"[frontend] Starting frontend 'flet'...'")
 	frontend_flet = hal9000.frontend.flet.HAL9000(app)
-	match await frontend_flet.configure(configuration):
+	match await frontend_flet.configure(manager.configuration):
 		case True:
 			manager.add_frontend(frontend_flet)
 			logging_getLogger("uvicorn").info(f"[frontend] ...frontend 'flet' started")
 		case False:
-			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'flet' failed, check the configuration ('{configuration}')' for potential issues")
+			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'flet' failed, check the configuration ('{manager.configuration}')' for potential issues")
 		case None:
 			logging_getLogger("uvicorn").info(f"[frontend] ...ignoring frontend 'flet' (BUG?)")
 	yield
