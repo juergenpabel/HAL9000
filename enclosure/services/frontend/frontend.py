@@ -71,32 +71,47 @@ class FrontendManager:
 
 	async def command_listener(self):
 		startup_last_publish = time_monotonic()
-		while self.mqtt_client.is_connected() is True:
-			if self.startup is True:
-				if (time_monotonic() - startup_last_publish) > 1:
-					startup_last_publish = time_monotonic()
-					self.mqtt_client.publish('hal9000/event/frontend/interface/state', 'starting')
-			status = self.mqtt_client.loop(timeout=0.01)
-			await asyncio_sleep(0.01)
-		raise Exception(f"ERROR: MQTT disconnected from '{self.configuration.getstring('frontend', 'broker-ip', fallback='127.0.0.1')}' for command_listener")
+		while True:
+			match self.mqtt_client.is_connected():
+				case True:
+					if self.startup is True:
+						if (time_monotonic() - startup_last_publish) > 1:
+							startup_last_publish = time_monotonic()
+							self.mqtt_client.publish('hal9000/event/frontend/interface/state', 'starting')
+					status = self.mqtt_client.loop(timeout=0.01)
+					await asyncio_sleep(0.01)
+				case False:
+					logging_getLogger("uvicorn").warning(f"[frontend] MQTT is disconnected, reconnecting...")
+					try:
+						self.mqtt_client = mqtt_Client(mqtt_CallbackAPIVersion.VERSION2, client_id='frontend')
+						self.mqtt_client.connect(self.configuration.getstring('frontend', 'broker-ip', fallback='127.0.0.1'),
+						                         self.configuration.getstring('frontend', 'broker-port', fallback=1883))
+						self.mqtt_client.subscribe('hal9000/command/frontend/#')
+						self.mqtt_client.on_message = self.on_mqtt_message
+						self.mqtt_client.loop(timeout=1)
+					except ConnectionRefusedError:
+						await asyncio_sleep(1)
 
 
 	async def event_listener(self):
-		while self.mqtt_client.is_connected() is True:
-			for frontend in self.frontends:
-				if frontend.events.empty() is False:
-					event = await frontend.events.get()
-					topic = event['topic']
-					payload = event['payload']
-					if isinstance(payload, str) is False:
-						try:
-							payload = json_dumps(payload)
-						except:
-							pass
-					self.mqtt_client.publish(f'hal9000/event/frontend/{topic}', payload)
-					self.startup = False
-			await asyncio_sleep(0.01)
-		raise Exception(f"ERROR: MQTT disconnected from '{self.configuration.getstring('frontend', 'broker-ip', fallback='127.0.0.1')}' for event_listener")
+		while True:
+			match self.mqtt_client.is_connected():
+				case True:
+					for frontend in self.frontends:
+						if frontend.events.empty() is False:
+							event = await frontend.events.get()
+							topic = event['topic']
+							payload = event['payload']
+							if isinstance(payload, str) is False:
+								try:
+									payload = json_dumps(payload)
+								except:
+									pass
+							self.mqtt_client.publish(f'hal9000/event/frontend/{topic}', payload)
+							self.startup = False
+					await asyncio_sleep(0.01)
+				case False:
+					await asyncio_sleep(1)
 
 
 async def fastapi_lifespan(app: fastapi_FastAPI):
@@ -137,4 +152,6 @@ if __name__ == '__main__':
 		uvicorn_run('frontend:app', host='0.0.0.0', port=9000, log_level='info')
 	except KeyboardInterrupt:
 		print("[frontend] exiting due to CTRL-C")
+	finally:
+		print("[frontend] terminating")
 
