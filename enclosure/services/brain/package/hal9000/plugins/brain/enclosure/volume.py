@@ -41,7 +41,7 @@ class Volume(EnclosureComponent):
 			if overlay != 'volume':
 				self.daemon.video_gui_overlay_hide(overlay)
 				del self.daemon.timeouts['gui/overlay']
-		if cortex['#activity']['audio'].module == "none":
+		if cortex['#activity']['audio'].module == 'none':
 			if 'delta' in signal['volume']:
 				if cortex['enclosure']['volume']['mute'] is False:
 					delta = int(signal['volume']['delta']) * self.config['volume-step']
@@ -49,11 +49,11 @@ class Volume(EnclosureComponent):
 					volume = min(volume, 100)
 					volume = max(volume, 0)
 					self.set_volume(cortex, volume)
-					self.daemon.video_gui_overlay_show('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": "false"}), 3)
+					self.daemon.video_gui_overlay_show('volume', ({'level': str(cortex['enclosure']['volume']['level']), 'mute': 'false'}), 3)
 			if 'mute' in signal['volume']:
 				mute = not(cortex['enclosure']['volume']['mute'])
 				self.set_mute(cortex, mute)
-				self.daemon.video_gui_overlay_show('volume', ({"level": str(cortex['enclosure']['volume']['level']), "mute": str(mute).lower()}), 3)
+				self.daemon.video_gui_overlay_show('volume', ({'level': str(cortex['enclosure']['volume']['level']), 'mute': str(mute).lower()}), 3)
 
 
 	def set_mute(self, cortex: dict, mute: bool) -> None:
@@ -62,11 +62,11 @@ class Volume(EnclosureComponent):
 		if mute is True:
 			volume = 0
 		self.daemon.queue_signal('mqtt', {'mqtt': {'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': volume}}})
-		self.daemon.logger.info('AUDIO: mute={}'.format(str(cortex['enclosure']['volume']['mute']).lower()))
+		self.daemon.logger.info(f"AUDIO: mute={cortex['enclosure']['volume']['mute']}")
 
 
 	def set_volume(self, cortex: dict, volume: int) -> None:
 		cortex['enclosure']['volume']['level'] = volume
 		self.daemon.queue_signal('mqtt', {'mqtt': {'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': volume}}})
-		self.daemon.logger.info('AUDIO: volume={}'.format(cortex['enclosure']['volume']['level']))
+		self.daemon.logger.info(f"AUDIO: volume={cortex['enclosure']['volume']['level']}")
 

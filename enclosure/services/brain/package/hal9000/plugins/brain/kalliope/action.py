@@ -40,10 +40,10 @@ class Action(HAL9000_Action):
 
 
 	def runlevel_error(self, cortex: dict) -> dict:
-		return {"code": "TODO",
-		        "level": "error",
-		        "message": "No connection to kalliope. Voice commands will not work.",
-		        "audio": None}
+		return {'code': 'TODO',
+		        'level': 'error',
+		        'message': "No connection to kalliope. Voice commands will not work.",
+		        'audio': None}
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
@@ -54,10 +54,10 @@ class Action(HAL9000_Action):
 				brain_state = signal['brain']['consciousness']
 				if brain_state == Daemon.CONSCIOUSNESS_AWAKE:
 					if self.config['kalliope-trigger-mqtt-topic'] is not None:
-						mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], "unpause", hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
+						mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], 'unpause', hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
 				if brain_state == Daemon.CONSCIOUSNESS_ASLEEP:
 					if self.config['kalliope-trigger-mqtt-topic'] is not None:
-						mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], "pause", hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
+						mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], 'pause', hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
 		if 'kalliope' in signal:
 			if 'state' in signal['kalliope']:
 				kalliope_state = signal['kalliope']['state']
@@ -68,12 +68,12 @@ class Action(HAL9000_Action):
 					cortex['kalliope']['state'] = kalliope_state
 					if cortex['#consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
 						if kalliope_state == Action.KALLIOPE_STATE_LISTENING:
-							self.daemon.video_gui_screen_show('hal9000', {"queue": "replace", "sequence": {"name": "wakeup", "loop": "false"}})
-							self.daemon.video_gui_screen_show('hal9000', {"queue": "append",  "sequence": {"name": "active", "loop": "true"}})
+							self.daemon.video_gui_screen_show('hal9000', {'queue': 'replace', 'sequence': {'name': 'wakeup', 'loop': 'false'}})
+							self.daemon.video_gui_screen_show('hal9000', {'queue': 'append',  'sequence': {'name': 'active', 'loop': 'true'}})
 						if kalliope_state == Action.KALLIOPE_STATE_WAITING:
-							self.daemon.video_gui_screen_show('hal9000', {"queue": "replace", "sequence": {"name": "sleep",  "loop": "false"}})
+							self.daemon.video_gui_screen_show('hal9000', {'queue': 'replace', 'sequence': {'name': 'sleep',  'loop': 'false'}})
 							self.daemon.cortex['#activity']['video'].screen = 'idle'
 					if cortex['#consciousness'] == Daemon.CONSCIOUSNESS_ASLEEP:
 						if self.config['kalliope-trigger-mqtt-topic'] is not None:
-							mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], "pause", hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
+							mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], 'pause', hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
 

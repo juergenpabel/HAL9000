@@ -41,7 +41,7 @@ class Trigger(HAL9000_Trigger):
 					if matches is not None:
 						neuron = json_loads(self.config['neuron-json-formatter'] % matches.groupdict())
 				if self.config['payload-jsonpath'] is not None:
-					for match in jsonpath_ng_ext_parse(self.config['payload-jsonpath']).find(json_loads(f"[{payload}]")):
+					for match in jsonpath_ng_ext_parse(self.config['payload-jsonpath']).find(json_loads(f'[{payload}]')):
 						neuron = json_loads(self.config['neuron-json-formatter'] % {'jsonpath': match.value})
 			except Exception as e:
 				print(e)

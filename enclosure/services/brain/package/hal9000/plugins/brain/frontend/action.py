@@ -39,10 +39,10 @@ class Action(HAL9000_Action):
 
 
 	def runlevel_error(self, cortex: dict) -> dict:
-		return {"code": "020",
-		        "level": "fatal",
-		        "message": "No connection to microcontroller. Display and inputs/sensors will not work.",
-		        "audio": "error/001-frontend.wav"}
+		return {'code': '020',
+		        'level': 'fatal',
+		        'message': "No connection to microcontroller. Display and inputs/sensors will not work.",
+		        'audio': 'error/001-frontend.wav'}
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
@@ -50,7 +50,7 @@ class Action(HAL9000_Action):
 			if 'status' in signal['brain']:
 				mqtt_publish_message(self.config['frontend-status-mqtt-topic'], json.dumps(signal['brain']['status']), hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')))
 			if 'consciousness' in signal['brain']:
-				self.send_command("application/runtime", json.dumps({"condition": signal['brain']['consciousness']}))
+				self.send_command('application/runtime', json.dumps({'condition': signal['brain']['consciousness']}))
 			if 'time' in signal['brain']:
 				synced = False
 				if 'synced' in signal['brain']['time']:
@@ -75,18 +75,18 @@ class Action(HAL9000_Action):
 				if 'timeout' in signal['frontend']['error']:
 					timeout = int(signal['frontend']['error']['timeout'])
 				if cortex['#activity']['video'].screen == 'idle':
-					self.daemon.video_gui_screen_show("error", {'code': code, 'message': message}, timeout)
+					self.daemon.video_gui_screen_show('error', {'code': code, 'message': message}, timeout)
 				else:
 					self.error_queue.append({'code': code, 'message': message, 'timeout': timeout})
 
 
 	def send_command(self, topic, body) -> None:
-		mqtt_publish_message(f"hal9000/command/frontend/{topic}", body, hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')))
+		mqtt_publish_message(f'hal9000/command/frontend/{topic}', body, hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')))
 
 
 	def send_system_time(self, synced: bool = False):
-		body = {"time": {"epoch": int(datetime.now().timestamp() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds), "synced": synced}}
-		self.send_command("application/runtime", json.dumps(body));
+		body = {'time': {'epoch': int(datetime.now().timestamp() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds), 'synced': synced}}
+		self.send_command('application/runtime', json.dumps(body));
 
 
 	def on_video_activity(self, target, item, old_value, new_value):
@@ -98,13 +98,13 @@ class Action(HAL9000_Action):
 					if 'screen' in new_value['activity']['gui']:
 						screen = new_value['activity']['gui']['screen']['name']
 						parameter = new_value['activity']['gui']['screen']['parameter']
-						self.send_command("gui/screen", json.dumps({screen: parameter}))
+						self.send_command('gui/screen', json.dumps({screen: parameter}))
 					if 'overlay' in new_value['activity']['gui']:
 						overlay = new_value['activity']['gui']['overlay']['name']
 						parameter = new_value['activity']['gui']['overlay']['parameter']
-						self.send_command("gui/overlay", json.dumps({overlay: parameter}))
+						self.send_command('gui/overlay', json.dumps({overlay: parameter}))
 #TODO		if item == 'screen' and new_value == 'idle':
 #TODO			if len(self.error_queue) > 0:
 #TODO				error = error_queue.pop(0)
-#TODO				self.daemon.video_gui_screen_show("error", {'code': error.code, 'message': error.message}, error.timeout)
+#TODO				self.daemon.video_gui_screen_show('error', {'code': error.code, 'message': error.message}, error.timeout)
 		return True
