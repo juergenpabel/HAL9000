@@ -1,27 +1,20 @@
 FROM python:3.11-slim
-ARG KALLIOPE_CONFIG_DIRECTORY=demo-en_US
+ARG DATA_DIRECTORY=demo-en_US
 ARG EXTRA_APT_INSTALL_PKGS=""
-
-LABEL com.github.juergenpabel.HAL9000.kalliope.config-directory=$KALLIOPE_CONFIG_DIRECTORY
 
 RUN apt update
 RUN apt upgrade -y
-RUN apt install -y gcc libasound2 libasound2-plugins libasound2-dev libportaudio2 portaudio19-dev espeak-ng-espeak espeak-ng-data git expect $EXTRA_APT_INSTALL_PKGS
+RUN apt install -y git gcc libasound2 libasound2-plugins libasound2-dev libportaudio2 portaudio19-dev espeak-ng-espeak espeak-ng-data $EXTRA_APT_INSTALL_PKGS
 
 WORKDIR /kalliope
 
-COPY $KALLIOPE_CONFIG_DIRECTORY/settings.yml  ./$KALLIOPE_CONFIG_DIRECTORY/
-COPY $KALLIOPE_CONFIG_DIRECTORY/brain.yml     ./$KALLIOPE_CONFIG_DIRECTORY/
-COPY $KALLIOPE_CONFIG_DIRECTORY/brains/       ./$KALLIOPE_CONFIG_DIRECTORY/brains/
-COPY $KALLIOPE_CONFIG_DIRECTORY/templates/    ./$KALLIOPE_CONFIG_DIRECTORY/templates/
-COPY $KALLIOPE_CONFIG_DIRECTORY/resources/    ./$KALLIOPE_CONFIG_DIRECTORY/resources/
-COPY $KALLIOPE_CONFIG_DIRECTORY/variables/    ./$KALLIOPE_CONFIG_DIRECTORY/variables/
+COPY ./requirements.txt  ./
+COPY ./$DATA_DIRECTORY/  ./data/
 
-COPY $KALLIOPE_CONFIG_DIRECTORY/requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt -r data/requirements.txt
 
 EXPOSE 5000
 
-WORKDIR /kalliope/$KALLIOPE_CONFIG_DIRECTORY/
+WORKDIR /kalliope/data/
 CMD kalliope start
 

@@ -55,6 +55,7 @@ podman create --pod=hal9000 --name=hal9000-kalliope \
               -v /etc/asound.conf:/etc/asound.conf:ro \
               --device /dev/snd:/dev/snd \
               --tz=local \
+              --pull=never \
               localhost/hal9000-kalliope:latest
 
 echo -n "Creating container 'hal9000-frontend':  "
@@ -64,6 +65,7 @@ podman create --pod=hal9000 --name=hal9000-frontend \
               -v "$GIT_REPODIR"/enclosure/services/frontend/:/frontend/:ro \
               $DEVICE_TTYHAL9000_ARGS \
               --tz=local \
+              --pull=never \
               localhost/hal9000-frontend:latest
 
 echo -n "Creating container 'hal9000-brain':     "
@@ -74,6 +76,7 @@ podman create --pod=hal9000 --name=hal9000-brain \
               -v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:rw \
               $SYSTEMD_TIMESYNC_ARGS \
               --tz=local \
+              --pull=never \
               localhost/hal9000-brain:latest
 
 echo -n "Creating container 'hal9000-console':   "
@@ -82,6 +85,7 @@ podman create --pod=hal9000 --name=hal9000-console \
               --group-add=keep-groups \
               -v "$GIT_REPODIR"/enclosure/services/console/:/console/:ro \
               --tz=local \
+              --pull=never \
               localhost/hal9000-console:latest
 
 if [ "x$DEVICE_TTYHAL9000_ARGS" == "x" ]; then

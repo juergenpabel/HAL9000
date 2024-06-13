@@ -1,8 +1,6 @@
 FROM python:3.11-slim
-ARG FRONTEND_CONFIG_DIRECTORY="demo-en_US"
+ARG DATA_DIRECTORY="demo-en_US"
 ARG EXTRA_APT_INSTALL_PKGS=""
-
-LABEL com.github.juergenpabel.HAL9000.frontend.config-directory=$FRONTEND_CONFIG_DIRECTORY
 
 RUN apt update
 RUN apt upgrade -y
@@ -10,17 +8,18 @@ RUN apt install -y libusb-1.0-0 $EXTRA_APT_INSTALL_PKGS
 
 WORKDIR /frontend
 
-COPY ./frontend.py                ./frontend.py
-COPY ./package                    ./package/
-COPY ./assets                     ./assets/
-COPY $FRONTEND_CONFIG_DIRECTORY/  ./$FRONTEND_CONFIG_DIRECTORY/
-RUN ln -s ../assets ./$FRONTEND_CONFIG_DIRECTORY/assets
+COPY ./requirements.txt  ./
+COPY ./frontend.py       ./
+COPY ./package/          ./package/
+COPY ./assets/           ./assets/
+COPY ./$DATA_DIRECTORY/  ./data/
+RUN ln -s ../assets      ./data/assets
 
-RUN pip install --no-cache-dir -r $FRONTEND_CONFIG_DIRECTORY/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt -r data/requirements.txt
 
 EXPOSE 9000
 
 ENV PYTHONPATH=/frontend/package
-WORKDIR /frontend/$FRONTEND_CONFIG_DIRECTORY/
+WORKDIR /frontend/data/
 CMD python3 /frontend/frontend.py frontend.ini
 

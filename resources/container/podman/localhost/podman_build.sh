@@ -23,9 +23,9 @@ case `/usr/bin/uname -m` in
 esac
 
 BUILD_PLATFORMS=${BUILD_PLATFORMS:-$HOST_PLATFORM_OS/$HOST_PLATFORM_HW}
-CONFIG_DIRECTORY=${CONFIG_DIRECTORY:-demo-en_US}
+DATA_DIRECTORY=${DATA_DIRECTORY:-demo-en_US}
 
-echo "Building images for platforms '$BUILD_PLATFORMS' with language-related configurations from '$CONFIG_DIRECTORY'"
+echo "Building images for platforms '$BUILD_PLATFORMS' with language-related configurations from '$DATA_DIRECTORY'"
 echo " "
 
 SCRIPT_SRC=$(realpath -s "$0")
@@ -54,45 +54,45 @@ done
 
 echo "Building image 'hal9000-kalliope'..."
 cd "$GIT_REPODIR/kalliope"
-git submodule update --recursive "$CONFIG_DIRECTORY"
+git submodule update --recursive "$DATA_DIRECTORY"
 podman manifest exists localhost/hal9000-kalliope:latest
 if [ "x$?" == "x0" ]; then
 	podman manifest rm localhost/hal9000-kalliope:latest
 fi
-podman build --platform "$BUILD_PLATFORMS" --build-arg KALLIOPE_CONFIG_DIRECTORY="$CONFIG_DIRECTORY" --manifest localhost/hal9000-kalliope:latest -f Containerfile .
+podman build --platform "$BUILD_PLATFORMS" --build-arg DATA_DIRECTORY="$DATA_DIRECTORY" --manifest localhost/hal9000-kalliope:latest -f Containerfile .
 
 echo "Building image 'hal9000-frontend'..."
 cd "$GIT_REPODIR/enclosure/services/frontend/"
-git submodule update --recursive "$CONFIG_DIRECTORY"
-if [ ! -e "$CONFIG_DIRECTORY/assets" ]; then
-	ln -s ../assets $CONFIG_DIRECTORY/assets
+git submodule update --recursive "$DATA_DIRECTORY"
+if [ -L "$DATA_DIRECTORY/assets" ]; then
+	rm $DATA_DIRECTORY/assets
 fi
 podman manifest exists localhost/hal9000-frontend:latest
 if [ "x$?" == "x0" ]; then
 	podman manifest rm localhost/hal9000-frontend:latest
 fi
-podman build --platform "$BUILD_PLATFORMS" --build-arg FRONTEND_CONFIG_DIRECTORY="$CONFIG_DIRECTORY" --manifest localhost/hal9000-frontend:latest -f Containerfile .
+podman build --platform "$BUILD_PLATFORMS" --build-arg DATA_DIRECTORY="$DATA_DIRECTORY" --manifest localhost/hal9000-frontend:latest -f Containerfile .
 
 echo "Building image 'hal9000-brain'..."
 cd "$GIT_REPODIR/enclosure/services/brain/"
-git submodule update --recursive "$CONFIG_DIRECTORY"
+git submodule update --recursive "$DATA_DIRECTORY"
 podman manifest exists localhost/hal9000-brain:latest
 if [ "x$?" == "x0" ]; then
 	podman manifest rm localhost/hal9000-brain:latest
 fi
-podman build --platform "$BUILD_PLATFORMS" --build-arg BRAIN_CONFIG_DIRECTORY="$CONFIG_DIRECTORY" --manifest localhost/hal9000-brain:latest -f Containerfile .
+podman build --platform "$BUILD_PLATFORMS" --build-arg DATA_DIRECTORY="$DATA_DIRECTORY" --manifest localhost/hal9000-brain:latest -f Containerfile .
 
 echo "Building image 'hal9000-console'..."
 cd "$GIT_REPODIR/enclosure/services/console/"
-git submodule update --recursive "$CONFIG_DIRECTORY"
-if [ ! -e "$CONFIG_DIRECTORY/assets" ]; then
-	ln -s ../assets $CONFIG_DIRECTORY/assets
+git submodule update --recursive "$DATA_DIRECTORY"
+if [ -L "$DATA_DIRECTORY/assets" ]; then
+	rm $DATA_DIRECTORY/assets
 fi
 podman manifest exists localhost/hal9000-console:latest
 if [ "x$?" == "x0" ]; then
 	podman manifest rm localhost/hal9000-console:latest
 fi
-podman build --platform "$BUILD_PLATFORMS" --build-arg CONSOLE_CONFIG_DIRECTORY="$CONFIG_DIRECTORY" --manifest localhost/hal9000-console:latest -f Containerfile .
+podman build --platform "$BUILD_PLATFORMS" --build-arg DATA_DIRECTORY="$DATA_DIRECTORY" --manifest localhost/hal9000-console:latest -f Containerfile .
 
 echo "NOTICE: images should be ready; next up: create pod/containers:"
 echo "          ./podman_create.sh"

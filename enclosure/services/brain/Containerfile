@@ -1,8 +1,6 @@
 FROM python:3.11-slim
-ARG BRAIN_CONFIG_DIRECTORY="demo-en_US"
+ARG DATA_DIRECTORY="demo-en_US"
 ARG EXTRA_APT_INSTALL_PKGS=""
-
-LABEL com.github.juergenpabel.HAL9000.brain.config-directory=$BRAIN_CONFIG_DIRECTORY
 
 RUN apt update
 RUN apt upgrade -y
@@ -10,13 +8,14 @@ RUN apt install -y $EXTRA_APT_INSTALL_PKGS
 
 WORKDIR /brain
 
-COPY ./brain.py                ./brain.py
-COPY ./package/                ./package/
-COPY $BRAIN_CONFIG_DIRECTORY/  ./$BRAIN_CONFIG_DIRECTORY/
+COPY ./requirements.txt  ./
+COPY ./brain.py          ./
+COPY ./package/          ./package/
+COPY ./$DATA_DIRECTORY/  ./data/
 
-RUN pip install --no-cache-dir -r $BRAIN_CONFIG_DIRECTORY/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt -r data/requirements.txt
 
 ENV PYTHONPATH=/brain/package
-WORKDIR /brain/$BRAIN_CONFIG_DIRECTORY
+WORKDIR /brain/data
 CMD python3 /brain/brain.py brain.ini
 
