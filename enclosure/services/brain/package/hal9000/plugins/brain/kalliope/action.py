@@ -3,7 +3,6 @@
 import os
 import json
 import configparser
-from paho.mqtt.publish import single as mqtt_publish_message
 
 from hal9000.brain.modules import HAL9000_Action
 from hal9000.brain.daemon import Daemon
@@ -49,15 +48,15 @@ class Action(HAL9000_Action):
 	def process(self, signal: dict, cortex: dict) -> None:
 		if 'brain' in signal:
 			if 'status' in signal['brain']:
-				mqtt_publish_message(self.config['kalliope-status-mqtt-topic'], json.dumps(signal['brain']['status']), hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
+				self.daemon.mqtt.publish(self.config['kalliope-status-mqtt-topic'], json.dumps(signal['brain']['status']))
 			if 'consciousness' in signal['brain']:
 				brain_state = signal['brain']['consciousness']
 				if brain_state == Daemon.CONSCIOUSNESS_AWAKE:
 					if self.config['kalliope-trigger-mqtt-topic'] is not None:
-						mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], 'unpause', hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
+						self.daemon.mqtt.publish(self.config['kalliope-trigger-mqtt-topic'], 'unpause')
 				if brain_state == Daemon.CONSCIOUSNESS_ASLEEP:
 					if self.config['kalliope-trigger-mqtt-topic'] is not None:
-						mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], 'pause', hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
+						self.daemon.mqtt.publish(self.config['kalliope-trigger-mqtt-topic'], 'pause')
 		if 'kalliope' in signal:
 			if 'state' in signal['kalliope']:
 				kalliope_state = signal['kalliope']['state']
@@ -75,5 +74,5 @@ class Action(HAL9000_Action):
 							self.daemon.cortex['#activity']['video'].screen = 'idle'
 					if cortex['#consciousness'] == Daemon.CONSCIOUSNESS_ASLEEP:
 						if self.config['kalliope-trigger-mqtt-topic'] is not None:
-							mqtt_publish_message(self.config['kalliope-trigger-mqtt-topic'], 'pause', hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')), client_id='brain')
+							self.daemon.mqtt.publish(self.config['kalliope-trigger-mqtt-topic'], 'pause')
 

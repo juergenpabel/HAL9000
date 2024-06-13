@@ -173,7 +173,6 @@ class Daemon(HAL9000_Daemon):
 				sys.exit(1) # TODO exit handling
 			if len(self.booting_modules) == 0:
 				monotonic_now = time.monotonic()
-				self.logger.info(f"STARTUP: {monotonic_now:.2f}")
 				self.logger.info(f"Startup completed for all modules ({(monotonic_now-(self.booting_timeout-self.config['boot-timeout'])):.2f} seconds)")
 				self.booting_timeout = None
 				if 'action' in self.timeouts:

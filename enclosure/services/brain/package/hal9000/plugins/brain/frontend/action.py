@@ -4,7 +4,6 @@ import os
 import json
 import configparser
 from datetime import datetime
-from paho.mqtt.publish import single as mqtt_publish_message
 
 from hal9000.brain.modules import HAL9000_Action
 from hal9000.brain.daemon import Daemon
@@ -48,7 +47,7 @@ class Action(HAL9000_Action):
 	def process(self, signal: dict, cortex: dict) -> None:
 		if 'brain' in signal:
 			if 'status' in signal['brain']:
-				mqtt_publish_message(self.config['frontend-status-mqtt-topic'], json.dumps(signal['brain']['status']), hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')))
+				self.daemon.mqtt.publish(self.config['frontend-status-mqtt-topic'], json.dumps(signal['brain']['status']))
 			if 'consciousness' in signal['brain']:
 				self.send_command('application/runtime', json.dumps({'condition': signal['brain']['consciousness']}))
 			if 'time' in signal['brain']:
@@ -81,7 +80,7 @@ class Action(HAL9000_Action):
 
 
 	def send_command(self, topic, body) -> None:
-		mqtt_publish_message(f'hal9000/command/frontend/{topic}', body, hostname=os.getenv('MQTT_SERVER', default='127.0.0.1'), port=int(os.getenv('MQTT_PORT', default='1883')))
+		self.daemon.mqtt.publish(f'hal9000/command/frontend/{topic}', body)
 
 
 	def send_system_time(self, synced: bool = False):
