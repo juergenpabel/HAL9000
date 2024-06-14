@@ -13,6 +13,10 @@ Not specifically a goal: price (although somewhat reasonable at 100-200€, depe
 ## Demos
 Some showcase demo videos are published in the wiki: https://github.com/juergenpabel/HAL9000/wiki/Demos/
 
+## Enclosure
+The enclosure can be (mostly) 3D-printed, the STLs (generated with openscad, see resources/openscad/ in this repository) are on printables:
+https://www.printables.com/model/218766-hal-9000
+
 ## Hardware
 A bill-of-materials is available in this repository: https://github.com/juergenpabel/HAL9000/blob/master/resources/hardware/BOM.md
 
