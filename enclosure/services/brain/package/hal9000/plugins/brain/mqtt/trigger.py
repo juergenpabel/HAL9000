@@ -13,6 +13,7 @@ class Trigger(HAL9000_Trigger):
 	def __init__(self, trigger_name: str) -> None:
 		HAL9000_Trigger.__init__(self, 'mqtt', trigger_name)
 		self.config = dict()
+		self.payload_jsonpath_parser = None
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
@@ -20,6 +21,8 @@ class Trigger(HAL9000_Trigger):
 		self.config['payload-regex'] = configuration.getstring(section_name, 'mqtt-payload-regex', fallback=None)
 		self.config['payload-jsonpath'] = configuration.getstring(section_name, 'mqtt-payload-jsonpath', fallback=None)
 		self.config['neuron-json-formatter'] = configuration.getstring(section_name, 'neuron-json-formatter', fallback=None)
+		if self.config['payload-jsonpath'] is not None:
+			self.payload_jsonpath_parser = jsonpath_ng_ext_parse(self.config['payload-jsonpath'])
 
 
 	def callbacks(self) -> dict:
@@ -41,7 +44,7 @@ class Trigger(HAL9000_Trigger):
 					if matches is not None:
 						neuron = json_loads(self.config['neuron-json-formatter'] % matches.groupdict())
 				if self.config['payload-jsonpath'] is not None:
-					for match in jsonpath_ng_ext_parse(self.config['payload-jsonpath']).find(json_loads(f'[{payload}]')):
+					for match in self.payload_jsonpath_parser.find(json_loads(f'[{payload}]')):
 						neuron = json_loads(self.config['neuron-json-formatter'] % {'jsonpath': match.value})
 			except Exception as e:
 				print(e)
