@@ -68,6 +68,11 @@ void Application::setEnv(const etl::string<GLOBAL_KEY_SIZE>& key, const etl::str
 }
 
 
+void Application::delEnv(const etl::string<GLOBAL_KEY_SIZE>& key) {
+	this->m_environment.erase(key);
+}
+
+
 bool Application::hasSetting(const etl::string<GLOBAL_KEY_SIZE>& key) {
 	return this->m_settings.find(key) != this->m_settings.end();
 }
@@ -99,6 +104,11 @@ void Application::setSetting(const etl::string<GLOBAL_KEY_SIZE>& key, const etl:
 			this->m_settings.erase(item);
 		}
 	}
+}
+
+
+void Application::delSetting(const etl::string<GLOBAL_KEY_SIZE>& key) {
+	this->m_settings.erase(key);
 }
 
 

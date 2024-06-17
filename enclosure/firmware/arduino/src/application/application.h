@@ -52,10 +52,12 @@ class Application {
 		bool                                  hasEnv(const etl::string<GLOBAL_KEY_SIZE>& key);
 		const etl::string<GLOBAL_VALUE_SIZE>& getEnv(const etl::string<GLOBAL_KEY_SIZE>& key);
 		void                                  setEnv(const etl::string<GLOBAL_KEY_SIZE>& key, const etl::string<GLOBAL_VALUE_SIZE>& value);
+		void                                  delEnv(const etl::string<GLOBAL_KEY_SIZE>& key);
 
 		bool                                  hasSetting(const etl::string<GLOBAL_KEY_SIZE>& key);
 		const etl::string<GLOBAL_VALUE_SIZE>& getSetting(const etl::string<GLOBAL_KEY_SIZE>& key);
 		void                                  setSetting(const etl::string<GLOBAL_KEY_SIZE>& key, const etl::string<GLOBAL_VALUE_SIZE>& value);
+		void                                  delSetting(const etl::string<GLOBAL_KEY_SIZE>& key);
 
 		void notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& code, const etl::string<GLOBAL_VALUE_SIZE>& message, uint16_t timeout = 0);
 

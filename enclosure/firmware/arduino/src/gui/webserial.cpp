@@ -1,11 +1,12 @@
 #include <TimeLib.h>
 
 #include "gui/screen/screen.h"
-#include "gui/screen/error/screen.h"
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/menu/screen.h"
 #include "gui/screen/splash/screen.h"
 #include "gui/screen/hal9000/screen.h"
+#include "gui/screen/qrcode/screen.h"
+#include "gui/screen/error/screen.h"
 #include "gui/screen/animations/screen.h"
 #include "gui/overlay/overlay.h"
 #include "application/environment.h"
@@ -74,6 +75,23 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 				screen = gui_screen_hal9000;
 			}
 		}
+	}
+	if(body.containsKey("qrcode") == true) {
+		g_application.delEnv("gui/screen:qrcode/text-above");
+		g_application.delEnv("gui/screen:qrcode/text-url");
+		g_application.delEnv("gui/screen:qrcode/text-below");
+		if(body["qrcode"].containsKey("title") == true) {
+			g_application.setEnv("gui/screen:qrcode/text-above", body["qrcode"]["title"].as<const char*>());
+			g_application.setEnv("gui/screen:qrcode/textsize-above", "large");
+		}
+		if(body["qrcode"].containsKey("url") == true) {
+			g_application.setEnv("gui/screen:qrcode/text-url", body["qrcode"]["url"].as<const char*>());
+		}
+		if(body["qrcode"].containsKey("hint") == true) {
+			g_application.setEnv("gui/screen:qrcode/text-below", body["qrcode"]["hint"].as<const char*>());
+			g_application.setEnv("gui/screen:qrcode/textsize-below", "small");
+		}
+		screen = gui_screen_qrcode;
 	}
 	if(body.containsKey("error") == true) {
 		if(body["error"].containsKey("code") == true) {
