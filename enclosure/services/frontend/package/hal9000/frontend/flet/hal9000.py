@@ -60,9 +60,14 @@ class HAL9000(Frontend):
 							self.show_idle(display)
 						elif screen == 'hal9000':
 							self.show_hal9k(display, command['payload']['hal9000'])
+						elif screen == 'qrcode':
+							self.show_qrcode(display, command['payload']['qrcode'])
 						elif screen == 'menu':
 							self.show_menu(display, command['payload']['menu'])
+						elif screen == 'error':
+							self.show_error(display, command['payload']['error'])
 						else:
+							self.show_error(display, {'title': 'BUG', 'text': f"Unsupported screen: {screen}"})
 							logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported screen '{json_dumps(command['payload'])}' in gui/screen")
 				elif command['topic'] == 'gui/overlay':
 					for overlay in command['payload'].keys():
@@ -141,11 +146,41 @@ class HAL9000(Frontend):
 				display.data['hal9k_queue'].append(data['sequence'])
 
 
+	def show_qrcode(self, display, data):
+		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
+		display.content.shapes.append(flet.canvas.Text(text=data['title'],
+		                                               x=int(display.radius/2), y=int(display.radius/8*1),
+		                                               style=flet.TextStyle(color='white'),
+		                                               alignment=flet_core.alignment.center))
+		display.content.shapes.append(flet.canvas.Text(text='TODO: QRcode',
+		                                               x=int(display.radius/2), y=int(display.radius/2),
+		                                               style=flet.TextStyle(color='red'),
+		                                               alignment=flet_core.alignment.center))
+		display.content.shapes.append(flet.canvas.Text(text=data['hint'],
+		                                               x=int(display.radius/2), y=int(display.radius/8*7),
+		                                               style=flet.TextStyle(color='white'),
+		                                               alignment=flet_core.alignment.center))
+		display.content.update()
+
+
 	def show_menu(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(text=data['title'],
 		                                               x=int(display.radius/2), y=int(display.radius/4*1),
 		                                               style=flet.TextStyle(color='white'),
+		                                               alignment=flet_core.alignment.center))
+		display.content.shapes.append(flet.canvas.Text(text=data['text'],
+		                                               x=int(display.radius/2), y=int(display.radius/4*3),
+		                                               style=flet.TextStyle(color='white'),
+		                                               alignment=flet_core.alignment.center))
+		display.content.update()
+
+
+	def show_error(self, display, data):
+		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
+		display.content.shapes.append(flet.canvas.Text(text=f"ERROR: {data['title']}",
+		                                               x=int(display.radius/2), y=int(display.radius/4*1),
+		                                               style=flet.TextStyle(color='red'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.shapes.append(flet.canvas.Text(text=data['text'],
 		                                               x=int(display.radius/2), y=int(display.radius/4*3),

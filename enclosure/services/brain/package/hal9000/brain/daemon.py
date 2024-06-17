@@ -53,12 +53,12 @@ class Activity(object):
 	def __getattr__(self, name):
 		return 'none'
 	def __repr__(self):
-		result = "{"
-		result += f"module='{self.module}'"
+		result = '{'
+		result += f'module=\'{self.module}\''
 		for item, value in self.__dict__.items():
 			if item not in self.hidden_names and item != 'module':
-				result += f",{item}='{value}'"
-		result += "}"
+				result += f',{item}=\'{value}\''
+		result += '}'
 		return result
 
 
@@ -139,7 +139,7 @@ class Daemon(HAL9000_Daemon):
 
 
 	def loop(self) -> None:
-		self.set_timeout(1, 'action', ['*', {"brain": {"status": {}}}])
+		self.set_timeout(1, 'action', ['*', {'brain': {'status': {}}}])
 		self.booting_timeout = time.monotonic() + self.config['boot-timeout']
 		for module in list(self.triggers.values()) + list(self.actions.values()):
 			if module.runlevel(self.cortex) == HAL9000_Module.MODULE_RUNLEVEL_UNKNOWN:
@@ -164,9 +164,9 @@ class Daemon(HAL9000_Daemon):
 					syslog(f"Error #{error['code']} for module '{id}': {error['message']}")
 #TODO					if self.config['error-message-translation-file'] is not None:
 #TODO						error['message'] = self.translate(error['message'], self.config['error-message-translation-file'])
-					self.video_gui_screen_show('error', {"code": error['code'], "message": error['message']})
-					if "audio" in error and error["audio"] is not None:
-						self.audio_play_file(error["audio"])
+					self.video_gui_screen_show('error', {'code': error['code'], 'message': error['message']})
+					if 'audio' in error and error['audio'] is not None:
+						self.audio_play_file(error['audio'])
 				self.logger.critical("=================")
 				self.logger.critical("Terminating now!!")
 				self.logger.critical("=================")
@@ -177,7 +177,7 @@ class Daemon(HAL9000_Daemon):
 				self.booting_timeout = None
 				if 'action' in self.timeouts:
 					del self.timeouts['action']
-				self.process_signal("*", {"brain": {"ready": True}})
+				self.process_signal('*', {'brain': {'ready': True}})
 				if self.cortex['#consciousness'] == Daemon.CONSCIOUSNESS_AWAKE:
 					action_name = self.config['boot-finished-action-name']
 					if action_name in self.actions:
@@ -284,7 +284,7 @@ class Daemon(HAL9000_Daemon):
 				self.logger.debug(f"CORTEX before state change = {self.cortex}")
 				self.cortex['#consciousness'] = new_state
 				for action_name in self.actions.keys():
-					signal = {"brain": {"consciousness": new_state}}
+					signal = {'brain': {'consciousness': new_state}}
 					self.actions[action_name].process(signal, self.cortex)
 				self.process_queued_signals()
 				self.logger.debug(f"CORTEX after state change  = {self.cortex}")
@@ -306,7 +306,7 @@ class Daemon(HAL9000_Daemon):
 			self.timeouts[Daemon.CONSCIOUSNESS_AWAKE] = datetime_wakeup, None
 		if datetime_wakeup == datetime_sleep or datetime_sleep < datetime_wakeup:
 			self.set_consciousness(Daemon.CONSCIOUSNESS_AWAKE)
-		self.queue_signal("*", {"brain": {"time": {"synced": datetime_synced}}})
+		self.queue_signal('*', {'brain': {'time': {'synced': datetime_synced}}})
 		if datetime_synced is True:
 			self.set_timeout(3600, 'system/time', None)
 		else:
@@ -317,7 +317,7 @@ class Daemon(HAL9000_Daemon):
 		if self.cortex['#consciousness'] != Daemon.CONSCIOUSNESS_AWAKE:
 			return
 		self.cortex['#activity']['video'].screen = screen
-		self.cortex['#activity']['video'].signal = {"activity": {"gui": {"screen": {"name": screen, "parameter": parameter}}}}
+		self.cortex['#activity']['video'].signal = {'activity': {'gui': {'screen': {'name': screen, 'parameter': parameter}}}}
 		if self.cortex['#activity']['video'].screen == screen:
 			self.logger.info(f"GUI: screen '{screen}' activated (previously '{self.cortex['#activity']['video'].screen}')")
 			if timeout is not None and timeout > 0:
@@ -328,7 +328,7 @@ class Daemon(HAL9000_Daemon):
 		if self.cortex['#consciousness'] != Daemon.CONSCIOUSNESS_AWAKE:
 			return
 		self.cortex['#activity']['video'].screen = 'idle'
-		self.cortex['#activity']['video'].signal = {"activity": {"gui": {"screen": {"name": "idle", "parameter": ""}}}}
+		self.cortex['#activity']['video'].signal = {'activity': {'gui': {'screen': {'name': 'idle', 'parameter': ''}}}}
 		if self.cortex['#activity']['video'].screen == 'idle':
 			self.logger.info(f"GUI: screen 'idle' activated (previously '{screen}')")
 			if 'gui/screen' in self.timeouts:
@@ -339,7 +339,7 @@ class Daemon(HAL9000_Daemon):
 		if self.cortex['#consciousness'] != Daemon.CONSCIOUSNESS_AWAKE:
 			return
 		self.cortex['#activity']['video'].overlay = overlay
-		self.cortex['#activity']['video'].signal = {"activity": {"gui": {"overlay": {"name": overlay, "parameter": parameter}}}}
+		self.cortex['#activity']['video'].signal = {'activity': {'gui': {'overlay': {'name': overlay, 'parameter': parameter}}}}
 		if self.cortex['#activity']['video'].overlay == overlay:
 			self.logger.info(f"GUI: overlay '{overlay}' activated (previously '{self.cortex['#activity']['video'].overlay}')")
 			if timeout is not None and timeout > 0:
@@ -350,7 +350,7 @@ class Daemon(HAL9000_Daemon):
 		if self.cortex['#consciousness'] != Daemon.CONSCIOUSNESS_AWAKE:
 			return
 		self.cortex['#activity']['video'].overlay = 'none'
-		self.cortex['#activity']['video'].signal = {"activity": {"gui": {"overlay": {"name": "none", "parameter": ""}}}}
+		self.cortex['#activity']['video'].signal = {'activity': {'gui': {'overlay': {'name': 'none', 'parameter': ''}}}}
 		if self.cortex['#activity']['video'].overlay == 'none':
 			self.logger.info(f"GUI: overlay 'none' activated (previously '{overlay}')")
 			if 'gui/overlay' in self.timeouts:
@@ -369,7 +369,7 @@ class Daemon(HAL9000_Daemon):
 #TODO			return
 		pass
 
-if __name__ == "__main__":
+if __name__ == '__main__':
 	daemon = Daemon()
 	daemon.load(sys.argv[1])
 	daemon.loop()

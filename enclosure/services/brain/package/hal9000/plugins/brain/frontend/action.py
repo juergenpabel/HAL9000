@@ -64,9 +64,9 @@ class Action(HAL9000_Action):
 						self.daemon.set_system_time()
 			if 'gui' in signal['frontend']:
 				if 'screen' in signal['frontend']['gui']:
-					cortex['#activity']['video'].screen = signal['frontend']['gui']['screen']
+					self.daemon.video_gui_screen_show(signal['frontend']['gui']['screen']['name'], signal['frontend']['gui']['screen']['parameter'])
 				if 'overlay' in signal['frontend']['gui']:
-					cortex['#activity']['video'].overlay = signal['frontend']['gui']['overlay']
+					self.daemon.video_gui_overlay_show(signal['frontend']['gui']['screen']['name'], signal['frontend']['gui']['screen']['parameter'])
 			if 'error' in signal['frontend']:
 				code = signal['frontend']['error']['code']
 				message = signal['frontend']['error']['message']

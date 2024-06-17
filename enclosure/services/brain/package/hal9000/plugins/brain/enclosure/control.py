@@ -86,7 +86,7 @@ class Control(EnclosureComponent):
 			cortex['#activity']['video'].menu_name = menu_name
 			cortex['#activity']['video'].menu_item = menu_item
 		if 'select' in signal['control']:
-			if cortex['#activity']['video'].screen == 'error':
+			if cortex['#activity']['video'].screen in ['error', 'qrcode']:
 				self.daemon.video_gui_screen_show('idle', {})
 			if cortex['#activity']['video'].screen == 'menu':
 				if 'gui/screen' in self.daemon.timeouts:
