@@ -96,6 +96,7 @@ class Daemon(HAL9000_Daemon):
 		self.config['boot-finished-signal-data']  = configuration.get('runlevel', 'boot-finished-signal-data', fallback=None)
 		self.config['sleep-time']  = configuration.get('brain', 'sleep-time', fallback=None)
 		self.config['wakeup-time'] = configuration.get('brain', 'wakeup-time', fallback=None)
+		self.config['help:error-url'] = configuration.getstring('help', 'error-url', fallback=None)
 		if self.config['sleep-time'] == self.config['wakeup-time']:
 			#TODO: error message
 			raise ConfigurationError

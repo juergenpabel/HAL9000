@@ -38,7 +38,7 @@ class Action(HAL9000_Action):
 
 
 	def runlevel_error(self, cortex: dict) -> dict:
-		return {'code': '020',
+		return {'code': '01',
 		        'level': 'fatal',
 		        'message': "No connection to microcontroller. Display and inputs/sensors will not work.",
 		        'audio': 'error/001-frontend.wav'}
@@ -64,6 +64,25 @@ class Action(HAL9000_Action):
 						self.daemon.set_system_time()
 			if 'gui' in signal['frontend']:
 				if 'screen' in signal['frontend']['gui']:
+					if 'url' in signal['frontend']['gui']['screen']['parameter']:
+						url = signal['frontend']['gui']['screen']['parameter']['url']
+						data_code = ''
+						data_ip = '127.0.0.1'
+						try:
+							import socket
+							s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+							s.connect(('1.1.1.1', 1))
+							data_ip = s.getsockname()[0]
+						except:
+							pass
+						finally:
+							s.close()
+						if 'code' in signal['frontend']['gui']['screen']['parameter']:
+							data_code = signal['frontend']['gui']['screen']['parameter']['code']
+						url = url.format(ip_address=data_ip, code=data_code)
+						signal['frontend']['gui']['screen']['parameter']['url'] = url
+					if 'hint' not in signal['frontend']['gui']['screen']['parameter']:
+						signal['frontend']['gui']['screen']['parameter']['hint'] = signal['frontend']['gui']['screen']['parameter']['url']
 					self.daemon.video_gui_screen_show(signal['frontend']['gui']['screen']['name'], signal['frontend']['gui']['screen']['parameter'])
 				if 'overlay' in signal['frontend']['gui']:
 					self.daemon.video_gui_overlay_show(signal['frontend']['gui']['screen']['name'], signal['frontend']['gui']['screen']['parameter'])
@@ -74,9 +93,15 @@ class Action(HAL9000_Action):
 				if 'timeout' in signal['frontend']['error']:
 					timeout = int(signal['frontend']['error']['timeout'])
 				if cortex['#activity']['video'].screen == 'idle':
-					self.daemon.video_gui_screen_show('error', {'code': code, 'message': message}, timeout)
+					self.daemon.video_gui_screen_show('error', {'code': code,
+					                                            'url': self.daemon.config['help:error-url'].format(code=code),
+					                                            'message': message},
+					                                  timeout)
 				else:
-					self.error_queue.append({'code': code, 'message': message, 'timeout': timeout})
+					self.error_queue.append({'code': code,
+					                         'url': self.daemon.config['help:error-url'].format(code=code),
+					                         'message': message,
+					                         'timeout': timeout})
 
 
 	def send_command(self, topic, body) -> None:
@@ -102,8 +127,8 @@ class Action(HAL9000_Action):
 						overlay = new_value['activity']['gui']['overlay']['name']
 						parameter = new_value['activity']['gui']['overlay']['parameter']
 						self.send_command('gui/overlay', json.dumps({overlay: parameter}))
-#TODO		if item == 'screen' and new_value == 'idle':
-#TODO			if len(self.error_queue) > 0:
-#TODO				error = error_queue.pop(0)
-#TODO				self.daemon.video_gui_screen_show('error', {'code': error.code, 'message': error.message}, error.timeout)
+		if item == 'screen' and new_value == 'idle':
+			if len(self.error_queue) > 0:
+				error = error_queue.pop(0)
+				self.daemon.video_gui_screen_show('error', {'code': error.code, 'url': error.url, 'message': error.message}, error.timeout)
 		return True

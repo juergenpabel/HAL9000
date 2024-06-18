@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 
 menu = dict()
 menu['0'] = ['Disconnect', None]
-menu['@'] = ['Settings: Set error base URL', '["application/settings", {"set": {"key": "application/help:error/base-url", "value": "https://hal9000-kalliope.github.io/error/"}]']
 menu['1'] = ['Sync system time',      '["application/runtime",  {"time": {"epoch": %d}}]' % (int(datetime.now().timestamp() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds))]
 menu['2'] = ['Dump system settings',  '["application/settings", {"list": {}}]']
 menu['3'] = ['Load system settings',  '["application/settings", {"load": {}}]']

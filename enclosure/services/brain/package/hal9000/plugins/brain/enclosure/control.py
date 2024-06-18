@@ -56,8 +56,8 @@ class Control(EnclosureComponent):
 			self.daemon.video_gui_screen_show('idle', {})
 			return
 		if 'delta' in signal['control']:
-#TODO			if cortex['#activity']['video'].screen not in ['gui', 'idle', 'menu']:
-#TODO				return
+			if cortex['#activity']['video'].screen not in ['idle', 'menu']: # TODO
+				return
 			if cortex['#activity']['video'].screen is None:          ## TODO
 				cortex['#activity']['video'].screen = 'idle'     ## TODO
 			if cortex['#activity']['video'].screen == 'idle':

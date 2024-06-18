@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
+from io import StringIO as io_StringIO
 from os import getcwd as os_getcwd
 from math import pi as math_pi, sin as math_sin, cos as math_cos
 from json import dumps as json_dumps
 from datetime import datetime as datetime_datetime
 from logging import getLogger as logging_getLogger
 from asyncio import Queue as asyncio_Queue, sleep as asyncio_sleep, create_task as asyncio_create_task
+from segno import make as segno_make
 
 import flet
 import flet.fastapi
@@ -146,23 +148,6 @@ class HAL9000(Frontend):
 				display.data['hal9k_queue'].append(data['sequence'])
 
 
-	def show_qrcode(self, display, data):
-		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-		display.content.shapes.append(flet.canvas.Text(text=data['title'],
-		                                               x=int(display.radius/2), y=int(display.radius/8*1),
-		                                               style=flet.TextStyle(color='white'),
-		                                               alignment=flet_core.alignment.center))
-		display.content.shapes.append(flet.canvas.Text(text='TODO: QRcode',
-		                                               x=int(display.radius/2), y=int(display.radius/2),
-		                                               style=flet.TextStyle(color='red'),
-		                                               alignment=flet_core.alignment.center))
-		display.content.shapes.append(flet.canvas.Text(text=data['hint'],
-		                                               x=int(display.radius/2), y=int(display.radius/8*7),
-		                                               style=flet.TextStyle(color='white'),
-		                                               alignment=flet_core.alignment.center))
-		display.content.update()
-
-
 	def show_menu(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(text=data['title'],
@@ -176,17 +161,34 @@ class HAL9000(Frontend):
 		display.content.update()
 
 
-	def show_error(self, display, data):
+	def show_qrcode(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-		display.content.shapes.append(flet.canvas.Text(text=f"ERROR: {data['title']}",
-		                                               x=int(display.radius/2), y=int(display.radius/4*1),
-		                                               style=flet.TextStyle(color='red'),
+		display.content.shapes.append(flet.canvas.Text(text=data['title'],
+		                                               x=int(display.radius/2), y=int(-display.radius/8*1),
+		                                               style=flet.TextStyle(color=data['title-color'] if 'title-color' in data else 'white',
+		                                                                    size=data['title-size'] if 'title-size' in data else 14),
 		                                               alignment=flet_core.alignment.center))
-		display.content.shapes.append(flet.canvas.Text(text=data['text'],
-		                                               x=int(display.radius/2), y=int(display.radius/4*3),
-		                                               style=flet.TextStyle(color='white'),
+		qrcode = io_StringIO()
+		segno_make(data['url'], version=5, error='m').save(qrcode, kind='txt', border=1)
+		qrcode.seek(0)
+		box_size = int(display.radius/(37+2))
+		for y, line in enumerate(qrcode.readlines()):
+			for x, value in enumerate(line.strip()):
+				display.content.shapes.append(flet.canvas.Rect(x=x*box_size, y=y*box_size,
+				                                               width=box_size, height=box_size,
+				                                               paint=flet.Paint(color='white' if value == '0' else 'black')))
+		display.content.shapes.append(flet.canvas.Text(text=data['hint'],
+		                                               x=int(display.radius/2), y=int(display.radius/8*9),
+		                                               style=flet.TextStyle(color=data['hint-color'] if 'hint-color' in data else 'white',
+		                                                                    size=data['hint-size'] if 'hint-size' in data else 10),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
+
+
+	def show_error(self, display, data):
+		self.show_qrcode(display, {'title': data['message'], 'title-size': 10, 'title-color': 'red',
+		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
+		                           'hint': f"Error {data['code']}", 'hint-size': 14, 'hint-color': 'red'})
 
 
 	def on_control_up(self, event):

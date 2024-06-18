@@ -107,10 +107,13 @@ void loop() {
 				if(timeout_offline > 0 && millis() > timeout_offline) {
 					const char* error_code = "01";
 					const char* error_message = "No connection to host";
+					const char* error_url = "https://github.com/juergenpabel/HAL9000/wiki/ERROR_01";
+					const char* error_timeout = "0";
 
 					g_application.setEnv("gui/screen:error/code", error_code);
+					g_application.setEnv("gui/screen:error/url", error_url);
 					g_application.setEnv("gui/screen:error/message", error_message);
-					g_application.setEnv("gui/screen:error/timeout", "0");
+					g_application.setEnv("gui/screen:error/timeout", error_timeout);
 					g_util_webserial.send("syslog/error", error_message);
 					gui_screen_set(gui_screen_error);
 					timeout_offline = 0;
