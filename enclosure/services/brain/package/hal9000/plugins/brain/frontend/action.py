@@ -8,6 +8,30 @@ from datetime import datetime
 from hal9000.brain.modules import HAL9000_Action
 from hal9000.brain.daemon import Daemon
 
+from dbus_fast.aio import MessageBus
+from dbus_fast.auth import AuthExternal, UID_NOT_SPECIFIED
+from dbus_fast.constants import BusType
+import asyncio
+
+async def ipaddress():
+	bus = await MessageBus(None, BusType.SYSTEM, AuthExternal(UID_NOT_SPECIFIED)).connect()
+	introspection = await bus.introspect('org.freedesktop.NetworkManager', '/org/freedesktop/NetworkManager')
+	obj = bus.get_proxy_object('org.freedesktop.NetworkManager', '/org/freedesktop/NetworkManager', introspection)
+	nm = obj.get_interface('org.freedesktop.NetworkManager')
+	for connection in await nm.get_active_connections():
+		introspection2 = await bus.introspect('org.freedesktop.NetworkManager', connection)
+		obj2 = bus.get_proxy_object('org.freedesktop.NetworkManager', connection, introspection2)
+		conf = obj2.get_interface('org.freedesktop.NetworkManager.Connection.Active')
+		if await conf.get_default() is True:
+			ip4config = await conf.get_ip4_config()
+			introspection3 = await bus.introspect('org.freedesktop.NetworkManager', ip4config)
+			obj3 = bus.get_proxy_object('org.freedesktop.NetworkManager', ip4config, introspection3)
+			data= obj3.get_interface('org.freedesktop.NetworkManager.IP4Config')
+			address_data = await data.get_address_data()
+			return address_data[0]['address'].value
+	return '127.0.0.1'
+
+
 
 class Action(HAL9000_Action):
 
@@ -66,20 +90,11 @@ class Action(HAL9000_Action):
 				if 'screen' in signal['frontend']['gui']:
 					if 'url' in signal['frontend']['gui']['screen']['parameter']:
 						url = signal['frontend']['gui']['screen']['parameter']['url']
-						data_code = ''
-						data_ip = '127.0.0.1'
-						try:
-							import socket
-							s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-							s.connect(('1.1.1.1', 1))
-							data_ip = s.getsockname()[0]
-						except:
-							pass
-						finally:
-							s.close()
+						parameter_code = ''
+						parameter_ipaddress = asyncio.run(ipaddress())
 						if 'code' in signal['frontend']['gui']['screen']['parameter']:
-							data_code = signal['frontend']['gui']['screen']['parameter']['code']
-						url = url.format(ip_address=data_ip, code=data_code)
+							parameter_code = signal['frontend']['gui']['screen']['parameter']['code']
+						url = url.format(ip_address=parameter_ipaddress, code=parameter_code)
 						signal['frontend']['gui']['screen']['parameter']['url'] = url
 					if 'hint' not in signal['frontend']['gui']['screen']['parameter']:
 						signal['frontend']['gui']['screen']['parameter']['hint'] = signal['frontend']['gui']['screen']['parameter']['url']

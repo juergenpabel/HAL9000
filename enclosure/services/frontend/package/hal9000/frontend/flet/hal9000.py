@@ -178,7 +178,7 @@ class HAL9000(Frontend):
 				                                               width=box_size, height=box_size,
 				                                               paint=flet.Paint(color='white' if value == '0' else 'black')))
 		display.content.shapes.append(flet.canvas.Text(text=data['hint'],
-		                                               x=int(display.radius/2), y=int(display.radius/8*9),
+		                                               x=int(display.radius/2), y=int(display.radius/8*9)-(data['hint-size'] if 'hint-size' in data else 10)/2,
 		                                               style=flet.TextStyle(color=data['hint-color'] if 'hint-color' in data else 'white',
 		                                                                    size=data['hint-size'] if 'hint-size' in data else 10),
 		                                               alignment=flet_core.alignment.center))
