@@ -1,10 +1,8 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 
-import json
-from datetime import datetime, timedelta
+from json import loads as json_loads
 from configparser import ConfigParser
 
-from hal9000.brain.daemon import Daemon, Activity
 from hal9000.plugins.brain.enclosure import EnclosureComponent
 
 
@@ -56,22 +54,22 @@ class Control(EnclosureComponent):
 			self.daemon.video_gui_screen_show('idle', {})
 			return
 		if 'delta' in signal['control']:
-			if cortex['#activity']['video'].screen not in ['idle', 'menu']: # TODO
+			if cortex['service']['frontend'].screen not in ['idle', 'menu']: # TODO
 				return
-			if cortex['#activity']['video'].screen is None:          ## TODO
-				cortex['#activity']['video'].screen = 'idle'     ## TODO
-			if cortex['#activity']['video'].screen == 'idle':
-				cortex['#activity']['video'].screen = 'menu'
-				cortex['#activity']['video'].menu_name = 'none'
-				cortex['#activity']['video'].menu_item = 'none'
-			if cortex['#activity']['video'].menu_name == 'none':
-				cortex['#activity']['video'].menu_name = 'menu-main'
-				cortex['#activity']['video'].menu_item = self.config['menu']['menu-main']['items'][0]['item']
+			if cortex['service']['frontend'].screen is None:          ## TODO
+				cortex['service']['frontend'].screen = 'idle'     ## TODO
+			if cortex['service']['frontend'].screen == 'idle':
+				cortex['service']['frontend'].screen = 'menu'
+				cortex['service']['frontend'].menu_name = 'none'
+				cortex['service']['frontend'].menu_item = 'none'
+			if cortex['service']['frontend'].menu_name == 'none':
+				cortex['service']['frontend'].menu_name = 'menu-main'
+				cortex['service']['frontend'].menu_item = self.config['menu']['menu-main']['items'][0]['item']
 				signal['control']['delta'] = 0
-			menu_name = cortex['#activity']['video'].menu_name
-			menu_item = cortex['#activity']['video'].menu_item
+			menu_name = cortex['service']['frontend'].menu_name
+			menu_item = cortex['service']['frontend'].menu_item
 			if menu_name not in self.config['menu']:
-				self.daemon.video_gui_overlay_show('error', {'text': "Error in menu"})
+				self.daemon.video_gui_overlay_show('error', {'text': "Error in menu"}) # TODO
 				return
 			position = 0
 			for item in self.config['menu'][menu_name]['items']:
@@ -83,20 +81,18 @@ class Control(EnclosureComponent):
 			menu_item  = self.config['menu'][menu_name]['items'][position]['item']
 			menu_text  = self.config['menu'][menu_name]['items'][position]['text']
 			self.daemon.video_gui_screen_show('menu', {'title': menu_title, 'text': menu_text}, self.config['menu']['timeout'])
-			cortex['#activity']['video'].menu_name = menu_name
-			cortex['#activity']['video'].menu_item = menu_item
+			cortex['service']['frontend'].menu_name = menu_name
+			cortex['service']['frontend'].menu_item = menu_item
 		if 'select' in signal['control']:
-			if cortex['#activity']['video'].screen in ['error', 'qrcode']:
+			if cortex['service']['frontend'].screen in ['error', 'qrcode']:
 				self.daemon.video_gui_screen_show('idle', {})
-			if cortex['#activity']['video'].screen == 'menu':
+			if cortex['service']['frontend'].screen == 'menu':
 				if 'gui/screen' in self.daemon.timeouts:
 					del self.daemon.timeouts['gui/screen']
-				if cortex['#activity']['video'].menu_name == 'none':
+				if cortex['service']['frontend'].menu_name == 'none':
 					self.daemon.video_gui_screen_show('idle', {})
 					return
-				menu_item = cortex['#activity']['video'].menu_item
-				cortex['#activity']['video'].menu_name = 'none'
-				cortex['#activity']['video'].menu_item = 'none'
+				menu_item = cortex['service']['frontend'].menu_item
 				if menu_item is not None:
 					if menu_item.startswith('item-'):
 						if menu_item not in self.config['action']:
@@ -108,8 +104,7 @@ class Control(EnclosureComponent):
 							self.daemon.video_gui_screen_show('error', {'menu': f"TODO:{action_name}"}, 10)
 							self.daemon.logger.error(f"plugin enclosure: invalid action '{action_name}', check configuration")
 							return
-						self.daemon.queue_signal(action_name, json.loads(self.config['action'][menu_item]['signal-data']))
-						self.daemon.video_gui_screen_show('idle', {})
+						self.daemon.queue_signal(action_name, json_loads(self.config['action'][menu_item]['signal-data']))
 					elif menu_item.startswith('menu-'):
 						if menu_item not in self.config['menu']:
 							self.daemon.video_gui_screen_show('error', {'menu': f"TODO:{menu_item}"}, 10)
@@ -118,10 +113,13 @@ class Control(EnclosureComponent):
 						menu_title = self.config['menu'][menu_item]['title']
 						menu_text  = self.config['menu'][menu_item]['items'][0]['text']
 						self.daemon.video_gui_screen_show('menu', {'title': menu_title, 'text': menu_text}, self.config['menu']['timeout'])
-						cortex['#activity']['video'].menu_name = menu_item
-						cortex['#activity']['video'].menu_item = self.config['menu'][menu_item]['items'][0]['item']
+						cortex['service']['frontend'].menu_name = menu_item
+						cortex['service']['frontend'].menu_item = self.config['menu'][menu_item]['items'][0]['item']
 					else:
 						self.daemon.video_gui_screen_show('error', {'menu': f"TODO:{menu_item}"}, 10)
 						self.daemon.logger.error(f"plugin enclosure: invalid menu item '{menu_item}', check configuration")
 						return
+				else:
+					cortex['service']['frontend'].menu_name = 'none'
+					cortex['service']['frontend'].menu_item = 'none'
 

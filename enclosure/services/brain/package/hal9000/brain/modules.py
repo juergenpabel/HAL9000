@@ -27,8 +27,7 @@ class HAL9000_Module(HAL9000_Plugin):
 	def runlevel_error(self, cortex: dict) -> dict:
 		return {"code": "TODO",
 		        "level": "error",
-		        "message": "BUG: HAL9000_Module derived class did not implement runlevel_error()",
-		        "audio": None}
+		        "message": "BUG: HAL9000_Module derived class did not implement runlevel_error()"}
 
 
 class HAL9000_Action(HAL9000_Module):

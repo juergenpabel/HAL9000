@@ -45,31 +45,36 @@ class Action(HAL9000_Action):
 	def __init__(self, action_name: str, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'frontend', action_name, **kwargs)
 		self.error_queue = list()
-		self.daemon.cortex['#activity']['video'].addCallback(self.on_video_activity)
 
 
 	def configure(self, configuration: configparser.ConfigParser, section_name: str, cortex: dict) -> None:
 		HAL9000_Action.configure(self, configuration, section_name, cortex)
 		self.config['frontend-status-mqtt-topic'] = configuration.get(section_name, 'frontend-status-mqtt-topic', fallback='hal9000/command/frontend/status')
-		cortex['frontend'] = dict()
-		cortex['frontend']['state'] = Action.FRONTEND_STATE_UNKNOWN
+		cortex['service']['frontend'].state = Action.FRONTEND_STATE_UNKNOWN
+		cortex['service']['frontend'].screen = 'idle'
+		cortex['service']['frontend'].overlay = 'none'
+		cortex['service']['frontend'].addCallback(self.on_frontend_activity)
 
 
 	def runlevel(self, cortex: dict) -> str:
-		if cortex['frontend']['state'] in [Action.FRONTEND_STATE_UNKNOWN, Action.FRONTEND_STATE_STARTING]:
-			return cortex['frontend']['state']
+		if cortex['service']['frontend'].state in [Action.FRONTEND_STATE_UNKNOWN, Action.FRONTEND_STATE_STARTING]:
+			return cortex['service']['frontend'].state
 		return Action.MODULE_RUNLEVEL_RUNNING
 
 
 	def runlevel_error(self, cortex: dict) -> dict:
 		return {'code': '01',
-		        'level': 'fatal',
-		        'message': "No connection to microcontroller. Display and inputs/sensors will not work.",
-		        'audio': 'error/001-frontend.wav'}
+		        'level': 'error',
+		        'message': "No connection to microcontroller."}
 
 
 	def process(self, signal: dict, cortex: dict) -> None:
 		if 'brain' in signal:
+			if 'ready' in signal['brain']:
+				self.daemon.video_gui_screen_show('hal9000', {'queue': 'replace', 'sequence': {'name': 'wakeup', 'loop': 'false'}})
+				self.daemon.video_gui_screen_show('hal9000', {'queue': 'append',  'sequence': {'name': 'active', 'loop': 'false'}})
+				self.daemon.video_gui_screen_show('hal9000', {'queue': 'append',  'sequence': {'name': 'active', 'loop': 'false'}})
+				self.daemon.video_gui_screen_show('hal9000', {'queue': 'append',  'sequence': {'name': 'sleep',  'loop': 'false'}}, 5)
 			if 'status' in signal['brain']:
 				self.daemon.mqtt.publish(self.config['frontend-status-mqtt-topic'], json.dumps(signal['brain']['status']))
 			if 'consciousness' in signal['brain']:
@@ -83,7 +88,7 @@ class Action(HAL9000_Action):
 			if 'state' in signal['frontend']:
 				frontend_state = signal['frontend']['state']
 				if frontend_state in Action.FRONTEND_STATES_VALID:
-					cortex['frontend']['state'] = frontend_state
+					cortex['service']['frontend'].state = frontend_state
 					if frontend_state == 'online':
 						self.daemon.set_system_time()
 			if 'gui' in signal['frontend']:
@@ -107,7 +112,7 @@ class Action(HAL9000_Action):
 				timeout = None
 				if 'timeout' in signal['frontend']['error']:
 					timeout = int(signal['frontend']['error']['timeout'])
-				if cortex['#activity']['video'].screen == 'idle':
+				if cortex['service']['frontend'].screen == 'idle':
 					self.daemon.video_gui_screen_show('error', {'code': code,
 					                                            'url': self.daemon.config['help:error-url'].format(code=code),
 					                                            'message': message},
@@ -128,21 +133,23 @@ class Action(HAL9000_Action):
 		self.send_command('application/runtime', json.dumps(body));
 
 
-	def on_video_activity(self, target, item, old_value, new_value):
-		if self.daemon.cortex['frontend']['state'] != Action.FRONTEND_STATE_ONLINE:
+	def on_frontend_activity(self, module, name, old_value, new_value):
+		if self.daemon.cortex['service']['frontend'].state != Action.FRONTEND_STATE_ONLINE:
+			if name == 'state':
+				return True
 			return False
-		if item == 'signal':
-			if 'activity' in new_value:
-				if 'gui' in new_value['activity']:
-					if 'screen' in new_value['activity']['gui']:
-						screen = new_value['activity']['gui']['screen']['name']
-						parameter = new_value['activity']['gui']['screen']['parameter']
+		if name == 'signal':
+			if 'signal' in new_value:
+				if 'gui' in new_value['signal']:
+					if 'screen' in new_value['signal']['gui']:
+						screen = new_value['signal']['gui']['screen']['name']
+						parameter = new_value['signal']['gui']['screen']['parameter']
 						self.send_command('gui/screen', json.dumps({screen: parameter}))
-					if 'overlay' in new_value['activity']['gui']:
-						overlay = new_value['activity']['gui']['overlay']['name']
-						parameter = new_value['activity']['gui']['overlay']['parameter']
+					if 'overlay' in new_value['signal']['gui']:
+						overlay = new_value['signal']['gui']['overlay']['name']
+						parameter = new_value['signal']['gui']['overlay']['parameter']
 						self.send_command('gui/overlay', json.dumps({overlay: parameter}))
-		if item == 'screen' and new_value == 'idle':
+		if name == 'screen' and new_value == 'idle':
 			if len(self.error_queue) > 0:
 				error = error_queue.pop(0)
 				self.daemon.video_gui_screen_show('error', {'code': error.code, 'url': error.url, 'message': error.message}, error.timeout)
