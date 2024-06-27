@@ -138,7 +138,7 @@ class HAL9000(Frontend):
 
 	async def run_event_listener(self):
 		logging_getLogger('uvicorn').info(f"[frontend:arduino] starting event-listener")
-		self.events.put_nowait({'topic': 'interface/state', 'payload': 'online'})
+		self.events.put_nowait({'topic': 'status', 'payload': 'online'})
 		try:
 			while self.serial.is_open is True:
 				line = await self.serial_readline()

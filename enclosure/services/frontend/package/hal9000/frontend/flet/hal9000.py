@@ -120,6 +120,7 @@ class HAL9000(Frontend):
 				if sequence['name'] == 'sleep':
 					display.background_image_src = '/sequences/init/00.jpg'
 					display.update()
+					self.events.put_nowait({'topic': 'gui/screen', 'payload': 'idle'})
 					self.show_idle(display)
 			await asyncio_sleep(0.1)
 
@@ -254,5 +255,5 @@ class HAL9000(Frontend):
 		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(page, display)))
 		page.session.set('gui_hal9k_task', asyncio_create_task(self.run_gui_screen_hal9k(page, display)))
 		self.show_idle(display)
-		self.events.put_nowait({'topic': 'interface/state', 'payload': 'online'})
+		self.events.put_nowait({'topic': 'status', 'payload': 'online'})
 

@@ -59,7 +59,7 @@ class FrontendManager:
 		payload = message.payload.decode('utf-8')
 		if topic == 'status':
 			if self.startup is False:
-				self.mqtt_client.publish('hal9000/event/frontend/interface/state', 'online')
+				self.mqtt_client.publish('hal9000/event/frontend/status', 'online')
 		else:
 			try:
 				payload = json_loads(payload)
@@ -77,7 +77,7 @@ class FrontendManager:
 					if self.startup is True:
 						if (time_monotonic() - startup_last_publish) > 1:
 							startup_last_publish = time_monotonic()
-							self.mqtt_client.publish('hal9000/event/frontend/interface/state', 'starting')
+							self.mqtt_client.publish('hal9000/event/frontend/status', 'starting')
 					status = self.mqtt_client.loop(timeout=0.01)
 					await asyncio_sleep(0.01)
 				case False:
@@ -99,6 +99,9 @@ class FrontendManager:
 				case True:
 					for frontend in self.frontends:
 						if frontend.events.empty() is False:
+							if self.startup is True:
+								self.mqtt_client.publish('hal9000/event/frontend/status', 'ready')
+								self.startup = False
 							event = await frontend.events.get()
 							topic = event['topic']
 							payload = event['payload']
@@ -108,7 +111,6 @@ class FrontendManager:
 								except:
 									pass
 							self.mqtt_client.publish(f'hal9000/event/frontend/{topic}', payload)
-							self.startup = False
 					await asyncio_sleep(0.01)
 				case False:
 					await asyncio_sleep(1)

@@ -1,17 +1,17 @@
-#!/usr/bin/python3
-
 from re import match as re_match
 from json import loads as json_loads
 from jsonpath_ng.ext import parse as jsonpath_ng_ext_parse
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.modules import HAL9000_Trigger
+import logging
+
+from hal9000.brain.plugin import HAL9000_Trigger
 
 
 class Trigger(HAL9000_Trigger):
 
-	def __init__(self, trigger_name: str) -> None:
-		HAL9000_Trigger.__init__(self, 'mqtt', trigger_name)
+	def __init__(self, trigger_name: str, trigger_cortex) -> None:
+		HAL9000_Trigger.__init__(self, 'mqtt', trigger_name, trigger_cortex)
 		self.config = dict()
 		self.payload_jsonpath_parser = None
 
@@ -20,7 +20,7 @@ class Trigger(HAL9000_Trigger):
 		self.config['topic'] = configuration.getstring(section_name, 'mqtt-topic', fallback=None)
 		self.config['payload-regex'] = configuration.getstring(section_name, 'mqtt-payload-regex', fallback=None)
 		self.config['payload-jsonpath'] = configuration.getstring(section_name, 'mqtt-payload-jsonpath', fallback=None)
-		self.config['neuron-json-formatter'] = configuration.getstring(section_name, 'neuron-json-formatter', fallback=None)
+		self.config['signal-json-formatter'] = configuration.getstring(section_name, 'signal-json-formatter', fallback=None)
 		if self.config['payload-jsonpath'] is not None:
 			self.payload_jsonpath_parser = jsonpath_ng_ext_parse(self.config['payload-jsonpath'])
 
@@ -35,18 +35,18 @@ class Trigger(HAL9000_Trigger):
 
 
 	def handle(self, message) -> dict:
-		neuron = {}
-		if self.config['neuron-json-formatter'] is not None:
+		signal = {}
+		if self.config['signal-json-formatter'] is not None:
 			try:
 				payload = message.payload.decode('utf-8')
 				if self.config['payload-regex'] is not None:
 					matches = re_match(self.config['payload-regex'], payload)
 					if matches is not None:
-						neuron = json_loads(self.config['neuron-json-formatter'] % matches.groupdict())
+						signal = json_loads(self.config['signal-json-formatter'] % matches.groupdict())
 				if self.config['payload-jsonpath'] is not None:
 					for match in self.payload_jsonpath_parser.find(json_loads(f'[{payload}]')):
-						neuron = json_loads(self.config['neuron-json-formatter'] % {'jsonpath': match.value})
+						signal = json_loads(self.config['signal-json-formatter'] % {'jsonpath': match.value})
 			except Exception as e:
-				print(e)
-		return neuron
+				self.daemon.logger.error(f"Exception in MQTT.Trigger.handle() => {e}")
+		return signal
 
