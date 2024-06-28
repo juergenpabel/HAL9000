@@ -83,6 +83,8 @@ class Action(HAL9000_Action):
 
 
 	def on_frontend_state_callback(self, plugin, key, old_value, new_value):
+		if new_value == 'ready':
+			self.daemon.set_system_time()
 		return True ##todo validity check
 
 
