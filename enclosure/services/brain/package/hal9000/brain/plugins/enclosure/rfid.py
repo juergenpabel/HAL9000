@@ -24,7 +24,7 @@ class RFID(EnclosureComponent):
 		pass #TODO
 
 
-	def on_enclosure_signal(self, signal):
+	async def on_enclosure_signal(self, signal):
 		if 'rfid' in signal:
 			pass #TODO
 

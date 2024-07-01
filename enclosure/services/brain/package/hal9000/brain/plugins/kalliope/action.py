@@ -28,7 +28,6 @@ class Action(HAL9000_Action):
 		self.daemon.cortex['plugin']['kalliope'].addNameCallback(self.on_kalliope_mute_callback, 'mute')
 		self.daemon.cortex['plugin']['kalliope'].addSignalHandler(self.on_kalliope_signal)
 		self.daemon.cortex['plugin']['brain'].addNameCallback(self.on_brain_state_callback, 'state')
-		self.daemon.cortex['plugin']['brain'].addNameCallback(self.on_brain_consciousness_callback, 'consciousness')
 
 
 	def configure(self, configuration: configparser.ConfigParser, section_name: str) -> None:
@@ -49,27 +48,41 @@ class Action(HAL9000_Action):
 		        'message': "No connection to kalliope."}
 
 
-	def on_kalliope_signal(self, plugin, signal):
+	async def on_kalliope_signal(self, plugin, signal):
 		if 'state' in signal:
-			if self.daemon.cortex['plugin']['brain'].consciousness == Daemon.CONSCIOUSNESS_AWAKE:
-				self.daemon.cortex['plugin']['kalliope'].state = signal['state']
-			if self.daemon.cortex['plugin']['brain'].consciousness == Daemon.CONSCIOUSNESS_ASLEEP:
-				if self.config['kalliope:trigger-mqtt-topic'] is not None:
-					self.daemon.mqtt.publish(self.config['kalliope:trigger-mqtt-topic'], 'pause')
-				self.daemon.cortex['plugin']['kalliope'].state = Action.KALLIOPE_STATE_SLEEPING
+			match self.daemon.cortex['plugin']['kalliope'].state:
+				case Action.KALLIOPE_STATE_UNKNOWN:
+					if signal['state'] == Action.KALLIOPE_STATE_STARTING:
+						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
+				case Action.KALLIOPE_STATE_STARTING:
+					if signal['state'] == Action.KALLIOPE_STATE_READY:
+						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
+				case Action.KALLIOPE_STATE_READY:
+					if signal['state'] in [Action.KALLIOPE_STATE_SLEEPING, Action.KALLIOPE_STATE_WAITING]:
+						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
+				case Action.KALLIOPE_STATE_SLEEPING:
+					if self.daemon.cortex['plugin']['brain'].state == Daemon.BRAIN_STATE_AWAKE:
+						if signal['state'] in [Action.KALLIOPE_STATE_WAITING, Action.KALLIOPE_STATE_LISTENING, \
+						                       Action.KALLIOPE_STATE_THINKING, Action.KALLIOPE_STATE_SPEAKING]:
+							self.daemon.cortex['plugin']['kalliope'].state = signal['state']
+				case _:
+					print("TODO:on_kalliope_signal")
 
 
-	def on_kalliope_state_callback(self, plugin, key, old_value, new_value) -> bool:
-		if old_value in [Action.KALLIOPE_STATE_UNKNOWN, Action.KALLIOPE_STATE_STARTING]:
-			if new_value not in [Action.KALLIOPE_STATE_STARTING, Action.KALLIOPE_STATE_READY, Action.KALLIOPE_STATE_SLEEPING]:
-				return False
-		match new_value:
+	def on_kalliope_state_callback(self, plugin, key, old_state, new_state) -> bool:
+		if old_state in [Action.KALLIOPE_STATE_UNKNOWN, Action.KALLIOPE_STATE_STARTING]:
+			if new_state in [Action.KALLIOPE_STATE_STARTING, Action.KALLIOPE_STATE_READY]:
+				return True
+		match new_state:
 			case Action.KALLIOPE_STATE_READY:
 				self.daemon.cortex['plugin']['kalliope'].audio_in = 'none'
 				self.daemon.cortex['plugin']['kalliope'].audio_out = 'none'
 			case  Action.KALLIOPE_STATE_WAITING:
 				self.daemon.cortex['plugin']['kalliope'].audio_in = 'wake-word-detector'
 				self.daemon.cortex['plugin']['kalliope'].audio_out = 'none'
+				if old_state == Action.KALLIOPE_STATE_SLEEPING:
+					if self.config['kalliope:trigger-mqtt-topic'] is not None:
+						self.daemon.mqtt_publish_queue.put_nowait({'topic': self.config['kalliope:trigger-mqtt-topic'], 'payload': 'unpause'})
 			case Action.KALLIOPE_STATE_LISTENING:
 				self.daemon.cortex['plugin']['kalliope'].audio_in = 'speech-to-text'
 				self.daemon.cortex['plugin']['kalliope'].audio_out = 'none'
@@ -82,40 +95,37 @@ class Action(HAL9000_Action):
 			case Action.KALLIOPE_STATE_SLEEPING:
 				self.daemon.cortex['plugin']['kalliope'].audio_in = 'none'
 				self.daemon.cortex['plugin']['kalliope'].audio_out = 'none'
+				if self.config['kalliope:trigger-mqtt-topic'] is not None:
+					self.daemon.mqtt_publish_queue.put_nowait( {'topic': self.config['kalliope:trigger-mqtt-topic'], 'payload': 'pause'})
+			case _:
+				print("TODO:on_kalliope_state_callback")
+				return False
 		return True
 
 
-	def on_kalliope_volume_callback(self, plugin, key, old_value, new_value) -> bool:
+	def on_kalliope_volume_callback(self, plugin, key, old_volume, new_volume) -> bool:
 		if plugin.mute in ['false', HAL9000_Plugin_Cortex.UNINITIALIZED]:
-			self.daemon.cortex['plugin']['mqtt'].signal({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': new_value}})
+			self.daemon.mqtt_publish_queue.put_nowait({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': new_volume}})
 		return True
 
 
-	def on_kalliope_mute_callback(self, plugin, key, old_value, new_value) -> bool:
-		match new_value:
+	def on_kalliope_mute_callback(self, plugin, key, old_mute, new_mute) -> bool:
+		match new_mute:
 			case True:
-				self.daemon.cortex['plugin']['mqtt'].signal({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': 0}})
+				self.daemon.mqtt_publish_queue.put_nowait({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': 0}})
 			case False:
-				self.daemon.cortex['plugin']['mqtt'].signal({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': plugin.volume}})
+				self.daemon.mqtt_publish_queue.put_nowait({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': plugin.volume}})
 		return True
 
 
-	def on_brain_state_callback(self, plugin, key, old_value, new_value) -> bool:
-		if new_value == 'ready':
-			self.daemon.mqtt.publish('hal9000/command/kalliope/welcome', '')
-		return True
-
-
-	def on_brain_consciousness_callback(self, plugin, key, old_value, new_value) -> bool:
+	def on_brain_state_callback(self, plugin, key, old_state, new_state) -> bool:
 		if self.daemon.cortex['plugin']['kalliope'].state in Action.KALLIOPE_STATES_RUNNING:
-			match new_value:
-				case Daemon.CONSCIOUSNESS_AWAKE:
-					if self.config['kalliope:trigger-mqtt-topic'] is not None:
-						self.daemon.mqtt.publish(self.config['kalliope:trigger-mqtt-topic'], 'unpause')
+			match new_state:
+				case Daemon.BRAIN_STATE_READY:
+					self.daemon.mqtt_publish_queue.put_nowait({'topic': 'hal9000/command/kalliope/welcome', 'payload': ''})
+				case Daemon.BRAIN_STATE_AWAKE:
 					self.daemon.cortex['plugin']['kalliope'].state = Action.KALLIOPE_STATE_WAITING
-				case Daemon.CONSCIOUSNESS_ASLEEP:
-					if self.config['kalliope:trigger-mqtt-topic'] is not None:
-						self.daemon.mqtt.publish(self.config['kalliope:trigger-mqtt-topic'], 'pause')
+				case Daemon.BRAIN_STATE_ASLEEP:
 					self.daemon.cortex['plugin']['kalliope'].state = Action.KALLIOPE_STATE_SLEEPING
 		return True
 

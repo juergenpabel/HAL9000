@@ -30,24 +30,25 @@ class Volume(EnclosureComponent):
 		return True
 
 
-	def on_enclosure_signal(self, plugin, signal: dict) -> None:
+	async def on_enclosure_signal(self, plugin, signal: dict) -> None:
 		if 'volume' in signal:
-			if 'gui/overlay' in self.daemon.timeouts:
-				timeout, overlay = self.daemon.timeouts['gui/overlay']
-				if overlay != 'volume':
-					self.daemon.video_gui_overlay_hide(overlay)
-					del self.daemon.timeouts['gui/overlay']
-#TODO			if self.daemon.cortex['plugin']['kalliope'].plugin_id == 'kalliope': ## TODO: test if audio is assigned to kalliope
+			self.daemon.del_timeout('gui/overlay')
 			if 'delta' in signal['volume']:
 				if self.daemon.cortex['plugin']['kalliope'].mute == 'false':
 					delta = int(signal['volume']['delta']) * self.config['volume-step']
 					volume = self.daemon.cortex['plugin']['kalliope'].volume + delta
 					volume = min(volume, 100)
 					volume = max(volume, 0)
+					await self.daemon.signal('frontend', {'gui': {'overlay': {'name': 'volume',
+					                                                                  'parameter': {'level': str(volume), 'mute': 'false'}}}})
 					self.daemon.cortex['plugin']['kalliope'].volume = volume
-					self.daemon.video_gui_overlay_show('volume', ({'level': str(self.daemon.cortex['plugin']['kalliope'].volume), 'mute': 'false'}), 3)
+					self.daemon.add_timeout(3, 'frontend:gui/overlay', {'name': 'none', 'parameter': {}})
+
 			if 'mute' in signal['volume']:
 				mute = not(False if self.daemon.cortex['plugin']['kalliope'].mute == 'false' else True)
+				await self.daemon.signal('frontend', {'gui': {'overlay': {'name': 'volume',
+				                                                                  'parameter': {'level': str(volume), 'mute': str(mute).lower()}}}})
 				self.daemon.cortex['plugin']['kalliope'].mute = str(mute).lower()
-				self.daemon.video_gui_overlay_show('volume', ({'level': str(self.daemon.cortex['plugin']['kalliope'].volume), 'mute': str(mute).lower()}), 3)
+				if mute is False:
+					self.daemon.add_timeout(3, 'frontend:gui/overlay', {'name': 'none', 'parameter': {}})
 

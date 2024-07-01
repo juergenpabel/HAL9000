@@ -18,7 +18,7 @@ class Action(HAL9000_Action):
 		return HAL9000_Plugin.PLUGIN_RUNLEVEL_RUNNING
 
 
-	def on_mqtt_signal(self, plugin, signal):
+	async def on_mqtt_signal(self, plugin, signal):
 		messages = signal
 		if isinstance(messages, list) is False:
 			messages = [messages]
@@ -27,5 +27,5 @@ class Action(HAL9000_Action):
 			mqtt_payload = message['payload']
 			if isinstance(mqtt_payload, str) is False:
 				mqtt_payload = json.dumps(mqtt_payload)
-			self.daemon.mqtt.publish(mqtt_topic, mqtt_payload)
+			self.daemon.mqtt_publish_queue.put_nowait({'topic': mqtt_topic, 'payload': mqtt_payload})
 

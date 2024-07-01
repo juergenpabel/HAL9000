@@ -1,35 +1,11 @@
-import os
-import json
-import configparser
-from datetime import datetime
+from json import dumps as json_dumps
+from os.path import exists as os_path_exists
+from datetime import datetime as datetime_datetime
+from configparser import ConfigParser as configparser_ConfigParser
 
 from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin_Cortex
 from hal9000.brain.daemon import Daemon
 from hal9000.brain.plugins.kalliope.action import Action as Kalliope_Action
-
-from dbus_fast.aio import MessageBus
-from dbus_fast.auth import AuthExternal, UID_NOT_SPECIFIED
-from dbus_fast.constants import BusType
-import asyncio
-
-async def ipaddress():
-	bus = await MessageBus(None, BusType.SYSTEM, AuthExternal(UID_NOT_SPECIFIED)).connect()
-	introspection = await bus.introspect('org.freedesktop.NetworkManager', '/org/freedesktop/NetworkManager')
-	obj = bus.get_proxy_object('org.freedesktop.NetworkManager', '/org/freedesktop/NetworkManager', introspection)
-	nm = obj.get_interface('org.freedesktop.NetworkManager')
-	for connection in await nm.get_active_connections():
-		introspection2 = await bus.introspect('org.freedesktop.NetworkManager', connection)
-		obj2 = bus.get_proxy_object('org.freedesktop.NetworkManager', connection, introspection2)
-		conf = obj2.get_interface('org.freedesktop.NetworkManager.Connection.Active')
-		if await conf.get_default() is True:
-			ip4config = await conf.get_ip4_config()
-			introspection3 = await bus.introspect('org.freedesktop.NetworkManager', ip4config)
-			obj3 = bus.get_proxy_object('org.freedesktop.NetworkManager', ip4config, introspection3)
-			data= obj3.get_interface('org.freedesktop.NetworkManager.IP4Config')
-			address_data = await data.get_address_data()
-			return address_data[0]['address'].value
-	return '127.0.0.1'
-
 
 
 class Action(HAL9000_Action):
@@ -48,7 +24,7 @@ class Action(HAL9000_Action):
 		self.error_queue = list()
 
 
-	def configure(self, configuration: configparser.ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		HAL9000_Action.configure(self, configuration, section_name)
 		self.config['frontend-status-mqtt-topic'] = configuration.get(section_name, 'frontend-status-mqtt-topic', fallback='hal9000/command/frontend/status')
 		self.daemon.cortex['plugin']['frontend'].state = Action.FRONTEND_STATE_UNKNOWN
@@ -57,7 +33,6 @@ class Action(HAL9000_Action):
 		self.daemon.cortex['plugin']['frontend'].addSignalHandler(self.on_frontend_signal)
 		self.daemon.cortex['plugin']['kalliope'].addNameCallback(self.on_kalliope_state_callback, 'state')
 		self.daemon.cortex['plugin']['brain'].addNameCallback(self.on_brain_state_callback, 'state')
-		self.daemon.cortex['plugin']['brain'].addNameCallback(self.on_brain_consciousness_callback, 'consciousness')
 		self.daemon.cortex['plugin']['brain'].addSignalHandler(self.on_brain_signal)
 
 
@@ -73,93 +48,124 @@ class Action(HAL9000_Action):
 		        'message': "No connection to microcontroller."}
 
 
-	def send_command(self, topic, body) -> None:
-		self.daemon.mqtt.publish(f'hal9000/command/frontend/{topic}', body)
+	def send_frontend_command(self, topic:str , body: dict) -> None:
+		self.daemon.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/frontend/{topic}', 'payload': json_dumps(body)})
 
 
-	def send_system_time(self, synced: bool = False):
-		body = {'time': {'epoch': int(datetime.now().timestamp() + datetime.now().astimezone().tzinfo.utcoffset(None).seconds), 'synced': synced}}
-		self.send_command('application/runtime', json.dumps(body));
-
-
-	def on_frontend_state_callback(self, plugin, key, old_value, new_value):
-		if new_value == 'ready':
-			self.daemon.set_system_time()
-		return True ##todo validity check
-
-
-	def on_frontend_screen_callback(self, plugin, key, old_value, new_value):
-		if new_value == 'idle':
-			if len(self.error_queue) > 0:
-				error = error_queue.pop(0)
-				self.daemon.video_gui_screen_show('error', {'code': error.code, 'url': error.url, 'message': error.message}, error.timeout)
+	def on_frontend_state_callback(self, plugin, key, old_state, new_state):
+		if old_state in [Action.FRONTEND_STATE_UNKNOWN, Action.FRONTEND_STATE_STARTING]:
+			if new_state not in [Action.FRONTEND_STATE_STARTING, Action.FRONTEND_STATE_READY]:
+				return False
+		if old_state in [Action.FRONTEND_STATE_READY, Action.FRONTEND_STATE_ONLINE, Action.FRONTEND_STATE_OFFLINE]:
+			if new_state not in [Action.FRONTEND_STATE_ONLINE, Action.FRONTEND_STATE_OFFLINE]:
+				return False
+		if new_state == Action.FRONTEND_STATE_READY:
+			self.daemon.add_signal('frontend', {'time': None})
+			self.daemon.add_signal('frontend', {'state': None})
+			self.daemon.cortex['plugin']['frontend'].screen = 'none'
+			self.daemon.cortex['plugin']['frontend'].overlay = 'none'
 		return True
 
 
-	def on_frontend_signal(self, plugin, signal):
+	def on_frontend_screen_callback(self, plugin, key, old_screen, new_screen):
+		if new_screen == 'idle':
+			if len(self.error_queue) > 0:
+				error = error_queue.pop(0)
+				self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'error',
+				                                                       'parameter': {'code': error.code,
+				                                                                     'url': error.url,
+				                                                                     'message': error.message}}}})
+				if error.timeout is not None:
+					self.daemon.add_timeout(error.timeout, 'frontend:gui/screen', {'name': 'idle', 'parameter': {}})
+
+		return True
+
+
+	async def on_frontend_signal(self, plugin, signal):
 		if 'state' in signal:
-			self.daemon.cortex['plugin']['frontend'].state = signal['state']
-			if signal['state'] == 'ready':
-				self.send_command('application/runtime', json.dumps({'condition': self.daemon.cortex['plugin']['brain'].consciousness}))
+			if self.daemon.cortex['plugin']['frontend'].state in [Action.FRONTEND_STATE_UNKNOWN, Action.FRONTEND_STATE_STARTING]:
+				if signal['state'] in [Action.FRONTEND_STATE_STARTING, Action.FRONTEND_STATE_READY]:
+					self.daemon.cortex['plugin']['frontend'].state = signal['state']
+					return
+			if self.daemon.cortex['plugin']['frontend'].state in [Action.FRONTEND_STATE_READY, Action.FRONTEND_STATE_ONLINE, Action.FRONTEND_STATE_OFFLINE]:
+				if signal['state'] in [Action.FRONTEND_STATE_ONLINE, Action.FRONTEND_STATE_OFFLINE]:
+					self.daemon.cortex['plugin']['frontend'].state = signal['state']
+					if self.daemon.cortex['plugin']['brain'].state in [Daemon.BRAIN_STATE_AWAKE, Daemon.BRAIN_STATE_ASLEEP]:
+						self.send_frontend_command('application/runtime', {'condition': self.daemon.cortex['plugin']['brain'].state})
+					return
+		if 'time' in signal:
+			epoch = int(datetime_datetime.now().timestamp() + datetime_datetime.now().astimezone().tzinfo.utcoffset(None).seconds)
+			synced = os_path_exists('/run/systemd/timesync/synchronized')
+			self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': synced}})
+			self.daemon.add_timeout(3600 if synced is True else 60, 'plugin:signal', {'plugin': 'frontend', 'signal': {'time': None}})
 		if 'gui' in signal:
 			if 'screen' in signal['gui']:
 				if 'url' in signal['gui']['screen']['parameter']:
 					url = signal['gui']['screen']['parameter']['url']
 					url_parameter_code = ''
-					url_parameter_ipaddress = asyncio.run(ipaddress())
+					url_parameter_ipv4 = await self.daemon.get_system_ipv4()
 					if 'code' in signal['gui']['screen']['parameter']:
 						url_parameter_code = signal['gui']['screen']['parameter']['code']
-					url = url.format(ip_address=url_parameter_ipaddress, code=url_parameter_code)
+					url = url.format(ip_address=url_parameter_ipv4, code=url_parameter_code)
 					signal['gui']['screen']['parameter']['url'] = url
 					if 'hint' not in signal['gui']['screen']['parameter']:
 						signal['gui']['screen']['parameter']['hint'] = signal['gui']['screen']['parameter']['url']
 				self.daemon.cortex['plugin']['frontend'].screen = signal['gui']['screen']['name']
-				self.send_command('gui/screen', json.dumps({signal['gui']['screen']['name']: signal['gui']['screen']['parameter']}))
+				self.send_frontend_command('gui/screen', {signal['gui']['screen']['name']: signal['gui']['screen']['parameter']})
 			if 'overlay' in signal['gui']:
 				self.daemon.cortex['plugin']['frontend'].overlay = signal['gui']['overlay']['name']
-				self.send_command('gui/overlay', json.dumps({signal['gui']['overlay']['name']: signal['gui']['overlay']['parameter']}))
+				self.send_frontend_command('gui/overlay', {signal['gui']['overlay']['name']: signal['gui']['overlay']['parameter']})
 
 
-	def on_brain_state_callback(self, plugin, key, old_value, new_value):
-		if new_value == 'ready':
-			if self.daemon.cortex['plugin']['brain'].consciousness == 'awake':
+	def on_brain_state_callback(self, plugin, key, old_state, new_state):
+		match new_state:
+			case Daemon.BRAIN_STATE_READY:
+				pass # TODO
+			case Daemon.BRAIN_STATE_AWAKE:
+				self.send_frontend_command('application/runtime', {'condition': 'awake'})
+				if old_state == Daemon.BRAIN_STATE_READY:
+					self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+					                                                       'parameter': {'queue': 'replace',
+					                                                                     'sequence': {'name': 'wakeup', 'loop': 'false'}}}}})
+					self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+					                                                       'parameter': {'queue': 'append',
+					                                                                     'sequence': {'name': 'active', 'loop': 'false'}}}}})
+					self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+					                                                       'parameter': {'queue': 'append',
+					                                                                     'sequence': {'name': 'active', 'loop': 'false'}}}}})
+					self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+					                                                       'parameter': {'queue': 'append',
+					                                                                     'sequence': {'name': 'sleep', 'loop': 'false'}}}}})
+				else:
+					self.daemon.cortex['plugin']['frontend'].screen = 'idle'
+				self.daemon.cortex['plugin']['frontend'].overlay = 'none'
+			case Daemon.BRAIN_STATE_ASLEEP:
+				self.send_frontend_command('application/runtime', {'condition': 'asleep'})
 				self.daemon.cortex['plugin']['frontend'].screen = 'none'
 				self.daemon.cortex['plugin']['frontend'].overlay = 'none'
-				self.daemon.video_gui_screen_show('hal9000', {'queue': 'replace', 'sequence': {'name': 'wakeup', 'loop': 'false'}})
-				self.daemon.video_gui_screen_show('hal9000', {'queue': 'append',  'sequence': {'name': 'active', 'loop': 'false'}})
-				self.daemon.video_gui_screen_show('hal9000', {'queue': 'append',  'sequence': {'name': 'active', 'loop': 'false'}})
-				self.daemon.video_gui_screen_show('hal9000', {'queue': 'append',  'sequence': {'name': 'sleep',  'loop': 'false'}})
+			case Daemon.BRAIN_STATE_DYING:
+				pass
+			case _:
+				print("TODO:on_brain_state_callback")
 		return True
 
 
-	def on_brain_consciousness_callback(self, plugin, key, old_value, new_value):
-		if self.daemon.cortex['plugin']['brain'].state == 'ready':
-			self.send_command('application/runtime', json.dumps({'condition': new_value}))
-			match new_value:
-				case 'awake':
-					self.daemon.cortex['plugin']['frontend'].screen = 'idle'
-					self.daemon.cortex['plugin']['frontend'].overlay = 'none'
-				case 'asleep':
-					self.daemon.cortex['plugin']['frontend'].screen = 'none'
-					self.daemon.cortex['plugin']['frontend'].overlay = 'none'
-		return True
-
-
-	def on_brain_signal(self, plugin, signal):
+	async def on_brain_signal(self, plugin, signal):
 		if 'status' in signal:
-			self.daemon.mqtt.publish(self.config['frontend-status-mqtt-topic'], json.dumps(signal['status']))
-		if 'time' in signal:
-			synced = False
-			if 'synced' in signal['time']:
-				synced = bool(signal['time']['synced'])
-			self.send_system_time(synced)
+			self.daemon.mqtt_publish_queue.put_nowait({'topic': self.config['frontend-status-mqtt-topic'], 'payload': json_dumps(signal['status'])})
 
 
-	def on_kalliope_state_callback(self, plugin, key, old_value, new_value):
-		if old_value == Kalliope_Action.KALLIOPE_STATE_SPEAKING and new_value == Kalliope_Action.KALLIOPE_STATE_WAITING:
-			self.daemon.video_gui_screen_show('hal9000', {'queue': 'replace', 'sequence': {'name': 'sleep',  'loop': 'false'}}, 3)
-		if old_value == Kalliope_Action.KALLIOPE_STATE_WAITING and new_value == Kalliope_Action.KALLIOPE_STATE_LISTENING:
-			self.daemon.video_gui_screen_show('hal9000', {'queue': 'replace', 'sequence': {'name': 'wakeup', 'loop': 'false'}})
-			self.daemon.video_gui_screen_show('hal9000', {'queue': 'append',  'sequence': {'name': 'active', 'loop': 'true'}})
+	def on_kalliope_state_callback(self, plugin, key, old_state, new_state):
+		if old_state == Kalliope_Action.KALLIOPE_STATE_SPEAKING and new_state == Kalliope_Action.KALLIOPE_STATE_WAITING:
+			self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+			                                                       'parameter': {'queue': 'replace',
+			                                                                     'sequence': {'name': 'sleep', 'loop': 'false'}}}}})
+		if old_state == Kalliope_Action.KALLIOPE_STATE_WAITING and new_state == Kalliope_Action.KALLIOPE_STATE_LISTENING:
+			self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+			                                                       'parameter': {'queue': 'replace',
+			                                                                     'sequence': {'name': 'wakeup', 'loop': 'false'}}}}})
+			self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+			                                                       'parameter': {'queue': 'append',
+			                                                                     'sequence': {'name': 'active', 'loop': 'true'}}}}})
 		return True
 

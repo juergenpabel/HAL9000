@@ -1,4 +1,4 @@
 jsonpath-ng>=1.6.1
-paho-mqtt<2
-requests
-dbus-fast
+aiomqtt>=2.1.0
+dbus-fast>=2.22.1
+

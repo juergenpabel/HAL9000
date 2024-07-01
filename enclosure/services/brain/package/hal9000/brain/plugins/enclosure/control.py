@@ -56,11 +56,11 @@ class Control(EnclosureComponent):
 		return True
 
 
-	def on_enclosure_signal(self, plugin, signal):
+	async def on_enclosure_signal(self, plugin, signal):
 		if 'control' in signal:
-			self.daemon.set_timeout(self.config['menu']['timeout'], 'gui/screen', 'idle') ## {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
+			self.daemon.add_timeout(self.config['menu']['timeout'], 'frontend:gui/screen', 'idle')
 			if 'cancel' in signal['control']:
-				self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
+				await self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
 				return
 			if 'delta' in signal['control']:
 				if self.daemon.cortex['plugin']['frontend'].screen == HAL9000_Plugin_Cortex.UNINITIALIZED:
@@ -76,7 +76,7 @@ class Control(EnclosureComponent):
 				menu_name = self.daemon.cortex['plugin']['frontend'].menu_name
 				menu_item = self.daemon.cortex['plugin']['frontend'].menu_item
 				if menu_name not in self.config['menu']:
-					self.daemon.cortex['plugin']['frontend'].signal({'gui': {'overlay': {'name': 'error', 'parameter': {'text': "Error in menu"}}}}) #TODO
+					await self.daemon.cortex['plugin']['frontend'].signal({'gui': {'overlay': {'name': 'error', 'parameter': {'text': "Error in menu"}}}}) #TODO
 					return
 				position = 0
 				for item in self.config['menu'][menu_name]['items']:
@@ -87,48 +87,45 @@ class Control(EnclosureComponent):
 				menu_title = self.config['menu'][menu_name]['title']
 				menu_item  = self.config['menu'][menu_name]['items'][position]['item']
 				menu_text  = self.config['menu'][menu_name]['items'][position]['text']
-				self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'menu', 'parameter': {'title': menu_title, 'text': menu_text}}}})
+				await self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'menu', 'parameter': {'title': menu_title, 'text': menu_text}}}})
 				self.daemon.cortex['plugin']['frontend'].menu_name = menu_name
 				self.daemon.cortex['plugin']['frontend'].menu_item = menu_item
 			if 'select' in signal['control']:
 				if self.daemon.cortex['plugin']['frontend'].screen in ['error', 'qrcode']:
-					if 'gui/screen' in self.daemon.timeouts:
-						del self.daemon.timeouts['gui/screen']
-					self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
+					self.daemon.del_timeout('frontend:gui/screen')
+					await self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
 				if self.daemon.cortex['plugin']['frontend'].screen == 'menu':
 					if self.daemon.cortex['plugin']['frontend'].menu_name == HAL9000_Plugin_Cortex.UNINITIALIZED:
-						if 'gui/screen' in self.daemon.timeouts:
-							del self.daemon.timeouts['gui/screen']
-						self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
+						self.daemon.del_timeout('frontend:gui/screen')
+						await self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
 						return
 					menu_item = self.daemon.cortex['plugin']['frontend'].menu_item
 					if menu_item is not None:
 						if menu_item.startswith('item-'):
 							if menu_item not in self.config['handlers'] or 'plugin' not in self.config['handlers'][menu_item] or 'signal' not in self.config['handlers'][menu_item]:
-								self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'error', 'parameter': {'menu': f"TODO:{menu_item}"}}}}) # TODO
+								await self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'error', 'parameter': {'menu': f"TODO:{menu_item}"}}}}) # TODO
 								self.daemon.logger.error(f"plugin enclosure: invalid menu item '{menu_item}', check configuration (required: 'plugin' and 'signal')")
 								return
 							plugin_name = self.config['handlers'][menu_item]['plugin']
 							signal_data = self.config['handlers'][menu_item]['signal']
 							if plugin_name not in self.daemon.cortex['plugin']:
-								self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'error', 'parameter': {'menu': f"TODO:{menu_item}"}}}})
+								await self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'error', 'parameter': {'menu': f"TODO:{menu_item}"}}}})
 								self.daemon.logger.error(f"plugin enclosure: unknown plugin '{menu_item}', check configuration")
 								return
-							self.daemon.cortex['plugin'][plugin_name].signal(json_loads(signal_data))
-							if 'gui/screen' in self.daemon.timeouts:
-								del self.daemon.timeouts['gui/screen']
+							await self.daemon.cortex['plugin'][plugin_name].signal(json_loads(signal_data))
+							self.daemon.del_timeout('frontend:gui/screen')
 						elif menu_item.startswith('menu-'):
 							if menu_item not in self.config['menu']:
-								self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'error', 'parameter': {'menu': f"TODO:{menu_item}"}}}})
+								await self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'error', 'parameter': {'menu': f"TODO:{menu_item}"}}}})
 								self.daemon.logger.error(f"plugin enclosure: invalid menu item '{menu_item}', check configuration")
 								return
 							menu_title = self.config['menu'][menu_item]['title']
 							menu_text  = self.config['menu'][menu_item]['items'][0]['text']
-							self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'menu', 'parameter': {'title': menu_title, 'text': menu_text}}}})
+							await self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'menu', 'parameter': {'title': menu_title, 'text': menu_text}}}})
 							self.daemon.cortex['plugin']['frontend'].menu_name = menu_item
 							self.daemon.cortex['plugin']['frontend'].menu_item = self.config['menu'][menu_item]['items'][0]['item']
 						else:
-							self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'error', 'parameter': {'menu': f"TODO:{menu_item}"}}}})
+							await self.daemon.cortex['plugin']['frontend'].signal({'gui': {'screen': {'name': 'error', 'parameter': {'menu': f"TODO:{menu_item}"}}}})
 							self.daemon.logger.error(f"plugin enclosure: invalid menu item '{menu_item}', check configuration")
 							return
 

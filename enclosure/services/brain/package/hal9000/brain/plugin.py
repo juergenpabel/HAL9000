@@ -1,5 +1,4 @@
 from configparser import ConfigParser
-from hal9000.brain import HAL9000_Abstract
 
 
 class HAL9000_Plugin_Cortex(object):
@@ -44,9 +43,9 @@ class HAL9000_Plugin_Cortex(object):
 		self.callbacks_signal.remove(callback)
 
 
-	def signal(self, data):
+	async def signal(self, data):
 		for callback in self.callbacks_signal:
-			callback(self, data)
+			await callback(self, data)
 
 
 	def __setattr__(self, name, new_value):
@@ -82,19 +81,22 @@ class HAL9000_Plugin_Cortex(object):
 		return result
 
 
-class HAL9000_Plugin(HAL9000_Abstract):
+class HAL9000_Plugin(object):
 	PLUGIN_RUNLEVEL_UNKNOWN  = "unknown"
 	PLUGIN_RUNLEVEL_STARTING = "starting"
 	PLUGIN_RUNLEVEL_RUNNING  = "running"
 	PLUGIN_RUNLEVEL_HALTING  = "halting"
 
 	def __init__(self, plugin_type: str, plugin_class: str, plugin_name: str, plugin_cortex: HAL9000_Plugin_Cortex, **kwargs) -> None:
-		HAL9000_Abstract.__init__(self, f"{plugin_type}:{plugin_class}:{plugin_name}")
+		self.name = f"{plugin_type}:{plugin_class}:{plugin_name}"
 		self.daemon = kwargs.get('daemon', None)
 		if plugin_cortex is not None and self.daemon is not None:
 			if plugin_class not in self.daemon.cortex['plugin']:
 				self.daemon.cortex['plugin'][plugin_class] = plugin_cortex
 		self.config = dict()
+
+	def __repr__(self):
+		return self.name
 
 
 	def configure(self, configuration: ConfigParser, section_name: str) -> None:
