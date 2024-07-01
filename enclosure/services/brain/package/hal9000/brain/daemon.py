@@ -246,6 +246,7 @@ class Daemon(object):
 						if isinstance(payload, dict) is True:
 							payload = json_dumps(payload)
 						await mqtt.publish(topic, payload)
+						self.logger.debug(f"MQTT published: {topic} => {str(chr(0x27))+str(chr(0x27)) if payload == '' else payload}")
 				await asyncio_sleep(0.01)
 		except asyncio_CancelledError as e:
 			pass
