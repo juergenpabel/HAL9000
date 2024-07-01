@@ -49,23 +49,29 @@ class Action(HAL9000_Action):
 
 	async def on_kalliope_signal(self, plugin, signal):
 		if 'state' in signal:
-			match self.daemon.cortex['plugin']['kalliope'].state:
-				case Action.KALLIOPE_STATE_UNKNOWN:
-					if signal['state'] == Action.KALLIOPE_STATE_STARTING:
-						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
+			match signal['state']:
 				case Action.KALLIOPE_STATE_STARTING:
-					if signal['state'] == Action.KALLIOPE_STATE_READY:
+					if self.daemon.cortex['plugin']['kalliope'].state == Action.KALLIOPE_STATE_UNKNOWN:
 						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
 				case Action.KALLIOPE_STATE_READY:
-					if signal['state'] in [Action.KALLIOPE_STATE_SLEEPING, Action.KALLIOPE_STATE_WAITING]:
+					if self.daemon.cortex['plugin']['kalliope'].state == Action.KALLIOPE_STATE_STARTING:
+						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
+				case Action.KALLIOPE_STATE_WAITING:
+					if self.daemon.cortex['plugin']['brain'].state in [Action.KALLIOPE_STATE_STARTING, Daemon.BRAIN_STATE_AWAKE]:
+						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
+				case Action.KALLIOPE_STATE_LISTENING:
+					if self.daemon.cortex['plugin']['brain'].state == Daemon.BRAIN_STATE_AWAKE:
+						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
+				case Action.KALLIOPE_STATE_THINKING:
+					if self.daemon.cortex['plugin']['brain'].state == Daemon.BRAIN_STATE_AWAKE:
+						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
+				case Action.KALLIOPE_STATE_SPEAKING:
+					if self.daemon.cortex['plugin']['brain'].state == Daemon.BRAIN_STATE_AWAKE:
 						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
 				case Action.KALLIOPE_STATE_SLEEPING:
-					if self.daemon.cortex['plugin']['brain'].state == Daemon.BRAIN_STATE_AWAKE:
-						if signal['state'] in [Action.KALLIOPE_STATE_WAITING, Action.KALLIOPE_STATE_LISTENING, \
-						                       Action.KALLIOPE_STATE_THINKING, Action.KALLIOPE_STATE_SPEAKING]:
-							self.daemon.cortex['plugin']['kalliope'].state = signal['state']
-				case _:
-					print("TODO:on_kalliope_signal")
+					if self.daemon.cortex['plugin']['kalliope'].state in [Action.KALLIOPE_STATE_WAITING, Action.KALLIOPE_STATE_LISTENING, \
+							                                      Action.KALLIOPE_STATE_THINKING, Action.KALLIOPE_STATE_SPEAKING]:
+						self.daemon.cortex['plugin']['kalliope'].state = signal['state']
 
 
 	def on_kalliope_state_callback(self, plugin, key, old_state, new_state) -> bool:

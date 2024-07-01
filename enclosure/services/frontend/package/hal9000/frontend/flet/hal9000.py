@@ -120,7 +120,7 @@ class HAL9000(Frontend):
 				if sequence['name'] == 'sleep':
 					display.background_image_src = '/sequences/init/00.jpg'
 					display.update()
-					self.events.put_nowait({'topic': 'gui/screen', 'payload': 'idle'})
+					self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'idle'}})
 					self.show_idle(display)
 			await asyncio_sleep(0.1)
 
