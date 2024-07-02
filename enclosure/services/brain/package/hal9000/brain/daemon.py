@@ -229,7 +229,7 @@ class Daemon(object):
 											await plugin.signal(signal)
 								self.logger.debug(f"CORTEX after signals   = {self.cortex}")
 		except aiomqtt_MqttError as e:
-			if self.tasks['mqtt'].cancelled() is False:
+			if self.tasks['mqtt'].cancelled() is False and self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
 				raise e
 		except asyncio_CancelledError as e:
 			pass
