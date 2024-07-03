@@ -21,7 +21,6 @@ class Action(HAL9000_Action):
 	def __init__(self, action_name: str, plugin_cortex: HAL9000_Plugin_Cortex, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'frontend', action_name, plugin_cortex, **kwargs)
 		self.daemon.cortex['plugin']['frontend'].addNames(['screen', 'overlay'])
-		self.error_queue = list()
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
@@ -29,7 +28,6 @@ class Action(HAL9000_Action):
 		self.config['frontend-status-mqtt-topic'] = configuration.get(section_name, 'frontend-status-mqtt-topic', fallback='hal9000/command/frontend/status')
 		self.daemon.cortex['plugin']['frontend'].state = Action.FRONTEND_STATE_UNKNOWN
 		self.daemon.cortex['plugin']['frontend'].addNameCallback(self.on_frontend_state_callback, 'state')
-		self.daemon.cortex['plugin']['frontend'].addNameCallback(self.on_frontend_screen_callback, 'screen')
 		self.daemon.cortex['plugin']['frontend'].addSignalHandler(self.on_frontend_signal)
 		self.daemon.cortex['plugin']['kalliope'].addNameCallback(self.on_kalliope_state_callback, 'state')
 		self.daemon.cortex['plugin']['brain'].addNameCallback(self.on_brain_state_callback, 'state')
@@ -59,39 +57,26 @@ class Action(HAL9000_Action):
 		if old_state in [Action.FRONTEND_STATE_READY, Action.FRONTEND_STATE_ONLINE, Action.FRONTEND_STATE_OFFLINE]:
 			if new_state not in [Action.FRONTEND_STATE_ONLINE, Action.FRONTEND_STATE_OFFLINE]:
 				return False
-		if new_state == Action.FRONTEND_STATE_READY:
-			self.daemon.add_signal('frontend', {'time': None})
-			self.daemon.add_signal('frontend', {'state': None})
-			self.daemon.cortex['plugin']['frontend'].screen = 'none'
-			self.daemon.cortex['plugin']['frontend'].overlay = 'none'
-		return True
-
-
-	def on_frontend_screen_callback(self, plugin, key, old_screen, new_screen):
-		if new_screen == 'idle':
-			if len(self.error_queue) > 0:
-				error = error_queue.pop(0)
-				self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'error',
-				                                                       'parameter': {'code': error.code,
-				                                                                     'url': error.url,
-				                                                                     'message': error.message}}}})
-				if error.timeout is not None:
-					self.daemon.add_timeout(error.timeout, 'frontend:gui/screen', {'name': 'idle', 'parameter': {}})
-
 		return True
 
 
 	async def on_frontend_signal(self, plugin, signal):
 		if 'state' in signal:
-			if self.daemon.cortex['plugin']['frontend'].state in [Action.FRONTEND_STATE_UNKNOWN, Action.FRONTEND_STATE_STARTING]:
-				if signal['state'] in [Action.FRONTEND_STATE_STARTING, Action.FRONTEND_STATE_READY]:
+			if signal['state'] in [Action.FRONTEND_STATE_STARTING, Action.FRONTEND_STATE_READY]:
+				if self.daemon.cortex['plugin']['frontend'].state in [Action.FRONTEND_STATE_UNKNOWN,
+				                                                      Action.FRONTEND_STATE_STARTING]:
 					self.daemon.cortex['plugin']['frontend'].state = signal['state']
+					if self.daemon.cortex['plugin']['frontend'].state == Action.FRONTEND_STATE_READY:
+						self.daemon.queue_signal('frontend', {'time': None})
+						self.daemon.cortex['plugin']['frontend'].screen = 'none'
+						self.daemon.cortex['plugin']['frontend'].overlay = 'none'
 					return
-			if self.daemon.cortex['plugin']['frontend'].state in [Action.FRONTEND_STATE_READY, Action.FRONTEND_STATE_ONLINE, Action.FRONTEND_STATE_OFFLINE]:
-				if signal['state'] in [Action.FRONTEND_STATE_ONLINE, Action.FRONTEND_STATE_OFFLINE]:
+			if signal['state'] in [Action.FRONTEND_STATE_ONLINE, Action.FRONTEND_STATE_OFFLINE]:
+				if self.daemon.cortex['plugin']['frontend'].state in [Action.FRONTEND_STATE_READY, \
+				                                                      Action.FRONTEND_STATE_ONLINE, \
+				                                                      Action.FRONTEND_STATE_OFFLINE]:
 					self.daemon.cortex['plugin']['frontend'].state = signal['state']
-					if self.daemon.cortex['plugin']['brain'].state in [Daemon.BRAIN_STATE_AWAKE, Daemon.BRAIN_STATE_ASLEEP]:
-						self.send_frontend_command('application/runtime', {'condition': self.daemon.cortex['plugin']['brain'].state})
+					self.send_frontend_command('application/runtime', {'condition': self.daemon.cortex['plugin']['brain'].state})
 					return
 		if 'time' in signal:
 			epoch = int(datetime_datetime.now().timestamp() + datetime_datetime.now().astimezone().tzinfo.utcoffset(None).seconds)
@@ -124,25 +109,25 @@ class Action(HAL9000_Action):
 			case Daemon.BRAIN_STATE_AWAKE:
 				self.send_frontend_command('application/runtime', {'condition': 'awake'})
 				if old_state == Daemon.BRAIN_STATE_READY:
-					self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
-					                                                       'parameter': {'queue': 'replace',
-					                                                                     'sequence': {'name': 'wakeup', 'loop': 'false'}}}}})
-					self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
-					                                                       'parameter': {'queue': 'append',
-					                                                                     'sequence': {'name': 'active', 'loop': 'false'}}}}})
-					self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
-					                                                       'parameter': {'queue': 'append',
-					                                                                     'sequence': {'name': 'active', 'loop': 'false'}}}}})
-					self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
-					                                                       'parameter': {'queue': 'append',
-					                                                                     'sequence': {'name': 'sleep', 'loop': 'false'}}}}})
+					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+					                                                         'parameter': {'queue': 'replace',
+					                                                                       'sequence': {'name': 'wakeup', 'loop': 'false'}}}}})
+					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+					                                                         'parameter': {'queue': 'append',
+					                                                                       'sequence': {'name': 'active', 'loop': 'false'}}}}})
+					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+					                                                         'parameter': {'queue': 'append',
+					                                                                       'sequence': {'name': 'active', 'loop': 'false'}}}}})
+					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+					                                                         'parameter': {'queue': 'append',
+					                                                                       'sequence': {'name': 'sleep', 'loop': 'false'}}}}})
 				else:
-					self.daemon.cortex['plugin']['frontend'].screen = 'idle'
-				self.daemon.cortex['plugin']['frontend'].overlay = 'none'
+					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
+				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 			case Daemon.BRAIN_STATE_ASLEEP:
 				self.send_frontend_command('application/runtime', {'condition': 'asleep'})
-				self.daemon.cortex['plugin']['frontend'].screen = 'none'
-				self.daemon.cortex['plugin']['frontend'].overlay = 'none'
+				self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
+				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 			case Daemon.BRAIN_STATE_DYING:
 				pass
 			case _:
@@ -157,15 +142,26 @@ class Action(HAL9000_Action):
 
 	def on_kalliope_state_callback(self, plugin, key, old_state, new_state):
 		if old_state == Kalliope_Action.KALLIOPE_STATE_SPEAKING and new_state == Kalliope_Action.KALLIOPE_STATE_WAITING:
-			self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
-			                                                       'parameter': {'queue': 'replace',
-			                                                                     'sequence': {'name': 'sleep', 'loop': 'false'}}}}})
+			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+			                                                         'parameter': {'queue': 'replace',
+			                                                                       'sequence': {'name': 'sleep', 'loop': 'false'}}}}})
 		if old_state == Kalliope_Action.KALLIOPE_STATE_WAITING and new_state == Kalliope_Action.KALLIOPE_STATE_LISTENING:
-			self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
-			                                                       'parameter': {'queue': 'replace',
-			                                                                     'sequence': {'name': 'wakeup', 'loop': 'false'}}}}})
-			self.daemon.add_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
-			                                                       'parameter': {'queue': 'append',
-			                                                                     'sequence': {'name': 'active', 'loop': 'true'}}}}})
+			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+			                                                         'parameter': {'queue': 'replace',
+			                                                                       'sequence': {'name': 'wakeup', 'loop': 'false'}}}}})
+			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+			                                                         'parameter': {'queue': 'append',
+			                                                                       'sequence': {'name': 'active', 'loop': 'true'}}}}})
+		# the following is for kalliope STT error cases (hal9000-on-stt-error & hal9000-on-order-not-found)
+		if old_state == Kalliope_Action.KALLIOPE_STATE_THINKING and new_state == Kalliope_Action.KALLIOPE_STATE_WAITING:
+			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+			                                                         'parameter': {'queue': 'replace',
+			                                                                       'sequence': {'name': 'active', 'loop': 'false'}}}}})
+			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+			                                                         'parameter': {'queue': 'append',
+			                                                                       'sequence': {'name': 'active', 'loop': 'false'}}}}})
+			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
+			                                                         'parameter': {'queue': 'append',
+			                                                                       'sequence': {'name': 'sleep', 'loop': 'false'}}}}})
 		return True
 

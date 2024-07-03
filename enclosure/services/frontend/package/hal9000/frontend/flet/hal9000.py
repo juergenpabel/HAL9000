@@ -50,15 +50,20 @@ class HAL9000(Frontend):
 				logging_getLogger('uvicorn').debug(f"[frontend:flet] received command in session '{page.session_id}': {command}")
 				if command['topic'] == 'application/runtime':
 					if 'condition' in command['payload']:
-						if command['payload']['condition'] == "asleep":
-							self.show_none(display)
+						if command['payload']['condition'] == "starting":
+							pass
 						elif command['payload']['condition'] == "awake":
 							self.show_idle(display)
+						elif command['payload']['condition'] == "asleep":
+							self.show_none(display)
 						else:
-							logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported condition '{command['payload']['condition']}' in application/runtime")
+							logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported condition "
+							                                     f"'{command['payload']['condition']}' in application/runtime")
 				elif command['topic'] == 'gui/screen':
 					for screen in command['payload'].keys():
-						if screen == 'idle':
+						if screen == 'none':
+							self.show_none(display)
+						elif screen == 'idle':
 							self.show_idle(display)
 						elif screen == 'hal9000':
 							self.show_hal9k(display, command['payload']['hal9000'])
@@ -69,8 +74,9 @@ class HAL9000(Frontend):
 						elif screen == 'error':
 							self.show_error(display, command['payload']['error'])
 						else:
-							self.show_error(display, {'title': 'BUG', 'text': f"Unsupported screen: {screen}"})
-							logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported screen '{json_dumps(command['payload'])}' in gui/screen")
+							self.show_error(display, {'title': 'BUG', 'message': f"Unsupported screen: {screen}", 'code': 'TODO'})
+							logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported screen"
+							                                     f"'{json_dumps(command['payload'])}' in gui/screen")
 				elif command['topic'] == 'gui/overlay':
 					for overlay in command['payload'].keys():
 						display.content.shapes = list(filter(lambda shape: shape.data!='overlay', display.content.shapes))

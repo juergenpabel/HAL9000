@@ -148,8 +148,7 @@ class Daemon(object):
 			self.tasks['timeouts'] = asyncio_create_task(self.task_timeouts())
 			self.tasks['mqtt'] = asyncio_create_task(self.task_mqtt())
 			self.logger.debug(f"CORTEX at startup = {self.cortex}")
-			while self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
-				await asyncio_sleep(0.001)
+			while self.cortex['plugin']['brain'].state == Daemon.BRAIN_STATE_STARTING:
 				for runlevel in [HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN, HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]:
 					if runlevel in self.plugins:
 						for id, plugin in self.plugins[runlevel].items():
@@ -165,8 +164,9 @@ class Daemon(object):
 						for id, plugin in self.plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN].items():
 							error = plugin.runlevel_error()
 							self.logger.critical(f"    Plugin '{id.split(':').pop()}': Error #{error['code']} => {error['message']}")
-							self.add_signal('frontend', {'gui': {'screen': {'name': 'error',
-							                                                'parameter': {'code': error['code'], 'message': error['message']}}}})
+							self.queue_signal('frontend', {'gui': {'screen': {'name': 'error',
+							                                                  'parameter': {'code': error['code'],
+							                                                                'message': error['message']}}}})
 						self.logger.critical("Terminating due to plugins that haven't reached runlevel 'starting' within timelimit")
 						self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_DYING
 					if len(self.plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN]) == 0:
@@ -181,7 +181,10 @@ class Daemon(object):
 							del self.plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]
 							self.logger.info(f"Startup completed for all plugins")
 							self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_READY
-							self.logger.debug(f"CORTEX after startup = {self.cortex}")
+				await asyncio_sleep(0.1)
+			self.logger.debug(f"CORTEX after startup = {self.cortex}")
+			while self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
+				await asyncio_sleep(0.1)
 		except Exception as e:
 			self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_DYING
 			results['main'] = e
@@ -268,7 +271,7 @@ class Daemon(object):
 					self.logger.debug(f"MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
 					await mqtt.subscribe(mqtt_topic)
 				while self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
-					await asyncio_sleep(0.01)
+					await asyncio_sleep(0.1)
 				task_events.cancel()
 				task_commands.cancel()
 				await asyncio_gather(task_events, task_commands)
@@ -314,48 +317,46 @@ class Daemon(object):
 	async def task_timeouts(self):
 		try:
 			timeouts = {}
+			timestamp_next = datetime_datetime.now().timestamp()
 			while self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
+				timestamp_now = datetime_datetime.now().timestamp()
 				if self.timeout_queue.empty() is False:
 					timeout = await self.timeout_queue.get()
 					if isinstance(timeout, dict) is True:
-						if 'timestamp' in timeout and 'key' in timeout and 'data' in timeout:
+						if 'timestamp' in timeout and 'key' in timeout and 'data' in timeout and isinstance(timeout['data'], dict) is True:
 							key = timeout['key']
 							if timeout['timestamp'] is not None:
 								timeouts[key] = timeout
+								timestamp_next = min(timestamp_next, timeout['timestamp'])
 							else:
 								if key in timeouts:
 									del timeouts[key]
-				await asyncio_sleep(0.01)
-				for key, timeout in timeouts.copy().items():
-					if datetime_datetime.now().timestamp() > timeout['timestamp']:
-						del timeouts[key]
-						match key:
-							case 'plugin:signal':
-								if isinstance(timeout['data'], dict) is True:
-									data = timeout['data']
+				if timestamp_now >= timestamp_next:
+					for key, timeout in timeouts.copy().items():
+						timestamp_next = min(timestamp_next, timeout['timestamp'])
+						if timestamp_now >= timeout['timestamp']:
+							if timeout['timestamp'] == timestamp_next:
+								timestamp_next = timestamp_now
+							del timeouts[key]
+							data = timeout['data']
+							match key:
+								case 'plugin:signal':
 									if 'plugin' in data and 'signal' in data:
 										plugin = data['plugin']
 										signal = data['signal']
-										if isinstance(plugin, str) is True:
-											if plugin in self.cortex['plugin']:
-												plugin = self.cortex['plugin'][plugin]
-											else:
-												self.logger.error(f"Unknown plugin '{plugin}' for signal: {signal}")
-										if isinstance(plugin, HAL9000_Plugin_Cortex) is True:
-											if isinstance(signal, dict) is True:
-												await plugin.signal(signal)
-							case 'frontend:gui/screen':
-								if isinstance(timeout['data'], dict) is True:
-									data = timeout['data']
+										if plugin in self.cortex['plugin']:
+											plugin = self.cortex['plugin'][plugin]
+											await plugin.signal(signal)
+										else:
+											self.logger.error(f"Unknown plugin '{plugin}' for signal: {signal}")
+								case 'frontend:gui/screen':
 									if 'name' in data and 'parameter' in data:
-										self.add_signal('frontend', {'gui': {'screen': {'name': data['name'],
-										                                                'parameter': data['parameter']}}})
-							case 'frontend:gui/overlay':
-								if isinstance(timeout['data'], dict) is True:
-									data = timeout['data']
+										self.queue_signal('frontend', {'gui': {'screen': {'name': data['name'],
+										                                                  'parameter': data['parameter']}}})
+								case 'frontend:gui/overlay':
 									if 'name' in data and 'parameter' in data:
-										self.add_signal('frontend', {'gui': {'overlay': {'name': data['name'],
-										                                                 'parameter': data['parameter']}}})
+										self.queue_signal('frontend', {'gui': {'overlay': {'name': data['name'],
+										                                                   'parameter': data['parameter']}}})
 				await asyncio_sleep(0.01)
 		except asyncio_CancelledError as e:
 			self.timeout_queue = None
@@ -400,7 +401,7 @@ class Daemon(object):
 				                               'key': Daemon.BRAIN_STATE_AWAKE, 'data': None})
 				if next_datetime_wakeup < next_datetime_sleep:
 					next_brain_state = Daemon.BRAIN_STATE_ASLEEP
-			self.add_signal('brain', {'state': next_brain_state})
+			self.queue_signal('brain', {'state': next_brain_state})
 		return True
 
 
@@ -436,7 +437,7 @@ class Daemon(object):
 			await self.cortex['plugin'][plugin].signal(signal)
 
 
-	def add_signal(self, plugin: str, signal: dict) -> None:
+	def queue_signal(self, plugin: str, signal: dict) -> None:
 		self.signal_queue.put_nowait({'plugin': plugin, 'signal': signal})
 
 
