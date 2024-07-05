@@ -68,7 +68,7 @@ class Daemon(object):
 
 	def configure(self, filename: str) -> None:
 		logging_config_fileConfig(filename)
-		logging_getLogger('apscheduler').setLevel('WARNING')
+		logging_getLogger('apscheduler').setLevel('ERROR')
 		self.logger.info(f"LOADING CONFIGURATION '{filename}'")
 		self.logger.info(f"Log-level set to '{logging_getLevelName(self.logger.level)}'")
 		self.configuration = configparser_ConfigParser(delimiters='=',
@@ -177,16 +177,20 @@ class Daemon(object):
 							self.plugins['brain'].status = Daemon.BRAIN_STATUS_READY
 				await asyncio_sleep(0.1)
 			self.logger.debug(f"STATUS after startup = {self.plugins}")
-			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
+			if self.config['brain:sleep-time'] is not None:
 				try:
 					time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
-					time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
 					self.scheduler.add_job(self.on_scheduler, apscheduler_triggers_cron_CronTrigger(hour=time_sleep.hour, minute=time_sleep.minute),
 					                       args=['brain', {'status': Daemon.BRAIN_STATUS_ASLEEP}], id='brain:sleep', name='brain:sleep')
+				except ValueError as e:
+					self.logger.error(f"sleep-time: failed to parse '{self.config['brain:sleep-time']}' as (an ISO-8601 formatted) time")
+			if self.config['brain:wakeup-time'] is not None:
+				try:
+					time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
 					self.scheduler.add_job(self.on_scheduler, apscheduler_triggers_cron_CronTrigger(hour=time_wakeup.hour, minute=time_wakeup.minute),
 					                       args=['brain', {'status': Daemon.BRAIN_STATUS_AWAKE}], id='brain:wakeup', name='brain:wakeup')
-				except Exception as e:
-					print(e) # TODO
+				except ValueError as e:
+					self.logger.error(f"wakeup-time: failed to parse '{self.config['brain:wakeup-time']}' as (an ISO-8601 formatted) time")
 			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				await asyncio_sleep(0.1)
 		except Exception as e:

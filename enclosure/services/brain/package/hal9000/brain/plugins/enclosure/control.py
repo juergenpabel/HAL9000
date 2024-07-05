@@ -24,21 +24,6 @@ class Control(EnclosureComponent):
 			menu_config = ConfigParser()
 			menu_config.read(files)
 			self.configure_menu(menu_config, 'menu-main')
-#TODO: validate menu config
-#TODO		if menu_item not in self.config['handlers'] or 'plugin' not in self.config['handlers'][menu_item] or 'signal' not in self.config['handlers'][menu_item]:
-#TODO			await self.daemon.plugins['frontend'].signal({'gui': {'screen': {'name': 'error', 'parameter': {'menu': f"TODO:{menu_item}"}}}}) # TODO
-#TODO			self.daemon.logger.error(f"plugin enclosure: invalid menu item '{menu_item}', check configuration (required: 'plugin' and 'signal')")
-#TODO			return
-#TODO		if menu_item not in self.config['menu']:
-#TODO			self.daemon.queue_signal('frontend',
-#TODO			                         {'gui': {'screen': {'name': 'error',
-#TODO			                                             'parameter': {'menu': f"TODO:{menu_item}"}}}})
-#TODO			self.daemon.logger.error(f"plugin enclosure: invalid menu item '{menu_item}', check configuration")
-#TODO			return
-#TODO			if menu_name not in self.config['menu']:
-#TODO				self.daemon.queue_signal('frontend',
-#TODO				                         {'gui': {'overlay': {'name': 'error', 'parameter': {'text': "Error in menu"}}}}) #TODO
-#TODO				return
 		self.daemon.plugins['frontend'].addNames(['menu_item', 'menu_name'])
 		self.daemon.plugins['frontend'].addNameCallback(self.on_frontend_screen_callback, 'screen')
 		self.daemon.plugins['enclosure'].addSignalHandler(self.on_enclosure_signal)
@@ -48,11 +33,20 @@ class Control(EnclosureComponent):
 		self.config['menu'][menu_self]['title'] = menu_config.get(menu_self, 'title', fallback='')
 		for menu_entry in menu_config.options(menu_self):
 			if menu_entry.startswith('item-'):
+				plugin = menu_config.get(menu_entry, 'plugin', fallback=None)
+				signal = menu_config.get(menu_entry, 'signal', fallback=None)
+				if plugin not in self.daemon.plugins:
+					self.daemon.logger.error(f"[enclosure:control] unknown plugin configured for menu entry '{menu_entry}': '{plugin}'")
+					continue
+				try:
+					signal = json_loads(signal)
+				except Exception as e:
+					self.daemon.logger.error(f"[enclosure:control] invalid signal configuration for menu entry '{menu_entry}': '{signal}'")
+					continue
 				self.config['menu'][menu_self]['items'].append({'item': menu_entry, 'text': menu_config.get(menu_self, menu_entry)})
 				self.config['handlers'][menu_entry] = dict()
-				self.config['handlers'][menu_entry]['action'] = menu_config.get(menu_entry, 'action', fallback=None)
-				self.config['handlers'][menu_entry]['plugin'] = menu_config.get(menu_entry, 'plugin', fallback=None)
-				self.config['handlers'][menu_entry]['signal'] = menu_config.get(menu_entry, 'signal', fallback=None)
+				self.config['handlers'][menu_entry]['plugin'] = plugin
+				self.config['handlers'][menu_entry]['signal'] = signal
 			if menu_entry.startswith('menu-'):
 				self.config['menu'][menu_self]['items'].append({'item': menu_entry, 'text': menu_config.get(menu_self, menu_entry)})
 				if menu_entry not in self.config['menu']:
@@ -80,8 +74,8 @@ class Control(EnclosureComponent):
 						menu_title = self.config['menu'][menu_name]['title']
 						menu_text  = self.config['menu'][menu_name]['items'][0]['text']
 						self.daemon.plugins['frontend'].screen = 'menu'
-						self.daemon.plugins['frontend'].menu_name = menu_name #TODO: menu_title?
-						self.daemon.plugins['frontend'].menu_item = menu_item #TODO: menu_text?
+						self.daemon.plugins['frontend'].menu_name = menu_name
+						self.daemon.plugins['frontend'].menu_item = menu_item
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu',
 						                                                         'parameter': {'title': menu_title,
 						                                                                       'text': menu_text}}}})

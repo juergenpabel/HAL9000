@@ -131,10 +131,8 @@ class Action(HAL9000_Action):
 			case Daemon.BRAIN_STATUS_AWAKE:
 				if self.daemon.plugins['kalliope'].status == Action.KALLIOPE_STATUS_SLEEPING:
 					self.daemon.queue_signal('kalliope', {'status': Action.KALLIOPE_STATUS_WAITING})
-#TODO					self.daemon.plugins['kalliope'].status = Action.KALLIOPE_STATUS_WAITING
 			case Daemon.BRAIN_STATUS_ASLEEP:
 				if self.daemon.plugins['kalliope'].status != Action.KALLIOPE_STATUS_SLEEPING:
 					self.daemon.queue_signal('kalliope', {'status': Action.KALLIOPE_STATUS_SLEEPING})
-#TODO					self.daemon.plugins['kalliope'].status = Action.KALLIOPE_STATUS_SLEEPING
 		return True
 
