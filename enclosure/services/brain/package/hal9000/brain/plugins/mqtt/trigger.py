@@ -5,13 +5,13 @@ from configparser import ConfigParser as configparser_ConfigParser
 
 import logging
 
-from hal9000.brain.plugin import HAL9000_Trigger
+from hal9000.brain.plugin import HAL9000_Trigger, HAL9000_Plugin_Status
 
 
 class Trigger(HAL9000_Trigger):
 
-	def __init__(self, trigger_name: str, trigger_cortex) -> None:
-		HAL9000_Trigger.__init__(self, 'mqtt', trigger_name, trigger_cortex)
+	def __init__(self, trigger_name: str, trigger_status: HAL9000_Plugin_Status) -> None:
+		HAL9000_Trigger.__init__(self, 'mqtt', trigger_name, trigger_status)
 		self.config = dict()
 		self.payload_jsonpath_parser = None
 

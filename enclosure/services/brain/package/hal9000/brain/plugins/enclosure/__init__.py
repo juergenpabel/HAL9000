@@ -1,10 +1,7 @@
-#!/usr/bin/python3
-
 import json
 from configparser import ConfigParser
 
-from hal9000.brain.plugin import HAL9000_Action
-from hal9000.brain.daemon import Daemon
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin_Status
 
 
 class EnclosureComponent:
@@ -19,8 +16,8 @@ class EnclosureComponent:
 
 
 class Action(HAL9000_Action):
-	def __init__(self, action_name: str, plugin_cortex, **kwargs) -> None:
-		HAL9000_Action.__init__(self, 'enclosure', 'self', plugin_cortex, **kwargs)
+	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
+		HAL9000_Action.__init__(self, 'enclosure', 'self', plugin_status, **kwargs)
 		self.components = dict()
 
 

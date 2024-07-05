@@ -1,4 +1,5 @@
 jsonpath-ng>=1.6.1
 aiomqtt>=2.1.0
 dbus-fast>=2.22.1
+apscheduler<4
 

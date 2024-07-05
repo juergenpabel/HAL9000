@@ -1,12 +1,13 @@
-#!/usr/bin/env python3
-
 from io import StringIO as io_StringIO
 from os import getcwd as os_getcwd
 from math import pi as math_pi, sin as math_sin, cos as math_cos
 from json import dumps as json_dumps
 from datetime import datetime as datetime_datetime
 from logging import getLogger as logging_getLogger
-from asyncio import Queue as asyncio_Queue, sleep as asyncio_sleep, create_task as asyncio_create_task
+from asyncio import Queue as asyncio_Queue, \
+                    sleep as asyncio_sleep, \
+                    create_task as asyncio_create_task, \
+                    CancelledError as asyncio_CancelledError
 from segno import make as segno_make
 
 import flet
@@ -21,88 +22,122 @@ class HAL9000(Frontend):
 	def __init__(self, app: fastapi_FastAPI):
 		super().__init__()
 		self.flet_app = app
-		self.session_queues = {}
+		self.command_session_queues = {}
 
 
 	async def configure(self, configuration) -> bool:
 		self.flet_app.mount('/', flet.fastapi.app(self.flet, route_url_strategy='path', assets_dir=f'{os_getcwd()}/assets'))
-		self.command_listener_task = asyncio_create_task(self.run_command_listener())
+		self.command_listener_task = asyncio_create_task(self.task_command_listener())
 		return True
 
 
-	async def run_command_listener(self):
+	async def task_command_listener(self):
 		logging_getLogger('uvicorn').debug(f"[frontend:flet] starting command-listener (event-listeners are started per flet-session)")
 		try:
-			while True:
+			while self.command_listener_task.cancelled() is False:
 				command = await self.commands.get()
-				for session_queue in self.session_queues.values():
-					session_queue.put_nowait(command.copy())
-		except:
-			self.command_listener_task = None
-		logging_getLogger('uvicorn').debug(f"[frontend:flet] exiting command-listener ('flet' frontend becomes non-functional)")
+				for command_session_queue in self.command_session_queues.values():
+					command_session_queue.put_nowait(command.copy())
+			logging_getLogger('uvicorn').debug(f"[frontend:flet] task_command_listener() cancelled")
+		except asyncio_CancelledError as e:
+			logging_getLogger('uvicorn').debug(f"[frontend:flet] task_command_listener() cancelled")
+		logging_getLogger('uvicorn').info(f"[frontend:flet] exiting command-listener ('flet' frontend becomes non-functional)")
+		self.command_listener_task = None
 
 
-	async def run_session_listener(self, page, display):
-		logging_getLogger('uvicorn').debug(f"[frontend:flet] starting event-listener for session '{page.session_id}'")
+	async def run_command_session_listener(self, page, display):
+		logging_getLogger('uvicorn').debug(f"[frontend:flet] starting command-listener for session '{page.session_id}'")
 		try:
-			command = await self.session_queues[page.session_id].get()
-			while page.session_id in self.session_queues:
+			command_session_queue = self.command_session_queues[page.session_id]
+			command = await command_session_queue.get()
+			while page.session_id in self.command_session_queues:
 				logging_getLogger('uvicorn').debug(f"[frontend:flet] received command in session '{page.session_id}': {command}")
-				if command['topic'] == 'application/runtime':
-					if 'condition' in command['payload']:
-						if command['payload']['condition'] == "starting":
-							pass
-						elif command['payload']['condition'] == "awake":
-							self.show_idle(display)
-						elif command['payload']['condition'] == "asleep":
-							self.show_none(display)
-						else:
-							logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported condition "
-							                                     f"'{command['payload']['condition']}' in application/runtime")
-				elif command['topic'] == 'gui/screen':
-					for screen in command['payload'].keys():
-						if screen == 'none':
-							self.show_none(display)
-						elif screen == 'idle':
-							self.show_idle(display)
-						elif screen == 'hal9000':
-							self.show_hal9k(display, command['payload']['hal9000'])
-						elif screen == 'qrcode':
-							self.show_qrcode(display, command['payload']['qrcode'])
-						elif screen == 'menu':
-							self.show_menu(display, command['payload']['menu'])
-						elif screen == 'error':
-							self.show_error(display, command['payload']['error'])
-						else:
-							self.show_error(display, {'title': 'BUG', 'message': f"Unsupported screen: {screen}", 'code': 'TODO'})
-							logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported screen"
-							                                     f"'{json_dumps(command['payload'])}' in gui/screen")
-				elif command['topic'] == 'gui/overlay':
-					for overlay in command['payload'].keys():
-						display.content.shapes = list(filter(lambda shape: shape.data!='overlay', display.content.shapes))
-						if overlay == 'volume':
-							radius = display.radius
-							for level in range(0, int(command['payload']['volume']['level'])):
-								dx = math_cos(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
-								dy = math_sin(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
-								display.content.shapes.append(flet.canvas.Line(radius/2+(dx*radius*0.9), radius/2+(dy*radius*0.9),
-								                                               radius/2+(dx*radius*0.99), radius/2+(dy*radius*0.99),
-								                                               paint=flet.Paint(color='white'), data='overlay'))
-							display.content.update()
-						elif overlay == 'none':
-							display.content.update()
-						else:
-							self.show_menu(display, json_dumps(command['payload']))
-				else:
-					logging_getLogger('uvicorn').warning(f"[frontend:flet] BUG: unsupported topic '{command['topic']}' in received command")
-				command = await self.session_queues[page.session_id].get()
+				match command['topic']:
+					case 'application/runtime':
+						if 'condition' in command['payload']:
+							condition = command['payload']['condition']
+							match condition:
+								case 'awake':
+									self.show_idle(display)
+								case 'asleep':
+									self.show_none(display)
+								case _:
+									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported condition '{condition}' "
+									                                     f"in command 'application/runtime'")
+						if 'shutdown' in command['payload'] and 'target' in command['payload']['shutdown']:
+							target = command['payload']['shutdown']['target']
+							match target:
+								case 'poweroff':
+									self.show_error(display, {'title': 'System shutdown',
+									                          'message': f"Not supported for HTML",
+									                          'code': 'TODO'})
+								case 'reboot':
+									self.show_error(display, {'title': 'System reboot',
+									                          'message': f"Not supported for HTML",
+									                          'code': 'TODO'})
+								case _:
+									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported shutdown target '{target}' "
+									                                     f"in command 'application/runtime'")
+					case 'gui/screen':
+						for screen in command['payload'].keys():
+							match screen:
+								case 'none':
+									self.show_none(display)
+								case 'idle':
+									self.show_idle(display)
+								case 'hal9000':
+									self.show_hal9k(display, command['payload']['hal9000'])
+								case 'menu':
+									self.show_menu(display, command['payload']['menu'])
+								case 'qrcode':
+									self.show_qrcode(display, command['payload']['qrcode'])
+								case 'error':
+									self.show_error(display, command['payload']['error'])
+								case _:
+									self.show_error(display, {'title': "Unsupported screen",
+									                          'message': screen,
+									                          'code': 'TODO'})
+									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported screen '{screen}' "
+									                                     f"in command 'gui/screen'")
+					case 'gui/overlay':
+						for overlay in command['payload'].keys():
+							display.content.shapes = list(filter(lambda shape: shape.data!='overlay', display.content.shapes))
+							match overlay:
+								case 'none':
+									display.content.update()
+								case 'volume':
+									radius = display.radius
+									for level in range(0, int(command['payload']['volume']['level'])):
+										color = 'white' if command['payload']['volume']['mute'] != 'true' else 'red'
+										dx = math_cos(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
+										dy = math_sin(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
+										x1 = radius/2+(dx*radius*0.9)
+										y1 = radius/2+(dy*radius*0.9)
+										x2 = radius/2+(dx*radius*0.99)
+										y2 = radius/2+(dy*radius*0.99)
+										display.content.shapes.append(flet.canvas.Line(x1, y1, x2, y2,
+										                                               paint=flet.Paint(color=color),
+										                                               data='overlay'))
+									display.content.update()
+								case _:
+									self.show_error(display, {'title': 'Unsupported overlay',
+									                          'message': overlay,
+									                          'code': 'TODO'})
+									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported overlay '{overlay}' "
+									                                     f"in command 'gui/overlay'")
+					case _:
+						self.show_error(display, {'title': 'Unsupported command',
+						                          'message': command['topic'],
+						                          'code': 'TODO'})
+						logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported command '{command['topic']}'")
+				command = await command_session_queue.get()
 		except Exception as e:
-			logging_getLogger('uvicorn').error(f"[frontend:flet] exception in run_session_listener(): {e}")
-		logging_getLogger('uvicorn').debug(f"[frontend:flet] exiting event-listener for session '{page.session_id}' (command-listener is not session-bound)")
+			logging_getLogger('uvicorn').error(f"[frontend:flet] exception in run_command_session_listener(): {e}")
+		logging_getLogger('uvicorn').debug(f"[frontend:flet] exiting command-listener for session '{page.session_id}'")
 
 
 	async def run_gui_screen_idle(self, page, display):
-		while page.session_id in self.session_queues:
+		while page.session_id in self.command_session_queues:
 			if display.data['idle_clock'].current is not None:
 				now = datetime_datetime.now()
 				if now.second % 2 == 0:
@@ -114,7 +149,7 @@ class HAL9000(Frontend):
 
 
 	async def run_gui_screen_hal9k(self, page, display):
-		while page.session_id in self.session_queues:
+		while page.session_id in self.command_session_queues:
 			if len(display.data['hal9k_queue']) > 0:
 				sequence = display.data['hal9k_queue'].pop(0)
 				if sequence['name'] in ['wakeup', 'active', 'sleep']:
@@ -219,10 +254,12 @@ class HAL9000(Frontend):
 
 	def flet_on_disconnect(self, event):
 		logging_getLogger('uvicorn').info(f"[frontend:flet] terminating flet session '{event.page.session_id}'")
-		if event.page.session_id in self.session_queues:
-			session_queue = self.session_queues[event.page.session_id]
-			del self.session_queues[event.page.session_id]
-			session_queue.put_nowait(None)
+		if event.page.session_id in self.command_session_queues:
+			command_session_queue = self.command_session_queues[event.page.session_id]
+			del self.command_session_queues[event.page.session_id]
+			command_session_queue.put_nowait(None)
+			if len(self.command_session_queues) == 0:
+				self.events.put_nowait({'topic': 'status', 'payload': 'offline'})
 		
 
 	async def flet(self, page: flet.Page):
@@ -256,8 +293,8 @@ class HAL9000(Frontend):
 		                                                 ]),
 		                           ], alignment=flet.MainAxisAlignment.CENTER))
 		page.update()
-		self.session_queues[page.session_id] = asyncio_Queue()
-		page.session.set('session_task', asyncio_create_task(self.run_session_listener(page, display)))
+		self.command_session_queues[page.session_id] = asyncio_Queue()
+		page.session.set('session_task', asyncio_create_task(self.run_command_session_listener(page, display)))
 		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(page, display)))
 		page.session.set('gui_hal9k_task', asyncio_create_task(self.run_gui_screen_hal9k(page, display)))
 		self.show_idle(display)

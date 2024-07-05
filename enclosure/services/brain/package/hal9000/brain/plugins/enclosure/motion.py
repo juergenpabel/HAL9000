@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 from configparser import ConfigParser
 
 from hal9000.brain.daemon import Daemon
@@ -14,6 +12,6 @@ class Motion(EnclosureComponent):
 
 	def configure(self, configuration: ConfigParser, section_name: str) -> None:
 		EnclosureComponent.configure(self, configuration, section_name)
-#TODO		self.daemon.cortex['plugin']['enclosure'].addNames('motion_timestamp')
-#TODO		self.daemon.cortex['plugin']['enclosure'].motion_timestamp = None
+#TODO		self.daemon.plugins['enclosure'].addNames('motion_timestamp')
+#TODO		self.daemon.plugins['enclosure'].motion_timestamp = None
 

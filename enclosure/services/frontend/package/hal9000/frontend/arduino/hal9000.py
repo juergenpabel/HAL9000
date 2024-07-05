@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from os.path import exists as os_path_exists
 from time import monotonic as time_monotonic
 from json import loads as json_loads, dumps as json_dumps

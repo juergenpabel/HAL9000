@@ -3,83 +3,81 @@ from os import getenv as os_getenv, \
 from os.path import exists as os_path_exists
 from time import monotonic as time_monotonic, \
                  sleep as time_sleep
+from datetime import datetime as datetime_datetime, \
+                     date as datetime_date, \
+                     timedelta as datetime_timedelta, \
+                     time as datetime_time
+from json import dumps as json_dumps
 from logging import getLogger as logging_getLogger, \
                     getLevelName as logging_getLevelName
+from logging.config import fileConfig as logging_config_fileConfig
+from configparser import ConfigParser as configparser_ConfigParser
+from importlib import import_module as importlib_import_module
 from signal import signal as signal_signal, \
                    SIGHUP as signal_SIGHUP, \
                    SIGTERM as signal_SIGTERM, \
                    SIGQUIT as signal_SIGQUIT, \
                    SIGINT as signal_SIGINT
-from logging.config import fileConfig as logging_config_fileConfig
-from importlib import import_module as importlib_import_module
-
-from json import dumps as json_dumps
 from asyncio import create_task as asyncio_create_task, \
                     gather as asyncio_gather, \
                     sleep as asyncio_sleep, \
                     Queue as asyncio_Queue, \
                     CancelledError as asyncio_CancelledError
+
 from aiomqtt import Client as aiomqtt_Client, \
                     MqttError as aiomqtt_MqttError
-from datetime import datetime as datetime_datetime, \
-                     date as datetime_date, \
-                     timedelta as datetime_timedelta, \
-                     time as datetime_time
-from configparser import ConfigParser as configparser_ConfigParser
+from apscheduler.schedulers.asyncio import AsyncIOScheduler as apscheduler_schedulers_AsyncIOScheduler
+from apscheduler.triggers.cron import CronTrigger as apscheduler_triggers_cron_CronTrigger
+from apscheduler.triggers.date import DateTrigger as apscheduler_triggers_date_DateTrigger
 from dbus_fast.aio import MessageBus
 from dbus_fast.auth import AuthExternal, UID_NOT_SPECIFIED
 from dbus_fast.constants import BusType
 
 
-from .plugin import HAL9000_Plugin, HAL9000_Plugin_Cortex
+from .plugin import HAL9000_Plugin, HAL9000_Plugin_Status
 
 
 class Daemon(object):
 
-	BRAIN_STATE_STARTING = 'starting'
-	BRAIN_STATE_READY = 'ready'
-	BRAIN_STATE_AWAKE = 'awake'
-	BRAIN_STATE_ASLEEP = 'asleep'
-	BRAIN_STATE_DYING = 'dying'
-	BRAIN_STATE_VALID = [BRAIN_STATE_STARTING, BRAIN_STATE_READY, BRAIN_STATE_AWAKE, BRAIN_STATE_ASLEEP, BRAIN_STATE_DYING]
+	BRAIN_STATUS_STARTING = 'starting'
+	BRAIN_STATUS_READY = 'ready'
+	BRAIN_STATUS_AWAKE = 'awake'
+	BRAIN_STATUS_ASLEEP = 'asleep'
+	BRAIN_STATUS_DYING = 'dying'
 
 	def __init__(self) -> None:
 		self.logger = logging_getLogger()
 		self.config = {}
-		self.commands = {}
+		self.plugins = {}
+		self.plugins['brain'] = HAL9000_Plugin_Status('brain', status='starting')
+		self.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
+		self.plugins['brain'].addSignalHandler(self.on_brain_signal)
 		self.tasks = {}
-		self.cortex = {'plugin': {'brain': HAL9000_Plugin_Cortex('brain', state='starting')}}
-		self.cortex['plugin']['brain'].addNameCallback(self.on_brain_state_callback, 'state')
-		self.cortex['plugin']['brain'].addSignalHandler(self.on_brain_signal)
 		self.actions = {}
 		self.triggers = {}
-		self.bindings = {}
 		self.callbacks = {'mqtt': {}}
-		self.startup_timeout = None
-		self.plugins = { HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN: {},
-		                 HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING: {},
-		                 HAL9000_Plugin.PLUGIN_RUNLEVEL_RUNNING: {},
-		                 HAL9000_Plugin.PLUGIN_RUNLEVEL_HALTING: {}}
+		self.scripts = {}
+		self.signal_queue = asyncio_Queue()
+		self.mqtt_publish_queue = asyncio_Queue()
+		self.scheduler = apscheduler_schedulers_AsyncIOScheduler()
 		signal_signal(signal_SIGHUP, self.on_posix_signal)
 		signal_signal(signal_SIGTERM, self.on_posix_signal)
 		signal_signal(signal_SIGQUIT, self.on_posix_signal)
 		signal_signal(signal_SIGINT, self.on_posix_signal)
-		self.signal_queue = asyncio_Queue()
-		self.timeout_queue = asyncio_Queue()
-		self.mqtt_publish_queue = asyncio_Queue()
 
 
 	def configure(self, filename: str) -> None:
 		logging_config_fileConfig(filename)
+		logging_getLogger('apscheduler').setLevel('WARNING')
 		self.logger.info(f"LOADING CONFIGURATION '{filename}'")
 		self.logger.info(f"Log-level set to '{logging_getLevelName(self.logger.level)}'")
 		self.configuration = configparser_ConfigParser(delimiters='=',
 		                                               converters={'list': lambda list: [item.strip().strip('"').strip("'") for item in list.split(',')],
 		                                                           'string': lambda string: string.strip('"').strip("'")}, interpolation=None)
 		self.configuration.read(filename)
+		self.config['startup:init-timeout'] = self.configuration.getint('startup', 'init-timeout', fallback=10)
 		self.config['mqtt:server']       = str(os_getenv('MQTT_SERVER', default=self.configuration.getstring('mqtt', 'server', fallback='127.0.0.1')))
 		self.config['mqtt:port']         = int(os_getenv('MQTT_PORT', default=self.configuration.getint('mqtt', 'port', fallback=1883)))
-		self.config['startup:init-timeout'] = self.configuration.getint('startup', 'init-timeout', fallback=5)
 		self.config['brain:sleep-time']  = self.configuration.get('brain', 'sleep-time', fallback=None)
 		self.config['brain:wakeup-time'] = self.configuration.get('brain', 'wakeup-time', fallback=None)
 		self.config['help:error-url'] = self.configuration.getstring('help', 'error-url', fallback=None)
@@ -93,28 +91,20 @@ class Daemon(object):
 						case 'action':
 							Action = getattr(module, 'Action')
 							if Action is not None:
-								plugin_cortex = HAL9000_Plugin_Cortex(plugin_id)
-								action = Action(plugin_id, plugin_cortex, daemon=self)
-								self.actions[plugin_id] = action
+								self.actions[plugin_id] = Action(plugin_id, HAL9000_Plugin_Status(plugin_id), daemon=self)
 						case 'trigger':
 							Trigger = getattr(module, 'Trigger')
 							if Trigger is not None:
-								plugin_cortex = HAL9000_Plugin_Cortex(plugin_id)
-								trigger = Trigger(plugin_id, plugin_cortex)
-								self.triggers[plugin_id] = trigger
+								self.triggers[plugin_id] = Trigger(plugin_id, HAL9000_Plugin_Status(plugin_id))
 		for section_name in self.configuration.sections():
 			plugin_path = self.configuration.getstring(section_name, 'plugin', fallback=None)
 			if plugin_path is not None:
 				plugin_type, plugin_id = section_name.lower().split(':',1)
-				if plugin_type == 'action':
-					self.actions[plugin_id].configure(self.configuration, section_name)
-				if plugin_type == 'trigger':
-					self.triggers[plugin_id].configure(self.configuration, section_name)
-		for binding_name in self.configuration.options('bindings'):
-			self.bindings[binding_name] = list()
-			actions = self.configuration.getlist('bindings', binding_name)
-			for action in actions:
-				self.bindings[binding_name].append(action)
+				match plugin_type:
+					case 'action':
+						self.actions[plugin_id].configure(self.configuration, section_name)
+					case 'trigger':
+						self.triggers[plugin_id].configure(self.configuration, section_name)
 		for trigger_id in self.triggers.keys():
 			trigger = self.triggers[trigger_id]
 			callbacks = trigger.callbacks()
@@ -126,67 +116,81 @@ class Daemon(object):
 							self.callbacks['mqtt'][mqtt_topic] = list()
 						self.callbacks['mqtt'][mqtt_topic].append(trigger)
 		for section_name in self.configuration.sections():
-			if section_name.startswith('command:'):
-				command_exec = self.configuration.getstring(section_name, 'exec', fallback=None)
-				if command_exec is not None:
-					command_name = section_name[8:]
-					self.commands[command_name] = command_exec
+			if section_name.startswith('script:'):
+				script_exec = self.configuration.getstring(section_name, 'exec', fallback=None)
+				if script_exec is not None and os_path_exists(script_exec) is True:
+					script_name = section_name.split(':', 1).pop()
+					self.scripts[script_name] = script_exec
 
 
 	async def loop(self):
 		results = {'main': None}
 		try:
-			self.startup_timeout = time_monotonic() + self.config['startup:init-timeout']
+			self.scheduler.start()
+			startup_timeout = time_monotonic() + self.config['startup:init-timeout']
+			plugins = { HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN: {},
+			                 HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING: {},
+			                 HAL9000_Plugin.PLUGIN_RUNLEVEL_RUNNING: {},
+			                 HAL9000_Plugin.PLUGIN_RUNLEVEL_HALTING: {}}
 			for plugin in list(self.triggers.values()) + list(self.actions.values()):
 				plugin_id = str(plugin)
 				plugin_runlevel = plugin.runlevel()
-				self.plugins[plugin_runlevel][plugin_id] = plugin
+				plugins[plugin_runlevel][plugin_id] = plugin
 			self.logger.info(f"Startup initialized (plugins that need runtime registration):")
-			for id, plugin in self.plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN].items():
+			for id, plugin in plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN].items():
 				self.logger.info(f" - Plugin '{id.split(':').pop()}'")
 			self.tasks['signals'] = asyncio_create_task(self.task_signal())
-			self.tasks['timeouts'] = asyncio_create_task(self.task_timeouts())
 			self.tasks['mqtt'] = asyncio_create_task(self.task_mqtt())
-			self.logger.debug(f"CORTEX at startup = {self.cortex}")
-			while self.cortex['plugin']['brain'].state == Daemon.BRAIN_STATE_STARTING:
+			self.logger.debug(f"STATUS at startup = {self.plugins}")
+			while self.plugins['brain'].status == Daemon.BRAIN_STATUS_STARTING:
 				for runlevel in [HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN, HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]:
-					if runlevel in self.plugins:
-						for id, plugin in self.plugins[runlevel].items():
+					if runlevel in plugins:
+						for id, plugin in plugins[runlevel].items():
 							plugin_runlevel = plugin.runlevel()
 							if plugin_runlevel != runlevel:
 								self.logger.info(f"Plugin '{id.split(':').pop()}' is now in runlevel '{plugin_runlevel}'")
-								self.plugins[runlevel][id] = None
-								self.plugins[plugin_runlevel][id] = plugin
-						self.plugins[runlevel] = {id:plugin for id,plugin in self.plugins[runlevel].items() if plugin is not None}
-				if self.startup_timeout is not None:
-					if time_monotonic() > self.startup_timeout:
+								plugins[runlevel][id] = None
+								plugins[plugin_runlevel][id] = plugin
+						plugins[runlevel] = {id:plugin for id,plugin in plugins[runlevel].items() if plugin is not None}
+				if startup_timeout is not None:
+					if time_monotonic() > startup_timeout:
 						self.logger.critical(f"Startup failed (plugins that haven't reported their runlevel):")
-						for id, plugin in self.plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN].items():
+						for id, plugin in plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN].items():
 							error = plugin.runlevel_error()
 							self.logger.critical(f"    Plugin '{id.split(':').pop()}': Error #{error['code']} => {error['message']}")
 							self.queue_signal('frontend', {'gui': {'screen': {'name': 'error',
 							                                                  'parameter': {'code': error['code'],
 							                                                                'message': error['message']}}}})
 						self.logger.critical("Terminating due to plugins that haven't reached runlevel 'starting' within timelimit")
-						self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_DYING
-					if len(self.plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN]) == 0:
+						self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
+					if len(plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN]) == 0:
 						self.logger.info(f"Startup in progress for all plugins")
-						self.startup_timeout = None
-						del self.plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN]
-						for plugin in self.cortex['plugin'].values():
+						startup_timeout = None
+						del plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN]
+						for plugin in self.plugins.values():
 							plugin.addNameCallback(self.on_plugin_callback, '*')
-				if self.startup_timeout is None:
-					if HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING in self.plugins:
-						if len(self.plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]) == 0:
-							del self.plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]
+				if startup_timeout is None:
+					if HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING in plugins:
+						if len(plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]) == 0:
+							del plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]
 							self.logger.info(f"Startup completed for all plugins")
-							self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_READY
+							self.plugins['brain'].status = Daemon.BRAIN_STATUS_READY
 				await asyncio_sleep(0.1)
-			self.logger.debug(f"CORTEX after startup = {self.cortex}")
-			while self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
+			self.logger.debug(f"STATUS after startup = {self.plugins}")
+			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
+				try:
+					time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
+					time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
+					self.scheduler.add_job(self.on_scheduler, apscheduler_triggers_cron_CronTrigger(hour=time_sleep.hour, minute=time_sleep.minute),
+					                       args=['brain', {'status': Daemon.BRAIN_STATUS_ASLEEP}], id='brain:sleep', name='brain:sleep')
+					self.scheduler.add_job(self.on_scheduler, apscheduler_triggers_cron_CronTrigger(hour=time_wakeup.hour, minute=time_wakeup.minute),
+					                       args=['brain', {'status': Daemon.BRAIN_STATUS_AWAKE}], id='brain:wakeup', name='brain:wakeup')
+				except Exception as e:
+					print(e) # TODO
+			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				await asyncio_sleep(0.1)
 		except Exception as e:
-			self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_DYING
+			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			results['main'] = e
 		for name, task in self.tasks.items():
 			task.cancel()
@@ -201,38 +205,42 @@ class Daemon(object):
 				payload = message.payload.decode('utf-8')
 				self.logger.debug(f"MQTT received: {topic} => {str(chr(0x27))+str(chr(0x27)) if payload == '' else payload}")
 				match topic:
-					case 'hal9000/command/brain/exit':
-						self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_DYING
-					case 'hal9000/command/brain/state':
-						if self.cortex['plugin']['brain'].state in [Daemon.BRAIN_STATE_AWAKE, Daemon.BRAIN_STATE_ASLEEP]:
-							if payload in [Daemon.BRAIN_STATE_AWAKE, Daemon.BRAIN_STATE_ASLEEP]:
-								self.cortex['plugin']['brain'].state = payload
-					case 'hal9000/command/brain/command':
-						if payload in self.commands:
-							self.logger.info(f"Executing configured command with id '{payload}': {self.commands[payload]}")
-							os_system(self.commands[payload])
-					case _:
-						if self.cortex['plugin']['brain'].state in [Daemon.BRAIN_STATE_STARTING, Daemon.BRAIN_STATE_READY, Daemon.BRAIN_STATE_AWAKE]:
+					case 'hal9000/command/brain/status':
+						if self.plugins['brain'].status in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
+							if payload in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP, Daemon.BRAIN_STATUS_DYING]:
+								self.plugins['brain'].status = payload
+					case 'hal9000/command/brain/script':
+						if payload in self.scripts:
+							self.logger.info(f"Executing configured script with id '{payload}': {self.scripts[payload]}")
+							os_system(self.scripts[payload])
+					case other:
+						if self.plugins['brain'].status in [Daemon.BRAIN_STATUS_STARTING, \
+						                                             Daemon.BRAIN_STATUS_READY, \
+						                                             Daemon.BRAIN_STATUS_AWAKE]:
+							signals = {}
 							if topic in self.callbacks['mqtt']:
-								self.logger.debug(f"TRIGGERS: {','.join(str(x).split(':',2)[2] for x in self.callbacks['mqtt'][topic])}")
-								self.logger.debug(f"CORTEX before triggers = {self.cortex}")
-								signals = {}
-								for trigger in self.callbacks['mqtt'][topic]:
+								triggers = self.callbacks['mqtt'][topic]
+								self.logger.debug(f"TRIGGERS: {','.join(str(x).split(':',2).pop(2) for x in triggers)}")
+								self.logger.debug(f"STATUS before triggers = {self.plugins}")
+								for trigger in triggers:
 									signal = trigger.handle(message)
 									if signal is not None and bool(signal) is not False:
-										binding_name = str(trigger).split(':', 2)[2]
-										signals[binding_name] = signal
-								for binding_name in signals.keys():
-									signal = signals[binding_name]
+										trigger_id = str(trigger).split(':', 2)[2]
+										signals[trigger_id] = signal
+								for trigger_id, signal in signals.items():
 									for plugin_name in signal.keys():
-										if plugin_name in self.cortex['plugin']:
-											plugin = self.cortex['plugin'][plugin_name]
-											signal = signal[plugin_name]
-											self.logger.debug(f"SIGNAL for plugin '{plugin_name}' generated from triggers: '{signal}'")
-											await plugin.signal(signal)
-								self.logger.debug(f"CORTEX after signals   = {self.cortex}")
+										if plugin_name not in self.plugins:
+											self.logger.warning(f"SIGNAL for unknown plugin '{plugin_name}' " \
+											                    f"generated by trigger '{trigger_id}: '{signal}'")
+											continue
+										plugin = self.plugins[plugin_name]
+										signal = signal[plugin_name]
+										self.logger.debug(f"SIGNAL for plugin '{plugin_name}' " \
+										                  f"generated by trigger '{trigger_id}': '{signal}'")
+										await plugin.signal(signal)
+								self.logger.debug(f"STATUS after signals   = {self.plugins}")
 		except aiomqtt_MqttError as e:
-			if self.tasks['mqtt'].cancelled() is False and self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
+			if self.tasks['mqtt'].cancelled() is False and self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				raise e
 		except asyncio_CancelledError as e:
 			pass
@@ -240,7 +248,7 @@ class Daemon(object):
 
 	async def task_mqtt_event_listener(self, mqtt):
 		try:
-			while self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
+			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				if self.mqtt_publish_queue.empty() is False:
 					data = await self.mqtt_publish_queue.get()
 					if isinstance(data, dict) is True and 'topic' in data and 'payload' in data:
@@ -262,15 +270,14 @@ class Daemon(object):
 			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'], identifier='hal9000-brain') as mqtt:
 				task_events = asyncio_create_task(self.task_mqtt_event_listener(mqtt))
 				task_commands = asyncio_create_task(self.task_mqtt_command_listener(mqtt))
-				await mqtt.subscribe('hal9000/command/brain/exit')
-				self.logger.debug(f"MQTT.subscribe('hal9000/command/brain/state') for plugin 'brain'")
-				await mqtt.subscribe('hal9000/command/brain/state')
-				self.logger.debug(f"MQTT.subscribe('hal9000/command/brain/command') for plugin 'brain'")
-				await mqtt.subscribe('hal9000/command/brain/command')
+				self.logger.debug(f"MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
+				await mqtt.subscribe('hal9000/command/brain/status')
+				self.logger.debug(f"MQTT.subscribe('hal9000/command/brain/script') for plugin 'brain'")
+				await mqtt.subscribe('hal9000/command/brain/script')
 				for mqtt_topic, trigger in self.callbacks['mqtt'].items():
 					self.logger.debug(f"MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
 					await mqtt.subscribe(mqtt_topic)
-				while self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
+				while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 					await asyncio_sleep(0.1)
 				task_events.cancel()
 				task_commands.cancel()
@@ -285,21 +292,21 @@ class Daemon(object):
 			self.mqtt_publish_queue = None
 		except Exception as e:
 			self.logger.critical(f"Daemon.task_mqtt(): {str(e)}")
-			self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_DYING
+			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			raise e
 
 
 	async def task_signal(self):
 		try:
-			while self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
+			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				if self.signal_queue.empty() is False:
 					data = await self.signal_queue.get()
 					if isinstance(data, dict) is True and 'plugin' in data and 'signal' in data:
 						plugin = data['plugin']
 						signal = data['signal']
 						self.logger.debug(f"SIGNAL for plugin '{plugin}' generated by Daemon.task_signal(): '{signal}'")
-						if plugin in self.cortex['plugin']:
-							plugin = self.cortex['plugin'][plugin]
+						if plugin in self.plugins:
+							plugin = self.plugins[plugin]
 							await plugin.signal(signal)
 						else:
 							self.logger.warning(f"Ignoring SIGNAL for unknown plugin '{plugin}' - ignoring it (=> BUG)")
@@ -310,62 +317,12 @@ class Daemon(object):
 			self.signal_queue = None
 		except Exception as e:
 			self.logger.critical(f"Daemon.task_signal(): {str(e)}")
-			self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_DYING
+			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			raise e
 
 
-	async def task_timeouts(self):
-		try:
-			timeouts = {}
-			timestamp_next = datetime_datetime.now().timestamp()
-			while self.cortex['plugin']['brain'].state != Daemon.BRAIN_STATE_DYING:
-				timestamp_now = datetime_datetime.now().timestamp()
-				if self.timeout_queue.empty() is False:
-					timeout = await self.timeout_queue.get()
-					if isinstance(timeout, dict) is True:
-						if 'timestamp' in timeout and 'key' in timeout and 'data' in timeout and isinstance(timeout['data'], dict) is True:
-							key = timeout['key']
-							if timeout['timestamp'] is not None:
-								timeouts[key] = timeout
-								timestamp_next = min(timestamp_next, timeout['timestamp'])
-							else:
-								if key in timeouts:
-									del timeouts[key]
-				if timestamp_now >= timestamp_next:
-					for key, timeout in timeouts.copy().items():
-						timestamp_next = min(timestamp_next, timeout['timestamp'])
-						if timestamp_now >= timeout['timestamp']:
-							if timeout['timestamp'] == timestamp_next:
-								timestamp_next = timestamp_now
-							del timeouts[key]
-							data = timeout['data']
-							match key:
-								case 'plugin:signal':
-									if 'plugin' in data and 'signal' in data:
-										plugin = data['plugin']
-										signal = data['signal']
-										if plugin in self.cortex['plugin']:
-											plugin = self.cortex['plugin'][plugin]
-											await plugin.signal(signal)
-										else:
-											self.logger.error(f"Unknown plugin '{plugin}' for signal: {signal}")
-								case 'frontend:gui/screen':
-									if 'name' in data and 'parameter' in data:
-										self.queue_signal('frontend', {'gui': {'screen': {'name': data['name'],
-										                                                  'parameter': data['parameter']}}})
-								case 'frontend:gui/overlay':
-									if 'name' in data and 'parameter' in data:
-										self.queue_signal('frontend', {'gui': {'overlay': {'name': data['name'],
-										                                                   'parameter': data['parameter']}}})
-				await asyncio_sleep(0.01)
-		except asyncio_CancelledError as e:
-			self.timeout_queue = None
-		except Exception as e:
-			self.logger.critical(f"Daemon.task_timeouts(): {str(e)}")
-			import traceback
-			traceback.print_tb(e.__traceback__)
-			self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_DYING
-			raise e
+	async def on_scheduler(self, plugin, signal):
+		self.queue_signal(plugin, signal)
 
 
 	def import_plugin(self, plugin_name: str, class_name: str) -> HAL9000_Plugin:
@@ -376,79 +333,68 @@ class Daemon(object):
 
 
 	def on_plugin_callback(self, plugin, name, old_value, new_value) -> bool:
-		logging_getLogger().info(f"Plugin '{plugin.plugin_id}': {name} changes from '{old_value}' to '{new_value}'")
-		if plugin.plugin_id == 'brain' and name == 'state':
-			if new_value not in Daemon.BRAIN_STATE_VALID:
+		if plugin.plugin_id == 'brain' and name == 'status':
+			if new_value not in [Daemon.BRAIN_STATUS_STARTING, Daemon.BRAIN_STATUS_READY, \
+			                     Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP, \
+			                     Daemon.BRAIN_STATUS_DYING]:
 				return False
+		logging_getLogger().info(f"Plugin '{plugin.plugin_id}': {name} changes from '{old_value}' to '{new_value}'")
 		return True
 
 
-	def on_brain_state_callback(self, plugin, name, old_state, new_state) -> bool:
-		if new_state == Daemon.BRAIN_STATE_READY:
-			next_brain_state = Daemon.BRAIN_STATE_AWAKE
+	def on_brain_status_callback(self, plugin, name, old_status, new_status) -> bool:
+		if new_status == Daemon.BRAIN_STATUS_READY:
+			next_brain_status = Daemon.BRAIN_STATUS_AWAKE
 			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
-				next_datetime_sleep = datetime_datetime.combine(datetime_date.today(),
-				                                                datetime_time.fromisoformat(self.config['brain:sleep-time']))
-				if(datetime_datetime.now() > next_datetime_sleep):
-					next_datetime_sleep += datetime_timedelta(hours=24)
-				self.timeout_queue.put_nowait({'timestamp': next_datetime_sleep.timestamp()-datetime_datetime.now().timestamp(),
-				                               'key': Daemon.BRAIN_STATE_ASLEEP, 'data': None})
-				next_datetime_wakeup = datetime_datetime.combine(datetime_date.today(),
-				                                                 datetime_time.fromisoformat(self.config['brain:wakeup-time']))
-				if(datetime_datetime.now() > next_datetime_wakeup):
-					next_datetime_wakeup += datetime_timedelta(hours=24)
-				self.timeout_queue.put_nowait({'timestamp': next_datetime_wakeup.timestamp()-datetime_datetime.now().timestamp(),
-				                               'key': Daemon.BRAIN_STATE_AWAKE, 'data': None})
-				if next_datetime_wakeup < next_datetime_sleep:
-					next_brain_state = Daemon.BRAIN_STATE_ASLEEP
-			self.queue_signal('brain', {'state': next_brain_state})
+				time_now = datetime_datetime.now().time()
+				time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
+				time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
+				if time_sleep > time_wakeup:
+					if time_now > time_sleep or time_now < time_wakeup:
+						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
+				else:
+					if time_now > time_sleep and time_now < time_wakeup:
+						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
+			self.queue_signal('brain', {'status': next_brain_status})
 		return True
 
 
-	async def on_brain_signal(self, plugin: HAL9000_Plugin_Cortex, signal: dict) -> None:
-		if 'state' in signal:
-			match self.cortex['plugin']['brain'].state:
-				case Daemon.BRAIN_STATE_STARTING:
-					if signal['state'] == Daemon.BRAIN_STATE_READY:
-						self.cortex['plugin']['brain'].state = signal['state']
-				case Daemon.BRAIN_STATE_READY:
-					if signal['state'] in [Daemon.BRAIN_STATE_AWAKE, Daemon.BRAIN_STATE_ASLEEP]:
-						self.cortex['plugin']['brain'].state = signal['state']
-				case Daemon.BRAIN_STATE_AWAKE:
-					if signal['state'] in [Daemon.BRAIN_STATE_ASLEEP, Daemon.BRAIN_STATE_DYING]:
-						self.cortex['plugin']['brain'].state = signal['state']
-					if 'interval' in signal:
-						self.add_timeout(signal['interval'], 'plugin:signal', {'plugin': 'brain',
-						                                                       'signal': {'state': Daemon.BRAIN_STATE_AWAKE,
-						                                                                  'interval': signal['interval']}})
-				case Daemon.BRAIN_STATE_ASLEEP:
-					if signal['state'] in [Daemon.BRAIN_STATE_AWAKE, Daemon.BRAIN_STATE_DYING]:
-						self.cortex['plugin']['brain'].state = signal['state']
-					if 'interval' in signal:
-						self.add_timeout(signal['interval'], 'plugin:signal', {'plugin': 'brain',
-						                                                       'signal': {'state': Daemon.BRAIN_STATE_ASLEEP,
-						                                                                  'interval': signal['interval']}})
-				case Daemon.BRAIN_STATE_DYING:
+	async def on_brain_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
+		if 'status' in signal:
+			match self.plugins['brain'].status:
+				case Daemon.BRAIN_STATUS_STARTING:
+					if signal['status'] == Daemon.BRAIN_STATUS_READY:
+						self.plugins['brain'].status = signal['status']
+				case Daemon.BRAIN_STATUS_READY:
+					if signal['status'] in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
+						self.plugins['brain'].status = signal['status']
+				case Daemon.BRAIN_STATUS_AWAKE:
+					if signal['status'] in [Daemon.BRAIN_STATUS_ASLEEP, Daemon.BRAIN_STATUS_DYING]:
+						self.plugins['brain'].status = signal['status']
+				case Daemon.BRAIN_STATUS_ASLEEP:
+					if signal['status'] in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_DYING]:
+						self.plugins['brain'].status = signal['status']
+				case Daemon.BRAIN_STATUS_DYING:
 					pass
 
 
 	async def signal(self, plugin: str, signal: dict) -> None:
-		if plugin in self.cortex['plugin']:
-			await self.cortex['plugin'][plugin].signal(signal)
+		if plugin in self.plugins:
+			await self.plugins[plugin].signal(signal)
 
 
 	def queue_signal(self, plugin: str, signal: dict) -> None:
 		self.signal_queue.put_nowait({'plugin': plugin, 'signal': signal})
 
 
-	def add_timeout(self, timeout_seconds: int, timeout_key: str, timeout_data) -> None:
-		self.timeout_queue.put_nowait({'timestamp': None if timeout_seconds is None else datetime_datetime.now().timestamp()+timeout_seconds,
-		                               'key': timeout_key,
-		                               'data': timeout_data})
+	def schedule_signal(self, seconds: int, receiver: str, signal: dict, id=None) -> None:
+		self.scheduler.add_job(self.on_scheduler, apscheduler_triggers_date_DateTrigger(datetime_datetime.now() + datetime_timedelta(seconds=seconds)),
+		                       args=[receiver, signal], id=id, name=id, replace_existing=True)
 
 
-	def del_timeout(self, timeout_key) -> None:
-		self.timeout_queue.put_nowait({'timestamp': None, 'key': timeout_key, 'data': None})
+	def cancel_signal(self, id: str) -> None:
+		if self.scheduler.get_job(id) is not None:
+			self.scheduler.remove_job(id)
 
 
 	async def get_system_ipv4(self) -> str:
@@ -471,5 +417,5 @@ class Daemon(object):
 
 
 	def on_posix_signal(self, number, frame):
-		self.cortex['plugin']['brain'].state = Daemon.BRAIN_STATE_DYING
+		self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 

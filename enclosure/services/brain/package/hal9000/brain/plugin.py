@@ -1,16 +1,16 @@
 from configparser import ConfigParser
 
 
-class HAL9000_Plugin_Cortex(object):
+class HAL9000_Plugin_Status(object):
 	UNINITIALIZED = '<uninitialized>'
 	SPECIAL_NAMES = ['plugin_id', 'valid_names', 'callbacks_data', 'callbacks_signal']
 
 	def __init__(self, plugin_id: str, **kwargs):
 		self.plugin_id = plugin_id
-		self.valid_names = ['state']
+		self.valid_names = ['status']
 		self.valid_names.extend(kwargs.get('valid_names', []))
 		for name in self.valid_names:
-			super().__setattr__(name, kwargs.get(name, HAL9000_Plugin_Cortex.UNINITIALIZED))
+			super().__setattr__(name, kwargs.get(name, HAL9000_Plugin_Status.UNINITIALIZED))
 		for name, value in kwargs.items():
 			if name in self.valid_names:
 				super().__setattr__(name, value)
@@ -20,9 +20,9 @@ class HAL9000_Plugin_Cortex(object):
 
 	def addNames(self, valid_names: list):
 		for name in valid_names:
-			if name not in HAL9000_Plugin_Cortex.SPECIAL_NAMES:
+			if name not in HAL9000_Plugin_Status.SPECIAL_NAMES:
 				self.valid_names.append(name)
-				super().__setattr__(name, HAL9000_Plugin_Cortex.UNINITIALIZED)
+				super().__setattr__(name, HAL9000_Plugin_Status.UNINITIALIZED)
 
 	def addNameCallback(self, callback, name='*'):
 		if name not in self.callbacks_data:
@@ -49,16 +49,16 @@ class HAL9000_Plugin_Cortex(object):
 
 
 	def __setattr__(self, name, new_value):
-		if name in HAL9000_Plugin_Cortex.SPECIAL_NAMES:
+		if name in HAL9000_Plugin_Status.SPECIAL_NAMES:
 			super().__setattr__(name, new_value)
 			return
 		if name not in self.valid_names:
-			raise Exception(f"HAL9000_Plugin_Cortex.__setattr__('{name}', '{new_value}'): '{name}' is not a registered attribute name")
+			raise Exception(f"HAL9000_Plugin_Status.__setattr__('{name}', '{new_value}'): '{name}' is not a registered attribute name")
 		old_value = None
 		if hasattr(self, name) is True:
 			old_value = getattr(self, name)
 		if new_value is None:
-			new_value = HAL9000_Plugin_Cortex.UNINITIALIZED
+			new_value = HAL9000_Plugin_Status.UNINITIALIZED
 		if old_value != new_value:
 			commit_value = True
 			for callback_name in ['*', name]:
@@ -73,7 +73,7 @@ class HAL9000_Plugin_Cortex(object):
 		result = '{'
 		for name in self.valid_names:
 			value = getattr(self, name)
-			if value != HAL9000_Plugin_Cortex.UNINITIALIZED:
+			if value != HAL9000_Plugin_Status.UNINITIALIZED:
 				result += f'{name}=\'{getattr(self, name)}\', '
 		if len(result) > 2:
 			result = result[:-2]
@@ -87,12 +87,12 @@ class HAL9000_Plugin(object):
 	PLUGIN_RUNLEVEL_RUNNING  = "running"
 	PLUGIN_RUNLEVEL_HALTING  = "halting"
 
-	def __init__(self, plugin_type: str, plugin_class: str, plugin_name: str, plugin_cortex: HAL9000_Plugin_Cortex, **kwargs) -> None:
+	def __init__(self, plugin_type: str, plugin_class: str, plugin_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
 		self.name = f"{plugin_type}:{plugin_class}:{plugin_name}"
 		self.daemon = kwargs.get('daemon', None)
-		if plugin_cortex is not None and self.daemon is not None:
-			if plugin_class not in self.daemon.cortex['plugin']:
-				self.daemon.cortex['plugin'][plugin_class] = plugin_cortex
+		if plugin_status is not None and self.daemon is not None:
+			if plugin_class not in self.daemon.plugins:
+				self.daemon.plugins[plugin_class] = plugin_status
 		self.config = dict()
 
 	def __repr__(self):
@@ -115,8 +115,8 @@ class HAL9000_Plugin(object):
 
 
 class HAL9000_Action(HAL9000_Plugin):
-	def __init__(self, action_class: str, action_name: str, plugin_cortex: HAL9000_Plugin_Cortex, **kwargs) -> None:
-		HAL9000_Plugin.__init__(self, "action", action_class, action_name, plugin_cortex, **kwargs)
+	def __init__(self, action_class: str, action_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
+		HAL9000_Plugin.__init__(self, "action", action_class, action_name, plugin_status, **kwargs)
 
 
 	def configure(self, configuration: ConfigParser, section_name: str) -> None:
@@ -125,8 +125,8 @@ class HAL9000_Action(HAL9000_Plugin):
 
 
 class HAL9000_Trigger(HAL9000_Plugin):
-	def __init__(self, trigger_class: str, trigger_name: str, plugin_cortex: HAL9000_Plugin_Cortex, **kwargs) -> None:
-		HAL9000_Plugin.__init__(self, "trigger", trigger_class, trigger_name, plugin_cortex, **kwargs)
+	def __init__(self, trigger_class: str, trigger_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
+		HAL9000_Plugin.__init__(self, "trigger", trigger_class, trigger_name, plugin_status, **kwargs)
 
 
 	def configure(self, configuration: ConfigParser, section_name: str) -> None:
