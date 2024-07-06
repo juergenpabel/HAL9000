@@ -57,16 +57,23 @@ class FrontendManager:
 	def on_mqtt_message(self, client, userdata, message):
 		topic = message.topic[25:] # remove 'hal9000/command/frontend/' prefix
 		payload = message.payload.decode('utf-8')
-		if topic == 'status':
-			if self.startup is False:
-				self.mqtt_client.publish('hal9000/event/frontend/status', 'online')
-		else:
-			try:
-				payload = json_loads(payload)
-			except Exception:
-				pass
-			for frontend in self.frontends:
-				frontend.commands.put_nowait({"topic": topic, "payload": payload})
+		match topic:
+			case 'status':
+				if self.startup is False:
+					results = []
+					for frontend in self.frontends:
+						results.append(frontend.status)
+					if Frontend.FRONTEND_STATUS_ONLINE in results:
+						self.mqtt_client.publish('hal9000/event/frontend/status', Frontend.FRONTEND_STATUS_ONLINE)
+					else:
+						self.mqtt_client.publish('hal9000/event/frontend/status', Frontend.FRONTEND_STATUS_OFFLINE)
+			case other:
+				try:
+					payload = json_loads(payload)
+				except Exception:
+					pass
+				for frontend in self.frontends:
+					frontend.commands.put_nowait({"topic": topic, "payload": payload})
 
 
 	async def command_listener(self):
@@ -100,17 +107,18 @@ class FrontendManager:
 					for frontend in self.frontends:
 						if frontend.events.empty() is False:
 							if self.startup is True:
-								self.mqtt_client.publish('hal9000/event/frontend/status', 'ready')
+								self.mqtt_client.publish('hal9000/event/frontend/status', Frontend.FRONTEND_STATUS_READY)
 								self.startup = False
 							event = await frontend.events.get()
-							topic = event['topic']
-							payload = event['payload']
-							if isinstance(payload, str) is False:
-								try:
-									payload = json_dumps(payload)
-								except:
-									pass
-							self.mqtt_client.publish(f'hal9000/event/frontend/{topic}', payload)
+							if 'topic' in event and 'payload' in event:
+								topic = event['topic']
+								payload = event['payload']
+								if isinstance(payload, str) is False:
+									try:
+										payload = json_dumps(payload)
+									except:
+										pass
+								self.mqtt_client.publish(f'hal9000/event/frontend/{topic}', payload)
 					await asyncio_sleep(0.01)
 				case False:
 					await asyncio_sleep(1)
@@ -130,6 +138,7 @@ async def fastapi_lifespan(app: fastapi_FastAPI):
 	match await frontend_arduino.configure(manager.configuration):
 		case True:
 			manager.add_frontend(frontend_arduino)
+			await frontend_arduino.start()
 			logging_getLogger("uvicorn").info(f"[frontend] ...frontend 'arduino' started")
 		case False:
 			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'arduino' failed, check the configuration ('{manager.configuration}')' for potential issues")
@@ -140,6 +149,7 @@ async def fastapi_lifespan(app: fastapi_FastAPI):
 	match await frontend_flet.configure(manager.configuration):
 		case True:
 			manager.add_frontend(frontend_flet)
+			await frontend_flet.start()
 			logging_getLogger("uvicorn").info(f"[frontend] ...frontend 'flet' started")
 		case False:
 			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'flet' failed, check the configuration ('{manager.configuration}')' for potential issues")

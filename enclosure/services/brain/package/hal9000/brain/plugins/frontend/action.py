@@ -53,13 +53,20 @@ class Action(HAL9000_Action):
 
 
 	def on_frontend_status_callback(self, plugin, key, old_status, new_status) -> bool:
-		if old_status in [Action.FRONTEND_STATUS_UNKNOWN, Action.FRONTEND_STATUS_STARTING]:
-			if new_status not in [Action.FRONTEND_STATUS_STARTING, Action.FRONTEND_STATUS_READY]:
-				return False
-		if old_status in [Action.FRONTEND_STATUS_READY, Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
-			if new_status not in [Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
-				return False
-		return True
+		match old_status:
+			case Action.FRONTEND_STATUS_UNKNOWN:
+				if new_status in [Action.FRONTEND_STATUS_STARTING, Action.FRONTEND_STATUS_READY,
+				                  Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
+					return True
+			case Action.FRONTEND_STATUS_STARTING:
+				if new_status == Action.FRONTEND_STATUS_READY:
+					return True
+			case Action.FRONTEND_STATUS_READY | \
+			     Action.FRONTEND_STATUS_ONLINE | \
+			     Action.FRONTEND_STATUS_OFFLINE:
+				if new_status in [Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
+					return True
+		return False
 
 
 	def on_frontend_screen_callback(self, plugin, key, old_screen, new_screen) -> bool:
@@ -69,20 +76,29 @@ class Action(HAL9000_Action):
 
 	async def on_frontend_signal(self, plugin, signal) -> None:
 		if 'status' in signal:
-			if signal['status'] in [Action.FRONTEND_STATUS_STARTING, Action.FRONTEND_STATUS_READY]:
-				if self.daemon.plugins['frontend'].status in [Action.FRONTEND_STATUS_UNKNOWN,
-				                                                      Action.FRONTEND_STATUS_STARTING]:
-					self.daemon.plugins['frontend'].status = signal['status']
-					if self.daemon.plugins['frontend'].status == Action.FRONTEND_STATUS_READY:
+			match self.daemon.plugins['frontend'].status:
+				case Action.FRONTEND_STATUS_UNKNOWN:
+					if signal['status'] in [Action.FRONTEND_STATUS_STARTING, Action.FRONTEND_STATUS_READY, \
+					                        Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
+						self.daemon.plugins['frontend'].status = signal['status']
+				case Action.FRONTEND_STATUS_STARTING:
+					if signal['status'] == Action.FRONTEND_STATUS_READY:
+						self.daemon.plugins['frontend'].status = signal['status']
 						self.daemon.plugins['frontend'].screen = 'none'
 						self.daemon.plugins['frontend'].overlay = 'none'
-			if signal['status'] in [Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
-				if self.daemon.plugins['frontend'].status in [Action.FRONTEND_STATUS_READY, \
-				                                                      Action.FRONTEND_STATUS_ONLINE, \
-				                                                      Action.FRONTEND_STATUS_OFFLINE]:
-					self.daemon.plugins['frontend'].status = signal['status']
-					if self.daemon.plugins['brain'].status in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
-						self.send_frontend_command('application/runtime', {'condition': self.daemon.plugins['brain'].status})
+				case Action.FRONTEND_STATUS_READY:
+					if signal['status'] in [Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
+						self.daemon.plugins['frontend'].status = signal['status']
+				case Action.FRONTEND_STATUS_ONLINE:
+					if signal['status'] == Action.FRONTEND_STATUS_OFFLINE:
+						self.daemon.plugins['frontend'].status = signal['status']
+						if self.daemon.plugins['brain'].status in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
+							self.send_frontend_command('application/runtime', {'condition': self.daemon.plugins['brain'].status})
+				case Action.FRONTEND_STATUS_OFFLINE:
+					if signal['status'] == Action.FRONTEND_STATUS_ONLINE:
+						self.daemon.plugins['frontend'].status = signal['status']
+						if self.daemon.plugins['brain'].status in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
+							self.send_frontend_command('application/runtime', {'condition': self.daemon.plugins['brain'].status})
 		if 'time' in signal:
 			datetime_now = datetime_datetime.now()
 			if datetime_now > self.datetime_next_time_sync:
@@ -143,8 +159,8 @@ class Action(HAL9000_Action):
 
 
 	async def on_brain_signal(self, plugin, signal) -> None:
-		if 'status' in signal:
-			self.daemon.mqtt_publish_queue.put_nowait({'topic': self.config['frontend-status-mqtt-topic'], 'payload': json_dumps(signal['status'])})
+		if 'status' in signal and signal['status'] in [None, False, '', {}]:
+			self.daemon.mqtt_publish_queue.put_nowait({'topic': self.config['frontend-status-mqtt-topic'], 'payload': ''})
 
 
 	def on_kalliope_status_callback(self, plugin, key, old_status, new_status) -> bool:

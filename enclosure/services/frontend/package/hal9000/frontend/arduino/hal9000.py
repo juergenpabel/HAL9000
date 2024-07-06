@@ -75,8 +75,6 @@ class HAL9000(Frontend):
 						line = await self.serial_readline(timeout=1)
 					response = json_loads(line)
 				logging_getLogger('uvicorn').info(f"[frontend:arduino] '{arduino_device}' is now up and running")
-				self.command_task = asyncio_create_task(self.run_command_listener())
-				self.event_task   = asyncio_create_task(self.run_event_listener())
 			except (configparser_ParsingError, serial_SerialException) as e:
 				logging_getLogger('uvicorn').error(f"[frontend:arduino] {e}")
 				if self.serial is not None:
@@ -85,6 +83,12 @@ class HAL9000(Frontend):
 				return False
 
 		return True
+
+
+	async def start(self) -> None:
+		await super().start()
+		self.command_task = asyncio_create_task(self.run_command_listener())
+		self.event_task   = asyncio_create_task(self.run_event_listener())
 
 
 	async def serial_readline(self, timeout=None):
@@ -118,6 +122,7 @@ class HAL9000(Frontend):
 
 	async def run_command_listener(self):
 		logging_getLogger('uvicorn').info(f"[frontend:arduino] starting command-listener")
+		self.status = Frontend.FRONTEND_STATUS_ONLINE
 		try:
 			while self.serial.is_open is True and os_path_exists(self.serial.port):
 				command = await self.commands.get()
@@ -132,11 +137,13 @@ class HAL9000(Frontend):
 		except Exception as e:
 			logging_getLogger('uvicorn').error(f"[frontend:arduino] exception in run_command_listener(): {e}")
 		logging_getLogger('uvicorn').error(f"[frontend:arduino] exiting command-listener ('arduino' frontend becomes non-functional)")
+		self.status = Frontend.FRONTEND_STATUS_OFFLINE
 
 
 	async def run_event_listener(self):
 		logging_getLogger('uvicorn').info(f"[frontend:arduino] starting event-listener")
-		self.events.put_nowait({'topic': 'status', 'payload': 'online'})
+		self.status = Frontend.FRONTEND_STATUS_ONLINE
+		self.events.put_nowait({'topic': 'status', 'payload': Frontend.FRONTEND_STATUS_ONLINE})
 		try:
 			while self.serial.is_open is True:
 				line = await self.serial_readline()
@@ -153,4 +160,5 @@ class HAL9000(Frontend):
 			logging_getLogger('uvicorn').error(f"[frontend:arduino] exception in run_event_listener(): {e}")
 		logging_getLogger('uvicorn').error(f"[frontend:arduino] exiting event-listener ('arduino' frontend becomes non-functional)")
 		self.commands.put_nowait(None) # to wake up run_command_listener()
+		self.status = Frontend.FRONTEND_STATUS_OFFLINE
 

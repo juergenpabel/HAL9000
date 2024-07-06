@@ -54,10 +54,10 @@ class Action(HAL9000_Action):
 					if self.daemon.plugins['kalliope'].status == Action.KALLIOPE_STATUS_UNKNOWN:
 						self.daemon.plugins['kalliope'].status = signal['status']
 				case Action.KALLIOPE_STATUS_READY:
-					if self.daemon.plugins['kalliope'].status == Action.KALLIOPE_STATUS_STARTING:
+					if self.daemon.plugins['kalliope'].status in [Action.KALLIOPE_STATUS_UNKNOWN, Action.KALLIOPE_STATUS_STARTING]:
 						self.daemon.plugins['kalliope'].status = signal['status']
 				case Action.KALLIOPE_STATUS_WAITING:
-					if self.daemon.plugins['brain'].status in [Action.KALLIOPE_STATUS_STARTING, Daemon.BRAIN_STATUS_AWAKE]:
+					if self.daemon.plugins['brain'].status in [Daemon.BRAIN_STATUS_STARTING, Daemon.BRAIN_STATUS_AWAKE]:
 						self.daemon.plugins['kalliope'].status = signal['status']
 				case Action.KALLIOPE_STATUS_LISTENING:
 					if self.daemon.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
@@ -75,9 +75,6 @@ class Action(HAL9000_Action):
 
 
 	def on_kalliope_status_callback(self, plugin, key, old_status, new_status) -> bool:
-		if old_status in [Action.KALLIOPE_STATUS_UNKNOWN, Action.KALLIOPE_STATUS_STARTING]:
-			if new_status in [Action.KALLIOPE_STATUS_STARTING, Action.KALLIOPE_STATUS_READY]:
-				return True
 		match new_status:
 			case Action.KALLIOPE_STATUS_READY:
 				self.daemon.plugins['kalliope'].audio_in = 'none'

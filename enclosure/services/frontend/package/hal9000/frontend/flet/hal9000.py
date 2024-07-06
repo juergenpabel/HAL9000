@@ -27,8 +27,12 @@ class HAL9000(Frontend):
 
 	async def configure(self, configuration) -> bool:
 		self.flet_app.mount('/', flet.fastapi.app(self.flet, route_url_strategy='path', assets_dir=f'{os_getcwd()}/assets'))
-		self.command_listener_task = asyncio_create_task(self.task_command_listener())
 		return True
+
+
+	async def start(self) -> None:
+		await super().start()
+		self.command_listener_task = asyncio_create_task(self.task_command_listener())
 
 
 	async def task_command_listener(self):
@@ -259,7 +263,8 @@ class HAL9000(Frontend):
 			del self.command_session_queues[event.page.session_id]
 			command_session_queue.put_nowait(None)
 			if len(self.command_session_queues) == 0:
-				self.events.put_nowait({'topic': 'status', 'payload': 'offline'})
+				self.status = Frontend.FRONTEND_STATUS_OFFLINE
+				self.events.put_nowait({'topic': 'status', 'payload': self.status})
 		
 
 	async def flet(self, page: flet.Page):
@@ -298,5 +303,6 @@ class HAL9000(Frontend):
 		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(page, display)))
 		page.session.set('gui_hal9k_task', asyncio_create_task(self.run_gui_screen_hal9k(page, display)))
 		self.show_idle(display)
-		self.events.put_nowait({'topic': 'status', 'payload': 'online'})
+		self.status = Frontend.FRONTEND_STATUS_ONLINE
+		self.events.put_nowait({'topic': 'status', 'payload': self.status})
 

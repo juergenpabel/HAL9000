@@ -9,7 +9,8 @@ from datetime import datetime as datetime_datetime, \
                      time as datetime_time
 from json import dumps as json_dumps
 from logging import getLogger as logging_getLogger, \
-                    getLevelName as logging_getLevelName
+                    getLevelName as logging_getLevelName, \
+                    addLevelName as logging_addLevelName
 from logging.config import fileConfig as logging_config_fileConfig
 from configparser import ConfigParser as configparser_ConfigParser
 from importlib import import_module as importlib_import_module
@@ -43,6 +44,8 @@ class Daemon(object):
 	BRAIN_STATUS_ASLEEP = 'asleep'
 	BRAIN_STATUS_DYING = 'dying'
 
+	LOGLEVEL_TRACE = 5
+
 	def __init__(self) -> None:
 		self.logger = logging_getLogger()
 		self.config = {}
@@ -65,6 +68,7 @@ class Daemon(object):
 
 
 	def configure(self, filename: str) -> None:
+		logging_addLevelName(Daemon.LOGLEVEL_TRACE, 'TRACE')
 		logging_config_fileConfig(filename)
 		logging_getLogger('apscheduler').setLevel('ERROR')
 		self.logger.info(f"LOADING CONFIGURATION '{filename}'")
@@ -125,20 +129,24 @@ class Daemon(object):
 		results = {'main': None}
 		try:
 			self.scheduler.start()
+			self.tasks['signals'] = asyncio_create_task(self.task_signal())
+			self.tasks['mqtt'] = asyncio_create_task(self.task_mqtt())
+			while 'mqtt:event_listener' not in self.tasks and 'mqtt:command_listener' not in self.tasks:
+				await asyncio_sleep(0.1)
 			startup_timeout = time_monotonic() + self.config['startup:init-timeout']
 			plugins = { HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN: {},
-			                 HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING: {},
-			                 HAL9000_Plugin.PLUGIN_RUNLEVEL_RUNNING: {},
-			                 HAL9000_Plugin.PLUGIN_RUNLEVEL_HALTING: {}}
+			            HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING: {},
+			            HAL9000_Plugin.PLUGIN_RUNLEVEL_RUNNING: {},
+			            HAL9000_Plugin.PLUGIN_RUNLEVEL_HALTING: {}}
 			for plugin in list(self.triggers.values()) + list(self.actions.values()):
 				plugin_id = str(plugin)
 				plugin_runlevel = plugin.runlevel()
 				plugins[plugin_runlevel][plugin_id] = plugin
 			self.logger.info(f"Startup initialized (plugins that need runtime registration):")
-			for id, plugin in plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN].items():
-				self.logger.info(f" - Plugin '{id.split(':').pop()}'")
-			self.tasks['signals'] = asyncio_create_task(self.task_signal())
-			self.tasks['mqtt'] = asyncio_create_task(self.task_mqtt())
+			for plugin_id, plugin in plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN].items():
+				plugin_name = plugin_id.split(':').pop()
+				self.logger.info(f" - Plugin '{plugin_name}'")
+				self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/{plugin_name}/status', 'payload': ''})
 			self.logger.debug(f"STATUS at startup = {self.plugins}")
 			while self.plugins['brain'].status == Daemon.BRAIN_STATUS_STARTING:
 				for runlevel in [HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN, HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]:
@@ -194,7 +202,7 @@ class Daemon(object):
 		except Exception as e:
 			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			results['main'] = e
-		for name, task in self.tasks.items():
+		for name, task in self.tasks.copy().items():
 			task.cancel()
 			results[name] = (await asyncio_gather(task, return_exceptions=True)).pop()
 		return results
@@ -217,8 +225,8 @@ class Daemon(object):
 							os_system(self.scripts[payload])
 					case other:
 						if self.plugins['brain'].status in [Daemon.BRAIN_STATUS_STARTING, \
-						                                             Daemon.BRAIN_STATUS_READY, \
-						                                             Daemon.BRAIN_STATUS_AWAKE]:
+						                                    Daemon.BRAIN_STATUS_READY, \
+						                                    Daemon.BRAIN_STATUS_AWAKE]:
 							signals = {}
 							if topic in self.callbacks['mqtt']:
 								triggers = self.callbacks['mqtt'][topic]
@@ -266,31 +274,31 @@ class Daemon(object):
 
 
 	async def task_mqtt(self):
-		task_events = None
-		task_commands = None
 		try:
 			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'], identifier='hal9000-brain') as mqtt:
-				task_events = asyncio_create_task(self.task_mqtt_event_listener(mqtt))
-				task_commands = asyncio_create_task(self.task_mqtt_command_listener(mqtt))
 				self.logger.debug(f"MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
 				await mqtt.subscribe('hal9000/command/brain/status')
 				self.logger.debug(f"MQTT.subscribe('hal9000/command/brain/script') for plugin 'brain'")
 				await mqtt.subscribe('hal9000/command/brain/script')
 				for mqtt_topic, trigger in self.callbacks['mqtt'].items():
-					self.logger.debug(f"MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
 					await mqtt.subscribe(mqtt_topic)
+					self.logger.debug(f"MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
+				self.tasks['mqtt:event_listener'] = asyncio_create_task(self.task_mqtt_event_listener(mqtt))
+				self.tasks['mqtt:command_listener'] = asyncio_create_task(self.task_mqtt_command_listener(mqtt))
 				while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 					await asyncio_sleep(0.1)
-				task_events.cancel()
-				task_commands.cancel()
-				await asyncio_gather(task_events, task_commands)
+				self.tasks['mqtt:event_listener'].cancel()
+				self.tasks['mqtt:command_listener'].cancel()
+				await asyncio_gather(self.tasks['mqtt:event_listener'], self.tasks['mqtt:command_listener'])
 		except asyncio_CancelledError as e:
-			if task_events is not None:
-				task_events.cancel()
-				await asyncio_gather(task_events)
-			if task_commands is not None:
-				task_commands.cancel()
-				await asyncio_gather(task_commands)
+			if 'mqtt:event_listener' in self.tasks:
+				self.tasks['mqtt:event_listener'].cancel()
+				await asyncio_gather(self.tasks['mqtt:event_listener'])
+				del self.tasks['mqtt:event_listener']
+			if 'mqtt:command_listener' in self.tasks:
+				self.tasks['mqtt:command_listener'].cancel()
+				await asyncio_gather(self.tasks['mqtt:command_listener'])
+				del self.tasks['mqtt:command_listener']
 			self.mqtt_publish_queue = None
 		except Exception as e:
 			self.logger.critical(f"Daemon.task_mqtt(): {str(e)}")
@@ -306,7 +314,7 @@ class Daemon(object):
 					if isinstance(data, dict) is True and 'plugin' in data and 'signal' in data:
 						plugin = data['plugin']
 						signal = data['signal']
-						self.logger.debug(f"SIGNAL for plugin '{plugin}' generated by Daemon.task_signal(): '{signal}'")
+						self.logger.log(Daemon.LOGLEVEL_TRACE, f"SIGNAL for plugin '{plugin}' generated by Daemon.task_signal(): '{signal}'")
 						if plugin in self.plugins:
 							plugin = self.plugins[plugin]
 							await plugin.signal(signal)
