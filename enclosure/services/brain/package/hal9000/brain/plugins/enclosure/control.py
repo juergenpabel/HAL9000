@@ -113,7 +113,7 @@ class Control(EnclosureComponent):
 						if menu_item.startswith('item-'):
 							plugin = self.config['handlers'][menu_item]['plugin']
 							signal = self.config['handlers'][menu_item]['signal']
-							self.daemon.queue_signal(plugin, json_loads(signal))
+							self.daemon.queue_signal(plugin, signal)
 						if menu_item.startswith('menu-'):
 							menu_title = self.config['menu'][menu_item]['title']
 							menu_text  = self.config['menu'][menu_item]['items'][0]['text']

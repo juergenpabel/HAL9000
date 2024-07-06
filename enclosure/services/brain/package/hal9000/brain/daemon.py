@@ -27,8 +27,6 @@ from asyncio import create_task as asyncio_create_task, \
 from aiomqtt import Client as aiomqtt_Client, \
                     MqttError as aiomqtt_MqttError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler as apscheduler_schedulers_AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger as apscheduler_triggers_cron_CronTrigger
-from apscheduler.triggers.date import DateTrigger as apscheduler_triggers_date_DateTrigger
 from dbus_fast.aio import MessageBus
 from dbus_fast.auth import AuthExternal, UID_NOT_SPECIFIED
 from dbus_fast.constants import BusType
@@ -180,14 +178,14 @@ class Daemon(object):
 			if self.config['brain:sleep-time'] is not None:
 				try:
 					time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
-					self.scheduler.add_job(self.on_scheduler, apscheduler_triggers_cron_CronTrigger(hour=time_sleep.hour, minute=time_sleep.minute),
+					self.scheduler.add_job(self.on_scheduler, 'cron', hour=time_sleep.hour, minute=time_sleep.minute,
 					                       args=['brain', {'status': Daemon.BRAIN_STATUS_ASLEEP}], id='brain:sleep', name='brain:sleep')
 				except ValueError as e:
 					self.logger.error(f"sleep-time: failed to parse '{self.config['brain:sleep-time']}' as (an ISO-8601 formatted) time")
 			if self.config['brain:wakeup-time'] is not None:
 				try:
 					time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
-					self.scheduler.add_job(self.on_scheduler, apscheduler_triggers_cron_CronTrigger(hour=time_wakeup.hour, minute=time_wakeup.minute),
+					self.scheduler.add_job(self.on_scheduler, 'cron', hour=time_wakeup.hour, minute=time_wakeup.minute,
 					                       args=['brain', {'status': Daemon.BRAIN_STATUS_AWAKE}], id='brain:wakeup', name='brain:wakeup')
 				except ValueError as e:
 					self.logger.error(f"wakeup-time: failed to parse '{self.config['brain:wakeup-time']}' as (an ISO-8601 formatted) time")
@@ -391,9 +389,16 @@ class Daemon(object):
 		self.signal_queue.put_nowait({'plugin': plugin, 'signal': signal})
 
 
-	def schedule_signal(self, seconds: int, receiver: str, signal: dict, id=None) -> None:
-		self.scheduler.add_job(self.on_scheduler, apscheduler_triggers_date_DateTrigger(datetime_datetime.now() + datetime_timedelta(seconds=seconds)),
-		                       args=[receiver, signal], id=id, name=id, replace_existing=True)
+	def schedule_signal(self, seconds: int, plugin: str, signal: dict, id=None, mode='single') -> None:
+		match mode:
+			case 'single':
+				self.scheduler.add_job(self.on_scheduler, 'date', run_date=datetime_datetime.now()+datetime_timedelta(seconds=seconds),
+				                       args=[plugin, signal], id=id, name=id, replace_existing=True)
+			case 'interval':
+				self.scheduler.add_job(self.on_scheduler, 'interval', seconds=seconds,
+				                       args=[plugin, signal], id=id, name=id, replace_existing=True)
+			case other:
+				logging_getLogger().error(f"unsupported schedule mode '{mode}' in Daemon.schedule_signal()")
 
 
 	def cancel_signal(self, id: str) -> None:

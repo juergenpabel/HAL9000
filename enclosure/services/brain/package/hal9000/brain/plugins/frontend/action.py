@@ -1,6 +1,7 @@
 from json import dumps as json_dumps
 from os.path import exists as os_path_exists
-from datetime import datetime as datetime_datetime
+from datetime import datetime as datetime_datetime, \
+                     timedelta as datetime_timedelta
 from configparser import ConfigParser as configparser_ConfigParser
 
 from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin_Status
@@ -19,7 +20,8 @@ class Action(HAL9000_Action):
 
 	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'frontend', action_name, plugin_status, **kwargs)
-		self.daemon.plugins['frontend'].addNames(['screen', 'overlay'])
+		self.daemon.plugins['frontend'].addNames(['screen', 'overlay', 'time'])
+		self.datetime_next_time_sync = datetime_datetime.now()
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
@@ -72,7 +74,6 @@ class Action(HAL9000_Action):
 				                                                      Action.FRONTEND_STATUS_STARTING]:
 					self.daemon.plugins['frontend'].status = signal['status']
 					if self.daemon.plugins['frontend'].status == Action.FRONTEND_STATUS_READY:
-						self.daemon.queue_signal('frontend', {'time': None})
 						self.daemon.plugins['frontend'].screen = 'none'
 						self.daemon.plugins['frontend'].overlay = 'none'
 			if signal['status'] in [Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
@@ -83,10 +84,13 @@ class Action(HAL9000_Action):
 					if self.daemon.plugins['brain'].status in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
 						self.send_frontend_command('application/runtime', {'condition': self.daemon.plugins['brain'].status})
 		if 'time' in signal:
-			epoch = int(datetime_datetime.now().timestamp() + datetime_datetime.now().astimezone().tzinfo.utcoffset(None).seconds)
-			synced = os_path_exists('/run/systemd/timesync/synchronized')
-			self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': synced}})
-			self.daemon.schedule_signal(3600 if synced is True else 60, 'frontend', {'time': None}, 'frontend:application/runtime#time')
+			datetime_now = datetime_datetime.now()
+			if datetime_now > self.datetime_next_time_sync:
+				time_synchronized = os_path_exists('/run/systemd/timesync/synchronized')
+				self.daemon.plugins['frontend'].time = 'synchronized' if time_synchronized is True else 'unsynchronized'
+				epoch = int(datetime_now.timestamp() + datetime_datetime.now().astimezone().tzinfo.utcoffset(None).seconds)
+				self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': time_synchronized}})
+				self.datetime_next_time_sync = datetime_now + datetime_timedelta(seconds=1 if time_synchronized is False else 3600)
 		if 'gui' in signal:
 			if 'screen' in signal['gui']:
 				if 'url' in signal['gui']['screen']['parameter']:
@@ -109,7 +113,8 @@ class Action(HAL9000_Action):
 	def on_brain_status_callback(self, plugin, key, old_status, new_status) -> bool:
 		match new_status:
 			case Daemon.BRAIN_STATUS_READY:
-				pass
+				self.daemon.queue_signal('frontend', {'time': {}})
+				self.daemon.schedule_signal(1, 'frontend', {'time': {}}, 'frontend:time', 'interval')
 			case Daemon.BRAIN_STATUS_AWAKE:
 				self.send_frontend_command('application/runtime', {'condition': 'awake'})
 				if old_status == Daemon.BRAIN_STATUS_READY:
