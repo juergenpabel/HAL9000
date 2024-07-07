@@ -1,44 +1,44 @@
-#!/bin/bash
+#!/bin/sh
 
-CONTAINER_REGISTRY="$1"
-CONTAINER_REPOSITORY="$2"
-CONTAINER_TAG="$3"
+CONTAINER_REGISTRY="${1:-unknown}"
+CONTAINER_REPOSITORY="${2:-unknown}"
+CONTAINER_TAG="${3:-unknown}"
 
-if [ "x$1" == "x" ]; then
+if [ "${CONTAINER_REGISTRY}" = "unknown" ]; then
 	echo "Usage: ./podman_publish.sh <container-registry-domain> <container-repository-path/user> <container-tag>"
 	exit 1
 fi
-if [ "x$2" == "x" ]; then
-	echo "Usage: ./podman_publish.sh $1 <container-repository-path/user> <container-tag>"
+if [ "${CONTAINER_REPOSITORY}" = "unknown" ]; then
+	echo "Usage: ./podman_publish.sh ${CONTAINER_REGISTRY} <container-repository-path/user> <container-tag>"
 	exit 1
 fi
-if [ "x$3" == "x" ]; then
-	echo "Usage: ./podman_publish.sh $1 $2 <container-tag>"
+if [ "${CONTAINER_TAG}" = "unknown" ]; then
+	echo "Usage: ./podman_publish.sh ${CONTAINER_REGISTRY} ${CONTAINER_REPOSITORY} <container-tag>"
 	exit 1
 fi
 
 echo "Logging in for '$CONTAINER_REGISTRY'..."
-podman login $CONTAINER_REGISTRY
-if [ "x$?" != "x0" ]; then
-	echo "ERROR: login failed for '$CONTAINER_REGISTRY'"
+podman login "${CONTAINER_REGISTRY}"
+if [ $? -ne 0 ]; then
+	echo "ERROR: login failed for '${CONTAINER_REGISTRY}'"
 	exit 1
 fi
 echo "INFO:  login successful"
 
-echo "Publishing images to '$CONTAINER_REGISTRY/$CONTAINER_REPOSITORY/...' (with tag '$CONTAINER_TAG')..."
+echo "Publishing images to '${CONTAINER_REGISTRY}/${CONTAINER_REPOSITORY}/...' (with tag '${CONTAINER_TAG}')..."
 UPLOAD_FAILED=""
-for CONTAINER_NAME in hal9000-mosquitto hal9000-kalliope hal9000-frontend hal9000-brain hal9000-console ; do
-	echo "Publishing 'localhost/$CONTAINER_NAME:latest' to '$CONTAINER_REGISTRY/$CONTAINER_REPOSITORY/$CONTAINER_NAME:$CONTAINER_TAG'..."
-	podman manifest push localhost/$CONTAINER_NAME:latest $CONTAINER_REGISTRY/$CONTAINER_REPOSITORY/$CONTAINER_NAME:$CONTAINER_TAG
-	if [ "x$?" != "x0" ]; then
-		UPLOAD_FAILED="$UPLOAD_FAILED$CONTAINER_NAME "
-		echo "NOTICE: Upload failed for $CONTAINER_NAME"
+for NAME in mosquitto kalliope frontend console brain ; do
+	echo "Publishing 'localhost/hal9000-${NAME}:latest' to '${CONTAINER_REGISTRY}/${CONTAINER_REPOSITORY}/hal9000-${NAME}:${CONTAINER_TAG}'..."
+	podman manifest push "localhost/hal9000-${NAME}:latest" "${CONTAINER_REGISTRY}/${CONTAINER_REPOSITORY}/hal9000-${NAME}:${CONTAINER_TAG}"
+	if [ $? -ne 0 ]; then
+		UPLOAD_FAILED="${UPLOAD_FAILED}hal9000-${NAME} "
+		echo "NOTICE: Upload failed for 'hal9000-${NAME}'"
 	fi
 done
 
-if [ "x$UPLOAD_FAILED" != "x" ]; then
-		echo "ERROR: Upload failed for: $UPLOAD_FAILED"
-		exit 1
+if [ "x${UPLOAD_FAILED}" != "x" ]; then
+	echo "ERROR: Upload failed for: ${UPLOAD_FAILED}"
+	exit 1
 fi
 
 echo "INFO:   images should be uploaded now"

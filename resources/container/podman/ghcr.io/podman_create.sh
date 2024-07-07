@@ -1,41 +1,47 @@
-#!/bin/bash
+#!/bin/sh
 
 USER_UID=`/usr/bin/id -u`
 USER_NAME=`/usr/bin/id -un`
-TARGET_TAG="$1"
+TARGET_TAG="${1:-unknown}"
 
-if [ "x$USER_UID" == "x0" ]; then
+if [ "x${USER_UID}" = "x0" ]; then
 	echo "ERROR: this script should NOT be run as root, use a non-privileged user (probably with dialout and audio as required group memberships, YMMV)"
 	exit 1
 fi
 
-if [ "x$XDG_RUNTIME_DIR" == "x" ]; then
-	echo "ERROR: for connecting with the user-instance of systemd, the environment variable XDG_RUNTIME_DIR must be set (export XDG_RUNTIME_DIR=/run/user/$USER_UID/)"
+if [ "x${XDG_RUNTIME_DIR}" = "x" ]; then
+	echo "ERROR: for connecting with the user-instance of systemd, the environment variable XDG_RUNTIME_DIR must be set:"
+	echo "       export XDG_RUNTIME_DIR='/run/user/${USER_UID}/'"
 	exit 1
 fi
 
-if [ "x$TARGET_TAG" == "x" ]; then
+if [ "${TARGET_TAG}" = "unknown" ]; then
 	echo "ERROR: no target tag (most likely 'development' or 'stable') provided as a command parameter)"
 	exit 1
 fi
 
 podman pod exists hal9000
-if [ "x$?" == "x0" ]; then
+if [ $? -eq 0 ]; then
 	echo "ERROR: pod 'hal9000' exists, aborting script (remove pod and start script again => podman pod rm hal9000)"
 	exit 1 
 fi
 
+podman network exists hal9000 2>&1 >/dev/null
+if [ $? -ne 0 ]; then
+	echo -n "Creating network 'hal9000':                 "
+	podman network create hal9000
+fi
 
 MISSING_IMAGES=0
-for NAME in mosquitto console frontend kalliope brain ; do
-	podman image exists "ghcr.io/juergenpabel/hal9000-$NAME:$TARGET_TAG"
-	if [ "x$?" != "x0" ]; then
-		echo "ERROR:  image 'ghcr.io/juergenpabel/hal9000-$NAME:$TARGET_TAG' not found"
+for NAME in mosquitto kalliope frontend console brain ; do
+	podman image exists "ghcr.io/juergenpabel/hal9000-${NAME}:${TARGET_TAG}"
+	if [ $? -ne 0 ]; then
+		echo "ERROR:  image 'ghcr.io/juergenpabel/hal9000-${NAME}:${TARGET_TAG}' not found"
 		MISSING_IMAGES+=1
 	fi
 done
-if [ "x$MISSING_IMAGES" != "x0" ]; then
-	echo "        Aborting script (download images first => ./podman_download.sh $TARGET_TAG)"
+if [ ${MISSING_IMAGES} -ne 0 ]; then
+	echo "        Aborting script (download images first => ./podman_download.sh '${TARGET_TAG}')"
 	exit 1
 fi
 
@@ -62,7 +68,7 @@ podman create --pod=hal9000 --name=hal9000-mosquitto \
               --group-add=keep-groups \
               --tz=local \
               --pull=never \
-              ghcr.io/juergenpabel/hal9000-mosquitto:$TARGET_TAG
+              "ghcr.io/juergenpabel/hal9000-mosquitto:${TARGET_TAG}"
 
 echo -n "Creating container 'hal9000-kalliope':  "
 podman create --pod=hal9000 --name=hal9000-kalliope \
@@ -72,26 +78,16 @@ podman create --pod=hal9000 --name=hal9000-kalliope \
               -v /etc/asound.conf:/etc/asound.conf:ro \
               --tz=local \
               --pull=never \
-              ghcr.io/juergenpabel/hal9000-kalliope:$TARGET_TAG
+              "ghcr.io/juergenpabel/hal9000-kalliope:${TARGET_TAG}"
 
 echo -n "Creating container 'hal9000-frontend':  "
 podman create --pod=hal9000 --name=hal9000-frontend \
               --requires hal9000-mosquitto \
               --group-add=keep-groups \
-              $DEVICE_TTYHAL9000_ARGS \
+              ${DEVICE_TTYHAL9000_ARGS} \
               --tz=local \
               --pull=never \
-              ghcr.io/juergenpabel/hal9000-frontend:$TARGET_TAG
-
-echo -n "Creating container 'hal9000-brain':     "
-podman create --pod=hal9000 --name=hal9000-brain \
-              --requires hal9000-kalliope,hal9000-frontend \
-              --group-add=keep-groups \
-              --tz=local \
-              -v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:rw \
-              $SYSTEMD_TIMESYNC_ARGS \
-              --pull=never \
-              ghcr.io/juergenpabel/hal9000-brain:$TARGET_TAG
+              "ghcr.io/juergenpabel/hal9000-frontend:${TARGET_TAG}"
 
 echo -n "Creating container 'hal9000-console':   "
 podman create --pod=hal9000 --name=hal9000-console \
@@ -99,9 +95,19 @@ podman create --pod=hal9000 --name=hal9000-console \
               --group-add=keep-groups \
               --tz=local \
               --pull=never \
-              ghcr.io/juergenpabel/hal9000-console:$TARGET_TAG
+              "ghcr.io/juergenpabel/hal9000-console:${TARGET_TAG}"
 
-if [ "x$DEVICE_TTYHAL9000_ARGS" == "x" ]; then
+echo -n "Creating container 'hal9000-brain':     "
+podman create --pod=hal9000 --name=hal9000-brain \
+              --requires hal9000-kalliope,hal9000-frontend \
+              --group-add=keep-groups \
+              --tz=local \
+              -v /run/dbus/system_bus_socket:/run/dbus/system_bus_socket:rw \
+              ${SYSTEMD_TIMESYNC_ARGS} \
+              --pull=never \
+              "ghcr.io/juergenpabel/hal9000-brain:${TARGET_TAG}"
+
+if [ "x${DEVICE_TTYHAL9000_ARGS}" = "x" ]; then
 	echo "NOTICE: no mircocontroller (/dev/ttyHAL9000) detected, not mounting the device into container 'hal9000-frontend'"
 	echo "        use the web-frontend (http://127.0.0.1:9000) as the user-interface (an open session is required for HAL9000 startup completion)"
 fi
@@ -110,5 +116,5 @@ echo "NOTICE: pod 'hal9000' created; next up: start pod/containers"
 echo "        If you would like to start the hal9000 containers NOW, either:"
 echo "          podman pod start hal9000  # for one-shot pod execution (and manual lifecycle handling)"
 echo "        or"
-echo "          ./run_systemd.sh          # for systemd-managed lifecycle execution (even after reboots)"
+echo "          ./podman_deploy.sh        # for systemd-managed lifecycle execution (even after reboots)"
 
