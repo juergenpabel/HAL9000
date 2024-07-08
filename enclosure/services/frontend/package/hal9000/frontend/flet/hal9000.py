@@ -190,7 +190,7 @@ class HAL9000(Frontend):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(ref=display.data['idle_clock'],
 		                                               x=int(display.radius), y=int(display.radius),
-		                                               style=flet.TextStyle(size=int(display.page.scale*18)+2,
+		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2,
 		                                                                    color='white' if display.data['idle_clock:synced'] is True else 'red'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
@@ -209,12 +209,12 @@ class HAL9000(Frontend):
 	def show_menu(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(text=data['title'],
-		                                               x=int(display.radius), y=int(0.75*display.radius),
-		                                               style=flet.TextStyle(size=int(display.page.scale*14)+2, color='white'),
+		                                               x=int(display.radius), y=int(0.5*display.radius),
+		                                               style=flet.TextStyle(size=int(display.page.scale*18), color='white'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.shapes.append(flet.canvas.Text(text=data['text'],
-		                                               x=int(display.radius), y=int(1.25*display.radius),
-		                                               style=flet.TextStyle(size=int(display.page.scale*14), color='white'),
+		                                               x=int(display.radius), y=int(display.radius),
+		                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
 
@@ -222,23 +222,24 @@ class HAL9000(Frontend):
 	def show_qrcode(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(text=data['title'],
-		                                               x=int(display.radius), y=int(0.4*display.radius)-int((data['hint-size'] if 'hint-size' in data else 10)/2),
+		                                               x=int(display.radius), y=int(0.4*display.radius)-int((data['title-size'] if 'title-size' in data else 18)/2),
 		                                               style=flet.TextStyle(color=data['title-color'] if 'title-color' in data else 'white',
-		                                                                    size=int(display.page.scale*(data['title-size'] if 'title-size' in data else 14))),
+		                                                                    size=int(display.page.scale*(data['title-size'] if 'title-size' in data else 18))),
 		                                               alignment=flet_core.alignment.center))
 		qrcode = io_StringIO()
 		segno_make(data['url'], version=5, error='m').save(qrcode, kind='txt', border=1)
 		qrcode.seek(0)
 		box_size = int(display.radius/(37+2))
+		box_offset = (display.radius-(37+2)*box_size)/2
 		for y, line in enumerate(qrcode.readlines()):
 			for x, value in enumerate(line.strip()):
-				display.content.shapes.append(flet.canvas.Rect(x=x*box_size+display.radius/2, y=y*box_size+display.radius/2,
+				display.content.shapes.append(flet.canvas.Rect(x=box_offset+x*box_size+display.radius/2, y=box_offset+y*box_size+display.radius/2,
 				                                               width=box_size, height=box_size,
 				                                               paint=flet.Paint(color='white' if value == '0' else 'black')))
 		display.content.shapes.append(flet.canvas.Text(text=data['hint'],
-		                                               x=int(display.radius), y=int(1.6*display.radius)-int((data['hint-size'] if 'hint-size' in data else 10)/2),
+		                                               x=int(display.radius), y=int(1.75*display.radius)-int((data['hint-size'] if 'hint-size' in data else 14)/2),
 		                                               style=flet.TextStyle(color=data['hint-color'] if 'hint-color' in data else 'white',
-		                                                                    size=int(display.page.scale*(data['hint-size'] if 'hint-size' in data else 10))),
+		                                                                    size=int(display.page.scale*(data['hint-size'] if 'hint-size' in data else 14))),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
 
