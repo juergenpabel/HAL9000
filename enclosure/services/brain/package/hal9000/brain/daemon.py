@@ -125,7 +125,7 @@ class Daemon(object):
 					self.scripts[script_name] = script_exec
 
 
-	async def loop(self):
+	async def loop(self) -> dict:
 		results = {'main': None}
 		try:
 			self.scheduler.start()
@@ -208,7 +208,7 @@ class Daemon(object):
 		return results
 			
 
-	async def task_mqtt_command_listener(self, mqtt):
+	async def task_mqtt_command_listener(self, mqtt: aiomqtt_Client) -> None:
 		try:
 			async for message in mqtt.messages:
 				topic = message.topic.value
@@ -256,7 +256,7 @@ class Daemon(object):
 			pass
 
 
-	async def task_mqtt_event_listener(self, mqtt):
+	async def task_mqtt_event_listener(self, mqtt: aiomqtt_Client) -> None:
 		try:
 			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				if self.mqtt_publish_queue.empty() is False:
@@ -273,7 +273,7 @@ class Daemon(object):
 			pass
 
 
-	async def task_mqtt(self):
+	async def task_mqtt(self) -> None:
 		try:
 			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'], identifier='hal9000-brain') as mqtt:
 				self.logger.debug(f"MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
@@ -306,7 +306,7 @@ class Daemon(object):
 			raise e
 
 
-	async def task_signal(self):
+	async def task_signal(self) -> None:
 		try:
 			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				if self.signal_queue.empty() is False:
@@ -331,7 +331,7 @@ class Daemon(object):
 			raise e
 
 
-	async def on_scheduler(self, plugin, signal):
+	async def on_scheduler(self, plugin: str, signal: dict) -> None:
 		self.queue_signal(plugin, signal)
 
 
@@ -342,17 +342,17 @@ class Daemon(object):
 		return None
 
 
-	def on_plugin_callback(self, plugin, name, old_value, new_value) -> bool:
-		if plugin.plugin_id == 'brain' and name == 'status':
+	def on_plugin_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_value, new_value) -> bool:
+		if plugin.plugin_id == 'brain' and key == 'status':
 			if new_value not in [Daemon.BRAIN_STATUS_STARTING, Daemon.BRAIN_STATUS_READY, \
 			                     Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP, \
 			                     Daemon.BRAIN_STATUS_DYING]:
 				return False
-		logging_getLogger().info(f"Plugin '{plugin.plugin_id}': {name} changes from '{old_value}' to '{new_value}'")
+		logging_getLogger().info(f"Plugin '{plugin.plugin_id}': {key} changes from '{old_value}' to '{new_value}'")
 		return True
 
 
-	def on_brain_status_callback(self, plugin, name, old_status, new_status) -> bool:
+	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		if new_status == Daemon.BRAIN_STATUS_READY:
 			next_brain_status = Daemon.BRAIN_STATUS_AWAKE
 			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
@@ -433,6 +433,6 @@ class Daemon(object):
 		return '127.0.0.1'
 
 
-	def on_posix_signal(self, number, frame):
+	def on_posix_signal(self, number: int, frame) -> None:
 		self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 

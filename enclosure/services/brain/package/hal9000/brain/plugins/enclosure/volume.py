@@ -1,5 +1,4 @@
-import configparser
-import json
+from configparser import ConfigParser as configparser_ConfigParser
 
 from hal9000.brain.daemon import Daemon
 from hal9000.brain.plugin import HAL9000_Plugin_Status
@@ -12,18 +11,18 @@ class Volume(EnclosureComponent):
 		self.config = dict()
 
 
-	def configure(self, configuration: configparser.ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		EnclosureComponent.configure(self, configuration, section_name)
 		self.config['volume-step']    = configuration.getint('enclosure:volume', 'volume-step',    fallback=5)
 		self.config['initial-mute']   = configuration.getboolean('enclosure:volume', 'initial-mute', fallback=False)
-		self.config['initial-volume'] = configuration.getint(    'enclosure:volume', 'initial-volume', fallback=50)
+		self.config['initial-volume'] = configuration.getint('enclosure:volume', 'initial-volume', fallback=50)
 		self.daemon.plugins['kalliope'].addNames(['volume', 'mute'])
 		self.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_status_callback, 'status')
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
 		self.daemon.plugins['enclosure'].addSignalHandler(self.on_enclosure_signal)
 
 
-	def on_brain_status_callback(self, plugin, name, old_status, new_status):
+	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		if new_status == 'ready':
 			if self.daemon.plugins['kalliope'].volume == HAL9000_Plugin_Status.UNINITIALIZED:
 				self.daemon.plugins['kalliope'].volume = int(self.config['initial-volume'])
@@ -32,8 +31,8 @@ class Volume(EnclosureComponent):
 		return True
 
 
-	def on_kalliope_status_callback(self, plugin, name, old_value, new_value):
-		if new_value == 'ready':
+	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
+		if new_status == 'ready':
 			if self.daemon.plugins['kalliope'].volume == HAL9000_Plugin_Status.UNINITIALIZED:
 				self.daemon.plugins['kalliope'].volume = int(self.config['initial-volume'])
 			if self.daemon.plugins['kalliope'].mute == HAL9000_Plugin_Status.UNINITIALIZED:
@@ -41,7 +40,7 @@ class Volume(EnclosureComponent):
 		return True
 
 
-	async def on_enclosure_signal(self, plugin, signal: dict) -> None:
+	async def on_enclosure_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
 		if 'volume' in signal:
 			self.daemon.cancel_signal('frontend:gui/overlay#volume')
 			if 'delta' in signal['volume']:

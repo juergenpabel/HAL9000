@@ -52,7 +52,7 @@ class Action(HAL9000_Action):
 		self.daemon.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/frontend/{topic}', 'payload': json_dumps(body)})
 
 
-	def on_frontend_status_callback(self, plugin, key, old_status, new_status) -> bool:
+	def on_frontend_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		match old_status:
 			case Action.FRONTEND_STATUS_UNKNOWN:
 				if new_status in [Action.FRONTEND_STATUS_STARTING, Action.FRONTEND_STATUS_READY,
@@ -69,12 +69,12 @@ class Action(HAL9000_Action):
 		return False
 
 
-	def on_frontend_screen_callback(self, plugin, key, old_screen, new_screen) -> bool:
+	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_screen: str, new_screen: str) -> bool:
 		self.daemon.logger.debug(f"STATUS at screen transition = {self.daemon.plugins}")
 		return True
 
 
-	async def on_frontend_signal(self, plugin, signal) -> None:
+	async def on_frontend_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
 		if 'status' in signal:
 			match self.daemon.plugins['frontend'].status:
 				case Action.FRONTEND_STATUS_UNKNOWN:
@@ -126,7 +126,7 @@ class Action(HAL9000_Action):
 				self.send_frontend_command('gui/overlay', {signal['gui']['overlay']['name']: signal['gui']['overlay']['parameter']})
 
 
-	def on_brain_status_callback(self, plugin, key, old_status, new_status) -> bool:
+	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		match new_status:
 			case Daemon.BRAIN_STATUS_READY:
 				self.daemon.queue_signal('frontend', {'time': {}})
@@ -158,12 +158,12 @@ class Action(HAL9000_Action):
 		return True
 
 
-	async def on_brain_signal(self, plugin, signal) -> None:
+	async def on_brain_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
 		if 'status' in signal and signal['status'] in [None, False, '', {}]:
 			self.daemon.mqtt_publish_queue.put_nowait({'topic': self.config['frontend-status-mqtt-topic'], 'payload': ''})
 
 
-	def on_kalliope_status_callback(self, plugin, key, old_status, new_status) -> bool:
+	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		if old_status == Kalliope_Action.KALLIOPE_STATUS_SPEAKING and new_status == Kalliope_Action.KALLIOPE_STATUS_WAITING:
 			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
 			                                                         'parameter': {'queue': 'replace',

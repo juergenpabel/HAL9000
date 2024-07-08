@@ -1,6 +1,7 @@
 from json import loads as json_loads
-from configparser import ConfigParser
+from configparser import ConfigParser as configparser_ConfigParser
 
+from hal9000.brain.plugin import HAL9000_Plugin_Status
 from hal9000.brain.plugins.enclosure import EnclosureComponent
 
 
@@ -14,14 +15,14 @@ class Control(EnclosureComponent):
 		self.config['menu']['menu-main']['items'] = list()
 
 
-	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		EnclosureComponent.configure(self, configuration, section_name)
 		self.config['menu']['timeout'] = configuration.getint('enclosure:control', 'timeout', fallback=15)
 		menu_files = configuration.getlist('enclosure:control', 'menu-files', fallback=[])
 		item_files = configuration.getlist('enclosure:control', 'item-files', fallback=[])
 		files = [file for file in menu_files+item_files if file is not None]
 		if len(files) > 0:
-			menu_config = ConfigParser()
+			menu_config = configparser_ConfigParser()
 			menu_config.read(files)
 			self.configure_menu(menu_config, 'menu-main')
 		self.daemon.plugins['frontend'].addNames(['menu_item', 'menu_name'])
@@ -29,7 +30,7 @@ class Control(EnclosureComponent):
 		self.daemon.plugins['enclosure'].addSignalHandler(self.on_enclosure_signal)
 
 
-	def configure_menu(self, menu_config: ConfigParser, menu_self: str) -> None:
+	def configure_menu(self, menu_config: configparser_ConfigParser, menu_self: str) -> None:
 		self.config['menu'][menu_self]['title'] = menu_config.get(menu_self, 'title', fallback='')
 		for menu_entry in menu_config.options(menu_self):
 			if menu_entry.startswith('item-'):
@@ -55,14 +56,14 @@ class Control(EnclosureComponent):
 					self.configure_menu(menu_config, menu_entry)
 
 
-	def on_frontend_screen_callback(self, plugin, key, old_value, new_value):
-		if old_value == 'menu':
+	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_screen: str, new_screen: str) -> bool:
+		if old_screen == 'menu':
 			self.daemon.plugins['frontend'].menu_name = None
 			self.daemon.plugins['frontend'].menu_item = None
 		return True
 
 
-	async def on_enclosure_signal(self, plugin, signal):
+	async def on_enclosure_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
 		if 'control' in signal:
 			match self.daemon.plugins['frontend'].screen:
 				case 'none':
@@ -113,7 +114,20 @@ class Control(EnclosureComponent):
 						if menu_item.startswith('item-'):
 							plugin = self.config['handlers'][menu_item]['plugin']
 							signal = self.config['handlers'][menu_item]['signal']
-							self.daemon.queue_signal(plugin, signal)
+							if isinstance(signal, dict):
+								self.daemon.queue_signal(plugin, signal)
+							elif isinstance(signal, list):
+								signals = signal
+								for signal in signals:
+									if isinstance(signal, dict) is True:
+										self.daemon.queue_signal(plugin, signal)
+									else:
+										self.daemon.logger.error(f"[enclosure/control]: unsupported signal type " \
+										                         f"'{type(signal)}' in list of signals for menu " \
+										                         f"item '{menu_item}': {signal}")
+							else:
+								self.daemon.logger.error(f"[enclosure/control]: unsupported signal type " \
+								                         f"'{type(signal)}' in menu item '{menu_item}': {signal}")
 						if menu_item.startswith('menu-'):
 							menu_title = self.config['menu'][menu_item]['title']
 							menu_text  = self.config['menu'][menu_item]['items'][0]['text']

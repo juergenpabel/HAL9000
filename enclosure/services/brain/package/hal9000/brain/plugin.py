@@ -1,11 +1,11 @@
-from configparser import ConfigParser
+from configparser import ConfigParser as configparser_ConfigParser
 
 
 class HAL9000_Plugin_Status(object):
 	UNINITIALIZED = '<uninitialized>'
 	SPECIAL_NAMES = ['plugin_id', 'valid_names', 'callbacks_data', 'callbacks_signal']
 
-	def __init__(self, plugin_id: str, **kwargs):
+	def __init__(self, plugin_id: str, **kwargs) -> None:
 		self.plugin_id = plugin_id
 		self.valid_names = ['status']
 		self.valid_names.extend(kwargs.get('valid_names', []))
@@ -18,37 +18,37 @@ class HAL9000_Plugin_Status(object):
 		self.callbacks_signal = set()
 
 
-	def addNames(self, valid_names: list):
+	def addNames(self, valid_names: list) -> None:
 		for name in valid_names:
 			if name not in HAL9000_Plugin_Status.SPECIAL_NAMES:
 				self.valid_names.append(name)
 				super().__setattr__(name, HAL9000_Plugin_Status.UNINITIALIZED)
 
-	def addNameCallback(self, callback, name='*'):
+	def addNameCallback(self, callback, name: str='*') -> None:
 		if name not in self.callbacks_data:
 			self.callbacks_data[name] = set()
 		self.callbacks_data[name].add(callback)
 
 
-	def delNameCallback(self, callback, name='*'):
+	def delNameCallback(self, callback, name: str='*') -> None:
 		if name in self.callbacks_data:
 			self.callbacks_data[name].remove(callback)
 
 
-	def addSignalHandler(self, callback):
+	def addSignalHandler(self, callback) -> None:
 		self.callbacks_signal.add(callback)
 
 
-	def delSignalHandler(self, callback, name='*'):
+	def delSignalHandler(self, callback, name: str='*') -> None:
 		self.callbacks_signal.remove(callback)
 
 
-	async def signal(self, data):
+	async def signal(self, signal: dict) -> None:
 		for callback in self.callbacks_signal:
-			await callback(self, data)
+			await callback(self, signal)
 
 
-	def __setattr__(self, name, new_value):
+	def __setattr__(self, name: str, new_value) -> None:
 		if name in HAL9000_Plugin_Status.SPECIAL_NAMES:
 			super().__setattr__(name, new_value)
 			return
@@ -69,7 +69,7 @@ class HAL9000_Plugin_Status(object):
 				super().__setattr__(name, new_value)
 
 
-	def __repr__(self):
+	def __repr__(self) -> str:
 		result = '{'
 		for name in self.valid_names:
 			value = getattr(self, name)
@@ -95,11 +95,11 @@ class HAL9000_Plugin(object):
 				self.daemon.plugins[plugin_class] = plugin_status
 		self.config = dict()
 
-	def __repr__(self):
+	def __repr__(self) -> str:
 		return self.name
 
 
-	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		pass
 
 
@@ -119,7 +119,7 @@ class HAL9000_Action(HAL9000_Plugin):
 		HAL9000_Plugin.__init__(self, "action", action_class, action_name, plugin_status, **kwargs)
 
 
-	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		HAL9000_Plugin.configure(self, configuration, section_name)
 
 
@@ -129,7 +129,7 @@ class HAL9000_Trigger(HAL9000_Plugin):
 		HAL9000_Plugin.__init__(self, "trigger", trigger_class, trigger_name, plugin_status, **kwargs)
 
 
-	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		HAL9000_Plugin.configure(self, configuration, section_name, None)
 
 
@@ -137,6 +137,6 @@ class HAL9000_Trigger(HAL9000_Plugin):
 		return HAL9000_Plugin.PLUGIN_RUNLEVEL_RUNNING
 
 
-	def handle(self, message) -> dict:
-		return None
+	def handle(self, data) -> dict:
+		return {}
 

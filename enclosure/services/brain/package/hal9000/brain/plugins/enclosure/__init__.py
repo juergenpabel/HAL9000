@@ -1,5 +1,4 @@
-import json
-from configparser import ConfigParser
+from configparser import ConfigParser as configparser_ConfigParser
 
 from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin_Status
 
@@ -10,7 +9,7 @@ class EnclosureComponent:
 		self.config = dict()
 
 
-	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		pass
 
 
@@ -21,7 +20,7 @@ class Action(HAL9000_Action):
 		self.components = dict()
 
 
-	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		HAL9000_Action.configure(self, configuration, section_name)
 		for identifier in configuration.options('enclosure:components'):
 			plugin_id = configuration.get('enclosure:components', identifier, fallback=None)

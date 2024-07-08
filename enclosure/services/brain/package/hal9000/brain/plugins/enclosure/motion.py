@@ -1,4 +1,4 @@
-from configparser import ConfigParser
+from configparser import ConfigParser as configparser_ConfigParser
 
 from hal9000.brain.daemon import Daemon
 from hal9000.brain.plugins.enclosure import EnclosureComponent
@@ -10,7 +10,7 @@ class Motion(EnclosureComponent):
 		self.config = dict()
 
 
-	def configure(self, configuration: ConfigParser, section_name: str) -> None:
+	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		EnclosureComponent.configure(self, configuration, section_name)
 #TODO		self.daemon.plugins['enclosure'].addNames('motion_timestamp')
 #TODO		self.daemon.plugins['enclosure'].motion_timestamp = None
