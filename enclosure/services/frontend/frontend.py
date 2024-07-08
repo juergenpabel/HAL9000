@@ -113,12 +113,14 @@ class FrontendManager:
 							if 'topic' in event and 'payload' in event:
 								topic = event['topic']
 								payload = event['payload']
+								if topic.count('/') in [0, 1]:
+									topic = f'hal9000/event/frontend/{topic}'
 								if isinstance(payload, str) is False:
 									try:
 										payload = json_dumps(payload)
 									except:
 										pass
-								self.mqtt_client.publish(f'hal9000/event/frontend/{topic}', payload)
+								self.mqtt_client.publish(topic, payload)
 					await asyncio_sleep(0.01)
 				case False:
 					await asyncio_sleep(1)

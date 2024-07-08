@@ -62,12 +62,21 @@ class HAL9000(Frontend):
 							condition = command['payload']['condition']
 							match condition:
 								case 'awake':
+									page.data['button_wakeup'].current.disabled = True
+									page.data['button_sleep'].current.disabled = False
+									page.update()
 									self.show_idle(display)
 								case 'asleep':
+									page.data['button_wakeup'].current.disabled = False
+									page.data['button_sleep'].current.disabled = True
+									page.update()
 									self.show_none(display)
-								case _:
+								case other:
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported condition '{condition}' "
 									                                     f"in command 'application/runtime'")
+						if 'time' in command['payload']:
+							if 'synced' in command['payload']['time']:
+								display.data['idle_clock:synced'] = command['payload']['time']['synced']
 						if 'shutdown' in command['payload'] and 'target' in command['payload']['shutdown']:
 							target = command['payload']['shutdown']['target']
 							match target:
@@ -79,7 +88,7 @@ class HAL9000(Frontend):
 									self.show_error(display, {'title': 'System reboot',
 									                          'message': f"Not supported for HTML",
 									                          'code': 'TODO'})
-								case _:
+								case other:
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported shutdown target '{target}' "
 									                                     f"in command 'application/runtime'")
 					case 'gui/screen':
@@ -97,7 +106,7 @@ class HAL9000(Frontend):
 									self.show_qrcode(display, command['payload']['qrcode'])
 								case 'error':
 									self.show_error(display, command['payload']['error'])
-								case _:
+								case other:
 									self.show_error(display, {'title': "Unsupported screen",
 									                          'message': screen,
 									                          'code': 'TODO'})
@@ -115,21 +124,21 @@ class HAL9000(Frontend):
 										color = 'white' if command['payload']['volume']['mute'] != 'true' else 'red'
 										dx = math_cos(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
 										dy = math_sin(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
-										x1 = radius/2+(dx*radius*0.9)
-										y1 = radius/2+(dy*radius*0.9)
-										x2 = radius/2+(dx*radius*0.99)
-										y2 = radius/2+(dy*radius*0.99)
+										x1 = radius+(dx*radius*0.9)
+										y1 = radius+(dy*radius*0.9)
+										x2 = radius+(dx*radius*0.99)
+										y2 = radius+(dy*radius*0.99)
 										display.content.shapes.append(flet.canvas.Line(x1, y1, x2, y2,
 										                                               paint=flet.Paint(color=color),
 										                                               data='overlay'))
 									display.content.update()
-								case _:
+								case other:
 									self.show_error(display, {'title': 'Unsupported overlay',
 									                          'message': overlay,
 									                          'code': 'TODO'})
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported overlay '{overlay}' "
 									                                     f"in command 'gui/overlay'")
-					case _:
+					case other:
 						self.show_error(display, {'title': 'Unsupported command',
 						                          'message': command['topic'],
 						                          'code': 'TODO'})
@@ -142,12 +151,14 @@ class HAL9000(Frontend):
 
 	async def run_gui_screen_idle(self, page, display):
 		while page.session_id in self.command_session_queues:
-			if display.data['idle_clock'].current is not None:
+			clock = display.data['idle_clock'].current
+			if clock is not None:
+				clock.style.color='white' if display.data['idle_clock:synced'] is True else 'red'
 				now = datetime_datetime.now()
 				if now.second % 2 == 0:
-					display.data['idle_clock'].current.text = now.strftime('%H:%M')
+					clock.text = now.strftime('%H:%M')
 				else:
-					display.data['idle_clock'].current.text = now.strftime('%H %M')
+					clock.text = now.strftime('%H %M')
 				display.content.update()
 			await asyncio_sleep(1)
 
@@ -178,8 +189,9 @@ class HAL9000(Frontend):
 	def show_idle(self, display):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(ref=display.data['idle_clock'],
-		                                               x=int(display.radius/2), y=int(display.radius/2),
-		                                               style=flet.TextStyle(color='white'),
+		                                               x=int(display.radius), y=int(display.radius),
+		                                               style=flet.TextStyle(size=int(display.page.scale*18)+2,
+		                                                                    color='white' if display.data['idle_clock:synced'] is True else 'red'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
 
@@ -197,12 +209,12 @@ class HAL9000(Frontend):
 	def show_menu(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(text=data['title'],
-		                                               x=int(display.radius/2), y=int(display.radius/4*1),
-		                                               style=flet.TextStyle(color='white'),
+		                                               x=int(display.radius), y=int(0.75*display.radius),
+		                                               style=flet.TextStyle(size=int(display.page.scale*14)+2, color='white'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.shapes.append(flet.canvas.Text(text=data['text'],
-		                                               x=int(display.radius/2), y=int(display.radius/4*3),
-		                                               style=flet.TextStyle(color='white'),
+		                                               x=int(display.radius), y=int(1.25*display.radius),
+		                                               style=flet.TextStyle(size=int(display.page.scale*14), color='white'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
 
@@ -210,9 +222,9 @@ class HAL9000(Frontend):
 	def show_qrcode(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(text=data['title'],
-		                                               x=int(display.radius/2), y=int(-display.radius/8*1),
+		                                               x=int(display.radius), y=int(0.4*display.radius)-int((data['hint-size'] if 'hint-size' in data else 10)/2),
 		                                               style=flet.TextStyle(color=data['title-color'] if 'title-color' in data else 'white',
-		                                                                    size=data['title-size'] if 'title-size' in data else 14),
+		                                                                    size=int(display.page.scale*(data['title-size'] if 'title-size' in data else 14))),
 		                                               alignment=flet_core.alignment.center))
 		qrcode = io_StringIO()
 		segno_make(data['url'], version=5, error='m').save(qrcode, kind='txt', border=1)
@@ -220,13 +232,13 @@ class HAL9000(Frontend):
 		box_size = int(display.radius/(37+2))
 		for y, line in enumerate(qrcode.readlines()):
 			for x, value in enumerate(line.strip()):
-				display.content.shapes.append(flet.canvas.Rect(x=x*box_size, y=y*box_size,
+				display.content.shapes.append(flet.canvas.Rect(x=x*box_size+display.radius/2, y=y*box_size+display.radius/2,
 				                                               width=box_size, height=box_size,
 				                                               paint=flet.Paint(color='white' if value == '0' else 'black')))
 		display.content.shapes.append(flet.canvas.Text(text=data['hint'],
-		                                               x=int(display.radius/2), y=int(display.radius/8*9)-(data['hint-size'] if 'hint-size' in data else 10)/2,
+		                                               x=int(display.radius), y=int(1.6*display.radius)-int((data['hint-size'] if 'hint-size' in data else 10)/2),
 		                                               style=flet.TextStyle(color=data['hint-color'] if 'hint-color' in data else 'white',
-		                                                                    size=data['hint-size'] if 'hint-size' in data else 10),
+		                                                                    size=int(display.page.scale*(data['hint-size'] if 'hint-size' in data else 10))),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
 
@@ -236,6 +248,12 @@ class HAL9000(Frontend):
 		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
 		                           'hint': f"Error {data['code']}", 'hint-size': 14, 'hint-color': 'red'})
 
+
+	def on_button_wakeup(self, event):
+		self.events.put_nowait({'topic': 'hal9000/command/brain/status', 'payload': 'awake'})
+
+	def on_button_sleep(self, event):
+		self.events.put_nowait({'topic': 'hal9000/command/brain/status', 'payload': 'asleep'})
 
 	def on_control_up(self, event):
 		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "rotary", "name": "control"}, "event": {"delta": "+1"}}'})
@@ -272,37 +290,55 @@ class HAL9000(Frontend):
 		page.on_disconnect = self.flet_on_disconnect
 		page.title = "HAL9000"
 		page.theme_mode = flet.ThemeMode.DARK
-		scale = 1.0
-		if page.height < 1000:
-			scale = page.height / 1000
-		display = flet.CircleAvatar(radius=scale*120, bgcolor='black')
-		display.content = flet.canvas.Canvas(width=scale*120, height=scale*120)
+		page.scale = page.height / 1000
+		page.padding = 0
+		page.data = {}
+		page.data['button_sleep'] = flet.Ref[flet.TextButton]()
+		page.data['button_wakeup'] = flet.Ref[flet.TextButton]()
+		display = flet.CircleAvatar(radius=page.scale*120, bgcolor='black')
+		display.content = flet.canvas.Canvas(width=display.radius*2, height=display.radius*2)
 		display.background_image_src = '/sequences/init/00.jpg'
 		display.data = {}
-		display.data['idle_clock'] = flet.Ref[flet.canvas.Text()]
+		display.data['idle_clock'] = flet.Ref[flet.canvas.Text]()
+		display.data['idle_clock:synced'] = None
 		display.data['hal9k_queue'] = []
+		display.page = page
 		page.add(flet.Row(controls=[flet.Column(controls=[
 		                                                  flet.TextButton("Ctrl+", on_click=self.on_control_up),
 		                                                  flet.TextButton("Select", on_click=self.on_control_select),
 		                                                  flet.TextButton("Ctrl-", on_click=self.on_control_down),
-		                                                 ]),
-		                            flet.Container(width=scale*328, height=scale*960,
-		                                           content=flet.Column(controls=[flet.Row(height=scale*425),
-		                                                                         flet.Row(controls=[display], alignment=flet.MainAxisAlignment.CENTER)
-		                                                                        ]),
-		                                           image_src="/HAL9000.jpg", image_fit=flet.ImageFit.FILL),
+		                                                 ], height=page.scale*960),
+		                            flet.Column(controls=[
+		                                                  flet.Container(content=flet.Column(controls=[
+		                                                                                               flet.Row(height=page.scale*100, spacing=0),
+		                                                                                               flet.Row(controls=[
+		                                                                                                                  flet.TextButton(ref=page.data['button_sleep'], text="Sleep",
+		                                                                                                                                  on_click=self.on_button_sleep),
+		                                                                                                                  flet.TextButton(ref=page.data['button_wakeup'], text="Wakeup",
+		                                                                                                                                  on_click=self.on_button_wakeup),
+		                                                                                                                  ], width=page.scale*328, height=page.scale*340, spacing=0,
+		                                                                                                                     vertical_alignment=flet.CrossAxisAlignment.START,
+		                                                                                                                     alignment=flet.MainAxisAlignment.SPACE_EVENLY),
+		                                                                                               flet.Row(controls=[display],
+		                                                                                                        alignment=flet.MainAxisAlignment.CENTER,
+		                                                                                                        vertical_alignment=flet.CrossAxisAlignment.START,
+		                                                                                                        width=page.scale*328, height=page.scale*520, spacing=0),
+		                                                                                              ], height=page.scale*960, spacing=0),
+		                                                                 width=page.scale*328, height=page.scale*960, padding=0,
+		                                                                 image_src="/HAL9000.jpg", image_fit=flet.ImageFit.FILL),
+		                                                  ], spacing=0),
 		                            flet.Column(controls=[
 		                                                  flet.TextButton("Vol+", on_click=self.on_volume_up),
 		                                                  flet.TextButton("Mute", on_click=self.on_volume_mute),
 		                                                  flet.TextButton("Vol-", on_click=self.on_volume_down),
-		                                                 ]),
-		                           ], alignment=flet.MainAxisAlignment.CENTER))
+		                                                 ], height=page.scale*960),
+		                           ], alignment=flet.MainAxisAlignment.CENTER, height=page.scale*960, spacing=0))
 		page.update()
 		self.command_session_queues[page.session_id] = asyncio_Queue()
 		page.session.set('session_task', asyncio_create_task(self.run_command_session_listener(page, display)))
 		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(page, display)))
 		page.session.set('gui_hal9k_task', asyncio_create_task(self.run_gui_screen_hal9k(page, display)))
-		self.show_idle(display)
+		self.show_none(display)
 		self.status = Frontend.FRONTEND_STATUS_ONLINE
 		self.events.put_nowait({'topic': 'status', 'payload': self.status})
 
