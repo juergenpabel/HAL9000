@@ -12,7 +12,6 @@ class Trigger(HAL9000_Trigger):
 
 	def __init__(self, trigger_name: str, trigger_status: HAL9000_Plugin_Status) -> None:
 		HAL9000_Trigger.__init__(self, 'mqtt', trigger_name, trigger_status)
-		self.config = dict()
 		self.payload_jsonpath_parser = None
 
 
@@ -26,8 +25,8 @@ class Trigger(HAL9000_Trigger):
 
 
 	def callbacks(self) -> dict:
-		result = dict()
-		topics = list()
+		result = {}
+		topics = []
 		if self.config['topic'] is not None:
 			topics.append(self.config['topic'])
 		result['mqtt'] = topics

@@ -182,7 +182,7 @@ class HAL9000(Frontend):
 
 
 	def show_none(self, display):
-		display.content.shapes = list()
+		display.content.shapes = []
 		display.content.update()
 
 

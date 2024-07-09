@@ -93,7 +93,7 @@ class HAL9000_Plugin(object):
 		if plugin_status is not None and self.daemon is not None:
 			if plugin_class not in self.daemon.plugins:
 				self.daemon.plugins[plugin_class] = plugin_status
-		self.config = dict()
+		self.config = {}
 
 	def __repr__(self) -> str:
 		return self.name

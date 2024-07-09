@@ -6,7 +6,7 @@ from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin_Status
 class EnclosureComponent:
 	def __init__(self, **kwargs) -> None:
 		self.daemon = kwargs.get('daemon', None)
-		self.config = dict()
+		self.config = {}
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
@@ -17,7 +17,7 @@ class EnclosureComponent:
 class Action(HAL9000_Action):
 	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'enclosure', 'self', plugin_status, **kwargs)
-		self.components = dict()
+		self.components = {}
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:

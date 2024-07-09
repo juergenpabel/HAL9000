@@ -8,11 +8,12 @@ from hal9000.brain.plugins.enclosure import EnclosureComponent
 class Control(EnclosureComponent):
 	def __init__(self, **kwargs) -> None:
 		EnclosureComponent.__init__(self, **kwargs)
-		self.config['handlers'] = dict()
-		self.config['menu'] = dict()
-		self.config['menu']['menu-main'] = dict()
+		self.config['handlers'] = {}
+		self.config['menu'] = {}
+		self.config['menu']['menu-main'] = {}
 		self.config['menu']['menu-main']['title'] = ''
-		self.config['menu']['menu-main']['items'] = list()
+		self.config['menu']['menu-main']['items'] = []
+		self.daemon.plugins['frontend'].addNames(['menu_item', 'menu_name'])
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
@@ -25,7 +26,6 @@ class Control(EnclosureComponent):
 			menu_config = configparser_ConfigParser()
 			menu_config.read(files)
 			self.configure_menu(menu_config, 'menu-main')
-		self.daemon.plugins['frontend'].addNames(['menu_item', 'menu_name'])
 		self.daemon.plugins['frontend'].addNameCallback(self.on_frontend_screen_callback, 'screen')
 		self.daemon.plugins['enclosure'].addSignalHandler(self.on_enclosure_signal)
 
@@ -45,14 +45,14 @@ class Control(EnclosureComponent):
 					self.daemon.logger.error(f"[enclosure:control] invalid signal configuration for menu entry '{menu_entry}': '{signal}'")
 					continue
 				self.config['menu'][menu_self]['items'].append({'item': menu_entry, 'text': menu_config.get(menu_self, menu_entry)})
-				self.config['handlers'][menu_entry] = dict()
+				self.config['handlers'][menu_entry] = {}
 				self.config['handlers'][menu_entry]['plugin'] = plugin
 				self.config['handlers'][menu_entry]['signal'] = signal
 			if menu_entry.startswith('menu-'):
 				self.config['menu'][menu_self]['items'].append({'item': menu_entry, 'text': menu_config.get(menu_self, menu_entry)})
 				if menu_entry not in self.config['menu']:
-					self.config['menu'][menu_entry] = dict()
-					self.config['menu'][menu_entry]['items'] = list()
+					self.config['menu'][menu_entry] = {}
+					self.config['menu'][menu_entry]['items'] = []
 					self.configure_menu(menu_config, menu_entry)
 
 

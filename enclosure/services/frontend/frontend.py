@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from os.path import exists as os_path_exists
 from sys import argv as sys_argv, exit as sys_exit
 from time import monotonic as time_monotonic
 from json import loads as json_loads, dumps as json_dumps
@@ -162,10 +163,13 @@ async def fastapi_lifespan(app: fastapi_FastAPI):
 
 app = fastapi_FastAPI(lifespan=fastapi_lifespan)
 if __name__ == '__main__':
+	if os_path_exists('assets') is False:
+		logging_getLogger().critical("[frontend] missing 'assets' directory (or symlink to directory)")
+		sys_exit(1)
 	try:
 		uvicorn_run('frontend:app', host='0.0.0.0', port=9000, log_level='info')
 	except KeyboardInterrupt:
-		print("[frontend] exiting due to CTRL-C")
+		logging_getLogger().info("[frontend] exiting due to CTRL-C")
 	finally:
-		print("[frontend] terminating")
+		logging_getLogger().info("[frontend] terminating")
 

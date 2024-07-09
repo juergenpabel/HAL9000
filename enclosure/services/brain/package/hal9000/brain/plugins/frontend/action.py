@@ -20,8 +20,7 @@ class Action(HAL9000_Action):
 
 	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'frontend', action_name, plugin_status, **kwargs)
-		self.daemon.plugins['frontend'].addNames(['screen', 'overlay', 'time'])
-		self.datetime_next_time_sync = datetime_datetime.now()
+		self.daemon.plugins['frontend'].addNames(['screen', 'overlay'])
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
@@ -33,6 +32,7 @@ class Action(HAL9000_Action):
 		self.daemon.plugins['frontend'].addSignalHandler(self.on_frontend_signal)
 		self.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_status_callback, 'status')
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
+		self.daemon.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
 		self.daemon.plugins['brain'].addSignalHandler(self.on_brain_signal)
 
 
@@ -64,6 +64,13 @@ class Action(HAL9000_Action):
 			case Action.FRONTEND_STATUS_READY | \
 			     Action.FRONTEND_STATUS_ONLINE | \
 			     Action.FRONTEND_STATUS_OFFLINE:
+				if old_status == Action.FRONTEND_STATUS_OFFLINE and new_status == Action.FRONTEND_STATUS_ONLINE:
+					datetime_now = datetime_datetime.now()
+					epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
+					synced = True if self.daemon.plugins['brain'].time == 'synchronized' else False
+					self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': synced}})
+					if self.daemon.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
+						self.send_frontend_command('gui/screen', {'idle': {}})
 				if new_status in [Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
 					return True
 		return False
@@ -99,14 +106,6 @@ class Action(HAL9000_Action):
 						self.daemon.plugins['frontend'].status = signal['status']
 						if self.daemon.plugins['brain'].status in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
 							self.send_frontend_command('application/runtime', {'condition': self.daemon.plugins['brain'].status})
-		if 'time' in signal:
-			datetime_now = datetime_datetime.now()
-			if datetime_now > self.datetime_next_time_sync:
-				time_synchronized = os_path_exists('/run/systemd/timesync/synchronized')
-				self.daemon.plugins['frontend'].time = 'synchronized' if time_synchronized is True else 'unsynchronized'
-				epoch = int(datetime_now.timestamp() + datetime_datetime.now().astimezone().tzinfo.utcoffset(None).seconds)
-				self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': time_synchronized}})
-				self.datetime_next_time_sync = datetime_now + datetime_timedelta(seconds=1 if time_synchronized is False else 3600)
 		if 'gui' in signal:
 			if 'screen' in signal['gui']:
 				if 'url' in signal['gui']['screen']['parameter']:
@@ -129,8 +128,7 @@ class Action(HAL9000_Action):
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		match new_status:
 			case Daemon.BRAIN_STATUS_READY:
-				self.daemon.queue_signal('frontend', {'time': {}})
-				self.daemon.schedule_signal(1, 'frontend', {'time': {}}, 'frontend:time', 'interval')
+				pass
 			case Daemon.BRAIN_STATUS_AWAKE:
 				self.send_frontend_command('application/runtime', {'condition': 'awake'})
 				if old_status == Daemon.BRAIN_STATUS_READY:
@@ -158,9 +156,18 @@ class Action(HAL9000_Action):
 		return True
 
 
+	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_time: str, new_time: str) -> bool:
+		datetime_now = datetime_datetime.now()
+		epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
+		synced = True if new_time == 'synchronized' else False
+		self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': synced}})
+		return True
+
+
 	async def on_brain_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
-		if 'status' in signal and signal['status'] in [None, False, '', {}]:
-			self.daemon.mqtt_publish_queue.put_nowait({'topic': self.config['frontend-status-mqtt-topic'], 'payload': ''})
+		if 'status' in signal:
+			if signal['status'] in [None, False, '', {}]:
+				self.daemon.mqtt_publish_queue.put_nowait({'topic': self.config['frontend-status-mqtt-topic'], 'payload': ''})
 
 
 	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:

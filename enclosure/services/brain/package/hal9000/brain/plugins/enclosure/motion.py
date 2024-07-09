@@ -7,7 +7,6 @@ from hal9000.brain.plugins.enclosure import EnclosureComponent
 class Motion(EnclosureComponent):
 	def __init__(self, **kwargs) -> None:
 		EnclosureComponent.__init__(self, **kwargs)
-		self.config = dict()
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:

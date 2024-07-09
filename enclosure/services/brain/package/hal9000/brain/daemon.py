@@ -51,8 +51,7 @@ class Daemon(object):
 		self.config = {}
 		self.plugins = {}
 		self.plugins['brain'] = HAL9000_Plugin_Status('brain', status='starting')
-		self.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
-		self.plugins['brain'].addSignalHandler(self.on_brain_signal)
+		self.plugins['brain'].addNames(['time'])
 		self.tasks = {}
 		self.actions = {}
 		self.triggers = {}
@@ -83,6 +82,9 @@ class Daemon(object):
 		self.config['brain:sleep-time']  = self.configuration.get('brain', 'sleep-time', fallback=None)
 		self.config['brain:wakeup-time'] = self.configuration.get('brain', 'wakeup-time', fallback=None)
 		self.config['help:error-url'] = self.configuration.getstring('help', 'error-url', fallback=None)
+		self.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
+		self.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
+		self.plugins['brain'].addSignalHandler(self.on_brain_signal)
 		for section_name in self.configuration.sections():
 			plugin_path = self.configuration.getstring(section_name, 'plugin', fallback=None)
 			if plugin_path is not None:
@@ -115,7 +117,7 @@ class Daemon(object):
 					callback_list = callbacks[callback_type]
 					for mqtt_topic in callback_list:
 						if mqtt_topic not in self.callbacks['mqtt']:
-							self.callbacks['mqtt'][mqtt_topic] = list()
+							self.callbacks['mqtt'][mqtt_topic] = []
 						self.callbacks['mqtt'][mqtt_topic].append(trigger)
 		for section_name in self.configuration.sections():
 			if section_name.startswith('script:'):
@@ -366,6 +368,26 @@ class Daemon(object):
 					if time_now > time_sleep and time_now < time_wakeup:
 						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
 			self.queue_signal('brain', {'status': next_brain_status})
+			self.queue_signal('brain', {'time:sync': {}})
+		return True
+
+
+	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_time: str, new_time: str) -> bool:
+		if old_time == 'unsynchronized' and new_time == 'synchronized':
+			next_brain_status = Daemon.BRAIN_STATUS_AWAKE
+			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
+				time_now = datetime_datetime.now().time()
+				time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
+				time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
+				if time_sleep > time_wakeup:
+					if time_now > time_sleep or time_now < time_wakeup:
+						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
+				else:
+					if time_now > time_sleep and time_now < time_wakeup:
+						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
+			if next_brain_status != self.plugins['brain'].status:
+				self.queue_signal('brain', {'status': next_brain_status})
+		self.schedule_signal(1 if new_time != 'synchronized' else 3600, 'brain', {'time:sync': {}}, 'brain:time:sync', 'interval')
 		return True
 
 
@@ -386,6 +408,9 @@ class Daemon(object):
 						self.plugins['brain'].status = signal['status']
 				case Daemon.BRAIN_STATUS_DYING:
 					pass
+		if 'time:sync' in signal:
+			time_synchronized = os_path_exists('/run/systemd/timesync/synchronized')
+			self.plugins['brain'].time = 'synchronized' if time_synchronized is True else 'unsynchronized'
 
 
 	async def signal(self, plugin: str, signal: dict) -> None:
