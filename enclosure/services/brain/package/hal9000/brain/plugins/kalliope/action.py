@@ -42,7 +42,7 @@ class Action(HAL9000_Action):
 
 
 	def runlevel_error(self) -> dict:
-		return {'code': '02',
+		return {'id': '02',
 		        'level': 'error',
 		        'message': "No connection to kalliope."}
 

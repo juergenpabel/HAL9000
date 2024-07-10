@@ -35,14 +35,14 @@ void setup() {
 	if(LittleFS.exists(filename.c_str()) == true) {
 		file = LittleFS.open(filename.c_str(), "r");
 		if(deserializeJson(json, file) != DeserializationError::Ok) {
-			g_application.notifyError("error", "002", "JSON error in board configuration", 60);
+			g_application.notifyError("error", "12", "Configuration error", filename);
 			json.clear();
 		}
 		file.close();
 	}
 	if(json.isNull() == false) {
 		if(g_device_board.configure(json) == false) {
-			g_application.notifyError("error", "003", "Failed to apply board configuration", 60);
+			g_application.notifyError("error", "12", "Configuration error", g_device_board.getIdentifier());
 		}
 	}
 	g_gui.begin();
@@ -61,7 +61,7 @@ void setup() {
 	g_gui_overlay.setTextDatum(MC_DATUM);
 	g_gui_buffer = (uint16_t*)malloc(GUI_SCREEN_HEIGHT*GUI_SCREEN_WIDTH*sizeof(uint16_t));
 	if(g_gui_buffer == nullptr) {
-		g_application.notifyError("warn", "001", "Not enough RAM: animations off", 10);
+		g_application.notifyError("warn", "11", "Disabled animations", "malloc() for GUI buffer failed");
 	}
 	g_util_webserial.setCommand("application/runtime", on_application_runtime);
 }
@@ -105,16 +105,11 @@ void loop() {
 					timeout_offline = 0;
 				}
 				if(timeout_offline > 0 && millis() > timeout_offline) {
-					const char* error_code = "01";
-					const char* error_message = "No connection to host";
-					const char* error_url = "https://github.com/juergenpabel/HAL9000/wiki/ERROR_01";
-					const char* error_timeout = "0";
+					Error error("error", "01", "No connection to host", "ERROR #01");
 
-					g_application.setEnv("gui/screen:error/code", error_code);
-					g_application.setEnv("gui/screen:error/url", error_url);
-					g_application.setEnv("gui/screen:error/message", error_message);
-					g_application.setEnv("gui/screen:error/timeout", error_timeout);
-					g_util_webserial.send("syslog/error", error_message);
+					g_util_webserial.send(error.level.insert(0, "syslog/"), error.message); // TODO: + " => " + error.detail);
+					g_application.setEnv("gui/screen:error/id", error.id);
+					g_application.setEnv("gui/screen:error/message", error.message);
 					gui_screen_set(gui_screen_error);
 					timeout_offline = 0;
 				}

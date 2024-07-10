@@ -140,7 +140,7 @@ void Application::onRunning() {
 	while(this->m_errors.empty() == false) {
 		const Error& error = this->m_errors.front();
 
-		this->notifyError(error.level, error.code, error.message, error.timeout);
+		this->notifyError(error.level, error.id, error.message, error.detail);
 		this->m_errors.pop();
 	}
 	g_application_configuration.clear();
@@ -150,7 +150,7 @@ void Application::onRunning() {
 		file = LittleFS.open("/system/application/configuration.json", "r");
 		if(file == true) {
 			if(deserializeJson(g_application_configuration, file) != DeserializationError::Ok) {
-				g_application.notifyError("error", "004", "JSON error in application config");
+				g_application.notifyError("error", "12", "Configuration error", "/system/application/configuration.json");
 				g_application_configuration.clear();
 			}
 			if(g_application_configuration.isNull() == false) {
@@ -166,22 +166,23 @@ void Application::onRunning() {
 }
 
 
-void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& code, const etl::string<GLOBAL_VALUE_SIZE>& message, uint16_t timeout) {
+void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& id,
+                              const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_KEY_SIZE>& detail) {
 	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> webserial_body;
 
 	if(this->getStatus() != StatusRunning) {
 		if(this->m_errors.full() == true) {
 			this->m_errors.pop();
 		}
-		this->m_errors.push(Error(level, code, message, timeout));
+		this->m_errors.push(Error(level, id, message, detail));
 		return;
 	}
 	webserial_body.clear();
 	webserial_body.createNestedObject("error");
 	webserial_body["error"]["level"] = level.c_str();
-	webserial_body["error"]["code"] = code.c_str();
+	webserial_body["error"]["id"] = id.c_str();
 	webserial_body["error"]["message"] = message.c_str();
-	webserial_body["error"]["timeout"] = timeout;
+	webserial_body["error"]["detail"] = detail;
 	g_util_webserial.send("application/event", webserial_body);
 }
 

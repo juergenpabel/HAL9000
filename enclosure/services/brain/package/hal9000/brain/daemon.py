@@ -79,9 +79,11 @@ class Daemon(object):
 		self.config['startup:init-timeout'] = self.configuration.getint('startup', 'init-timeout', fallback=10)
 		self.config['mqtt:server']       = str(os_getenv('MQTT_SERVER', default=self.configuration.getstring('mqtt', 'server', fallback='127.0.0.1')))
 		self.config['mqtt:port']         = int(os_getenv('MQTT_PORT', default=self.configuration.getint('mqtt', 'port', fallback=1883)))
+		self.config['brain:require-synced-time'] = self.configuration.getboolean('brain', 'require-synced-time', fallback=True)
 		self.config['brain:sleep-time']  = self.configuration.get('brain', 'sleep-time', fallback=None)
 		self.config['brain:wakeup-time'] = self.configuration.get('brain', 'wakeup-time', fallback=None)
-		self.config['help:error-url'] = self.configuration.getstring('help', 'error-url', fallback=None)
+		self.config['help:error-url'] = self.configuration.getstring('help', 'error-url', fallback='https://github.com/juergenpabel/HAL9000/wiki/Error-database')
+		self.config['help:splash-url'] = self.configuration.getstring('help', 'splash-url', fallback='https://github.com/juergenpabel/HAL9000/wiki/Splashs')
 		self.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
 		self.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
 		self.plugins['brain'].addSignalHandler(self.on_brain_signal)
@@ -165,10 +167,7 @@ class Daemon(object):
 						self.logger.critical(f"Startup failed (plugins that haven't reported their runlevel):")
 						for id, plugin in plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN].items():
 							error = plugin.runlevel_error()
-							self.logger.critical(f"    Plugin '{id.split(':').pop()}': Error #{error['code']} => {error['message']}")
-							self.queue_signal('frontend', {'gui': {'screen': {'name': 'error',
-							                                                  'parameter': {'code': error['code'],
-							                                                                'message': error['message']}}}})
+							await self.process_error('critical', error['id'], f"    Plugin '{id.split(':').pop()}'", error['message'])
 						self.logger.critical("Terminating due to plugins that haven't reached runlevel 'starting' within timelimit")
 						self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 					if len(plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN]) == 0:
@@ -356,24 +355,12 @@ class Daemon(object):
 
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		if new_status == Daemon.BRAIN_STATUS_READY:
-			next_brain_status = Daemon.BRAIN_STATUS_AWAKE
-			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
-				time_now = datetime_datetime.now().time()
-				time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
-				time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
-				if time_sleep > time_wakeup:
-					if time_now > time_sleep or time_now < time_wakeup:
-						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
-				else:
-					if time_now > time_sleep and time_now < time_wakeup:
-						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
-			self.queue_signal('brain', {'status': next_brain_status})
 			self.queue_signal('brain', {'time:sync': {}})
 		return True
 
 
 	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_time: str, new_time: str) -> bool:
-		if old_time == 'unsynchronized' and new_time == 'synchronized':
+		if (new_time == 'unsynchronized' and self.config['brain:require-synced-time'] is False) or (new_time == 'synchronized'):
 			next_brain_status = Daemon.BRAIN_STATUS_AWAKE
 			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
 				time_now = datetime_datetime.now().time()
@@ -387,7 +374,15 @@ class Daemon(object):
 						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
 			if next_brain_status != self.plugins['brain'].status:
 				self.queue_signal('brain', {'status': next_brain_status})
-		self.schedule_signal(1 if new_time != 'synchronized' else 3600, 'brain', {'time:sync': {}}, 'brain:time:sync', 'interval')
+		match new_time:
+			case 'unsynchronized':
+				if self.config['brain:require-synced-time'] is True:
+					logging_getLogger().info(f"Waiting for system time to become synchronized... (require-synced-time=true)")
+				self.schedule_signal(1, 'brain', {'time:sync': {}}, 'brain:time:sync', 'interval')
+			case 'synchronized':
+				self.remove_scheduled_signal('brain:time:sync')
+			case other:
+				return False
 		return True
 
 
@@ -413,6 +408,12 @@ class Daemon(object):
 			self.plugins['brain'].time = 'synchronized' if time_synchronized is True else 'unsynchronized'
 
 
+	async def process_error(self, level: str, id: str, title: str, details: str='<no details>') -> None:
+		self.logger.log(level, f"ERROR #{id}: {title} => {details}")
+		url = self.config['help:error-url'].format(id=id)
+		await self.signal('frontend', {'gui': {'screen': {'name': 'error', 'parameter': {'id': id, 'url': url, 'message': title}}}})
+
+
 	async def signal(self, plugin: str, signal: dict) -> None:
 		if plugin in self.plugins:
 			await self.plugins[plugin].signal(signal)
@@ -434,7 +435,7 @@ class Daemon(object):
 				logging_getLogger().error(f"unsupported schedule mode '{mode}' in Daemon.schedule_signal()")
 
 
-	def cancel_signal(self, id: str) -> None:
+	def remove_scheduled_signal(self, id: str) -> None:
 		if self.scheduler.get_job(id) is not None:
 			self.scheduler.remove_job(id)
 

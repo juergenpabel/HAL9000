@@ -108,9 +108,9 @@ class HAL9000_Plugin(object):
 
 
 	def runlevel_error(self) -> dict:
-		return {"code": "TODO",
-		        "level": "error",
-		        "message": "BUG: HAL9000_Plugin derived class did not implement runlevel_error()"}
+		return {'id': '90',
+		        'level': 'error',
+		        'message': "BUG: HAL9000_Plugin derived class did not implement runlevel_error()"}
 
 
 

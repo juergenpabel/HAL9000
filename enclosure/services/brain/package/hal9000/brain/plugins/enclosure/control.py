@@ -82,6 +82,8 @@ class Control(EnclosureComponent):
 						                                                                       'text': menu_text}}}})
 				case 'hal9000':
 					pass
+				case 'splash':
+					pass
 				case 'error':
 					if 'select' in signal['control']:
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
@@ -95,7 +97,7 @@ class Control(EnclosureComponent):
 						self.daemon.schedule_signal(self.config['menu']['timeout'],
 						                            'frontend',
 						                            {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
-						                            'menu:timeout')
+						                            'enclosure:control:menu:timeout')
 						position = 0
 						for item in self.config['menu'][menu_name]['items']:
 							if item['item'] == menu_item:
@@ -110,7 +112,7 @@ class Control(EnclosureComponent):
 						self.daemon.plugins['frontend'].menu_name = menu_name
 						self.daemon.plugins['frontend'].menu_item = menu_item
 					if 'select' in signal['control']:
-						self.daemon.cancel_signal('menu:timeout')
+						self.daemon.remove_scheduled_signal('enclosure:control:menu:timeout')
 						if menu_item.startswith('item-'):
 							plugin = self.config['handlers'][menu_item]['plugin']
 							signal = self.config['handlers'][menu_item]['signal']
@@ -138,7 +140,8 @@ class Control(EnclosureComponent):
 							self.daemon.plugins['frontend'].menu_item = self.config['menu'][menu_item]['items'][0]['item']
 							self.daemon.schedule_signal(self.config['menu']['timeout'],
 							                            'frontend',
-							                            {'gui': {'screen': {'name': 'idle', 'parameter': {}}}}, 'menu:timeout')
+							                            {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
+							                            'enclosure:control:menu:timeout')
 				case other:
 					self.daemon.logger.error(f"[enclosure/control]: unknown screen '{self.daemon.plugins['frontend'].screen}', " \
 					                         f"returning to screen 'idle'")

@@ -1,24 +1,44 @@
-#include "util/jpeg.h"
+#include <etl/string.h>
+#include <etl/format_spec.h>
+#include <etl/to_string.h>
+
 #include "gui/screen/screen.h"
+#include "gui/screen/qrcode/screen.h"
 #include "globals.h"
 
 
 void gui_screen_splash(bool refresh) {
-	if(refresh == true) {
-		etl::string<GLOBAL_FILENAME_SIZE> filename("/images/splash/");
+	etl::string<GLOBAL_VALUE_SIZE> splash_message;
+	etl::string<GLOBAL_VALUE_SIZE> splash_url;
+	etl::string<GLOBAL_VALUE_SIZE> splash_id;
 
-		filename += g_application.getEnv("gui/screen:splash/filename");
-		if(g_gui_buffer != nullptr) {
-			util_jpeg_decode565_littlefs(filename, g_gui_buffer, GUI_SCREEN_WIDTH*GUI_SCREEN_HEIGHT*sizeof(uint16_t));
-			g_gui.pushImage((TFT_WIDTH-GUI_SCREEN_WIDTH)/2, (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT, (uint16_t*)g_gui_buffer);
-		} else {
-			g_gui.fillScreen(TFT_BLACK);
-			g_gui.setTextColor(TFT_RED, TFT_BLACK, false);
-			g_gui.setTextFont(1);
-			g_gui.setTextSize(1);
-			g_gui.setTextDatum(MC_DATUM);
-			g_gui.drawString(filename.c_str(), TFT_WIDTH/2, TFT_HEIGHT/2);
+	if(refresh == true) {
+		if(g_application.hasEnv("gui/screen:splash/id") == true) {
+			splash_id = g_application.getEnv("gui/screen:splash/id");
 		}
+		if(g_application.hasEnv("gui/screen:splash/url") == true) {
+			splash_url = g_application.getEnv("gui/screen:splash/url");
+		} else {
+			splash_url = "https://github.com/juergenpabel/HAL9000/wiki/Splashs"; //TODO: Splash::calculateURL(splash_id)
+		}
+		if(g_application.hasEnv("gui/screen:splash/message") == true) {
+			splash_message = g_application.getEnv("gui/screen:splash/message");
+		}
+		g_application.setEnv("gui/screen:qrcode/color-screen",   "blue");
+		g_application.setEnv("gui/screen:qrcode/color-text",     "white");
+		g_application.setEnv("gui/screen:qrcode/textsize-above", "small");
+		g_application.setEnv("gui/screen:qrcode/textsize-below", "normal");
+		g_application.setEnv("gui/screen:qrcode/text-above", splash_message);
+		g_application.setEnv("gui/screen:qrcode/text-url",   splash_url);
+		g_application.setEnv("gui/screen:qrcode/text-below", splash_id.insert(0, "ID: "));
+		gui_screen_qrcode(true);
+		g_application.delEnv("gui/screen:qrcode/text-below");
+		g_application.delEnv("gui/screen:qrcode/text-url");
+		g_application.delEnv("gui/screen:qrcode/text-above");
+		g_application.delEnv("gui/screen:qrcode/textsize-below");
+		g_application.delEnv("gui/screen:qrcode/textsize-above");
+		g_application.delEnv("gui/screen:qrcode/color-text");
+		g_application.delEnv("gui/screen:qrcode/color-screen");
 	}
 }
 

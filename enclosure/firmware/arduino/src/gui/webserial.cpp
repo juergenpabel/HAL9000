@@ -20,12 +20,11 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		screen = gui_screen_none;
 	}
 	if(body.containsKey("idle") == true) {
-		if(body["idle"].containsKey("clock") == true) {
-			g_application.setEnv("gui/screen:idle/clock", body["idle"]["clock"].as<const char*>());
-		}
 		screen = gui_screen_idle;
 	}
 	if(body.containsKey("menu") == true) {
+		g_application.delEnv("gui/screen:menu/title");
+		g_application.delEnv("gui/screen:menu/text");
 		if(body["menu"].containsKey("title") == true) {
 			g_application.setEnv("gui/screen:menu/title", body["menu"]["title"].as<const char*>());
 		}
@@ -33,19 +32,6 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 			g_application.setEnv("gui/screen:menu/text",  body["menu"]["text"].as<const char*>());
 		}
 		screen = gui_screen_menu;
-	}
-	if(body.containsKey("splash") == true) {
-		if(body["splash"].containsKey("filename") == true) {
-			etl::string<GLOBAL_FILENAME_SIZE> filename = body["splash"]["filename"].as<const char*>();
-
-			if(filename.substr(filename.size()-4,4).compare(".jpg") != 0) {
-				g_util_webserial.send("syslog/warn", "on_gui_screen() => 'splash' screen called with non-jpeg filename (*.jpg)");
-				g_util_webserial.send("syslog/warn", filename);
-				return;
-			}
-			g_application.setEnv("gui/screen:splash/filename", filename);
-		}
-		screen = gui_screen_splash;
 	}
 	if(body.containsKey("hal9000") == true) {
 		if((body["hal9000"].containsKey("queue") == true) && (body["hal9000"].containsKey("sequence") == true)) {
@@ -77,12 +63,14 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		}
 	}
 	if(body.containsKey("qrcode") == true) {
+		g_application.delEnv("gui/screen:qrcode/textsize-above");
 		g_application.delEnv("gui/screen:qrcode/text-above");
 		g_application.delEnv("gui/screen:qrcode/text-url");
 		g_application.delEnv("gui/screen:qrcode/text-below");
+		g_application.delEnv("gui/screen:qrcode/textsize-below");
 		if(body["qrcode"].containsKey("title") == true) {
 			g_application.setEnv("gui/screen:qrcode/text-above", body["qrcode"]["title"].as<const char*>());
-			g_application.setEnv("gui/screen:qrcode/textsize-above", "large");
+			g_application.setEnv("gui/screen:qrcode/textsize-above", "normal");
 		}
 		if(body["qrcode"].containsKey("url") == true) {
 			g_application.setEnv("gui/screen:qrcode/text-url", body["qrcode"]["url"].as<const char*>());
@@ -93,15 +81,33 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		}
 		screen = gui_screen_qrcode;
 	}
+	if(body.containsKey("splash") == true) {
+		g_application.delEnv("gui/screen:splash/message");
+		g_application.delEnv("gui/screen:splash/url");
+		g_application.delEnv("gui/screen:splash/id");
+		if(body["splash"].containsKey("message") == true) {
+			g_application.setEnv("gui/screen:splash/message", body["splash"]["message"].as<const char*>());
+		}
+		if(body["splash"].containsKey("url") == true) {
+			g_application.setEnv("gui/screen:splash/url", body["splash"]["url"].as<const char*>());
+		}
+		if(body["splash"].containsKey("id") == true) {
+			g_application.setEnv("gui/screen:splash/id", body["splash"]["id"].as<const char*>());
+		}
+		screen = gui_screen_splash;
+	}
 	if(body.containsKey("error") == true) {
-		if(body["error"].containsKey("code") == true) {
-			g_application.setEnv("gui/screen:error/code", body["error"]["code"].as<const char*>());
+		g_application.delEnv("gui/screen:error/message");
+		g_application.delEnv("gui/screen:error/url");
+		g_application.delEnv("gui/screen:error/id");
+		if(body["error"].containsKey("id") == true) {
+			g_application.setEnv("gui/screen:error/id", body["error"]["id"].as<const char*>());
 		}
 		if(body["error"].containsKey("message") == true) {
 			g_application.setEnv("gui/screen:error/message", body["error"]["message"].as<const char*>());
 		}
-		if(body["error"].containsKey("timeout") == true) {
-			g_application.setEnv("gui/screen:error/timeout", body["error"]["timeout"].as<const char*>());
+		if(body["error"].containsKey("url") == true) {
+			g_application.setEnv("gui/screen:error/url", body["error"]["url"].as<const char*>());
 		}
 		screen = gui_screen_error;
 	}

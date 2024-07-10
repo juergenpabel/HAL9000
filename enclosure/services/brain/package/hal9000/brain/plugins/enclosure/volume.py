@@ -43,7 +43,7 @@ class Volume(EnclosureComponent):
 
 	async def on_enclosure_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
 		if 'volume' in signal:
-			self.daemon.cancel_signal('frontend:gui/overlay#volume')
+			self.daemon.remove_scheduled_signal('frontend:gui/overlay#volume:timeout')
 			if 'delta' in signal['volume']:
 				if self.daemon.plugins['kalliope'].mute == 'false':
 					delta = int(signal['volume']['delta']) * self.config['volume-step']
@@ -53,13 +53,15 @@ class Volume(EnclosureComponent):
 					self.daemon.plugins['kalliope'].volume = volume
 					self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'volume',
 					                                                          'parameter': {'level': str(volume), 'mute': 'false'}}}})
-					self.daemon.schedule_signal(3, 'frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}}, 'frontend:gui/overlay#volume')
+					self.daemon.schedule_signal(3, 'frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}},
+					                            'frontend:gui/overlay#volume:timeout')
 			if 'mute' in signal['volume']:
-				mute = not(False if self.daemon.plugins['kalliope'].mute == 'false' else True)
+				mute = not(True if self.daemon.plugins['kalliope'].mute == 'true' else False)
 				volume = self.daemon.plugins['kalliope'].volume
 				self.daemon.plugins['kalliope'].mute = str(mute).lower()
 				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'volume',
 				                                                          'parameter': {'level': str(volume), 'mute': str(mute).lower()}}}})
 				if mute is False:
-					self.daemon.schedule_signal(1, 'frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}}, 'frontend:gui/overlay#volume')
+					self.daemon.schedule_signal(1, 'frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}},
+					                            'frontend:gui/overlay#volume:timeout')
 

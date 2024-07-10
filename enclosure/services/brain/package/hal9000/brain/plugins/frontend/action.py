@@ -43,7 +43,7 @@ class Action(HAL9000_Action):
 
 
 	def runlevel_error(self) -> dict:
-		return {'code': '01',
+		return {'id': '01',
 		        'level': 'error',
 		        'message': "No connection to microcontroller."}
 
@@ -110,11 +110,11 @@ class Action(HAL9000_Action):
 			if 'screen' in signal['gui']:
 				if 'url' in signal['gui']['screen']['parameter']:
 					url = signal['gui']['screen']['parameter']['url']
-					url_parameter_code = ''
+					url_parameter_id = ''
 					url_parameter_ipv4 = await self.daemon.get_system_ipv4()
-					if 'code' in signal['gui']['screen']['parameter']:
-						url_parameter_code = signal['gui']['screen']['parameter']['code']
-					url = url.format(ip_address=url_parameter_ipv4, code=url_parameter_code)
+					if 'id' in signal['gui']['screen']['parameter']:
+						url_parameter_id = signal['gui']['screen']['parameter']['id']
+					url = url.format(id=url_parameter_id, ip_address=url_parameter_ipv4)
 					signal['gui']['screen']['parameter']['url'] = url
 					if 'hint' not in signal['gui']['screen']['parameter']:
 						signal['gui']['screen']['parameter']['hint'] = signal['gui']['screen']['parameter']['url']
@@ -128,7 +128,12 @@ class Action(HAL9000_Action):
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		match new_status:
 			case Daemon.BRAIN_STATUS_READY:
-				pass
+				if self.daemon.config['brain:require-synced-time'] is True and self.daemon.plugins['brain'].time != 'synchronized':
+					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'splash',
+					                                                         'parameter': {'id': 'NTP',
+					                                                                       'url': self.daemon.config['help:splash-url'],
+					                                                                       'message': 'Waiting for NTP sync...'}}}})
+					self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 			case Daemon.BRAIN_STATUS_AWAKE:
 				self.send_frontend_command('application/runtime', {'condition': 'awake'})
 				if old_status == Daemon.BRAIN_STATUS_READY:

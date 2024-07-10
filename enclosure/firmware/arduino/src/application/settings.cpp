@@ -12,6 +12,7 @@ typedef etl::string<GLOBAL_VALUE_SIZE> LogString;
 
 Settings::Settings(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
 	this->filename = filename;
+	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 }
 
 
@@ -33,6 +34,7 @@ bool Settings::load() {
 		file.close();
 		return true;
 	}
+	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 	do {
 		if(file.position() < file.size()) {
 			line_buffer_pos += file.read((uint8_t*)&line_buffer[line_buffer_pos], sizeof(line_buffer)-line_buffer_pos-1);

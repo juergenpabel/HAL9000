@@ -56,12 +56,12 @@ static void gui_screen_animation_load(const etl::string<GLOBAL_FILENAME_SIZE>& f
 	       File file;
 
 	if(LittleFS.exists(filename.c_str()) == false) {
-		g_application.notifyError("error", "005", "Animation file: not found", 15);
+		g_application.notifyError("error", "13", "Animation error", filename);
 		return;
 	}
 	file = LittleFS.open(filename.c_str(), "r");
 	if(deserializeJson(configJSON, file) != DeserializationError::Ok) {
-		g_application.notifyError("error", "006", "Animation file: JSON error", 15);
+		g_application.notifyError("error", "13", "Animation error", filename);
 		file.close();
 		return;
 	}

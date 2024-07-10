@@ -95,7 +95,7 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 	if(data.containsKey("get") == true) {
 		etl::string<GLOBAL_KEY_SIZE> key;
 
-		key = data["env"]["key"].as<const char*>();
+		key = data["get"]["key"].as<const char*>();
 		if(key.length() > 0) {
 			g_util_webserial.send("application/environment#get", g_application.getEnv(key));
 			g_util_webserial.send("syslog/debug", "application/environment#get => OK");
@@ -107,8 +107,8 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 		etl::string<GLOBAL_KEY_SIZE> key;
 		etl::string<GLOBAL_VALUE_SIZE> value;
 
-		key = data["env"]["key"].as<const char*>();
-		value = data["env"]["value"].as<const char*>();
+		key = data["set"]["key"].as<const char*>();
+		value = data["set"]["value"].as<const char*>();
 		if(key.length() > 0 && value.length() > 0) {
 			g_application.setEnv(key, value);
 			g_util_webserial.send("syslog/debug", "application/application#env => OK");

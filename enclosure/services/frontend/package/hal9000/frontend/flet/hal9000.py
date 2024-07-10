@@ -82,12 +82,12 @@ class HAL9000(Frontend):
 							match target:
 								case 'poweroff':
 									self.show_error(display, {'title': 'System shutdown',
-									                          'message': f"Not supported for HTML",
-									                          'code': 'TODO'})
+									                          'message': f"Animation not implemented",
+									                          'id': '70'})
 								case 'reboot':
 									self.show_error(display, {'title': 'System reboot',
-									                          'message': f"Not supported for HTML",
-									                          'code': 'TODO'})
+									                          'message': f"Animation not implemented",
+									                          'id': '70'})
 								case other:
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported shutdown target '{target}' "
 									                                     f"in command 'application/runtime'")
@@ -104,12 +104,14 @@ class HAL9000(Frontend):
 									self.show_menu(display, command['payload']['menu'])
 								case 'qrcode':
 									self.show_qrcode(display, command['payload']['qrcode'])
+								case 'splash':
+									self.show_splash(display, command['payload']['splash'])
 								case 'error':
 									self.show_error(display, command['payload']['error'])
 								case other:
 									self.show_error(display, {'title': "Unsupported screen",
 									                          'message': screen,
-									                          'code': 'TODO'})
+									                          'id': '71'})
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported screen '{screen}' "
 									                                     f"in command 'gui/screen'")
 					case 'gui/overlay':
@@ -135,13 +137,13 @@ class HAL9000(Frontend):
 								case other:
 									self.show_error(display, {'title': 'Unsupported overlay',
 									                          'message': overlay,
-									                          'code': 'TODO'})
+									                          'id': '72'})
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported overlay '{overlay}' "
 									                                     f"in command 'gui/overlay'")
 					case other:
 						self.show_error(display, {'title': 'Unsupported command',
 						                          'message': command['topic'],
-						                          'code': 'TODO'})
+						                          'id': '73'})
 						logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported command '{command['topic']}'")
 				command = await command_session_queue.get()
 		except Exception as e:
@@ -221,8 +223,10 @@ class HAL9000(Frontend):
 
 	def show_qrcode(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
+		display.content.shapes.append(flet.canvas.Circle(x=display.radius, y=display.radius, radius=display.radius,
+		                                                 paint=flet.Paint(color=data['bg-color'] if 'bg-color' in data else 'black')))
 		display.content.shapes.append(flet.canvas.Text(text=data['title'],
-		                                               x=int(display.radius), y=int(0.4*display.radius)-int((data['title-size'] if 'title-size' in data else 18)/2),
+		                                               x=display.radius, y=int(0.5*display.radius)-int((data['title-size'] if 'title-size' in data else 18)/2),
 		                                               style=flet.TextStyle(color=data['title-color'] if 'title-color' in data else 'white',
 		                                                                    size=int(display.page.scale*(data['title-size'] if 'title-size' in data else 18))),
 		                                               alignment=flet_core.alignment.center))
@@ -244,10 +248,16 @@ class HAL9000(Frontend):
 		display.content.update()
 
 
+	def show_splash(self, display, data):
+		self.show_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
+		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Splash-database',
+		                           'hint': f"Splash ID: {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
+
+
 	def show_error(self, display, data):
-		self.show_qrcode(display, {'title': data['message'], 'title-size': 10, 'title-color': 'red',
+		self.show_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'red', 'title-color': 'white',
 		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
-		                           'hint': f"Error {data['code']}", 'hint-size': 14, 'hint-color': 'red'})
+		                           'hint': f"Error {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
 
 
 	def on_button_wakeup(self, event):
@@ -296,7 +306,7 @@ class HAL9000(Frontend):
 		page.data = {}
 		page.data['button_sleep'] = flet.Ref[flet.TextButton]()
 		page.data['button_wakeup'] = flet.Ref[flet.TextButton]()
-		display = flet.CircleAvatar(radius=page.scale*120, bgcolor='black')
+		display = flet.CircleAvatar(radius=int(page.scale*120))
 		display.content = flet.canvas.Canvas(width=display.radius*2, height=display.radius*2)
 		display.background_image_src = '/sequences/init/00.jpg'
 		display.data = {}
