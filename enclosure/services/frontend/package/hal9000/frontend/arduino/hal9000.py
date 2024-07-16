@@ -112,21 +112,31 @@ class HAL9000(Frontend):
 			timeout += time_monotonic()
 		line = None
 		if self.serial is not None:
-			line = ""
+			chunk = b''
+			line = ''
 			while len(line) == 0:
-				chunk = self.serial.readline().decode('utf-8')
-				while '\n' not in chunk:
-					if timeout is not None and time_monotonic() > timeout:
-						return None
-					await asyncio_sleep(0.001)
-					if len(chunk) > 0:
-						line += chunk.strip('\n')
-					chunk = self.serial.readline().decode('utf-8')
-				line += chunk.strip('\n')
-				logging_getLogger('uvicorn').debug(f"[frontend:arduino] D->H: {line}")
-				if len(line) < 8 or line[0] != '[' or line[-1] != ']':
-					logging_getLogger('uvicorn').warning(f"[frontend:arduino] skipping over non-webserial message (probably an arduino error message): {line}")
-					line = ""
+				try:
+					chunk = b''
+					while len(chunk) == 0:
+						chunk = self.serial.readline()
+					chunk = chunk.decode('utf-8')
+					while '\n' not in chunk:
+						if timeout is not None and time_monotonic() > timeout:
+							return None
+						await asyncio_sleep(0.001)
+						if len(chunk) > 0:
+							line += chunk.strip('\n')
+						while len(chunk) == 0:
+							chunk = self.serial.readline()
+						chunk = chunk.decode('utf-8')
+					line += chunk.strip('\n')
+					logging_getLogger('uvicorn').debug(f"[frontend:arduino] D->H: {line}")
+					if len(line) < 8 or line[0] != '[' or line[-1] != ']':
+						logging_getLogger('uvicorn').warning(f"[frontend:arduino] skipping over non-webserial message (probably an arduino error message): {line}")
+						line = ''
+				except Exception as e:
+					logging_getLogger('uvicorn').warning(f"[frontend:arduino] skipping over non utf-8 encoded chunk: {chunk}")
+					line = ''
 		return line
 
 
