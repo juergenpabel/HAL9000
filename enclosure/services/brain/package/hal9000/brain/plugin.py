@@ -64,12 +64,11 @@ class HAL9000_Plugin_Status(object):
 			for callback_name in ['*', name]:
 				if callback_name in self.callbacks_data:
 					for callback in self.callbacks_data[callback_name]:
-						x = callback(self, name, old_value, new_value)
-						if x is None:
-							print(callback)
-						else:
-							commit_value &= x
-#						commit_value &= callback(self, name, old_value, new_value)
+						result = callback(self, name, old_value, new_value)
+						if result is None:
+							raise Exception(f"HAL9000_Plugin_Status.__setattr__('{name}', '{new_value}'): a registerd callback " \
+							                f"returned <None> instead of a boolean value (BUG!) => {callback}")
+						commit_value &= result
 			if commit_value is True:
 				super().__setattr__(name, new_value)
 

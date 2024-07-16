@@ -103,8 +103,8 @@ class HAL9000(Frontend):
 
 	async def start(self) -> None:
 		await super().start()
-		self.h2d_task = asyncio_create_task(self.task_host2device())
-		self.d2h_task   = asyncio_create_task(self.task_device2host())
+		self.tasks['host2device'] = asyncio_create_task(self.task_host2device())
+		self.tasks['device2host'] = asyncio_create_task(self.task_device2host())
 
 
 	async def serial_readline(self, timeout=None):
@@ -118,7 +118,10 @@ class HAL9000(Frontend):
 				try:
 					chunk = b''
 					while len(chunk) == 0:
+						if timeout is not None and time_monotonic() > timeout:
+							return None
 						chunk = self.serial.readline()
+						await asyncio_sleep(0.001)
 					chunk = chunk.decode('utf-8')
 					while '\n' not in chunk:
 						if timeout is not None and time_monotonic() > timeout:
@@ -148,17 +151,20 @@ class HAL9000(Frontend):
 
 	async def task_host2device(self):
 		logging_getLogger('uvicorn').info(f"[frontend:arduino] starting host2device-listener")
-		while os_path_exists(self.serial.port):
+		while os_path_exists(self.serial.port) and self.tasks['host2device'].cancelled() is False:
 			if self.serial.is_open is False:
 				self.serial.open()
 				await asyncio_sleep(1)
 			try:
-				while self.serial.is_open is True:
+				if self.runlevel != Frontend.FRONTEND_RUNLEVEL_RUNNING:
+					self.runlevel = Frontend.FRONTEND_RUNLEVEL_RUNNING
+					logging_getLogger('uvicorn').info(f"[frontend:arduino] task_host2device() changed runlevel to 'running'")
+					self.events.put_nowait({'topic': 'runlevel', 'payload': self.runlevel})
+				while self.serial.is_open is True and self.tasks['host2device'].cancelled() is False:
 					if self.status != Frontend.FRONTEND_STATUS_ONLINE:
 						self.status = Frontend.FRONTEND_STATUS_ONLINE
 						logging_getLogger('uvicorn').info(f"[frontend:arduino] task_host2device() changed status to 'online'")
 						self.events.put_nowait({'topic': 'status', 'payload': self.status})
-						self.commands.put_nowait(None) # to wake up task_host2device()
 					command = await self.commands.get()
 					logging_getLogger('uvicorn').debug(f"[frontend:arduino] received command: {command}")
 					if isinstance(command, dict) and 'topic' in command and 'payload' in command:
@@ -176,16 +182,21 @@ class HAL9000(Frontend):
 			self.events.put_nowait({'topic': 'status', 'payload': self.status})
 			self.commands.put_nowait(None) # to wake up task_host2device()
 		logging_getLogger('uvicorn').error(f"[frontend:arduino] exiting host2device-listener ('arduino' frontend becomes non-functional)")
+		del self.tasks['host2device']
 
 
 	async def task_device2host(self):
 		logging_getLogger('uvicorn').info(f"[frontend:arduino] starting device2host-listener")
-		while os_path_exists(self.serial.port):
+		while os_path_exists(self.serial.port) and self.tasks['device2host'].cancelled() is False:
 			if self.serial.is_open is False:
 				self.serial.open()
 				await asyncio_sleep(1)
 			try:
-				while self.serial.is_open is True:
+				if self.runlevel != Frontend.FRONTEND_RUNLEVEL_RUNNING:
+					self.runlevel = Frontend.FRONTEND_RUNLEVEL_RUNNING
+					logging_getLogger('uvicorn').info(f"[frontend:arduino] task_device2host() changed runlevel to 'running'")
+					self.events.put_nowait({'topic': 'runlevel', 'payload': self.runlevel})
+				while self.serial.is_open is True and self.tasks['device2host'].cancelled() is False:
 					if self.status != Frontend.FRONTEND_STATUS_ONLINE:
 						self.status = Frontend.FRONTEND_STATUS_ONLINE
 						logging_getLogger('uvicorn').info(f"[frontend:arduino] task_device2host() changed status to 'online'")
@@ -212,4 +223,5 @@ class HAL9000(Frontend):
 			self.events.put_nowait({'topic': 'status', 'payload': self.status})
 			self.commands.put_nowait(None) # to wake up task_host2device()
 		logging_getLogger('uvicorn').error(f"[frontend:arduino] exiting device2host-listener ('arduino' frontend becomes non-functional)")
+		del self.tasks['device2host']
 

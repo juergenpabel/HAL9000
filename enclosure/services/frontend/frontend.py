@@ -20,6 +20,7 @@ class FrontendManager:
 	def __init__(self):
 		self.startup = True
 		self.frontends = []
+		self.tasks = {}
 
 
 	async def configure(self, filename):
@@ -62,19 +63,16 @@ class FrontendManager:
 			case 'runlevel':
 				if self.startup is False:
 					frontends_runlevel = []
-					frontends_status = []
 					for frontend in self.frontends:
 						frontends_runlevel.append(frontend.runlevel)
-						frontends_status.append(frontend.status)
 					if Frontend.FRONTEND_RUNLEVEL_RUNNING in frontends_runlevel:
-						if Frontend.FRONTEND_STATUS_ONLINE in results:
-							self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_RUNNING)
-						else:
-							self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_STARTING)
+						self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_RUNNING)
 					elif Frontend.FRONTEND_RUNLEVEL_READY in frontends_runlevel:
 						self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_READY)
 					else:
 						self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_STARTING)
+				else:
+					logging_getLogger("uvicorn").debug(f"[frontend] ignoring runlevel command because startup is still in progress")
 			case 'status':
 				if self.startup is False:
 					frontends_status = []
@@ -84,6 +82,8 @@ class FrontendManager:
 						self.mqtt_client.publish('hal9000/event/frontend/status', Frontend.FRONTEND_STATUS_ONLINE)
 					else:
 						self.mqtt_client.publish('hal9000/event/frontend/status', Frontend.FRONTEND_STATUS_OFFLINE)
+				else:
+					logging_getLogger("uvicorn").debug(f"[frontend] ignoring status command because startup is still in progress")
 			case other:
 				try:
 					payload = json_loads(payload)
@@ -95,35 +95,35 @@ class FrontendManager:
 
 	async def command_listener(self):
 		startup_last_publish = time_monotonic()
-		while True:
-			match self.mqtt_client.is_connected():
-				case True:
-					if self.startup is True:
-						if (time_monotonic() - startup_last_publish) > 1:
-							startup_last_publish = time_monotonic()
-							self.mqtt_client.publish('hal9000/event/frontend/runlevel', 'starting')
-					self.mqtt_client.loop(timeout=0.01)
-					await asyncio_sleep(0.01)
-				case False:
-					logging_getLogger("uvicorn").warning(f"[frontend] MQTT is disconnected, reconnecting...")
-					try:
-						self.mqtt_client = mqtt_Client(mqtt_CallbackAPIVersion.VERSION2, client_id='frontend')
-						self.mqtt_client.connect(self.configuration.getstring('frontend', 'broker-ip', fallback='127.0.0.1'),
-						                         self.configuration.getstring('frontend', 'broker-port', fallback=1883))
-						self.mqtt_client.subscribe('hal9000/command/frontend/#')
-						self.mqtt_client.on_message = self.on_mqtt_message
-						self.mqtt_client.loop(timeout=1)
-					except ConnectionRefusedError:
-						await asyncio_sleep(1)
+		while self.tasks['command_listener'].cancelled() is False:
+			while self.mqtt_client.is_connected():
+				if self.startup is True:
+					if (time_monotonic() - startup_last_publish) > 1:
+						startup_last_publish = time_monotonic()
+						self.mqtt_client.publish('hal9000/event/frontend/runlevel', 'starting')
+				self.mqtt_client.loop(timeout=0.01)
+				await asyncio_sleep(0.01)
+			logging_getLogger("uvicorn").warning(f"[frontend] MQTT is disconnected, reconnecting...")
+			try:
+				self.mqtt_client = mqtt_Client(mqtt_CallbackAPIVersion.VERSION2, client_id='frontend')
+				self.mqtt_client.connect(self.configuration.getstring('frontend', 'broker-ip', fallback='127.0.0.1'),
+				                         self.configuration.getstring('frontend', 'broker-port', fallback=1883))
+				self.mqtt_client.subscribe('hal9000/command/frontend/#')
+				self.mqtt_client.on_message = self.on_mqtt_message
+				self.mqtt_client.loop(timeout=1)
+			except ConnectionRefusedError:
+				await asyncio_sleep(1)
+		logging_getLogger("uvicorn").info(f"[frontend] command_listener() exiting due to task being cancelled")
 
 
 	async def event_listener(self):
-		while True:
+		while self.tasks['event_listener'].cancelled() is False:
 			match self.mqtt_client.is_connected():
 				case True:
 					for frontend in self.frontends:
 						if frontend.events.empty() is False:
 							if self.startup is True:
+								logging_getLogger("uvicorn").info(f"[frontend] startup completed")
 								self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_READY)
 								self.startup = False
 							event = await frontend.events.get()
@@ -140,7 +140,9 @@ class FrontendManager:
 								self.mqtt_client.publish(topic, payload)
 					await asyncio_sleep(0.01)
 				case False:
+					logging_getLogger("uvicorn").debug(f"[frontend] event_listener() no mqtt connection...")
 					await asyncio_sleep(1)
+		logging_getLogger("uvicorn").info(f"[frontend] event_listener() exiting due to task being cancelled")
 
 
 async def fastapi_lifespan(app: fastapi_FastAPI):
@@ -150,19 +152,8 @@ async def fastapi_lifespan(app: fastapi_FastAPI):
 	if await manager.configure(sys_argv[1]) is False:
 		logging_getLogger("uvicorn").critical(f"[frontend] configuration failed, exiting...")
 		sys_exit(1)
-	asyncio_create_task(manager.command_listener())
-	asyncio_create_task(manager.event_listener())
-	logging_getLogger("uvicorn").info(f"[frontend] Starting frontend 'arduino'...")
-	frontend_arduino = hal9000.frontend.arduino.HAL9000(app)
-	match await frontend_arduino.configure(manager.configuration):
-		case True:
-			manager.add_frontend(frontend_arduino)
-			await frontend_arduino.start()
-			logging_getLogger("uvicorn").info(f"[frontend] ...frontend 'arduino' started")
-		case False:
-			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'arduino' failed, check the configuration ('{manager.configuration}')' for potential issues")
-		case None:
-			logging_getLogger("uvicorn").info(f"[frontend] ...ignoring frontend 'arduino' (device not present)")
+	manager.tasks['command_listener'] = asyncio_create_task(manager.command_listener())
+	manager.tasks['event_listener'] = asyncio_create_task(manager.event_listener())
 	logging_getLogger("uvicorn").info(f"[frontend] Starting frontend 'flet'...'")
 	frontend_flet = hal9000.frontend.flet.HAL9000(app)
 	match await frontend_flet.configure(manager.configuration):
@@ -174,6 +165,17 @@ async def fastapi_lifespan(app: fastapi_FastAPI):
 			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'flet' failed, check the configuration ('{manager.configuration}')' for potential issues")
 		case None:
 			logging_getLogger("uvicorn").info(f"[frontend] ...ignoring frontend 'flet' (BUG?)")
+	logging_getLogger("uvicorn").info(f"[frontend] Starting frontend 'arduino'...")
+	frontend_arduino = hal9000.frontend.arduino.HAL9000(app)
+	match await frontend_arduino.configure(manager.configuration):
+		case True:
+			manager.add_frontend(frontend_arduino)
+			await frontend_arduino.start()
+			logging_getLogger("uvicorn").info(f"[frontend] ...frontend 'arduino' started")
+		case False:
+			logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend 'arduino' failed, check the configuration ('{manager.configuration}')' for potential issues")
+		case None:
+			logging_getLogger("uvicorn").info(f"[frontend] ...ignoring frontend 'arduino' (device not present)")
 	yield
 
 

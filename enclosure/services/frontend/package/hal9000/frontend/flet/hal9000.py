@@ -32,13 +32,13 @@ class HAL9000(Frontend):
 
 	async def start(self) -> None:
 		await super().start()
-		self.command_listener_task = asyncio_create_task(self.task_command_listener())
+		self.tasks['command_listener'] = asyncio_create_task(self.task_command_listener())
 
 
 	async def task_command_listener(self):
 		logging_getLogger('uvicorn').debug(f"[frontend:flet] starting command-listener (event-listeners are started per flet-session)")
 		try:
-			while self.command_listener_task.cancelled() is False:
+			while self.tasks['command_listener'].cancelled() is False:
 				command = await self.commands.get()
 				for command_session_queue in self.command_session_queues.values():
 					command_session_queue.put_nowait(command.copy())
@@ -46,7 +46,7 @@ class HAL9000(Frontend):
 		except asyncio_CancelledError as e:
 			logging_getLogger('uvicorn').debug(f"[frontend:flet] task_command_listener() cancelled")
 		logging_getLogger('uvicorn').info(f"[frontend:flet] exiting command-listener ('flet' frontend becomes non-functional)")
-		self.command_listener_task = None
+		del self.tasks['command_listener']
 
 
 	async def run_command_session_listener(self, page, display):

@@ -198,20 +198,6 @@ class Daemon(object):
 					                       args=['brain', {'status': Daemon.BRAIN_STATUS_AWAKE}], id='brain:wakeup', name='brain:wakeup')
 				except ValueError as e:
 					self.logger.error(f"[daemon] wakeup-time: failed to parse '{self.config['brain:wakeup-time']}' as (an ISO-8601 formatted) time")
-#TODO			self.plugins['brain'].runlevel = HAL9000_Plugin.RUNLEVEL_RUNNING # TODO: welcome?
-			await self.signal('brain', {'runlevel': HAL9000_Plugin.RUNLEVEL_RUNNING})
-			next_brain_status = Daemon.BRAIN_STATUS_AWAKE
-			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
-				time_now = datetime_datetime.now().time()
-				time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
-				time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
-				if time_sleep > time_wakeup:
-					if time_now > time_sleep or time_now < time_wakeup:
-						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
-				else:
-					if time_now > time_sleep and time_now < time_wakeup:
-						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
-			await self.signal('brain', {'status': next_brain_status})
 			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				await asyncio_sleep(0.1)
 		except Exception as e:
@@ -392,8 +378,6 @@ class Daemon(object):
 
 	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_time: str, new_time: str) -> bool:
 		if (new_time == 'unsynchronized' and self.config['brain:require-synced-time'] is False) or (new_time == 'synchronized'):
-			if self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_READY:
-				self.queue_signal('brain', {'runlevel': HAL9000_Plugin.RUNLEVEL_RUNNING})
 			next_brain_status = Daemon.BRAIN_STATUS_AWAKE
 			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
 				time_now = datetime_datetime.now().time()
@@ -405,8 +389,9 @@ class Daemon(object):
 				else:
 					if time_now > time_sleep and time_now < time_wakeup:
 						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
-#TODO			if next_brain_status != self.plugins['brain'].status:
-#TODO				self.queue_signal('brain', {'status': next_brain_status})
+			self.plugins['brain'].status = next_brain_status
+			if self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_READY:
+				self.queue_signal('brain', {'runlevel': HAL9000_Plugin.RUNLEVEL_RUNNING})
 		match new_time:
 			case 'unsynchronized':
 				if self.config['brain:require-synced-time'] is True:

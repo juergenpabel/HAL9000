@@ -48,9 +48,7 @@ class Action(HAL9000_Action):
 		if 'runlevel' in signal:
 			match signal['runlevel']:
 				case HAL9000_Plugin.RUNLEVEL_STARTING:
-					print("1")
 					if self.daemon.plugins['kalliope'].runlevel == HAL9000_Plugin.RUNLEVEL_UNKNOWN:
-						print("2")
 						self.daemon.plugins['kalliope'].runlevel = HAL9000_Plugin.RUNLEVEL_STARTING
 				case HAL9000_Plugin.RUNLEVEL_READY:
 					if self.daemon.plugins['kalliope'].runlevel in [HAL9000_Plugin.RUNLEVEL_UNKNOWN, \
@@ -59,6 +57,9 @@ class Action(HAL9000_Action):
 						self.daemon.plugins['kalliope'].audio_in = 'none'
 						self.daemon.plugins['kalliope'].audio_out = 'none'
 				case HAL9000_Plugin.RUNLEVEL_RUNNING:
+					self.daemon.plugins['kalliope'].runlevel = HAL9000_Plugin.RUNLEVEL_RUNNING
+					self.daemon.plugins['kalliope'].audio_in = 'none'
+					self.daemon.plugins['kalliope'].audio_out = 'none'
 					self.daemon.queue_signal('kalliope', {'status': Action.KALLIOPE_STATUS_WAITING})
 		if 'status' in signal:
 			match signal['status']:

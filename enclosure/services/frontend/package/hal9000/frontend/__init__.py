@@ -16,6 +16,7 @@ class Frontend:
 		self.commands = asyncio_Queue()
 		self.events = asyncio_Queue()
 		self.config = {}
+		self.tasks = {}
 
 
 	async def configure(self, configuration) -> bool:
