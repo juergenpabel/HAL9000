@@ -8,6 +8,7 @@ from datetime import datetime as datetime_datetime, \
                      timedelta as datetime_timedelta, \
                      time as datetime_time
 from json import dumps as json_dumps
+import logging
 from logging import getLogger as logging_getLogger, \
                     getLevelName as logging_getLevelName, \
                     addLevelName as logging_addLevelName
@@ -38,8 +39,6 @@ from .plugin import HAL9000_Plugin, HAL9000_Plugin_Status
 
 class Daemon(object):
 
-	BRAIN_STATUS_STARTING = 'starting'
-	BRAIN_STATUS_READY = 'ready'
 	BRAIN_STATUS_AWAKE = 'awake'
 	BRAIN_STATUS_ASLEEP = 'asleep'
 	BRAIN_STATUS_DYING = 'dying'
@@ -50,7 +49,7 @@ class Daemon(object):
 		self.logger = logging_getLogger()
 		self.config = {}
 		self.plugins = {}
-		self.plugins['brain'] = HAL9000_Plugin_Status('brain', status='starting')
+		self.plugins['brain'] = HAL9000_Plugin_Status('brain', runlevel=HAL9000_Plugin.RUNLEVEL_STARTING)
 		self.plugins['brain'].addNames(['time'])
 		self.tasks = {}
 		self.actions = {}
@@ -70,8 +69,8 @@ class Daemon(object):
 		logging_addLevelName(Daemon.LOGLEVEL_TRACE, 'TRACE')
 		logging_config_fileConfig(filename)
 		logging_getLogger('apscheduler').setLevel('ERROR')
-		self.logger.info(f"LOADING CONFIGURATION '{filename}'")
-		self.logger.info(f"Log-level set to '{logging_getLevelName(self.logger.level)}'")
+		self.logger.info(f"[daemon] LOADING CONFIGURATION '{filename}'")
+		self.logger.info(f"[daemon] Log-level set to '{logging_getLevelName(self.logger.level)}'")
 		self.configuration = configparser_ConfigParser(delimiters='=',
 		                                               converters={'list': lambda list: [item.strip().strip('"').strip("'") for item in list.split(',')],
 		                                                           'string': lambda string: string.strip('"').strip("'")}, interpolation=None)
@@ -84,7 +83,7 @@ class Daemon(object):
 		self.config['brain:wakeup-time'] = self.configuration.get('brain', 'wakeup-time', fallback=None)
 		self.config['help:error-url'] = self.configuration.getstring('help', 'error-url', fallback='https://github.com/juergenpabel/HAL9000/wiki/Error-database')
 		self.config['help:splash-url'] = self.configuration.getstring('help', 'splash-url', fallback='https://github.com/juergenpabel/HAL9000/wiki/Splashs')
-		self.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
+		self.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
 		self.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
 		self.plugins['brain'].addSignalHandler(self.on_brain_signal)
 		for section_name in self.configuration.sections():
@@ -138,71 +137,87 @@ class Daemon(object):
 			while 'mqtt:event_listener' not in self.tasks and 'mqtt:command_listener' not in self.tasks:
 				await asyncio_sleep(0.1)
 			startup_timeout = time_monotonic() + self.config['startup:init-timeout']
-			plugins = { HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN: {},
-			            HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING: {},
-			            HAL9000_Plugin.PLUGIN_RUNLEVEL_RUNNING: {},
-			            HAL9000_Plugin.PLUGIN_RUNLEVEL_HALTING: {}}
+			plugins = { HAL9000_Plugin_Status.UNINITIALIZED: {},
+			            HAL9000_Plugin.RUNLEVEL_UNKNOWN: {},
+			            HAL9000_Plugin.RUNLEVEL_STARTING: {},
+			            HAL9000_Plugin.RUNLEVEL_READY: {},
+			            HAL9000_Plugin.RUNLEVEL_RUNNING: {} }
 			for plugin in list(self.triggers.values()) + list(self.actions.values()):
 				plugin_id = str(plugin)
 				plugin_runlevel = plugin.runlevel()
 				plugins[plugin_runlevel][plugin_id] = plugin
-			self.logger.info(f"Startup initialized (plugins that need runtime registration):")
-			for plugin_id, plugin in plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN].items():
+			self.logger.info(f"[daemon] Startup initialized (plugins that need runtime registration):")
+			for plugin_id, plugin in plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN].items():
 				plugin_name = plugin_id.split(':').pop()
-				self.logger.info(f" - Plugin '{plugin_name}'")
-				self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/{plugin_name}/status', 'payload': ''})
-			self.logger.debug(f"STATUS at startup = {self.plugins}")
-			while self.plugins['brain'].status == Daemon.BRAIN_STATUS_STARTING:
-				for runlevel in [HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN, HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]:
+				self.logger.info(f"[daemon]  - Plugin '{plugin_name}'")
+				self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/{plugin_name}/runlevel', 'payload': ''})
+			self.logger.debug(f"[daemon] STATUS at startup = {self.plugins}")
+			while self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_STARTING:
+				for runlevel in [HAL9000_Plugin.RUNLEVEL_UNKNOWN, HAL9000_Plugin.RUNLEVEL_STARTING]:
 					if runlevel in plugins:
 						for id, plugin in plugins[runlevel].items():
 							plugin_runlevel = plugin.runlevel()
 							if plugin_runlevel != runlevel:
-								self.logger.info(f"Plugin '{id.split(':').pop()}' is now in runlevel '{plugin_runlevel}'")
+								self.logger.info(f"[daemon] Plugin '{id.split(':').pop()}' is now in runlevel '{plugin_runlevel}'")
 								plugins[runlevel][id] = None
 								plugins[plugin_runlevel][id] = plugin
 						plugins[runlevel] = {id:plugin for id,plugin in plugins[runlevel].items() if plugin is not None}
 				if startup_timeout is not None:
 					if time_monotonic() > startup_timeout:
-						self.logger.critical(f"Startup failed (plugins that haven't reported their runlevel):")
-						for id, plugin in plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN].items():
+						self.logger.critical(f"[daemon] Startup failed (plugins that haven't reported their runlevel):")
+						for id, plugin in plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN].items():
 							error = plugin.runlevel_error()
 							await self.process_error('critical', error['id'], f"    Plugin '{id.split(':').pop()}'", error['message'])
-						self.logger.critical("Terminating due to plugins that haven't reached runlevel 'starting' within timelimit")
-						self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
-					if len(plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN]) == 0:
-						self.logger.info(f"Startup in progress for all plugins")
+						self.logger.debug(f"[daemon] STATUS at startup-timeout = {self.plugins}")
+						raise Exception("Terminating due to plugins that haven't reached runlevel 'starting' within timelimit")
+					if len(plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN]) == 0:
+						self.logger.info(f"[daemon] Startup in progress for all plugins")
 						startup_timeout = None
-						del plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN]
+						del plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN]
 						for plugin in self.plugins.values():
 							plugin.addNameCallback(self.on_plugin_callback, '*')
 				if startup_timeout is None:
-					if HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING in plugins:
-						if len(plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]) == 0:
-							del plugins[HAL9000_Plugin.PLUGIN_RUNLEVEL_STARTING]
-							self.logger.info(f"Startup completed for all plugins")
-							self.plugins['brain'].status = Daemon.BRAIN_STATUS_READY
+					if HAL9000_Plugin.RUNLEVEL_STARTING in plugins:
+						if len(plugins[HAL9000_Plugin.RUNLEVEL_STARTING]) == 0:
+							del plugins[HAL9000_Plugin.RUNLEVEL_STARTING]
+							self.logger.info(f"[daemon] Startup completed for all plugins")
+							self.plugins['brain'].runlevel = HAL9000_Plugin.RUNLEVEL_READY
 				await asyncio_sleep(0.1)
-			self.logger.debug(f"STATUS after startup = {self.plugins}")
+			self.logger.debug(f"[daemon] STATUS after startup = {self.plugins}")
 			if self.config['brain:sleep-time'] is not None:
 				try:
 					time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
 					self.scheduler.add_job(self.on_scheduler, 'cron', hour=time_sleep.hour, minute=time_sleep.minute,
 					                       args=['brain', {'status': Daemon.BRAIN_STATUS_ASLEEP}], id='brain:sleep', name='brain:sleep')
 				except ValueError as e:
-					self.logger.error(f"sleep-time: failed to parse '{self.config['brain:sleep-time']}' as (an ISO-8601 formatted) time")
+					self.logger.error(f"[daemon] sleep-time: failed to parse '{self.config['brain:sleep-time']}' as (an ISO-8601 formatted) time")
 			if self.config['brain:wakeup-time'] is not None:
 				try:
 					time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
 					self.scheduler.add_job(self.on_scheduler, 'cron', hour=time_wakeup.hour, minute=time_wakeup.minute,
 					                       args=['brain', {'status': Daemon.BRAIN_STATUS_AWAKE}], id='brain:wakeup', name='brain:wakeup')
 				except ValueError as e:
-					self.logger.error(f"wakeup-time: failed to parse '{self.config['brain:wakeup-time']}' as (an ISO-8601 formatted) time")
+					self.logger.error(f"[daemon] wakeup-time: failed to parse '{self.config['brain:wakeup-time']}' as (an ISO-8601 formatted) time")
+#TODO			self.plugins['brain'].runlevel = HAL9000_Plugin.RUNLEVEL_RUNNING # TODO: welcome?
+			await self.signal('brain', {'runlevel': HAL9000_Plugin.RUNLEVEL_RUNNING})
+			next_brain_status = Daemon.BRAIN_STATUS_AWAKE
+			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
+				time_now = datetime_datetime.now().time()
+				time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
+				time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
+				if time_sleep > time_wakeup:
+					if time_now > time_sleep or time_now < time_wakeup:
+						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
+				else:
+					if time_now > time_sleep and time_now < time_wakeup:
+						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
+			await self.signal('brain', {'status': next_brain_status})
 			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				await asyncio_sleep(0.1)
 		except Exception as e:
 			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			results['main'] = e
+			raise e
 		for name, task in self.tasks.copy().items():
 			task.cancel()
 			results[name] = (await asyncio_gather(task, return_exceptions=True)).pop()
@@ -210,11 +225,12 @@ class Daemon(object):
 			
 
 	async def task_mqtt_command_listener(self, mqtt: aiomqtt_Client) -> None:
+		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] starting mqtt command-listener")
 		try:
 			async for message in mqtt.messages:
 				topic = message.topic.value
 				payload = message.payload.decode('utf-8')
-				self.logger.debug(f"MQTT received: {topic} => {str(chr(0x27))+str(chr(0x27)) if payload == '' else payload}")
+				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT received: {topic} => {str(chr(0x27))+str(chr(0x27)) if payload == '' else payload}")
 				match topic:
 					case 'hal9000/command/brain/status':
 						if self.plugins['brain'].status in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
@@ -222,17 +238,17 @@ class Daemon(object):
 								self.plugins['brain'].status = payload
 					case 'hal9000/command/brain/script':
 						if payload in self.scripts:
-							self.logger.info(f"Executing configured script with id '{payload}': {self.scripts[payload]}")
+							self.logger.info(f"[daemon] Executing configured script with id '{payload}': {self.scripts[payload]}")
 							os_system(self.scripts[payload])
 					case other:
-						if self.plugins['brain'].status in [Daemon.BRAIN_STATUS_STARTING, \
-						                                    Daemon.BRAIN_STATUS_READY, \
-						                                    Daemon.BRAIN_STATUS_AWAKE]:
+						if self.plugins['brain'].runlevel in [HAL9000_Plugin.RUNLEVEL_STARTING, \
+						                                      HAL9000_Plugin.RUNLEVEL_READY, \
+						                                      HAL9000_Plugin.RUNLEVEL_RUNNING]:
 							signals = {}
 							if topic in self.callbacks['mqtt']:
 								triggers = self.callbacks['mqtt'][topic]
-								self.logger.debug(f"TRIGGERS: {','.join(str(x).split(':',2).pop(2) for x in triggers)}")
-								self.logger.debug(f"STATUS before triggers = {self.plugins}")
+								self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] TRIGGERS: {','.join(str(x).split(':',2).pop(2) for x in triggers)}")
+								self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] STATUS before triggers = {self.plugins}")
 								for trigger in triggers:
 									signal = trigger.handle(message)
 									if signal is not None and bool(signal) is not False:
@@ -241,23 +257,26 @@ class Daemon(object):
 								for trigger_id, signal in signals.items():
 									for plugin_name in signal.keys():
 										if plugin_name not in self.plugins:
-											self.logger.warning(f"SIGNAL for unknown plugin '{plugin_name}' " \
+											self.logger.warning(f"[daemon] SIGNAL for unknown plugin '{plugin_name}' " \
 											                    f"generated by trigger '{trigger_id}: '{signal}'")
 											continue
 										plugin = self.plugins[plugin_name]
 										signal = signal[plugin_name]
-										self.logger.debug(f"SIGNAL for plugin '{plugin_name}' " \
+										self.logger.debug(f"[daemon] SIGNAL for plugin '{plugin_name}' " \
 										                  f"generated by trigger '{trigger_id}': '{signal}'")
 										await plugin.signal(signal)
-								self.logger.debug(f"STATUS after signals   = {self.plugins}")
+								self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] STATUS after signals   = {self.plugins}")
 		except aiomqtt_MqttError as e:
 			if self.tasks['mqtt'].cancelled() is False and self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				raise e
 		except asyncio_CancelledError as e:
 			pass
+		finally:
+			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] exiting mqtt command-listener")
 
 
 	async def task_mqtt_event_listener(self, mqtt: aiomqtt_Client) -> None:
+		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] starting mqtt event-listener")
 		try:
 			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				if self.mqtt_publish_queue.empty() is False:
@@ -268,22 +287,25 @@ class Daemon(object):
 						if isinstance(payload, dict) is True:
 							payload = json_dumps(payload)
 						await mqtt.publish(topic, payload)
-						self.logger.debug(f"MQTT published: {topic} => {str(chr(0x27))+str(chr(0x27)) if payload == '' else payload}")
+						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT published: {topic} => {str(chr(0x27))+str(chr(0x27)) if payload == '' else payload}")
 				await asyncio_sleep(0.01)
 		except asyncio_CancelledError as e:
 			pass
+		finally:
+			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] exiting mqtt event-listener")
 
 
 	async def task_mqtt(self) -> None:
+		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] starting mqtt task")
 		try:
 			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'], identifier='hal9000-brain') as mqtt:
-				self.logger.debug(f"MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
+				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
 				await mqtt.subscribe('hal9000/command/brain/status')
-				self.logger.debug(f"MQTT.subscribe('hal9000/command/brain/script') for plugin 'brain'")
+				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT.subscribe('hal9000/command/brain/script') for plugin 'brain'")
 				await mqtt.subscribe('hal9000/command/brain/script')
 				for mqtt_topic, trigger in self.callbacks['mqtt'].items():
 					await mqtt.subscribe(mqtt_topic)
-					self.logger.debug(f"MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
+					self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
 				self.tasks['mqtt:event_listener'] = asyncio_create_task(self.task_mqtt_event_listener(mqtt))
 				self.tasks['mqtt:command_listener'] = asyncio_create_task(self.task_mqtt_command_listener(mqtt))
 				while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
@@ -302,12 +324,15 @@ class Daemon(object):
 				del self.tasks['mqtt:command_listener']
 			self.mqtt_publish_queue = None
 		except Exception as e:
-			self.logger.critical(f"Daemon.task_mqtt(): {str(e)}")
+			self.logger.critical(f"[daemon] Daemon.task_mqtt(): {str(e)}")
 			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			raise e
+		finally:
+			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] exiting mqtt task")
 
 
 	async def task_signal(self) -> None:
+		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] starting signal task")
 		try:
 			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				if self.signal_queue.empty() is False:
@@ -315,21 +340,23 @@ class Daemon(object):
 					if isinstance(data, dict) is True and 'plugin' in data and 'signal' in data:
 						plugin = data['plugin']
 						signal = data['signal']
-						self.logger.log(Daemon.LOGLEVEL_TRACE, f"SIGNAL for plugin '{plugin}' generated by Daemon.task_signal(): '{signal}'")
+						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] SIGNAL for plugin '{plugin}' generated by Daemon.task_signal(): '{signal}'")
 						if plugin in self.plugins:
 							plugin = self.plugins[plugin]
 							await plugin.signal(signal)
 						else:
-							self.logger.warning(f"Ignoring SIGNAL for unknown plugin '{plugin}' - ignoring it (=> BUG)")
+							self.logger.warning(f"[daemon] Ignoring SIGNAL for unknown plugin '{plugin}' - ignoring it (=> BUG)")
 					else:
-						self.logger.warning(f"Ignoring invalid SIGNAL '{str(signal)}' from signal_queue")
+						self.logger.warning(f"[daemon] Ignoring invalid SIGNAL '{str(signal)}' from signal_queue")
 				await asyncio_sleep(0.01)
 		except asyncio_CancelledError as e:
 			self.signal_queue = None
 		except Exception as e:
-			self.logger.critical(f"Daemon.task_signal(): {str(e)}")
+			self.logger.critical(f"[daemon] Daemon.task_signal(): {str(e)}")
 			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			raise e
+		finally:
+			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] exiting signal task")
 
 
 	async def on_scheduler(self, plugin: str, signal: dict) -> None:
@@ -344,23 +371,30 @@ class Daemon(object):
 
 
 	def on_plugin_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_value, new_value) -> bool:
+		if plugin.plugin_id == 'brain' and key == 'runlevel':
+			if new_value not in [HAL9000_Plugin.RUNLEVEL_STARTING, \
+			                     HAL9000_Plugin.RUNLEVEL_READY, \
+			                     HAL9000_Plugin.RUNLEVEL_RUNNING]:
+				return False
 		if plugin.plugin_id == 'brain' and key == 'status':
-			if new_value not in [Daemon.BRAIN_STATUS_STARTING, Daemon.BRAIN_STATUS_READY, \
-			                     Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP, \
+			if new_value not in [Daemon.BRAIN_STATUS_AWAKE, \
+			                     Daemon.BRAIN_STATUS_ASLEEP, \
 			                     Daemon.BRAIN_STATUS_DYING]:
 				return False
-		logging_getLogger().info(f"Plugin '{plugin.plugin_id}': {key} changes from '{old_value}' to '{new_value}'")
+		logging_getLogger().info(f"[daemon] Plugin '{plugin.plugin_id}': {key} changes from '{old_value}' to '{new_value}'")
 		return True
 
 
-	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
-		if new_status == Daemon.BRAIN_STATUS_READY:
+	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str) -> bool:
+		if new_runlevel == HAL9000_Plugin.RUNLEVEL_READY:
 			self.queue_signal('brain', {'time:sync': {}})
 		return True
 
 
 	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_time: str, new_time: str) -> bool:
 		if (new_time == 'unsynchronized' and self.config['brain:require-synced-time'] is False) or (new_time == 'synchronized'):
+			if self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_READY:
+				self.queue_signal('brain', {'runlevel': HAL9000_Plugin.RUNLEVEL_RUNNING})
 			next_brain_status = Daemon.BRAIN_STATUS_AWAKE
 			if self.config['brain:sleep-time'] is not None and self.config['brain:wakeup-time'] is not None:
 				time_now = datetime_datetime.now().time()
@@ -372,8 +406,8 @@ class Daemon(object):
 				else:
 					if time_now > time_sleep and time_now < time_wakeup:
 						next_brain_status = Daemon.BRAIN_STATUS_ASLEEP
-			if next_brain_status != self.plugins['brain'].status:
-				self.queue_signal('brain', {'status': next_brain_status})
+#TODO			if next_brain_status != self.plugins['brain'].status:
+#TODO				self.queue_signal('brain', {'status': next_brain_status})
 		match new_time:
 			case 'unsynchronized':
 				if self.config['brain:require-synced-time'] is True:
@@ -387,19 +421,24 @@ class Daemon(object):
 
 
 	async def on_brain_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
+		if 'runlevel' in signal:
+			match self.plugins['brain'].runlevel:
+				case HAL9000_Plugin.RUNLEVEL_STARTING:
+					if signal['runlevel'] == HAL9000_Plugin.RUNLEVEL_READY:
+						self.plugins['brain'].runlevel = HAL9000_Plugin.RUNLEVEL_READY
+				case HAL9000_Plugin.RUNLEVEL_READY:
+					if signal['runlevel'] == HAL9000_Plugin.RUNLEVEL_RUNNING:
+						self.plugins['brain'].runlevel = HAL9000_Plugin.RUNLEVEL_RUNNING
+				case HAL9000_Plugin.RUNLEVEL_RUNNING:
+					self.logger.error(f"[daemon] signal with unexpected new runlevel '{signal['runlevel']}' (current runlevel='running')")
+				case other:
+					self.logger.error(f"[daemon] unexpected current runlevel '{self.plugins['brain'].runlevel}'")
 		if 'status' in signal:
 			match self.plugins['brain'].status:
-				case Daemon.BRAIN_STATUS_STARTING:
-					if signal['status'] == Daemon.BRAIN_STATUS_READY:
-						self.plugins['brain'].status = signal['status']
-				case Daemon.BRAIN_STATUS_READY:
-					if signal['status'] in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
-						self.plugins['brain'].status = signal['status']
-				case Daemon.BRAIN_STATUS_AWAKE:
-					if signal['status'] in [Daemon.BRAIN_STATUS_ASLEEP, Daemon.BRAIN_STATUS_DYING]:
-						self.plugins['brain'].status = signal['status']
-				case Daemon.BRAIN_STATUS_ASLEEP:
-					if signal['status'] in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_DYING]:
+				case HAL9000_Plugin_Status.UNINITIALIZED | Daemon.BRAIN_STATUS_AWAKE | Daemon.BRAIN_STATUS_ASLEEP:
+					if signal['status'] in [Daemon.BRAIN_STATUS_AWAKE, \
+					                           Daemon.BRAIN_STATUS_ASLEEP,\
+					                           Daemon.BRAIN_STATUS_DYING]:
 						self.plugins['brain'].status = signal['status']
 				case Daemon.BRAIN_STATUS_DYING:
 					pass
@@ -409,9 +448,10 @@ class Daemon(object):
 
 
 	async def process_error(self, level: str, id: str, title: str, details: str='<no details>') -> None:
-		self.logger.log(level, f"ERROR #{id}: {title} => {details}")
-		url = self.config['help:error-url'].format(id=id)
-		await self.signal('frontend', {'gui': {'screen': {'name': 'error', 'parameter': {'id': id, 'url': url, 'message': title}}}})
+		self.logger.log(getattr(logging, level.upper()), f"[daemon] ERROR #{id}: {title} => {details}")
+		if self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_RUNNING:
+			url = self.config['help:error-url'].format(id=id)
+			await self.signal('frontend', {'gui': {'screen': {'name': 'error', 'parameter': {'id': id, 'url': url, 'message': title}}}})
 
 
 	async def signal(self, plugin: str, signal: dict) -> None:

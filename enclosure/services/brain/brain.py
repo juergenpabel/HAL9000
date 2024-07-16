@@ -18,10 +18,10 @@ if __name__ == '__main__':
 		results = asyncio_run(daemon.loop())
 		for name, result in results.items():
 			if result is not None:
-				logging_getLogger('brain').critical(f"asyncio_run(daemon.loop()): '{name}' => {result}")
+				logging_getLogger('brain').critical(f"[daemon] asyncio_run(daemon.loop()): '{name}' => {result}")
 			else:
-				logging_getLogger('brain').debug(f"asyncio_run(daemon.loop()): '{name}' => {result}")
+				logging_getLogger('brain').debug(f"[daemon] asyncio_run(daemon.loop()): '{name}' => {result}")
 	except Exception as e:
-		logging_getLogger('brain').critical(f"{e}")
+		logging_getLogger('brain').critical(f"[daemon] {e}")
 		raise e
 

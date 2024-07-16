@@ -10,8 +10,8 @@ from hal9000.brain.plugin import HAL9000_Trigger, HAL9000_Plugin_Status
 
 class Trigger(HAL9000_Trigger):
 
-	def __init__(self, trigger_name: str, trigger_status: HAL9000_Plugin_Status) -> None:
-		HAL9000_Trigger.__init__(self, 'mqtt', trigger_name, trigger_status)
+	def __init__(self, trigger_name: str, plugin_status: HAL9000_Plugin_Status) -> None:
+		HAL9000_Trigger.__init__(self, 'mqtt', trigger_name, plugin_status)
 		self.payload_jsonpath_parser = None
 
 

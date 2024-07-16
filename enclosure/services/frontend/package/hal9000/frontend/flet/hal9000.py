@@ -58,9 +58,9 @@ class HAL9000(Frontend):
 				logging_getLogger('uvicorn').debug(f"[frontend:flet] received command in session '{page.session_id}': {command}")
 				match command['topic']:
 					case 'application/runtime':
-						if 'condition' in command['payload']:
-							condition = command['payload']['condition']
-							match condition:
+						if 'status' in command['payload']:
+							status = command['payload']['status']
+							match status:
 								case 'awake':
 									page.data['button_wakeup'].current.disabled = True
 									page.data['button_sleep'].current.disabled = False
@@ -72,7 +72,7 @@ class HAL9000(Frontend):
 									page.update()
 									self.show_none(display)
 								case other:
-									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported condition '{condition}' "
+									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported status '{status}' "
 									                                     f"in command 'application/runtime'")
 						if 'time' in command['payload']:
 							if 'synced' in command['payload']['time']:

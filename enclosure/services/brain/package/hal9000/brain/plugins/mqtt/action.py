@@ -14,7 +14,7 @@ class Action(HAL9000_Action):
 
 
 	def runlevel(self) -> str:
-		return HAL9000_Plugin.PLUGIN_RUNLEVEL_RUNNING
+		return HAL9000_Plugin.RUNLEVEL_RUNNING
 
 
 	async def on_mqtt_signal(self, plugin: str, signal: dict) -> None:

@@ -23,11 +23,11 @@ void setup() {
 
 	g_device_board.start(booting);
 	if(booting == true) {
-		g_application.setStatus(StatusBooting);
-		g_util_webserial.send("syslog/debug", "system was powered on (booting, configuring)");
+		g_util_webserial.send("syslog/debug", "system was hard-resetted or powered-on (starting => configuring => waiting => ready => running)");
+		g_application.setStatus(StatusStarting);
 	} else {
+		g_util_webserial.send("syslog/debug", "system was soft-resetted (starting => running)");
 		g_application.setStatus(StatusRunning);
-		g_util_webserial.send("syslog/debug", "system was resetted (not booting, running)");
 	}
 	filename  = "/system/board/";
 	filename += g_device_board.getIdentifier();
@@ -68,55 +68,30 @@ void setup() {
 
 
 void loop() {
-	static unsigned long timeout_offline = 0;
-	static Status oldStatus = StatusUnknown;
-	       Status newStatus = StatusUnknown;
+	static unsigned long configurationTimeout = 0;
+	static Status        previousStatus = StatusUnknown;
+	       Status        currentStatus = StatusUnknown;
 
 	g_util_webserial.update();
-	newStatus = g_application.getStatus();
-	if(newStatus != oldStatus) {
-		switch(newStatus) {
-			case StatusBooting:
-				if(gui_screen_get() == gui_screen_none) {
-					g_util_webserial.send("application/runtime", "{\"status\":\"booting\"}", false);
-					gui_screen_set(gui_screen_animation_startup);
+	currentStatus = g_application.getStatus();
+	if(currentStatus != previousStatus) {
+		etl::string<GLOBAL_VALUE_SIZE> payloadStatus("{\"status\":\"<STATUS>\"}");
+
+		g_util_webserial.send("application/runtime", payloadStatus.replace(11, 8, g_application.getStatusName()), false);
+		switch(currentStatus) {
+			case StatusStarting:
+				if(g_application.loadSettings() == false) {
+					g_util_webserial.send("syslog/critical", "failed to load application settings, will probably be non-functional");
 				}
-				if(gui_screen_get() == gui_screen_animation_startup) {
-					gui_screen_set_refresh();
-					newStatus = StatusUnchanged;
-				}
-				if(gui_screen_get() == gui_screen_idle) {
-					g_application.setStatus(StatusConfiguring);
-					gui_screen_set(gui_screen_none);
-				}
+				gui_screen_set(gui_screen_animations_startup);
+				g_application.setStatus(StatusConfiguring);
 				break;
 			case StatusConfiguring:
-				if(g_application.hasEnv("application/configuration") == false) {
-					g_application.setEnv("application/configuration", "true");
-					g_application.loadSettings();
-					g_util_webserial.setCommand("*", Application::onConfiguration);
-					g_util_webserial.send("application/runtime", "{\"status\":\"configuring\"}", false);
-					timeout_offline = millis() + 10000; //TODO:config option
-				}
-				if(g_application.getEnv("application/configuration").compare("false") == 0) {
-					g_application.setEnv("application/configuration", Application::Null);
-					g_application.setStatus(StatusRunning);
-					oldStatus = StatusConfiguring;
-					timeout_offline = 0;
-				}
-				if(timeout_offline > 0 && millis() > timeout_offline) {
-					Error error("error", "01", "No connection to host", "ERROR #01");
-
-					g_util_webserial.send(error.level.insert(0, "syslog/"), error.message); // TODO: + " => " + error.detail);
-					g_application.setEnv("gui/screen:error/id", error.id);
-					g_application.setEnv("gui/screen:error/message", error.message);
-					gui_screen_set(gui_screen_error);
-					timeout_offline = 0;
-				}
-				newStatus = StatusUnchanged;
+				configurationTimeout = millis() + 90000; //TODO:config option
+				g_util_webserial.setCommand("*", Application::onConfiguration);
 				break;
-			case StatusRunning:
-				g_util_webserial.send("application/runtime", "{\"status\":\"running\"}", false);
+			case StatusWaiting:
+				configurationTimeout = 0;
 				g_util_webserial.setCommand("*", nullptr);
 				g_util_webserial.setCommand("application/environment", on_application_environment);
 				g_util_webserial.setCommand("application/settings", on_application_settings);
@@ -127,25 +102,29 @@ void loop() {
 				g_util_webserial.setCommand("device/sdcard", on_device_sdcard);
 				g_util_webserial.setCommand("gui/screen", on_gui_screen);
 				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
+				g_application.onWaiting();
+				break;
+			case StatusReady:
+				g_application.onReady();
+				g_application.setStatus(StatusRunning);
+				break;
+			case StatusRunning:
 				g_application.onRunning();
 				break;
 			case StatusResetting:
-				g_util_webserial.send("application/runtime", "{\"status\":\"resetting\"}", false);
 				gui_screen_set(gui_screen_none);
 				g_device_board.reset(false);
 				break;
 			case StatusRebooting:
-				g_util_webserial.send("application/runtime", "{\"status\":\"rebooting\"}", false);
-				gui_screen_set(gui_screen_animation_shutdown);
-				while(gui_screen_get() == gui_screen_animation_shutdown) {
+				gui_screen_set(gui_screen_animations_shutdown);
+				while(gui_screen_get() == gui_screen_animations_shutdown) {
 					gui_screen_update(true);
 				}
 				g_device_board.reset(true);
 				break;
 			case StatusHalting:
-				g_util_webserial.send("application/runtime", "{\"status\":\"halting\"}", false);
-				gui_screen_set(gui_screen_animation_shutdown);
-				while(gui_screen_get() == gui_screen_animation_shutdown) {
+				gui_screen_set(gui_screen_animations_shutdown);
+				while(gui_screen_get() == gui_screen_animations_shutdown) {
 					gui_screen_update(true);
 				}
 				g_device_board.halt();
@@ -155,9 +134,16 @@ void loop() {
 				g_util_webserial.send("application/runtime", "{\"status\":\"resetting\"}", false);
 				g_device_board.reset(false);
 		}
-		if(newStatus != StatusUnchanged) {
-			oldStatus = newStatus;
-		}
+		previousStatus = currentStatus;
+	}
+	if(configurationTimeout > 0 && millis() > configurationTimeout) {
+		Error error("error", "01", "No connection to host", "ERROR #01");
+
+		g_util_webserial.send(error.level.insert(0, "syslog/"), error.message); // TODO: + " => " + error.detail);
+		g_application.setEnv("gui/screen:error/id", error.id);
+		g_application.setEnv("gui/screen:error/message", error.message);
+		gui_screen_set(gui_screen_error);
+		configurationTimeout = 0;
 	}
 	gui_screen_update(false);
 }

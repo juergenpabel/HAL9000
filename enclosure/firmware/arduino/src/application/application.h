@@ -11,28 +11,22 @@
 
 typedef enum {
 	StatusUnknown      = 0x00,
-	StatusBooting      = 0x01,
+	StatusStarting     = 0x01,
 	StatusConfiguring  = 0x02,
-	StatusRunning      = 0x03,
-	StatusResetting    = 0x04,
-	StatusRebooting    = 0x05,
-	StatusHalting      = 0x06,
-	StatusPanicing     = 0x07,
-	StatusUnchanged    = 0xff,
+	StatusWaiting      = 0x03,
+	StatusReady        = 0x04,
+	StatusRunning      = 0x05,
+	StatusResetting    = 0x06,
+	StatusRebooting    = 0x07,
+	StatusHalting      = 0x08,
+	StatusPanicing     = 0x09,
+	StatusMAX          = 0x09
 } Status;
-
-typedef enum {
-	ConditionUnknown   = 0x00,
-	ConditionAsleep    = 0x01,
-	ConditionAwake     = 0x02,
-	ConditionUnchanged = 0xff
-} Condition;
 
 
 class Application {
 	private:
 		Status      m_status;
-		Condition   m_condition;
 	protected:
 		Environment m_environment;
 		Settings    m_settings;
@@ -43,11 +37,9 @@ class Application {
 		bool saveSettings();
 		bool resetSettings();
 
-		void       setCondition(Condition condition) { this->m_condition = condition; };
-		Condition  getCondition() { return this->m_condition; };
-
-		void       setStatus(Status status) { if(status != StatusUnchanged) { this->m_status = status; } };
-		Status     getStatus() { return this->m_status; };
+		void                                  setStatus(Status status) { if(status > this->m_status && status <= StatusMAX) { this->m_status = status; } };
+		Status                                getStatus() { return this->m_status; };
+		const etl::string<GLOBAL_KEY_SIZE>&   getStatusName();
 
 		bool                                  hasEnv(const etl::string<GLOBAL_KEY_SIZE>& key);
 		const etl::string<GLOBAL_VALUE_SIZE>& getEnv(const etl::string<GLOBAL_KEY_SIZE>& key);
@@ -63,6 +55,8 @@ class Application {
 		                 const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_KEY_SIZE>& detail);
 
 	static void onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+	       void onWaiting();
+	       void onReady();
 	       void onRunning();
 
 	static const etl::string<GLOBAL_VALUE_SIZE> Null;

@@ -26,6 +26,7 @@ class WebSerial {
 		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::string<GLOBAL_VALUE_SIZE>& data, bool data_stringify = true);
 
 	friend class Application;
+	friend void gui_screen_animations(bool refresh);
 };
 
 #endif

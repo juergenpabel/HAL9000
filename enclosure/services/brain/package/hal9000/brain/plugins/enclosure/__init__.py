@@ -34,5 +34,5 @@ class Action(HAL9000_Action):
 
 
 	def runlevel(self) -> str:
-		return HAL9000_Action.PLUGIN_RUNLEVEL_RUNNING
+		return HAL9000_Action.RUNLEVEL_RUNNING
 

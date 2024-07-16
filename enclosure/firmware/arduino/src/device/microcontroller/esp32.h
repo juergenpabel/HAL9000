@@ -26,7 +26,6 @@ typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, Semaphore, 16> MutexMap;
 class Microcontroller : public AbstractMicrocontroller {
 	private:
 		static bool           reset_booting;
-		static Condition      reset_condition;
 		static uint32_t       reset_timestamp;
 		static vprintf_like_t original_vprintf;
 	protected:

@@ -11,31 +11,66 @@
 #include "globals.h"
 
 
+static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& filename);
+
 typedef struct {
-	etl::string<GLOBAL_FILENAME_SIZE> directory;
+	etl::string<GLOBAL_FILENAME_SIZE> dirname;
 	int                               frames;
 	int                               delay;
+	boolean                           loop;
+	etl::string<GLOBAL_VALUE_SIZE>    onthis_webserial;
+	etl::string<GLOBAL_VALUE_SIZE>    onnext_webserial;
 } animation_t;
 
 static etl::list<animation_t, 8>  g_animation;
 static int                        g_current_frame = 0;
 
 
-static void gui_screen_animations(bool refresh) {
-	if(g_current_frame >= g_animation.front().frames) {
-		g_animation.pop_front();
-		g_current_frame = 0;
+void gui_screen_animations(bool refresh) {
+	static etl::string<GLOBAL_FILENAME_SIZE> filename;
+	static etl::format_spec                  frame_format(10, 2, 0, false, false, false, false, '0');
+
+	if(g_application.hasEnv("gui/screen:animations/name") == true) {
+		filename  = "/system/gui/screen/animations/";
+		filename += g_application.getEnv("gui/screen:animations/name");
+		filename += ".json";
+		gui_screen_animations_load(filename);
+		g_application.delEnv("gui/screen:animations/name");
 		if(g_animation.empty() == true) {
-			gui_screen_set(gui_screen_idle);
-			g_util_webserial.send("gui/event", "{\"screen\":\"idle\"}", false);
-			return;
+			g_util_webserial.send("syslog/error", "error loading json data for gui/screen 'animations':");
+			g_util_webserial.send("syslog/error", filename);
 		}
 	}
-	if(refresh == true) {
-		static etl::string<GLOBAL_FILENAME_SIZE> filename;
-		static etl::format_spec                  frame_format(10, 2, 0, false, false, false, false, '0');
+	if(g_animation.empty() == false) {
+		animation_t* current_animation = nullptr;
 
-		filename = g_animation.front().directory;
+		current_animation = &g_animation.front();
+		if(g_current_frame >= current_animation->frames) {
+			g_current_frame = 0;
+			if(current_animation->loop == true) {
+				if(g_application.getEnv("gui/screen:animations/loop") == "false") {
+					g_application.delEnv("gui/screen:animations/loop");
+					current_animation->loop = false;
+				}
+			}
+			if(current_animation->loop == false) {
+				if(current_animation->onnext_webserial.empty() == false) {
+					g_util_webserial.handle(current_animation->onnext_webserial);
+				}
+				g_animation.pop_front();
+				if(g_animation.empty() == true) {
+					gui_screen_set(gui_screen_none);
+					return;
+				}
+				current_animation = &g_animation.front();
+			}
+		}
+		if(g_current_frame == 0) {
+			if(current_animation->onthis_webserial.empty() == false) {
+				g_util_webserial.handle(current_animation->onthis_webserial);
+			}
+		}
+		filename = current_animation->dirname;
 		if(filename.back() != '/') {
 			filename += "/";
 		}
@@ -43,16 +78,14 @@ static void gui_screen_animations(bool refresh) {
 		filename += ".jpg";
 		util_jpeg_decode565_littlefs(filename.c_str(), g_gui_buffer, GUI_SCREEN_WIDTH*GUI_SCREEN_HEIGHT*sizeof(uint16_t));
 		g_gui.pushImage((TFT_WIDTH-GUI_SCREEN_WIDTH)/2, (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2, GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT, (uint16_t*)g_gui_buffer);
-		delay(g_animation.front().delay);
+		delay(current_animation->delay);
 		g_current_frame++;
 	}
 }
 
 
-static void gui_screen_animation_load(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
-	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> configJSON;
-	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> folderJSON;
-	       JsonArray                                folders;
+static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
+	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> animationsJSON;
 	       File file;
 
 	if(LittleFS.exists(filename.c_str()) == false) {
@@ -60,36 +93,38 @@ static void gui_screen_animation_load(const etl::string<GLOBAL_FILENAME_SIZE>& f
 		return;
 	}
 	file = LittleFS.open(filename.c_str(), "r");
-	if(deserializeJson(configJSON, file) != DeserializationError::Ok) {
+	if(deserializeJson(animationsJSON, file) != DeserializationError::Ok) {
 		g_application.notifyError("error", "13", "Animation error", filename);
 		file.close();
 		return;
 	}
 	file.close();
-	folders = configJSON.as<JsonArray>();
-	for(JsonVariant folder : folders) {
-		static etl::string<GLOBAL_FILENAME_SIZE> filename2;
+	for(JsonVariant animationJSON : animationsJSON.as<JsonArray>()) {
 		static animation_t animation;
 
-		animation.directory = "/images/animations/";
-		animation.directory += folder.as<const char*>();
-		filename2 = animation.directory;
-		filename2 += "/animation.json";
-		if(LittleFS.exists(filename2.c_str()) == true) {
-			file = LittleFS.open(filename2.c_str(), "r");
-			if(deserializeJson(folderJSON, file) == DeserializationError::Ok) {
-				animation.frames = folderJSON["frames"].as<int>();
-				animation.delay  = folderJSON["delay"].as<int>();
-				g_animation.push_back(animation);
+		animation.dirname = animationJSON["directory"].as<const char*>();
+		animation.frames = animationJSON["frames"].as<int>();
+		animation.delay = animationJSON["delay"].as<int>();
+		animation.loop = animationJSON["loop"].as<bool>();
+		animation.onthis_webserial.clear();
+		if(animationJSON.containsKey("on:this") == true) {
+			if(animationJSON["on:this"].containsKey("webserial") == true) {
+				animation.onthis_webserial = animationJSON["on:this"]["webserial"].as<const char*>();
 			}
-			file.close();
 		}
+		animation.onnext_webserial.clear();
+		if(animationJSON.containsKey("on:next") == true) {
+			if(animationJSON["on:next"].containsKey("webserial") == true) {
+				animation.onnext_webserial = animationJSON["on:next"]["webserial"].as<const char*>();
+			}
+		}
+		g_animation.push_back(animation);
 	}
 	g_current_frame = 0;
 }
 
 
-void gui_screen_animation_startup(bool refresh) {
+void gui_screen_animations_startup(bool refresh) {
 	if(g_gui_buffer == nullptr) {
 		if(refresh == true) {
 			g_gui.fillScreen(TFT_BLACK);
@@ -99,19 +134,17 @@ void gui_screen_animation_startup(bool refresh) {
 			g_gui.setTextDatum(MC_DATUM);
 			g_gui.drawString("Startup...", TFT_WIDTH/2, TFT_HEIGHT/2);
 			delay(30000); //TODO
-			gui_screen_set(gui_screen_idle);
-			g_util_webserial.send("gui/event", "{\"screen\":\"idle\"}", false);
+			gui_screen_set(gui_screen_none);
+			g_util_webserial.send("gui/event", "{\"screen\":\"none\"}", false);
 		}
 		return;
 	}
-	if(g_animation.empty() == true) {
-		gui_screen_animation_load("/images/animations/startup.json");
-	}
-	gui_screen_animations(refresh);
+	gui_screen_animations_load("/system/gui/screen/animations/startup.json");
+	gui_screen_set(gui_screen_animations);
 }
 
 
-void gui_screen_animation_shutdown(bool refresh) {
+void gui_screen_animations_shutdown(bool refresh) {
 	if(g_gui_buffer == nullptr) {
 		if(refresh == true) {
 			g_gui.fillScreen(TFT_BLACK);
@@ -120,15 +153,13 @@ void gui_screen_animation_shutdown(bool refresh) {
 			g_gui.setTextSize(2);
 			g_gui.setTextDatum(MC_DATUM);
 			g_gui.drawString("Shutdown...", TFT_WIDTH/2, TFT_HEIGHT/2);
-			delay(5000);
+			delay(10000); //TODO
 			gui_screen_set(gui_screen_none);
 			g_util_webserial.send("gui/event", "{\"screen\":\"none\"}", false);
 		}
 		return;
 	}
-	if(g_animation.empty() == true) {
-		gui_screen_animation_load("/images/animations/shutdown.json");
-	}
-	gui_screen_animations(refresh);
+	gui_screen_animations_load("/system/gui/screen/animations/shutdown.json");
+	gui_screen_set(gui_screen_animations);
 }
 

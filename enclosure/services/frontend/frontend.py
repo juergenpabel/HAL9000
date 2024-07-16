@@ -59,12 +59,28 @@ class FrontendManager:
 		topic = message.topic[25:] # remove 'hal9000/command/frontend/' prefix
 		payload = message.payload.decode('utf-8')
 		match topic:
+			case 'runlevel':
+				if self.startup is False:
+					frontends_runlevel = []
+					frontends_status = []
+					for frontend in self.frontends:
+						frontends_runlevel.append(frontend.runlevel)
+						frontends_status.append(frontend.status)
+					if Frontend.FRONTEND_RUNLEVEL_RUNNING in frontends_runlevel:
+						if Frontend.FRONTEND_STATUS_ONLINE in results:
+							self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_RUNNING)
+						else:
+							self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_STARTING)
+					elif Frontend.FRONTEND_RUNLEVEL_READY in frontends_runlevel:
+						self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_READY)
+					else:
+						self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_STARTING)
 			case 'status':
 				if self.startup is False:
-					results = []
+					frontends_status = []
 					for frontend in self.frontends:
-						results.append(frontend.status)
-					if Frontend.FRONTEND_STATUS_ONLINE in results:
+						frontends_status.append(frontend.status)
+					if Frontend.FRONTEND_STATUS_ONLINE in frontends_status:
 						self.mqtt_client.publish('hal9000/event/frontend/status', Frontend.FRONTEND_STATUS_ONLINE)
 					else:
 						self.mqtt_client.publish('hal9000/event/frontend/status', Frontend.FRONTEND_STATUS_OFFLINE)
@@ -85,8 +101,8 @@ class FrontendManager:
 					if self.startup is True:
 						if (time_monotonic() - startup_last_publish) > 1:
 							startup_last_publish = time_monotonic()
-							self.mqtt_client.publish('hal9000/event/frontend/status', 'starting')
-					status = self.mqtt_client.loop(timeout=0.01)
+							self.mqtt_client.publish('hal9000/event/frontend/runlevel', 'starting')
+					self.mqtt_client.loop(timeout=0.01)
 					await asyncio_sleep(0.01)
 				case False:
 					logging_getLogger("uvicorn").warning(f"[frontend] MQTT is disconnected, reconnecting...")
@@ -108,7 +124,7 @@ class FrontendManager:
 					for frontend in self.frontends:
 						if frontend.events.empty() is False:
 							if self.startup is True:
-								self.mqtt_client.publish('hal9000/event/frontend/status', Frontend.FRONTEND_STATUS_READY)
+								self.mqtt_client.publish('hal9000/event/frontend/runlevel', Frontend.FRONTEND_RUNLEVEL_READY)
 								self.startup = False
 							event = await frontend.events.get()
 							if 'topic' in event and 'payload' in event:

@@ -7,7 +7,7 @@ class HAL9000_Plugin_Status(object):
 
 	def __init__(self, plugin_id: str, **kwargs) -> None:
 		self.plugin_id = plugin_id
-		self.valid_names = ['status']
+		self.valid_names = ['runlevel', 'status']
 		self.valid_names.extend(kwargs.get('valid_names', []))
 		for name in self.valid_names:
 			super().__setattr__(name, kwargs.get(name, HAL9000_Plugin_Status.UNINITIALIZED))
@@ -64,7 +64,12 @@ class HAL9000_Plugin_Status(object):
 			for callback_name in ['*', name]:
 				if callback_name in self.callbacks_data:
 					for callback in self.callbacks_data[callback_name]:
-						commit_value &= callback(self, name, old_value, new_value)
+						x = callback(self, name, old_value, new_value)
+						if x is None:
+							print(callback)
+						else:
+							commit_value &= x
+#						commit_value &= callback(self, name, old_value, new_value)
 			if commit_value is True:
 				super().__setattr__(name, new_value)
 
@@ -82,10 +87,10 @@ class HAL9000_Plugin_Status(object):
 
 
 class HAL9000_Plugin(object):
-	PLUGIN_RUNLEVEL_UNKNOWN  = "unknown"
-	PLUGIN_RUNLEVEL_STARTING = "starting"
-	PLUGIN_RUNLEVEL_RUNNING  = "running"
-	PLUGIN_RUNLEVEL_HALTING  = "halting"
+	RUNLEVEL_UNKNOWN  = "unknown"
+	RUNLEVEL_STARTING = "starting"
+	RUNLEVEL_READY    = "ready"
+	RUNLEVEL_RUNNING  = "running"
 
 	def __init__(self, plugin_type: str, plugin_class: str, plugin_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
 		self.name = f"{plugin_type}:{plugin_class}:{plugin_name}"
@@ -104,7 +109,7 @@ class HAL9000_Plugin(object):
 
 
 	def runlevel(self) -> str:
-		return HAL9000_Plugin.PLUGIN_RUNLEVEL_UNKNOWN
+		return HAL9000_Plugin.RUNLEVEL_UNKNOWN
 
 
 	def runlevel_error(self) -> dict:
@@ -134,7 +139,7 @@ class HAL9000_Trigger(HAL9000_Plugin):
 
 
 	def runlevel(self) -> str:
-		return HAL9000_Plugin.PLUGIN_RUNLEVEL_RUNNING
+		return HAL9000_Plugin.RUNLEVEL_RUNNING
 
 
 	def handle(self, data) -> dict:

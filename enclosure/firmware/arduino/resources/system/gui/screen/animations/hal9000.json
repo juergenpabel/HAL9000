@@ -1,0 +1,5 @@
+[ {"directory": "/images/animations/hal9000/fade-in",  "frames": 10, "delay":   0, "loop": false},
+  {"directory": "/images/animations/hal9000/loop",     "frames": 10, "delay":   0, "loop": true},
+  {"directory": "/images/animations/hal9000/fade-out", "frames": 10, "delay":   0, "loop": false, "on:next": {"webserial": "[\"gui/screen\", {\"idle\": {}}]"}}
+]
+

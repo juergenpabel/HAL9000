@@ -7,7 +7,7 @@ void gui_screen_idle(bool refresh) {
 	static time_t  clock_previous = 0;
 	       time_t  clock_current = now();
 	       bool    clock_show = true;
-	       bool    clock_synced = true;
+	       bool    clock_synced = false;
 
 	if(refresh) {
 		clock_previous = 0;
@@ -18,9 +18,9 @@ void gui_screen_idle(bool refresh) {
 			clock_show = false;
 		}
 	}
-	if(g_application.hasEnv("application/runtime#time") == true) {
-		if(g_application.getEnv("application/runtime#time").compare("unsynced") == 0) {
-			clock_synced = false;
+	if(g_application.hasEnv("application/runtime:time/synced") == true) {
+		if(g_application.getEnv("application/runtime:time/synced").compare("synced") == 0) {
+			clock_synced = true;
 		}
 	}
 	if(clock_show == true && year(clock_current) >= 2001) {

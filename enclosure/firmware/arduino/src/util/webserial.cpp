@@ -125,9 +125,15 @@ void WebSerial::handle(const etl::string<GLOBAL_VALUE_SIZE>& line) {
 	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> json;
 
 	json.clear();
-	deserializeJson(json, line.c_str());
+	if(deserializeJson(json, line.c_str()) != DeserializationError::Ok) {
+		this->send("syslog/error", "JSON parse of received line failed:");
+		this->send("syslog/error", line);
+	}
 	if(json.is<JsonArray>() && json.size() == 2) {
 		this->handle(json[0].as<const char*>(), json[1].as<JsonVariant>());
+	} else {
+		this->send("syslog/error", "JSON parse of received line returned unexpected JSON object:");
+		this->send("syslog/error", line);
 	}
 }
 

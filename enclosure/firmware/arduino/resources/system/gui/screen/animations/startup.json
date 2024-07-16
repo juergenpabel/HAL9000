@@ -1,0 +1,9 @@
+[ {"directory": "/images/animations/startup/power-on",                "frames": 15, "delay":   0, "loop": false},
+  {"directory": "/images/animations/startup/system-starting",         "frames": 26, "delay": 250, "loop": false},
+  {"directory": "/images/animations/startup/system-waiting/fade-in",  "frames": 15, "delay":   0, "loop": false},
+  {"directory": "/images/animations/startup/system-waiting/loop",     "frames": 85, "delay":   0, "loop": true},
+  {"directory": "/images/animations/startup/system-waiting/fade-out", "frames": 30, "delay":   0, "loop": false},
+  {"directory": "/images/animations/startup/welcome",                 "frames": 34, "delay":  25, "loop": false,
+                                                                      "on:next": {"webserial": "[\"application/runtime\", {\"ready\":{}}]"}}
+]
+

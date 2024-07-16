@@ -12,7 +12,6 @@
 
 
 RTC_NOINIT_ATTR bool           Microcontroller::reset_booting;
-RTC_NOINIT_ATTR Condition      Microcontroller::reset_condition;
 RTC_NOINIT_ATTR uint32_t       Microcontroller::reset_timestamp;
                 vprintf_like_t Microcontroller::original_vprintf;
 
@@ -33,9 +32,6 @@ void Microcontroller::start(uint32_t& timestamp, bool& host_booting) {
 		host_booting = Microcontroller::reset_booting;
 		if(Microcontroller::reset_timestamp > 1009843199 /*2001-12-31 23:59:59*/) {
 			timestamp = Microcontroller::reset_timestamp;
-		}
-		if(Microcontroller::reset_condition != ConditionUnknown) {
-			g_application.setCondition(Microcontroller::reset_condition);
 		}
 	}
 	Microcontroller::original_vprintf = esp_log_set_vprintf(Microcontroller::vprintf);
@@ -71,7 +67,6 @@ void Microcontroller::reset(uint32_t timestamp, bool rebooting) {
 		}
 	}
 	Microcontroller::reset_booting   = rebooting;
-	Microcontroller::reset_condition = g_application.getCondition();
 	Microcontroller::reset_timestamp = timestamp;
 	esp_restart();
 }
