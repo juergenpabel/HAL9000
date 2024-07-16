@@ -1,4 +1,4 @@
 # Name,   Type, SubType,   Offset,  Size, Flags
 nvs,      data, nvs,       0x009000, 0x007000,
 hal9000,  app,  factory,   0x010000, 0x1f0000,
-spiffs,   data, spiffs,    0x200000, 0x200000,
+spiffs,   data, spiffs,    0x200000, 0x1c0000,
