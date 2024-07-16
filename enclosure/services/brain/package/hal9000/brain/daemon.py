@@ -217,7 +217,6 @@ class Daemon(object):
 		except Exception as e:
 			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			results['main'] = e
-			raise e
 		for name, task in self.tasks.copy().items():
 			task.cancel()
 			results[name] = (await asyncio_gather(task, return_exceptions=True)).pop()
