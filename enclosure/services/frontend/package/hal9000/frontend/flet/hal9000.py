@@ -1,7 +1,10 @@
 from io import StringIO as io_StringIO
 from os import getcwd as os_getcwd
+from os.path import exists as os_path_exists
 from math import pi as math_pi, sin as math_sin, cos as math_cos
-from json import dumps as json_dumps
+from json import dumps as json_dumps, \
+                 loads as json_loads, \
+                 load as json_load
 from datetime import datetime as datetime_datetime
 from logging import getLogger as logging_getLogger
 from asyncio import Queue as asyncio_Queue, \
@@ -22,6 +25,7 @@ class HAL9000(Frontend):
 	def __init__(self, app: fastapi_FastAPI):
 		super().__init__()
 		self.flet_app = app
+		self.environment = {}
 		self.command_session_queues = {}
 
 
@@ -91,6 +95,16 @@ class HAL9000(Frontend):
 								case other:
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported shutdown target '{target}' "
 									                                     f"in command 'application/runtime'")
+					case 'application/environment':
+						if 'set' in command['payload']:
+							if 'key' in command['payload']['set'] and 'value' in command['payload']['set']:
+								key = command['payload']['set']['key']
+								value = command['payload']['set']['value']
+								self.environment[key] = value
+								logging_getLogger('uvicorn').debug(f"[frontend:flet] application/environment:set('{key}','{value}') => OK")
+							else:
+								logging_getLogger('uvicorn').warning(f"[frontend:flet] for command 'application/environment' with 'set': " \
+								                                     f"missing 'key' and/or 'value' items: {command['payload']['set']}")
 					case 'gui/screen':
 						for screen in command['payload'].keys():
 							match screen:
@@ -98,8 +112,8 @@ class HAL9000(Frontend):
 									self.show_none(display)
 								case 'idle':
 									self.show_idle(display)
-								case 'hal9000':
-									self.show_hal9k(display, command['payload']['hal9000'])
+								case 'animations':
+									self.show_animations(display, command['payload']['animations'])
 								case 'menu':
 									self.show_menu(display, command['payload']['menu'])
 								case 'qrcode':
@@ -165,18 +179,23 @@ class HAL9000(Frontend):
 			await asyncio_sleep(1)
 
 
-	async def run_gui_screen_hal9k(self, page, display):
+	async def run_gui_screen_animations(self, page, display):
 		while page.session_id in self.command_session_queues:
-			if len(display.data['hal9k_queue']) > 0:
-				sequence = display.data['hal9k_queue'].pop(0)
-				if sequence['name'] in ['wakeup', 'active', 'sleep']:
+			if len(display.data['animations']) > 0:
+				animation = display.data['animations'].pop(0)
+				if 'directory' in animation and 'frames' in animation and 'delay' in animation and 'loop' in animation:
 					display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-					for nr in range(0,10):
-						display.background_image_src = f'/sequences/{sequence["name"]}/0{nr}.jpg'
-						display.update()
-						await asyncio_sleep(0.2)
-				if sequence['name'] == 'sleep':
-					display.background_image_src = '/sequences/init/00.jpg'
+					do_loop = True
+					while do_loop is True:
+						for nr in range(0, animation['frames']):
+							display.background_image_src = f'{animation["directory"]}/{nr:02}.jpg'
+							display.update()
+							await asyncio_sleep(0.2+float(animation['delay'])/1000)
+						do_loop = bool(animation['loop'])
+						if do_loop is True:
+							do_loop = json_loads(self.environment.get('gui/screen:animations/loop', 'true'))
+							if do_loop is False:
+								del self.environment['gui/screen:animations/loop']
 					display.update()
 					self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'idle'}})
 					self.show_idle(display)
@@ -198,14 +217,15 @@ class HAL9000(Frontend):
 		display.content.update()
 
 
-	def show_hal9k(self, display, data):
+	def show_animations(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-		if 'queue' in data:
-			if data['queue'] == 'replace':
-				display.data['hal9k_queue'].clear()
-				display.data['hal9k_queue'].append(data['sequence'])
-			elif data['queue'] == 'append':
-				display.data['hal9k_queue'].append(data['sequence'])
+		display.data['animations'].clear()
+		if os_path_exists(f'assets/system/gui/screen/animations/{data["name"]}.json') is True:
+			with open(f'assets/system/gui/screen/animations/{data["name"]}.json') as file:
+				display.data['animations'] = json_load(file)
+		else:
+			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'assets/system/gui/screen/animations/{data['name']}.json'")
+		display.content.update()
 
 
 	def show_menu(self, display, data):
@@ -312,7 +332,7 @@ class HAL9000(Frontend):
 		display.data = {}
 		display.data['idle_clock'] = flet.Ref[flet.canvas.Text]()
 		display.data['idle_clock:synced'] = None
-		display.data['hal9k_queue'] = []
+		display.data['animations'] = []
 		display.page = page
 		page.add(flet.Row(controls=[flet.Column(controls=[
 		                                                  flet.TextButton("Ctrl+", on_click=self.on_control_up),
@@ -348,7 +368,7 @@ class HAL9000(Frontend):
 		self.command_session_queues[page.session_id] = asyncio_Queue()
 		page.session.set('session_task', asyncio_create_task(self.run_command_session_listener(page, display)))
 		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(page, display)))
-		page.session.set('gui_hal9k_task', asyncio_create_task(self.run_gui_screen_hal9k(page, display)))
+		page.session.set('gui_animations_task', asyncio_create_task(self.run_gui_screen_animations(page, display)))
 		self.show_none(display)
 		self.status = Frontend.FRONTEND_STATUS_ONLINE
 		self.events.put_nowait({'topic': 'status', 'payload': self.status})
