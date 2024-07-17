@@ -19,7 +19,7 @@ void gui_screen_idle(bool refresh) {
 		}
 	}
 	if(g_application.hasEnv("application/runtime:time/synced") == true) {
-		if(g_application.getEnv("application/runtime:time/synced").compare("synced") == 0) {
+		if(g_application.getEnv("application/runtime:time/synced").compare("true") == 0) {
 			clock_synced = true;
 		}
 	}
