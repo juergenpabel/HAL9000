@@ -20,6 +20,7 @@ class HAL9000(Frontend):
 	def __init__(self, app: fastapi_FastAPI):
 		super().__init__()
 		self.serial = None
+		self.serial_chunk = bytearray(b'')
 
 
 	async def configure(self, configuration) -> bool:
@@ -110,43 +111,36 @@ class HAL9000(Frontend):
 	async def serial_readline(self, timeout=None):
 		if timeout is not None:
 			timeout += time_monotonic()
+		chunk = b''
+		while b'\n' not in chunk:
+			if timeout is not None and time_monotonic() > timeout:
+				return None
+			if self.serial is None or self.serial.is_open is False:
+				return None
+			chunk = self.serial.readline()
+			if len(chunk) > 0:
+				self.serial_chunk.extend(chunk)
+			else:
+				await asyncio_sleep(0.001)
 		line = None
-		if self.serial is not None:
-			chunk = b''
-			line = ''
-			while len(line) == 0:
-				try:
-					chunk = b''
-					while len(chunk) == 0:
-						if timeout is not None and time_monotonic() > timeout:
-							return None
-						chunk = self.serial.readline()
-						await asyncio_sleep(0.001)
-					chunk = chunk.decode('utf-8')
-					while '\n' not in chunk:
-						if timeout is not None and time_monotonic() > timeout:
-							return None
-						await asyncio_sleep(0.001)
-						if len(chunk) > 0:
-							line += chunk.strip('\n')
-						while len(chunk) == 0:
-							chunk = self.serial.readline()
-						chunk = chunk.decode('utf-8')
-					line += chunk.strip('\n')
-					logging_getLogger('uvicorn').debug(f"[frontend:arduino] D->H: {line}")
-					if len(line) < 8 or line[0] != '[' or line[-1] != ']':
-						logging_getLogger('uvicorn').warning(f"[frontend:arduino] skipping over non-webserial message (probably an arduino error message): {line}")
-						line = ''
-				except Exception as e:
-					logging_getLogger('uvicorn').warning(f"[frontend:arduino] skipping over non utf-8 encoded chunk: {chunk}")
-					line = ''
+		try:
+			line = self.serial_chunk.decode('utf-8').strip('\n')
+			logging_getLogger('uvicorn').debug(f"[frontend:arduino] D->H: {line}")
+		except Exception as e:
+			logging_getLogger('uvicorn').warning(f"[frontend:arduino] skipping over received line due to utf-8 decoding issue: {self.serial_chunk}")
+		self.serial_chunk = bytearray(b'')
+		if isinstance(line, str) is True and (len(line) < 8 or line[0] != '[' or line[-1] != ']'):
+			logging_getLogger('uvicorn').warning(f"[frontend:arduino] skipping over non-webserial message (probably an arduino error message): {line}")
+			line = None
 		return line
 
 
 	async def serial_writeline(self, line):
-		if self.serial is not None:
+		if self.serial is not None and self.serial.is_open is True:
 			logging_getLogger('uvicorn').debug(f"[frontend:arduino] H->D: {line}")
 			self.serial.write(f'{line}\n'.encode('utf-8'))
+		else:
+			logging_getLogger('uvicorn').error(f"[frontend:arduino] serial_writeline('{line}') failed due to missing serial connection")
 
 
 	async def task_host2device(self):

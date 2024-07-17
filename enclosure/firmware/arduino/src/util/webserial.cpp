@@ -20,6 +20,7 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 	static etl::string<GLOBAL_VALUE_SIZE> message;
 
 	g_device_microcontroller.mutex_enter("webserial::send");
+	message.clear();
 	message  = "[\"";
 	message += command;
 	message += "\", ";

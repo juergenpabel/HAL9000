@@ -52,7 +52,7 @@ class Application {
 		void                                  delSetting(const etl::string<GLOBAL_KEY_SIZE>& key);
 
 		void notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& id,
-		                 const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_KEY_SIZE>& detail);
+		                 const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_VALUE_SIZE>& detail);
 
 	static void onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 	       void onWaiting();

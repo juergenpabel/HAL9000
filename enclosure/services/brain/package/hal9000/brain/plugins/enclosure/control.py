@@ -80,7 +80,7 @@ class Control(EnclosureComponent):
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu',
 						                                                         'parameter': {'title': menu_title,
 						                                                                       'text': menu_text}}}})
-				case 'hal9000':
+				case 'animations':
 					pass
 				case 'splash':
 					pass

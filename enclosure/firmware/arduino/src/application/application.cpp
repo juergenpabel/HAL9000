@@ -190,7 +190,7 @@ void Application::onRunning() {
 
 
 void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& id,
-                              const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_KEY_SIZE>& detail) {
+                              const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_VALUE_SIZE>& detail) {
 	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> webserial_body;
 
 	if(this->getStatus() != StatusRunning) {
@@ -205,7 +205,7 @@ void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const e
 	webserial_body["error"]["level"] = level.c_str();
 	webserial_body["error"]["id"] = id.c_str();
 	webserial_body["error"]["message"] = message.c_str();
-	webserial_body["error"]["detail"] = detail;
+	webserial_body["error"]["detail"] = detail.c_str();
 	g_util_webserial.send("application/event", webserial_body);
 }
 

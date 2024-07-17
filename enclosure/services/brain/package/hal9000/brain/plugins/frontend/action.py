@@ -184,15 +184,8 @@ class Action(HAL9000_Action):
 
 	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		if old_status == Kalliope_Action.KALLIOPE_STATUS_WAITING and new_status == Kalliope_Action.KALLIOPE_STATUS_LISTENING:
-			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
-			                                                         'parameter': {'queue': 'replace',
-			                                                                       'sequence': {'name': 'wakeup', 'loop': 'false'}}}}})
-			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
-			                                                         'parameter': {'queue': 'append',
-			                                                                       'sequence': {'name': 'active', 'loop': 'true'}}}}})
+			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
 		if old_status == Kalliope_Action.KALLIOPE_STATUS_SPEAKING and new_status == Kalliope_Action.KALLIOPE_STATUS_WAITING:
-			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'hal9000',
-			                                                         'parameter': {'queue': 'replace',
-			                                                                       'sequence': {'name': 'sleep', 'loop': 'false'}}}}})
+			self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
 		return True
 
