@@ -13,15 +13,16 @@
 
 
 void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& body) {
-	gui_screen_func screen = nullptr;
+	static gui_screen_name screen_name;
+	       gui_screen_func screen_func = nullptr;
 
 	if(body.containsKey("animations") == true) {
 		g_application.delEnv("gui/screen:animations/name");
 		if(body["animations"].containsKey("name") == true) {
 			g_application.setEnv("gui/screen:animations/name", body["animations"]["name"].as<const char*>());
 		}
-		screen = gui_screen_animations;
-		g_util_webserial.send("syslog/debug", "gui/screen:animations => OK");
+		screen_name = "animations";
+		screen_func = gui_screen_animations;
 	}
 	if(body.containsKey("error") == true) {
 		g_application.delEnv("gui/screen:error/message");
@@ -36,12 +37,12 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		if(body["error"].containsKey("url") == true) {
 			g_application.setEnv("gui/screen:error/url", body["error"]["url"].as<const char*>());
 		}
-		g_util_webserial.send("syslog/debug", "gui/screen:error => OK");
-		screen = gui_screen_error;
+		screen_name = "error";
+		screen_func = gui_screen_error;
 	}
 	if(body.containsKey("idle") == true) {
-		screen = gui_screen_idle;
-		g_util_webserial.send("syslog/debug", "gui/screen:idle => OK");
+		screen_name = "idle";
+		screen_func = gui_screen_idle;
 	}
 	if(body.containsKey("menu") == true) {
 		g_application.delEnv("gui/screen:menu/title");
@@ -52,12 +53,12 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		if(body["menu"].containsKey("text") == true) {
 			g_application.setEnv("gui/screen:menu/text",  body["menu"]["text"].as<const char*>());
 		}
-		screen = gui_screen_menu;
-		g_util_webserial.send("syslog/debug", "gui/screen:menu => OK");
+		screen_name = "menu";
+		screen_func = gui_screen_menu;
 	}
 	if(body.containsKey("none") == true) {
-		screen = gui_screen_none;
-		g_util_webserial.send("syslog/debug", "gui/screen:none => OK");
+		screen_name = "none";
+		screen_func = gui_screen_none;
 	}
 	if(body.containsKey("qrcode") == true) {
 		g_application.delEnv("gui/screen:qrcode/textsize-above");
@@ -76,8 +77,8 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 			g_application.setEnv("gui/screen:qrcode/text-below", body["qrcode"]["hint"].as<const char*>());
 			g_application.setEnv("gui/screen:qrcode/textsize-below", "small");
 		}
-		screen = gui_screen_qrcode;
-		g_util_webserial.send("syslog/debug", "gui/screen:qrcode => OK");
+		screen_name = "qrcode";
+		screen_func = gui_screen_qrcode;
 	}
 	if(body.containsKey("splash") == true) {
 		g_application.delEnv("gui/screen:splash/message");
@@ -92,21 +93,22 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		if(body["splash"].containsKey("id") == true) {
 			g_application.setEnv("gui/screen:splash/id", body["splash"]["id"].as<const char*>());
 		}
-		screen = gui_screen_splash;
-		g_util_webserial.send("syslog/debug", "gui/screen:splash => OK");
+		screen_name = "splash";
+		screen_func = gui_screen_splash;
 	}
-	if(screen != nullptr) {
-		gui_screen_set(screen);
+	if(screen_func != nullptr) {
+		gui_screen_set(screen_name, screen_func);
 	}
 }
 
 
 void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& body) {
-	gui_overlay_func overlay = nullptr;
+	static gui_overlay_name overlay_name;
+	       gui_overlay_func overlay_func = nullptr;
 
 	if(body.containsKey("none") == true) {
-		overlay = gui_overlay_none;
-		g_util_webserial.send("syslog/debug", "gui/overlay:none => OK");
+		overlay_name = "none";
+		overlay_func = gui_overlay_none;
 	}
 	if(body.containsKey("volume") == true) {
 		if(body["volume"].containsKey("level") == true) {
@@ -115,18 +117,18 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 		if(body["volume"].containsKey("mute") == true) {
 			g_application.setEnv("gui/overlay:volume/mute", body["volume"]["mute"].as<const char*>());
 		}
-		overlay = gui_overlay_volume;
-		g_util_webserial.send("syslog/debug", "gui/overlay:volume => OK");
+		overlay_name = "volume";
+		overlay_func = gui_overlay_volume;
 	}
 	if(body.containsKey("message") == true) {
 		if(body["message"].containsKey("text") == true) {
 			g_application.setEnv("gui/overlay:message/text", body["message"]["text"].as<const char*>());
 		}
-		overlay = gui_overlay_message;
-		g_util_webserial.send("syslog/debug", "gui/overlay:message => OK");
+		overlay_name = "message";
+		overlay_func = gui_overlay_message;
 	}
-	if(overlay != nullptr) {
-		gui_overlay_set(overlay);
+	if(overlay_func != nullptr) {
+		gui_overlay_set(overlay_name, overlay_func);
 	}
 }
 

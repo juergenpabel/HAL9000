@@ -144,7 +144,7 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 		return;
 	}
 	if(gui_screen_get() == gui_screen_error) {
-		gui_screen_set(gui_screen_animations_startup);
+		gui_screen_set("", gui_screen_animations_startup);
 	}
 	current = g_application_configuration.createNestedObject();
 	current["command"].set((char*)command.c_str());

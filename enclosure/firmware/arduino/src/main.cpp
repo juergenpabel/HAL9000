@@ -83,7 +83,7 @@ void loop() {
 				if(g_application.loadSettings() == false) {
 					g_util_webserial.send("syslog/critical", "failed to load application settings, will probably be non-functional");
 				}
-				gui_screen_set(gui_screen_animations_startup);
+				gui_screen_set("", gui_screen_animations_startup);
 				g_application.setStatus(StatusConfiguring);
 				break;
 			case StatusConfiguring:
@@ -112,18 +112,18 @@ void loop() {
 				g_application.onRunning();
 				break;
 			case StatusResetting:
-				gui_screen_set(gui_screen_none);
+				gui_screen_set("none", gui_screen_none);
 				g_device_board.reset(false);
 				break;
 			case StatusRebooting:
-				gui_screen_set(gui_screen_animations_shutdown);
+				gui_screen_set("", gui_screen_animations_shutdown);
 				while(gui_screen_get() == gui_screen_animations_shutdown) {
 					gui_screen_update(true);
 				}
 				g_device_board.reset(true);
 				break;
 			case StatusHalting:
-				gui_screen_set(gui_screen_animations_shutdown);
+				gui_screen_set("", gui_screen_animations_shutdown);
 				while(gui_screen_get() == gui_screen_animations_shutdown) {
 					gui_screen_update(true);
 				}
@@ -142,7 +142,7 @@ void loop() {
 		g_util_webserial.send(error.level.insert(0, "syslog/"), error.message); // TODO: + " => " + error.detail);
 		g_application.setEnv("gui/screen:error/id", error.id);
 		g_application.setEnv("gui/screen:error/message", error.message);
-		gui_screen_set(gui_screen_error);
+		gui_screen_set("error", gui_screen_error);
 		configurationTimeout = 0;
 	}
 	gui_screen_update(false);

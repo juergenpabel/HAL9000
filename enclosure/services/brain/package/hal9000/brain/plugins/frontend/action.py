@@ -129,10 +129,12 @@ class Action(HAL9000_Action):
 					if 'hint' not in signal['gui']['screen']['parameter']:
 						signal['gui']['screen']['parameter']['hint'] = signal['gui']['screen']['parameter']['url']
 				self.daemon.plugins['frontend'].screen = signal['gui']['screen']['name']
-				self.send_frontend_command('gui/screen', {signal['gui']['screen']['name']: signal['gui']['screen']['parameter']})
+				if 'origin' not in signal['gui']['screen'] or signal['gui']['screen']['origin'] != 'arduino':
+					self.send_frontend_command('gui/screen', {signal['gui']['screen']['name']: signal['gui']['screen']['parameter']})
 			if 'overlay' in signal['gui']:
 				self.daemon.plugins['frontend'].overlay = signal['gui']['overlay']['name']
-				self.send_frontend_command('gui/overlay', {signal['gui']['overlay']['name']: signal['gui']['overlay']['parameter']})
+				if 'origin' not in signal['gui']['overlay'] or signal['gui']['overlay']['origin'] != 'arduino':
+					self.send_frontend_command('gui/overlay', {signal['gui']['overlay']['name']: signal['gui']['overlay']['parameter']})
 
 
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str) -> bool:

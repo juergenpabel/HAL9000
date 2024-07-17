@@ -13,10 +13,17 @@ gui_screen_func gui_screen_get() {
 }
 
 
-void gui_screen_set(gui_screen_func new_screen) {
-	if(new_screen != nullptr) {
-		g_gui_screen = new_screen;
+void gui_screen_set(const gui_screen_name& screen_name, gui_screen_func screen_func) {
+	static etl::string<GLOBAL_VALUE_SIZE> payload;
+
+	if(screen_func != nullptr && screen_func != g_gui_screen) {
+		g_gui_screen = screen_func;
 		g_gui_screen_forced_refresh = true;
+		if(screen_name.size() > 0) {
+			payload = "{\"screen\":\"<NAME>\"}";
+			payload.replace(11, 6, screen_name);
+			g_util_webserial.send("gui/event", payload, false);
+		}
 	}
 }
 

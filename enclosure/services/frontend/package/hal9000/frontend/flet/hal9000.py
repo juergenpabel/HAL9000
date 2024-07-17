@@ -181,30 +181,39 @@ class HAL9000(Frontend):
 
 	async def run_gui_screen_animations(self, page, display):
 		while page.session_id in self.command_session_queues:
-			if len(display.data['animations']) > 0:
-				animation = display.data['animations'].pop(0)
-				if 'directory' in animation and 'frames' in animation and 'delay' in animation and 'loop' in animation:
-					display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-					do_loop = True
-					while do_loop is True:
-						for nr in range(0, animation['frames']):
-							display.background_image_src = f'{animation["directory"]}/{nr:02}.jpg'
-							display.update()
-							await asyncio_sleep(0.2+float(animation['delay'])/1000)
-						do_loop = bool(animation['loop'])
-						if do_loop is True:
-							do_loop = json_loads(self.environment.get('gui/screen:animations/loop', 'true'))
-							if do_loop is False:
-								del self.environment['gui/screen:animations/loop']
-					display.update()
-					self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'idle'}})
-					self.show_idle(display)
+			if 'name' in display.data['animations'] and 'json' in display.data['animations']:
+				name = display.data['animations']['name']
+				if len(display.data['animations']['json']) > 0:
+					animation = display.data['animations']['json'].pop(0)
+					if 'directory' in animation and 'frames' in animation and 'delay' in animation and 'loop' in animation:
+						display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
+						do_loop = True
+						while do_loop is True:
+							for nr in range(0, animation['frames']):
+								display.background_image_src = f'{animation["directory"]}/{nr:02}.jpg'
+								display.update()
+								await asyncio_sleep(0.2+float(animation['delay'])/1000)
+							do_loop = bool(animation['loop'])
+							if do_loop is True:
+								do_loop = json_loads(self.environment.get('gui/screen:animations/loop', 'true'))
+								if do_loop is False:
+									del self.environment['gui/screen:animations/loop']
+						display.update()
+					if 'on:next' in animation:
+						if 'webserial' in animation['on:next']:
+							try:
+								topic, payload = json_loads(animation['on:next']['webserial'])
+								self.commands.put_nowait({'topic': topic, 'payload': payload})
+							except Exception as e:
+								logging_getLogger('uvicorn').error(f"[frontend:flet] on:next/webserial of gui/screen:animations/{name} " \
+								                                   f"not webserial-compliant: '{animation['on:next']['webserial']}' => {e}")
 			await asyncio_sleep(0.1)
 
 
 	def show_none(self, display):
 		display.content.shapes = []
 		display.content.update()
+		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'none'}})
 
 
 	def show_idle(self, display):
@@ -214,17 +223,20 @@ class HAL9000(Frontend):
 		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
+		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'idle'}})
 
 
 	def show_animations(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-		display.data['animations'].clear()
+		display.data['animations'] = {}
 		if os_path_exists(f'assets/system/gui/screen/animations/{data["name"]}.json') is True:
 			with open(f'assets/system/gui/screen/animations/{data["name"]}.json') as file:
-				display.data['animations'] = json_load(file)
+				display.data['animations']['name'] = data['name']
+				display.data['animations']['json'] = json_load(file)
 		else:
 			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'assets/system/gui/screen/animations/{data['name']}.json'")
 		display.content.update()
+		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'animations'}})
 
 
 	def show_menu(self, display, data):
@@ -238,6 +250,7 @@ class HAL9000(Frontend):
 		                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
+		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'menu'}})
 
 
 	def show_qrcode(self, display, data):
@@ -265,18 +278,21 @@ class HAL9000(Frontend):
 		                                                                    size=int(display.page.scale*(data['hint-size'] if 'hint-size' in data else 14))),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
+		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'qrcode'}})
 
 
 	def show_splash(self, display, data):
 		self.show_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
 		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Splash-database',
 		                           'hint': f"Splash ID: {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
+		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'splash'}})
 
 
 	def show_error(self, display, data):
 		self.show_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'red', 'title-color': 'white',
 		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
 		                           'hint': f"Error {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
+		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'error'}})
 
 
 	def on_button_wakeup(self, event):

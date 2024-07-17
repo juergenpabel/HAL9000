@@ -59,7 +59,6 @@ void gui_screen_animations(bool refresh) {
 				}
 				g_animation.pop_front();
 				if(g_animation.empty() == true) {
-					gui_screen_set(gui_screen_none);
 					return;
 				}
 				current_animation = &g_animation.front();
@@ -133,14 +132,13 @@ void gui_screen_animations_startup(bool refresh) {
 			g_gui.setTextSize(2);
 			g_gui.setTextDatum(MC_DATUM);
 			g_gui.drawString("Startup...", TFT_WIDTH/2, TFT_HEIGHT/2);
-			delay(30000); //TODO
-			gui_screen_set(gui_screen_none);
-			g_util_webserial.send("gui/event", "{\"screen\":\"none\"}", false);
+			delay(60000); //TODO
+			gui_screen_set("none", gui_screen_none);
 		}
 		return;
 	}
 	gui_screen_animations_load("/system/gui/screen/animations/startup.json");
-	gui_screen_set(gui_screen_animations);
+	gui_screen_set("animations", gui_screen_animations);
 }
 
 
@@ -153,13 +151,12 @@ void gui_screen_animations_shutdown(bool refresh) {
 			g_gui.setTextSize(2);
 			g_gui.setTextDatum(MC_DATUM);
 			g_gui.drawString("Shutdown...", TFT_WIDTH/2, TFT_HEIGHT/2);
-			delay(10000); //TODO
-			gui_screen_set(gui_screen_none);
-			g_util_webserial.send("gui/event", "{\"screen\":\"none\"}", false);
+			delay(15000); //TODO
+			gui_screen_set("none", gui_screen_none);
 		}
 		return;
 	}
 	gui_screen_animations_load("/system/gui/screen/animations/shutdown.json");
-	gui_screen_set(gui_screen_animations);
+	gui_screen_set("animations", gui_screen_animations);
 }
 
