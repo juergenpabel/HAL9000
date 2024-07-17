@@ -1,5 +1,5 @@
 [ {"directory": "/images/animations/startup/power-on",                "frames": 15, "delay":   0, "loop": false},
-  {"directory": "/images/animations/startup/system-starting",         "frames": 25, "delay": 250, "loop": false},
+  {"directory": "/images/animations/startup/system-starting",         "frames": 25, "delay": 500, "loop": false},
   {"directory": "/images/animations/startup/system-waiting/fade-in",  "frames": 12, "delay":   0, "loop": false},
   {"directory": "/images/animations/startup/system-waiting/loop",     "frames": 74, "delay":   0, "loop": true},
   {"directory": "/images/animations/startup/system-waiting/fade-out", "frames": 28, "delay":   0, "loop": false},
