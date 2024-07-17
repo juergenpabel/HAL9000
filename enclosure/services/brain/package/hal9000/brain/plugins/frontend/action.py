@@ -70,7 +70,7 @@ class Action(HAL9000_Action):
 				self.send_frontend_command('application/runtime', {'status': self.daemon.plugins['brain'].status})
 			datetime_now = datetime_datetime.now()
 			epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
-			synced = True if self.daemon.plugins['brain'].time == 'synchronized' else False
+			synced = 'true' if self.daemon.plugins['brain'].time == 'synchronized' else 'false'
 			self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': synced}})
 			if self.daemon.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
 				self.send_frontend_command('gui/screen', {'idle': {}})
@@ -171,7 +171,7 @@ class Action(HAL9000_Action):
 	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_time: str, new_time: str) -> bool:
 		datetime_now = datetime_datetime.now()
 		epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
-		synced = True if new_time == 'synchronized' else False
+		synced = 'true' if new_time == 'synchronized' else 'false'
 		self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': synced}})
 		return True
 

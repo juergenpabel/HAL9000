@@ -37,11 +37,7 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 			g_util_webserial.send("syslog/debug", "application/runtime:time/epoch => OK");
 		}
 		if(data["time"].containsKey("synced") == true) {
-			if(data["time"]["synced"].as<bool>() == true) {
-				g_application.setEnv("application/runtime:time/synced", "true");
-			} else {
-				g_application.setEnv("application/runtime:time/synced", "false");
-			}
+			g_application.setEnv("application/runtime:time/synced", data["time"]["synced"].as<const char*>());
 			g_util_webserial.send("syslog/debug", "application/runtime:time/synced => OK");
 		}
 	}

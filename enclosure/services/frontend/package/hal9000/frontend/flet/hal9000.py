@@ -169,7 +169,7 @@ class HAL9000(Frontend):
 		while page.session_id in self.command_session_queues:
 			clock = display.data['idle_clock'].current
 			if clock is not None:
-				clock.style.color='white' if display.data['idle_clock:synced'] is True else 'red'
+				clock.style.color='white' if display.data['idle_clock:synced'] == 'true' else 'red'
 				now = datetime_datetime.now()
 				if now.second % 2 == 0:
 					clock.text = now.strftime('%H:%M')
@@ -211,8 +211,7 @@ class HAL9000(Frontend):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(ref=display.data['idle_clock'],
 		                                               x=int(display.radius), y=int(display.radius),
-		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2,
-		                                                                    color='white' if display.data['idle_clock:synced'] is True else 'red'),
+		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
 
