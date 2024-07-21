@@ -17,17 +17,23 @@ Settings::Settings(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
 
 
 bool Settings::load() {
-	File                      file;
-	char                      line_buffer[LINE_SIZE+1] = {0};
-        int                       line_buffer_pos = 0;
-	etl::string<LINE_SIZE+1>  line;
-	size_t                    line_sep_pos = 0;
-	size_t                    line_end_pos = 0;
+	static char                      line_buffer[LINE_SIZE+1] = {0};
+               int                       line_buffer_pos = 0;
+	       etl::string<LINE_SIZE+1>  line;
+	       size_t                    line_sep_pos = 0;
+	       size_t                    line_end_pos = 0;
+	       File                      file;
 
 	this->clear();
 	file = LittleFS.open(this->filename.c_str(), "r");
 	if(!file) {
-		g_util_webserial.send("syslog/error", LogString("Settings::load('").append(this->filename).append(LogString("') => could not open file")));
+		static LogString message;
+
+		message.clear();
+		message  = "Settings::load('";
+		message += this->filename;
+		message += "') => could not open file";
+		g_util_webserial.send("syslog/error", message);
 		return false;
 	}
 	if(file.size() == 0) {

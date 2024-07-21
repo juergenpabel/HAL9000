@@ -29,14 +29,14 @@ class MCP23X17 {
 		uint16_t           mcp23X17_gpio_values;
 	public:
 		MCP23X17();
-		void init();
-		void init(uint8_t i2c_bus, uint8_t i2c_addr);
-		void config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& inputs, const JsonObject& status);
-		void config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& outputs);
+		bool init();
+		bool init(uint8_t i2c_bus, uint8_t i2c_addr);
+		bool config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& inputs, const JsonObject& status);
+		bool config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& outputs);
 
-		void start();
-		void check();
+		bool start();
 	protected:
+		void check();
 		static void loop();
 };
 

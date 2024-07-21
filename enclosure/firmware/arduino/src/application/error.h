@@ -27,6 +27,7 @@ class Error {
 		static etl::string<GLOBAL_VALUE_SIZE>& calculateURL(const etl::string<GLOBAL_KEY_SIZE>& id);
 
 	friend class Application;
+	friend class WebSerial;
 	friend void setup();
 	friend void loop();
 };

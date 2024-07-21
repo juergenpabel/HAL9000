@@ -75,9 +75,9 @@ void loop() {
 	g_util_webserial.update();
 	currentStatus = g_application.getStatus();
 	if(currentStatus != previousStatus) {
-		etl::string<GLOBAL_VALUE_SIZE> payloadStatus("{\"status\":\"<STATUS>\"}");
+		etl::string<GLOBAL_VALUE_SIZE> payloadStatus("{\"status\":{\"name\":\"<STATUS>\"}}");
 
-		g_util_webserial.send("application/runtime", payloadStatus.replace(11, 8, g_application.getStatusName()), false);
+		g_util_webserial.send("application/runtime", payloadStatus.replace(19, 8, g_application.getStatusName()), false);
 		switch(currentStatus) {
 			case StatusStarting:
 				if(g_application.loadSettings() == false) {

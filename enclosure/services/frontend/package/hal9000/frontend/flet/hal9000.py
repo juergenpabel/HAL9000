@@ -23,7 +23,7 @@ from hal9000.frontend import Frontend
 class HAL9000(Frontend):
 
 	def __init__(self, app: fastapi_FastAPI):
-		super().__init__()
+		super().__init__('flet')
 		self.flet_app = app
 		self.environment = {}
 		self.command_session_queues = {}
@@ -41,16 +41,19 @@ class HAL9000(Frontend):
 
 	async def task_command_listener(self):
 		logging_getLogger('uvicorn').debug(f"[frontend:flet] starting command-listener (event-listeners are started per flet-session)")
+		await asyncio_sleep(0.1)
+		self.runlevel = Frontend.FRONTEND_RUNLEVEL_STARTING
+		self.status = Frontend.FRONTEND_STATUS_OFFLINE
 		try:
 			while self.tasks['command_listener'].cancelled() is False:
 				command = await self.commands.get()
 				for command_session_queue in self.command_session_queues.values():
 					command_session_queue.put_nowait(command.copy())
+		finally:
 			logging_getLogger('uvicorn').debug(f"[frontend:flet] task_command_listener() cancelled")
-		except asyncio_CancelledError as e:
-			logging_getLogger('uvicorn').debug(f"[frontend:flet] task_command_listener() cancelled")
-		logging_getLogger('uvicorn').info(f"[frontend:flet] exiting command-listener ('flet' frontend becomes non-functional)")
-		del self.tasks['command_listener']
+			del self.tasks['command_listener']
+			self.runlevel = Frontend.FRONTEND_RUNLEVEL_DEAD
+			return # ignore exception (return in finally block)
 
 
 	async def run_command_session_listener(self, page, display):
@@ -62,25 +65,9 @@ class HAL9000(Frontend):
 				logging_getLogger('uvicorn').debug(f"[frontend:flet] received command in session '{page.session_id}': {command}")
 				match command['topic']:
 					case 'application/runtime':
-						if 'status' in command['payload']:
-							status = command['payload']['status']
-							match status:
-								case 'awake':
-									page.data['button_wakeup'].current.disabled = True
-									page.data['button_sleep'].current.disabled = False
-									page.update()
-									self.show_idle(display)
-								case 'asleep':
-									page.data['button_wakeup'].current.disabled = False
-									page.data['button_sleep'].current.disabled = True
-									page.update()
-									self.show_none(display)
-								case other:
-									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported status '{status}' "
-									                                     f"in command 'application/runtime'")
 						if 'time' in command['payload']:
 							if 'synced' in command['payload']['time']:
-								display.data['idle_clock:synced'] = command['payload']['time']['synced']
+								page.session.set('idle_clock:synced', command['payload']['time']['synced'])
 						if 'shutdown' in command['payload'] and 'target' in command['payload']['shutdown']:
 							target = command['payload']['shutdown']['target']
 							match target:
@@ -169,7 +156,7 @@ class HAL9000(Frontend):
 		while page.session_id in self.command_session_queues:
 			clock = display.data['idle_clock'].current
 			if clock is not None:
-				clock.style.color='white' if display.data['idle_clock:synced'] == 'true' else 'red'
+				clock.style.color='white' if page.session.get('idle_clock:synced') == 'true' else 'red'
 				now = datetime_datetime.now()
 				if now.second % 2 == 0:
 					clock.text = now.strftime('%H:%M')
@@ -328,7 +315,6 @@ class HAL9000(Frontend):
 			command_session_queue.put_nowait(None)
 			if len(self.command_session_queues) == 0:
 				self.status = Frontend.FRONTEND_STATUS_OFFLINE
-				self.events.put_nowait({'topic': 'status', 'payload': self.status})
 		
 
 	async def flet(self, page: flet.Page):
@@ -341,12 +327,11 @@ class HAL9000(Frontend):
 		page.data = {}
 		page.data['button_sleep'] = flet.Ref[flet.TextButton]()
 		page.data['button_wakeup'] = flet.Ref[flet.TextButton]()
-		display = flet.CircleAvatar(radius=int(page.scale*120))
+		display = flet.CircleAvatar(radius=int(page.scale*120), bgcolor='black')
 		display.content = flet.canvas.Canvas(width=display.radius*2, height=display.radius*2)
 		display.background_image_src = '/sequences/init/00.jpg'
 		display.data = {}
 		display.data['idle_clock'] = flet.Ref[flet.canvas.Text]()
-		display.data['idle_clock:synced'] = None
 		display.data['animations'] = []
 		display.page = page
 		page.add(flet.Row(controls=[flet.Column(controls=[
@@ -384,7 +369,8 @@ class HAL9000(Frontend):
 		page.session.set('session_task', asyncio_create_task(self.run_command_session_listener(page, display)))
 		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(page, display)))
 		page.session.set('gui_animations_task', asyncio_create_task(self.run_gui_screen_animations(page, display)))
-		self.show_none(display)
+		page.session.set('idle_clock:synced', 'unknown')
+		if self.runlevel == Frontend.FRONTEND_RUNLEVEL_STARTING:
+			self.runlevel = Frontend.FRONTEND_RUNLEVEL_RUNNING
 		self.status = Frontend.FRONTEND_STATUS_ONLINE
-		self.events.put_nowait({'topic': 'status', 'payload': self.status})
 

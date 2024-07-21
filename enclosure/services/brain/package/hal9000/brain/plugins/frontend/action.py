@@ -66,14 +66,14 @@ class Action(HAL9000_Action):
 
 	def on_frontend_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		if new_status == Action.FRONTEND_STATUS_ONLINE:
-			if self.daemon.plugins['brain'].status in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
-				self.send_frontend_command('application/runtime', {'status': self.daemon.plugins['brain'].status})
 			datetime_now = datetime_datetime.now()
 			epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
 			synced = 'true' if self.daemon.plugins['brain'].time == 'synchronized' else 'false'
 			self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': synced}})
 			if self.daemon.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
 				self.send_frontend_command('gui/screen', {'idle': {}})
+			else:
+				self.send_frontend_command('gui/screen', {'none': {}})
 		if new_status in [Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
 			return True
 		return False
@@ -105,8 +105,6 @@ class Action(HAL9000_Action):
 				case Action.FRONTEND_STATUS_ONLINE:
 					if signal['status'] == Action.FRONTEND_STATUS_OFFLINE:
 						self.daemon.plugins['frontend'].status = Action.FRONTEND_STATUS_OFFLINE
-#TODO:?? syslog instead?			if self.daemon.plugins['brain'].status in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
-#TODO							self.send_frontend_command('application/runtime', {'status': self.daemon.plugins['brain'].status})
 				case Action.FRONTEND_STATUS_OFFLINE:
 					if signal['status'] == Action.FRONTEND_STATUS_ONLINE:
 						self.daemon.plugins['frontend'].status = Action.FRONTEND_STATUS_ONLINE
@@ -152,8 +150,7 @@ class Action(HAL9000_Action):
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str) -> bool:
 		match new_status:
 			case Daemon.BRAIN_STATUS_AWAKE:
-				self.send_frontend_command('application/runtime', {'status': 'awake'})
-				if old_status == HAL9000_Plugin_Status.UNINITIALIZED: #TODO welcome
+				if old_status == HAL9000_Plugin_Status.UNINITIALIZED:
 					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
 					self.daemon.schedule_signal(2, 'frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop',
 					                                                                    'value': 'false'}}},
@@ -162,11 +159,8 @@ class Action(HAL9000_Action):
 					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
 				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 			case Daemon.BRAIN_STATUS_ASLEEP:
-				self.send_frontend_command('application/runtime', {'status': 'asleep'})
 				self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
 				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-			case Daemon.BRAIN_STATUS_DYING:
-				self.send_frontend_command('application/runtime', {'status': 'zombie'})
 		return True
 
 

@@ -1,7 +1,10 @@
+#include <Arduino.h>
 #include <etl/string.h>
 #include <ArduinoJson.h>
 
 #include "util/webserial.h"
+#include "gui/screen/screen.h"
+#include "gui/screen/error/screen.h"
 #include "globals.h"
 
 
@@ -10,8 +13,10 @@ WebSerial::WebSerial() {
 
 
 void WebSerial::begin() {
+	Serial.begin(115200);
+	g_device_microcontroller.mutex_create("Serial", true);
 	g_device_microcontroller.mutex_create("webserial::set", false);
-	g_device_microcontroller.mutex_create("webserial::send", false);
+	g_device_microcontroller.mutex_create("webserial::send", true);
 	g_device_microcontroller.mutex_create("webserial::update", false);
 }
 
@@ -69,8 +74,10 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& json) {
 	static char data[GLOBAL_VALUE_SIZE] = {0};
 
+	g_device_microcontroller.mutex_enter("webserial::send");
 	serializeJson(json, data);
 	this->send(command, data, false);
+	g_device_microcontroller.mutex_exit("webserial::send");
 }
 
 
@@ -79,8 +86,14 @@ void WebSerial::update() {
 	static size_t serial_buffer_pos = 0;
 
 	if(Serial == false) {
-		//TODO: set env error code
-		//TODOgui_set_screen(gui_screen_error);
+		if(gui_screen_get() != gui_screen_error) {
+			Error error("error", "09", "Lost connection to host", "ERROR #09");
+
+			g_util_webserial.send(error.level.insert(0, "syslog/"), error.message); // TODO: + " => " + error.detail);
+			g_application.setEnv("gui/screen:error/id", error.id);
+			g_application.setEnv("gui/screen:error/message", error.message);
+			gui_screen_set("error", gui_screen_error);
+		}
 		return;
 	}
 	if(g_device_microcontroller.mutex_try_enter("webserial::update") == true) {

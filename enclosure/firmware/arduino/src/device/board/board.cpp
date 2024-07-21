@@ -1,4 +1,3 @@
-#include <Arduino.h>
 #include <LittleFS.h>
 #include <TimeLib.h>
 
@@ -8,14 +7,12 @@
 void AbstractBoard::start(bool& host_booting) {
 	uint32_t  epoch = 0;
 
+	g_util_webserial.begin();
 	g_device_microcontroller.start(epoch, host_booting);
 	if(epoch > 0) {
 		setTime(epoch);
 		g_util_webserial.send("syslog/debug", "recovered system time from before microcontroller was resetted");
 	}
-	g_device_microcontroller.mutex_create("Serial", true);
-	Serial.begin(115200);
-	g_util_webserial.begin();
 	if(LittleFS.begin() != true) {
 		while(true) {
 			if(Serial == true) {

@@ -25,7 +25,7 @@ MCP23X17::MCP23X17()
 }
 
 
-void MCP23X17::init() {
+bool MCP23X17::init() {
 	int i2c_bus     = 0;
 	int i2c_address = 0;
 
@@ -35,32 +35,32 @@ void MCP23X17::init() {
 	if(g_application.hasSetting("device/mcp23X17:i2c/address") == true) {
 		i2c_address = atoi(g_application.getSetting("device/mcp23X17:i2c/address").c_str());
 	}
-	this->init(i2c_bus, i2c_address);
-
+	return this->init(i2c_bus, i2c_address);
 }
 
 
-void MCP23X17::init(uint8_t i2c_bus, uint8_t i2c_addr) {
+bool MCP23X17::init(uint8_t i2c_bus, uint8_t i2c_addr) {
 	TwoWire* twowire = nullptr;
 
 	if(this->status != MCP23X17_STATE_UNINITIALIZED) {
 		g_util_webserial.send("syslog/warn", "MCP23X17 already initialized");
-		return;
+		return false;
 	}
 	twowire = g_device_microcontroller.twowire_get(i2c_bus);
 	if(twowire == nullptr) {
 		g_util_webserial.send("syslog/error", "MCP23X17 could not obtain TwoWire instance");
-		return;
+		return false;
 	}
 	if(this->mcp23X17.begin_I2C(i2c_addr, twowire) == false) {
 		g_util_webserial.send("syslog/error", "MCP23X17 failed to initialize");
-		return;
+		return false;
 	}
 	this->status = MCP23X17_STATE_INITIALIZED;
+	return true;
 }
 
 
-void MCP23X17::config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& inputs, const JsonObject& events) {
+bool MCP23X17::config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& inputs, const JsonObject& events) {
 	MCP23X17_InputDevice* device = nullptr;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
@@ -68,13 +68,13 @@ void MCP23X17::config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, co
 	}
 	if(this->status == MCP23X17_STATE_RUNNING) {
 		g_util_webserial.send("syslog/error", "MCP23X17 already loop()'ing on the other core");
-		return;
+		return false;
 	}
 	if(device_type.size() == 0 || device_name.size() == 0) {
 		g_util_webserial.send("syslog/error", "MCP23X17::config_inputs(): invalid parameters name/type");
 		g_util_webserial.send("syslog/error", device_type);
 		g_util_webserial.send("syslog/error", device_name);
-		return;
+		return false;
 	}
 	if(device_type.compare("switch") == 0) {
 		for(int i=0;i<3;i++) {
@@ -100,16 +100,17 @@ void MCP23X17::config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, co
 	if(device == nullptr) {
 		g_util_webserial.send("syslog/error", "MCP23X17::config_inputs(): invalid parameter device_type");
 		g_util_webserial.send("syslog/error", device_type);
-		return;
+		return false;
 	}
 	if(device->configure(device_name, &this->mcp23X17, inputs, events) == false) {
 		g_util_webserial.send("syslog/error", "MCP23X17::config_inputs(): device configuration failed");
-		return;
+		return false;
 	}
+	return true;
 }
 
 
-void MCP23X17::config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& outputs) {
+bool MCP23X17::config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& outputs) {
 	MCP23X17_OutputDevice* device = nullptr;
 
 	if(this->status == MCP23X17_STATE_UNINITIALIZED) {
@@ -119,7 +120,7 @@ void MCP23X17::config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, c
 		g_util_webserial.send("syslog/error", "MCP23X17::config_outputs(): invalid parameters name/type");
 		g_util_webserial.send("syslog/error", device_type);
 		g_util_webserial.send("syslog/error", device_name);
-		return;
+		return false;
 	}
 	if(device_type.compare("digital") == 0) {
 		for(int i=0;i<3;i++) {
@@ -131,11 +132,34 @@ void MCP23X17::config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, c
 	if(device == nullptr) {
 		g_util_webserial.send("syslog/error", "MCP23X17::config_outputs(): invalid parameter device_type");
 		g_util_webserial.send("syslog/error", device_type);
-		return;
+		return false;
 	}
 	if(device->configure(device_name, &this->mcp23X17, outputs) == false) {
 		g_util_webserial.send("syslog/error", "MCP23X17::config_outputs(): device configuration failed");
-		return;
+		return false;
+	}
+	return true;
+}
+
+
+bool MCP23X17::start() {
+	if(this->status != MCP23X17_STATE_INITIALIZED) {
+		g_util_webserial.send("syslog/warn", "MCP23X17::start() with invalid state");
+		return false;
+	}
+	this->mcp23X17_gpio_values = this->mcp23X17.readGPIOAB();
+	this->status = MCP23X17_STATE_RUNNING;
+	g_device_microcontroller.thread_create(MCP23X17::loop, 1);
+	return true;
+}
+
+
+void MCP23X17::loop() {
+	g_util_webserial.send("syslog/debug", "MCP23X17::loop() now running on 2nd core");
+	while(true) {
+		g_device_mcp23X17.check();
+		yield();
+		delay(1);
 	}
 }
 
@@ -177,27 +201,6 @@ void MCP23X17::check() {
 			}
 		}
 		this->mcp23X17_gpio_values = mcp23X17_gpio_values;
-	}
-}
-
-
-void MCP23X17::start() {
-	if(this->status != MCP23X17_STATE_INITIALIZED) {
-		g_util_webserial.send("syslog/warn", "MCP23X17::start() with invalid state");
-		return;
-	}
-	this->mcp23X17_gpio_values = this->mcp23X17.readGPIOAB();
-	this->status = MCP23X17_STATE_RUNNING;
-	g_device_microcontroller.thread_create(MCP23X17::loop, 1);
-}
-
-
-void MCP23X17::loop() {
-	g_util_webserial.send("syslog/debug", "MCP23X17::loop() now running on 2nd core");
-	while(true) {
-		g_device_mcp23X17.check();
-		yield();
-		delay(1);
 	}
 }
 
