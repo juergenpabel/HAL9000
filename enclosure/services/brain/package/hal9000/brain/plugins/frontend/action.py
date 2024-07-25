@@ -156,11 +156,13 @@ class Action(HAL9000_Action):
 					                                                                    'value': 'false'}}},
 					                            'frontend:gui/screen#animations/loop:timeout')
 				else:
+					#TODO: displayOn
 					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
 				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 			case Daemon.BRAIN_STATUS_ASLEEP:
 				self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
 				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+				#TODO: displayOff
 		return True
 
 

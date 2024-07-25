@@ -193,8 +193,7 @@ bool Microcontroller::task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name,
 		g_util_webserial.send("syslog/error", "ESP32: invalid core in Microcontroller::task_create()");
 		return false;
 	}
-	core = 1 - core;
-	xTaskCreatePinnedToCore(task_start, task_name.c_str(), 8192, (void*)task_function, tskIDLE_PRIORITY+1, nullptr, 0);
+	xTaskCreatePinnedToCore(task_start, task_name.c_str(), 8192, (void*)task_function, configMAX_PRIORITIES/2, nullptr, 1-core);
 	return true;
 }
 

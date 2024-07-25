@@ -146,5 +146,15 @@ void loop() {
 		configurationTimeout = 0;
 	}
 	gui_screen_update(false);
+	if(currentStatus == StatusRunning) {
+		static TickType_t    previousTicks = 0;
+		       TickType_t    currentTicks;
+
+		currentTicks = xTaskGetTickCount();
+		if((currentTicks-previousTicks) < pdMS_TO_TICKS(50)) {
+			vTaskDelay(pdMS_TO_TICKS(50) - (currentTicks-previousTicks));
+		}
+		previousTicks = currentTicks;
+	}
 }
 

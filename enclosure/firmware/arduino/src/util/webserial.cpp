@@ -52,8 +52,9 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 	line += "]";
 
 	if(xQueueSend(this->queue_send_handle, line.c_str(), 50) != pdTRUE) {
-		Serial.println("[\"syslog/critical\", \"send queue full in Webserial::send(), sending out-of-order:\"]");
-		Serial.println(line.c_str());
+		Serial.write("[\"syslog/critical\", \"send queue full in Webserial::send(), sending out-of-order:\"]\n");
+		Serial.write(line.c_str());
+		Serial.write('\n');
 		Serial.flush();
 	}
 }
@@ -79,7 +80,8 @@ void WebSerial::update() {
 	}
 	while(uxQueueMessagesWaiting(this->queue_send_handle) > 0) {
 		if(xQueueReceive(this->queue_send_handle, webserial_send_line, 0) == pdTRUE) {
-			Serial.println(webserial_send_line);
+			Serial.write(webserial_send_line);
+			Serial.write('\n');
 			Serial.flush();
 		}
 	}
@@ -88,7 +90,8 @@ void WebSerial::update() {
 			this->handle(webserial_recv_line);
 			while(uxQueueMessagesWaiting(this->queue_send_handle) > 0) {
 				if(xQueueReceive(this->queue_send_handle, webserial_send_line, 0) == pdTRUE) {
-					Serial.println(webserial_send_line);
+					Serial.write(webserial_send_line);
+					Serial.write('\n');
 					Serial.flush();
 				}
 			}
@@ -109,8 +112,9 @@ void WebSerial::update() {
 				memcpy(webserial_recv_line, input_chunk.c_str(), input_chunk_pos);
 				webserial_recv_line[input_chunk_pos] = '\0';
 				if(xQueueSend(this->queue_recv_handle, webserial_recv_line, 0) != pdTRUE) {
-					Serial.println("[\"syslog/critical\", \"recv queue full in Webserial::update(), dropping:\"]");
-					Serial.println(webserial_recv_line);
+					Serial.write("[\"syslog/critical\", \"recv queue full in Webserial::update(), dropping:\"]\n");
+					Serial.write(webserial_recv_line);
+					Serial.write('\n');
 					Serial.flush();
 				}
 				strncpy(receive_buffer, input_chunk.substr(input_chunk_pos+1).c_str(), sizeof(receive_buffer)-1);
@@ -126,7 +130,8 @@ void WebSerial::update() {
 			this->handle(webserial_recv_line);
 			while(uxQueueMessagesWaiting(this->queue_send_handle) > 0) {
 				if(xQueueReceive(this->queue_send_handle, webserial_send_line, 0) == pdTRUE) {
-					Serial.println(webserial_send_line);
+					Serial.write(webserial_send_line);
+					Serial.write('\n');
 					Serial.flush();
 				}
 			}

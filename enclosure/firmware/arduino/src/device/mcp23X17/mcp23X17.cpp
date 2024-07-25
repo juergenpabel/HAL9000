@@ -157,11 +157,19 @@ bool MCP23X17::start() {
 
 
 void MCP23X17::loop() {
+	TickType_t ticks_previous;
+	TickType_t ticks_current;
+
 	g_util_webserial.send("syslog/debug", "MCP23X17::loop() now running on 2nd core");
+	ticks_current = xTaskGetTickCount();
 	while(true) {
+		ticks_previous = ticks_current;
 		g_device_mcp23X17.check();
+		ticks_current = xTaskGetTickCount();
+		if((ticks_current-ticks_previous) < pdMS_TO_TICKS(5)) {
+			vTaskDelay(pdMS_TO_TICKS(5) - (ticks_current-ticks_previous));
+		}
 		yield();
-		delay(1);
 	}
 }
 
