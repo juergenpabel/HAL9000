@@ -55,7 +55,6 @@ class Daemon(object):
 		self.actions = {}
 		self.triggers = {}
 		self.callbacks = {'mqtt': {}}
-		self.scripts = {}
 		self.signal_queue = asyncio_Queue()
 		self.mqtt_publish_queue = asyncio_Queue()
 		self.scheduler = apscheduler_schedulers_AsyncIOScheduler()
@@ -120,12 +119,6 @@ class Daemon(object):
 						if mqtt_topic not in self.callbacks['mqtt']:
 							self.callbacks['mqtt'][mqtt_topic] = []
 						self.callbacks['mqtt'][mqtt_topic].append(trigger)
-		for section_name in self.configuration.sections():
-			if section_name.startswith('script:'):
-				script_exec = self.configuration.getstring(section_name, 'exec', fallback=None)
-				if script_exec is not None and os_path_exists(script_exec) is True:
-					script_name = section_name.split(':', 1).pop()
-					self.scripts[script_name] = script_exec
 
 
 	async def loop(self) -> dict:
@@ -221,10 +214,6 @@ class Daemon(object):
 						if self.plugins['brain'].status in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP]:
 							if payload in [Daemon.BRAIN_STATUS_AWAKE, Daemon.BRAIN_STATUS_ASLEEP, Daemon.BRAIN_STATUS_DYING]:
 								self.plugins['brain'].status = payload
-					case 'hal9000/command/brain/script':
-						if payload in self.scripts:
-							self.logger.info(f"[daemon] Executing configured script with id '{payload}': {self.scripts[payload]}")
-							os_system(self.scripts[payload])
 					case other:
 						if self.plugins['brain'].runlevel in [HAL9000_Plugin.RUNLEVEL_STARTING, \
 						                                      HAL9000_Plugin.RUNLEVEL_READY, \
@@ -286,8 +275,6 @@ class Daemon(object):
 			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'], identifier='hal9000-brain') as mqtt:
 				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
 				await mqtt.subscribe('hal9000/command/brain/status')
-				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT.subscribe('hal9000/command/brain/script') for plugin 'brain'")
-				await mqtt.subscribe('hal9000/command/brain/script')
 				for mqtt_topic, trigger in self.callbacks['mqtt'].items():
 					await mqtt.subscribe(mqtt_topic)
 					self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
