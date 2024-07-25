@@ -181,25 +181,21 @@ TwoWire* Microcontroller::twowire_get(uint8_t instance) {
 }
 
 
-static void thread_function(void* parameter) {
-	void (*function)() = (void (*)())parameter;
+static void task_start(void* parameter) {
+	void (*task_function)() = (void (*)())parameter;
 
-	function();
+	task_function();
 }
 
 
-bool Microcontroller::thread_create(void (*function)(), uint8_t core) {
-        static bool result = false;
-
-	if(result == true) {
-//TODO: error handling
+bool Microcontroller::task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name, void (*task_function)(), uint8_t core) {
+	if(core != 0 && core != 1) {
+		g_util_webserial.send("syslog/error", "ESP32: invalid core in Microcontroller::task_create()");
 		return false;
 	}
-	if(core == 1) {
-		xTaskCreatePinnedToCore(thread_function, "MCP23X17", 4096, (void*)function, configMAX_PRIORITIES - 1, nullptr, 1);
-		result = true;
-	}
-	return result;
+	core = 1 - core;
+	xTaskCreatePinnedToCore(task_start, task_name.c_str(), 8192, (void*)task_function, tskIDLE_PRIORITY+1, nullptr, 0);
+	return true;
 }
 
 

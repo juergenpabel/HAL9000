@@ -19,7 +19,7 @@ class AbstractMicrocontroller {
 		virtual void reset(uint32_t timestamp, bool rebooting) = 0;
 		virtual void halt() = 0;
 
-		virtual bool thread_create(void (*function)(), uint8_t core) = 0;
+		virtual bool task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name, void (*task_function)(), uint8_t core) = 0;
 
 		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name, bool recursive) = 0;
 		virtual bool mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name) = 0;

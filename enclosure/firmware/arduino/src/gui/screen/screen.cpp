@@ -41,9 +41,11 @@ void gui_screen_update(bool refresh) {
 		refresh = true;
 		g_gui_screen_forced_refresh = false;
 	}
+	g_device_microcontroller.mutex_enter("gpio");
 	gui_overlay_update(refresh);
 	g_gui_screen(refresh);
 	g_gui_overlay.pushSprite(offset_x, offset_y, TFT_BLACK);
+	g_device_microcontroller.mutex_exit("gpio");
 }
 
 

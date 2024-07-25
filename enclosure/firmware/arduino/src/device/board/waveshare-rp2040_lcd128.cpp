@@ -1,14 +1,14 @@
-#ifdef ARDUINO_ROUNDYPI
+#ifdef ARDUINO_WAVESHARE_RP2040_LCD128
 
 #include <Arduino.h>
 #include <TimeLib.h>
 
-#include "device/board/roundypi.h"
+#include "device/board/waveshare-rp2040_lcd128.h"
 #include "globals.h"
 
 
 Board::Board()
-      :AbstractBoard("roundypi") {
+      :AbstractBoard("waveshare-rp2040_lcd128") {
 }
 
 

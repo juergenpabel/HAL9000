@@ -1,10 +1,12 @@
-#ifndef __DEVICE_BOARD_M5CORE2_H__
-#define __DEVICE_BOARD_M5CORE2_H__
+#ifndef __DEVICE_BOARD_WAVESHARE_RP2040_LCD128_H__
+#define __DEVICE_BOARD_WAVESHARE_RP2040_LCD128_H__
 
-#ifdef ARDUINO_M5STACK_Core2
+#ifdef ARDUINO_WAVESHARE_RP2040_LCD128
 
-#include <freertos/queue.h>
+#include <FreeRTOS.h>
+#include <queue.h>
 #include "device/board/board.h"
+
 
 class Board : public AbstractBoard {
 	public:

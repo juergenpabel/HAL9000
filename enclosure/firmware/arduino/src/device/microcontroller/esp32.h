@@ -42,7 +42,7 @@ class Microcontroller : public AbstractMicrocontroller {
 
 		static int vprintf(const char* format, va_list message);
 
-		virtual bool thread_create(void (*function)(), uint8_t core);
+		virtual bool task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name, void (*task_function)(), uint8_t core);
 
 		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name, bool recursive);
 		virtual bool mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name);

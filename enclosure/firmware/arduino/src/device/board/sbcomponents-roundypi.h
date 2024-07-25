@@ -1,8 +1,10 @@
 #ifndef __DEVICE_BOARD_ROUNDYPI_H__
 #define __DEVICE_BOARD_ROUNDYPI_H__
 
-#ifdef ARDUINO_ROUNDYPI
+#ifdef ARDUINO_SBCOMPONENTS_ROUNDYPI
 
+#include <FreeRTOS.h>
+#include <queue.h>
 #include "device/board/board.h"
 
 

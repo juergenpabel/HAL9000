@@ -160,11 +160,11 @@ TwoWire* Microcontroller::twowire_get(uint8_t instance) {
 }
 
 
-bool Microcontroller::thread_create(void (*function)(), uint8_t core) {
+bool Microcontroller::task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name, void (*task_function)(), uint8_t core) {
 	bool result = false;
 
 	if(core == 1) {
-		multicore_launch_core1(function);
+		multicore_launch_core1(task_function);
 		result = true;
 	}
 	return result;

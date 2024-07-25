@@ -9,6 +9,7 @@ void AbstractBoard::start(bool& host_booting) {
 
 	g_util_webserial.begin();
 	g_device_microcontroller.start(epoch, host_booting);
+	g_device_microcontroller.mutex_create("gpio", false);
 	if(epoch > 0) {
 		setTime(epoch);
 		g_util_webserial.send("syslog/debug", "recovered system time from before microcontroller was resetted");

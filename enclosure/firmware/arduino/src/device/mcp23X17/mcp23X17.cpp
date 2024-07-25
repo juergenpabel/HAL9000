@@ -147,9 +147,11 @@ bool MCP23X17::start() {
 		g_util_webserial.send("syslog/warn", "MCP23X17::start() with invalid state");
 		return false;
 	}
+	g_device_microcontroller.mutex_enter("gpio");
 	this->mcp23X17_gpio_values = this->mcp23X17.readGPIOAB();
+	g_device_microcontroller.mutex_exit("gpio");
 	this->status = MCP23X17_STATE_RUNNING;
-	g_device_microcontroller.thread_create(MCP23X17::loop, 1);
+	g_device_microcontroller.task_create("MCP23X17", MCP23X17::loop, 1);
 	return true;
 }
 
@@ -170,7 +172,9 @@ void MCP23X17::check() {
 	if(this->status != MCP23X17_STATE_RUNNING) {
 		return;
 	}
+	g_device_microcontroller.mutex_enter("gpio");
 	mcp23X17_gpio_values = this->mcp23X17.readGPIOAB();
+	g_device_microcontroller.mutex_exit("gpio");
 	if(mcp23X17_gpio_values != this->mcp23X17_gpio_values) {
 
 		for(int nr=0; nr<16; nr++) {
