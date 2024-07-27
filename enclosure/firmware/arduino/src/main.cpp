@@ -5,12 +5,13 @@
 #include "globals.h"
 #include "application/webserial.h"
 #include "device/webserial.h"
-#include "gui/webserial.h"
+#include "gui/gui.h"
 #include "gui/screen/screen.h"
 #include "gui/screen/error/screen.h"
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/splash/screen.h"
 #include "gui/screen/animations/screen.h"
+#include "gui/webserial.h"
 #include "util/webserial.h"
 #include "util/jpeg.h"
 
@@ -48,20 +49,26 @@ void setup() {
 	g_gui.begin();
 	g_gui.setRotation(TFT_ORIENTATION_LOGICAL);
 	g_gui.fillScreen(TFT_BLACK);
-	g_gui.setTextColor(TFT_WHITE);
-	g_gui.setTextFont(1);
-	g_gui.setTextSize(5);
-	g_gui.setTextDatum(MC_DATUM);
+	g_gui_screen.setColorDepth(16);
+	g_gui_screen.setTextColor(TFT_WHITE, TFT_BLACK, false);
+	g_gui_screen.setTextFont(1);
+	g_gui_screen.setTextSize(5);
+	g_gui_screen.setTextDatum(MC_DATUM);
+	g_gui_screen.createSprite(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
+	if(g_gui_screen.getPointer() == nullptr) {
+		g_util_webserial.send("syslog/warning", "out-of-memory: UI running without screen-sprite (no 'real' graphics)");
+		g_application.notifyError("warn", "11", "Disabled animations", "g_gui_screen.createSprite() failed");
+	}
 	g_gui_overlay.setColorDepth(1);
 	g_gui_overlay.setBitmapColor(TFT_WHITE, TFT_BLACK);
-	g_gui_overlay.createSprite(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
 	g_gui_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
 	g_gui_overlay.setTextFont(1);
 	g_gui_overlay.setTextSize(2);
 	g_gui_overlay.setTextDatum(MC_DATUM);
-	g_gui_buffer = (uint16_t*)malloc(GUI_SCREEN_HEIGHT*GUI_SCREEN_WIDTH*sizeof(uint16_t));
-	if(g_gui_buffer == nullptr) {
-		g_application.notifyError("warn", "11", "Disabled animations", "malloc() for GUI buffer failed");
+	g_gui_overlay.createSprite(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
+	if(g_gui_overlay.getPointer() == nullptr) {
+		g_util_webserial.send("syslog/warning", "out-of-memory: UI running without overlay-sprite");
+		g_application.notifyError("warn", "11", "Disabled overlays", "g_gui_overlay.createSprite() failed");
 	}
 	g_util_webserial.setCommand("application/runtime", on_application_runtime);
 }
@@ -117,14 +124,14 @@ void loop() {
 				break;
 			case StatusRebooting:
 				gui_screen_set("", gui_screen_animations_shutdown);
-				while(gui_screen_get() == gui_screen_animations_shutdown) {
+				while(gui_screen_get() == gui_screen_animations) {
 					gui_screen_update(true);
 				}
 				g_device_board.reset(true);
 				break;
 			case StatusHalting:
 				gui_screen_set("", gui_screen_animations_shutdown);
-				while(gui_screen_get() == gui_screen_animations_shutdown) {
+				while(gui_screen_get() == gui_screen_animations) {
 					gui_screen_update(true);
 				}
 				g_device_board.halt();
@@ -145,7 +152,7 @@ void loop() {
 		gui_screen_set("error", gui_screen_error);
 		configurationTimeout = 0;
 	}
-	gui_screen_update(false);
+	gui_update();
 	if(currentStatus == StatusRunning) {
 		static TickType_t    previousTicks = 0;
 		       TickType_t    currentTicks;

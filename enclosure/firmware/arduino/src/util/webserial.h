@@ -30,7 +30,7 @@ class WebSerial {
 		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 
 	friend class Application;
-	friend void gui_screen_animations(bool refresh);
+	friend bool gui_screen_animations(bool refresh);
 };
 
 #endif

@@ -1,2 +1,2 @@
-void gui_screen_splash(bool refresh);
+bool gui_screen_splash(bool refresh);
 

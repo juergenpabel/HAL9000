@@ -1,2 +1,2 @@
-void gui_screen_idle(bool refresh);
+bool gui_screen_idle(bool refresh);
 

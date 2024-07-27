@@ -1,0 +1,2 @@
+void gui_update();
+

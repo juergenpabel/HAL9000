@@ -29,17 +29,23 @@ static TextsizeMap g_textsizes = {{"small",  1},
                                   {"large",  3}};
 
 
-void gui_screen_qrcode(bool refresh) {
+bool gui_screen_qrcode(bool refresh) {
 	etl::string<GLOBAL_VALUE_SIZE> text_above;
 	etl::string<GLOBAL_VALUE_SIZE> text_url;
 	etl::string<GLOBAL_VALUE_SIZE> text_below;
 
 	if(refresh == true) {
-		uint32_t color_screen = TFT_BLACK;
-		uint32_t color_text = TFT_WHITE;
-		uint32_t textsize_above = 2;
-		uint32_t textsize_below = 2;
+		TFT_eSPI* gui;
+		uint32_t  color_screen = TFT_BLACK;
+		uint32_t  color_text = TFT_WHITE;
+		uint32_t  textsize_above = 2;
+		uint32_t  textsize_below = 2;
 
+		gui = &g_gui_screen;
+		if(g_gui_screen.getPointer() == nullptr) {
+			gui = &g_gui;
+			g_util_webserial.send("syslog/debug", "gui_screen_qrcode() using direct rendering because no screen-sprite");
+		}
 		if(g_application.hasEnv("gui/screen:qrcode/text-above") == true) {
 			text_above = g_application.getEnv("gui/screen:qrcode/text-above");
 		}
@@ -73,19 +79,22 @@ void gui_screen_qrcode(bool refresh) {
 				textsize_below = iter->second;
 			}
 		}
-		g_gui.fillScreen(color_screen);
+		if(gui == &g_gui) {
+			g_device_microcontroller.mutex_enter("gpio");
+		}
+		gui->fillScreen(color_screen);
 		if(text_above.size() > 0) {
 			uint16_t pos_x;
 			uint16_t pos_y;
 
-			pos_x = (TFT_WIDTH -GUI_SCREEN_WIDTH )/2+(GUI_SCREEN_WIDTH /2);
-			pos_y = (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*2);
-			g_gui.setTextColor(color_text, color_screen, false);
-			g_gui.setTextFont(1);
-			g_gui.setTextSize(textsize_above);
-			g_gui.setTextDatum(MC_DATUM);
-			g_gui.setTextWrap(true);
-			g_gui.drawString(text_above.c_str(), pos_x, pos_y-g_gui.fontHeight()-5);
+			pos_x = (gui->width() -GUI_SCREEN_WIDTH )/2+(GUI_SCREEN_WIDTH /2);
+			pos_y = (gui->height()-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*2);
+			gui->setTextColor(color_text, color_screen, false);
+			gui->setTextFont(1);
+			gui->setTextSize(textsize_above);
+			gui->setTextDatum(MC_DATUM);
+			gui->setTextWrap(true);
+			gui->drawString(text_above.c_str(), pos_x, pos_y-gui->fontHeight()-5);
 		}
 		if(text_url.size() > 0) {
 			static uint8_t qr_temp[QRCODE_SIZE];
@@ -100,13 +109,13 @@ void gui_screen_qrcode(bool refresh) {
 				qr_size = qrcodegen_getSize(qr_final);
 				qr_dotsize = (min(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT) / 8 * 4) / qr_size;
 
-				offset_x = ((TFT_WIDTH -GUI_SCREEN_WIDTH )/2)+(((GUI_SCREEN_WIDTH )-(qr_dotsize*qr_size))/2);
-				offset_y = ((TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2)+(((GUI_SCREEN_HEIGHT)-(qr_dotsize*qr_size))/2);
-				g_gui.fillRoundRect(offset_x-(qr_dotsize*1), offset_y-(qr_dotsize*1), (1+qr_size+1)*qr_dotsize, (1+qr_size+1)*qr_dotsize, qr_dotsize*1, TFT_WHITE);
+				offset_x = ((gui->width() -GUI_SCREEN_WIDTH )/2)+(((GUI_SCREEN_WIDTH )-(qr_dotsize*qr_size))/2);
+				offset_y = ((gui->height()-GUI_SCREEN_HEIGHT)/2)+(((GUI_SCREEN_HEIGHT)-(qr_dotsize*qr_size))/2);
+				gui->fillRoundRect(offset_x-(qr_dotsize*1), offset_y-(qr_dotsize*1), (1+qr_size+1)*qr_dotsize, (1+qr_size+1)*qr_dotsize, qr_dotsize*1, TFT_WHITE);
 				for(uint8_t y=0; y<qr_size; y++) {
 					for(uint8_t x=0; x<qr_size; x++) {
 						if(qrcodegen_getModule(qr_final, x, y) == true) {
-							g_gui.fillRect(offset_x+(qr_dotsize*x), offset_y+(qr_dotsize*y), qr_dotsize, qr_dotsize, TFT_BLACK);
+							gui->fillRect(offset_x+(qr_dotsize*x), offset_y+(qr_dotsize*y), qr_dotsize, qr_dotsize, TFT_BLACK);
 						}
 					}
 				}
@@ -116,14 +125,18 @@ void gui_screen_qrcode(bool refresh) {
 			uint16_t pos_x;
 			uint16_t pos_y;
 
-			pos_x = (TFT_WIDTH -GUI_SCREEN_WIDTH )/2+(GUI_SCREEN_WIDTH /2);
-			pos_y = (TFT_HEIGHT-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*6);
-			g_gui.setTextColor(color_text, color_screen, false);
-			g_gui.setTextFont(1);
-			g_gui.setTextSize(textsize_below);
-			g_gui.setTextDatum(MC_DATUM);
-			g_gui.drawString(text_below.c_str(), pos_x, pos_y+g_gui.fontHeight()+5);
+			pos_x = (gui->width() -GUI_SCREEN_WIDTH )/2+(GUI_SCREEN_WIDTH /2);
+			pos_y = (gui->height()-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*6);
+			gui->setTextColor(color_text, color_screen, false);
+			gui->setTextFont(1);
+			gui->setTextSize(textsize_below);
+			gui->setTextDatum(MC_DATUM);
+			gui->drawString(text_below.c_str(), pos_x, pos_y+gui->fontHeight()+5);
+		}
+		if(gui == &g_gui) {
+			g_device_microcontroller.mutex_exit("gpio");
 		}
 	}
+	return refresh;
 }
 

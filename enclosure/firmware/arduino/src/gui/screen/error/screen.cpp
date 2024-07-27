@@ -8,7 +8,7 @@
 #include "globals.h"
 
 
-void gui_screen_error(bool refresh) {
+bool gui_screen_error(bool refresh) {
 	etl::string<GLOBAL_VALUE_SIZE> error_message;
 	etl::string<GLOBAL_VALUE_SIZE> error_url;
 	etl::string<GLOBAL_VALUE_SIZE> error_id;
@@ -32,7 +32,7 @@ void gui_screen_error(bool refresh) {
 		g_application.setEnv("gui/screen:qrcode/text-above", error_message);
 		g_application.setEnv("gui/screen:qrcode/text-url",   error_url);
 		g_application.setEnv("gui/screen:qrcode/text-below", error_id.insert(0, "Error: "));
-		gui_screen_qrcode(true);
+		refresh = gui_screen_qrcode(refresh);
 		g_application.delEnv("gui/screen:qrcode/text-below");
 		g_application.delEnv("gui/screen:qrcode/text-url");
 		g_application.delEnv("gui/screen:qrcode/text-above");
@@ -41,5 +41,6 @@ void gui_screen_error(bool refresh) {
 		g_application.delEnv("gui/screen:qrcode/color-text");
 		g_application.delEnv("gui/screen:qrcode/color-screen");
 	}
+	return refresh;
 }
 
