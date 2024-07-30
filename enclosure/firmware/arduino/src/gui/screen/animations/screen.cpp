@@ -27,7 +27,7 @@ static etl::list<animation_t, 8>  g_animation;
 static int                        g_current_frame = 0;
 
 
-bool gui_screen_animations(bool refresh) {
+gui_refresh_t gui_screen_animations(bool refresh) {
 	static etl::string<GLOBAL_FILENAME_SIZE> filename;
 	static etl::format_spec                  frame_format(10, 2, 0, false, false, false, false, '0');
 
@@ -62,7 +62,7 @@ bool gui_screen_animations(bool refresh) {
 				}
 				g_animation.pop_front();
 				if(g_animation.empty() == true) {
-					return false;
+					return RefreshIgnore;
 				}
 				current_animation = &g_animation.front();
 			}
@@ -80,7 +80,7 @@ bool gui_screen_animations(bool refresh) {
 			etl::to_string(g_current_frame, filename, frame_format, true);
 			filename += ".jpg";
 			util_jpeg_decode565_littlefs(filename.c_str(), (uint16_t*)g_gui_screen.getPointer(), GUI_SCREEN_WIDTH*GUI_SCREEN_HEIGHT*sizeof(uint16_t));
-			refresh = true;
+			g_gui_screen.pushSprite((g_gui.width()-GUI_SCREEN_WIDTH)/2, (g_gui.height()-GUI_SCREEN_HEIGHT)/2);
 		} else {
 			if(g_current_frame == 0) {
 				g_device_microcontroller.mutex_enter("gpio");
@@ -91,14 +91,13 @@ bool gui_screen_animations(bool refresh) {
 				g_gui.setTextDatum(MC_DATUM);
 				g_gui.drawString(current_animation->title.c_str(), g_gui.width()/2, g_gui.height()/2);
 				g_device_microcontroller.mutex_exit("gpio");
-				refresh = true;
 			}
 			vTaskDelay(pdMS_TO_TICKS(50)); // roughly estimated image loading-time difference
 		}
 		vTaskDelay(pdMS_TO_TICKS(current_animation->delay));
 		g_current_frame++;
 	}
-	return refresh;
+	return RefreshIgnore;
 }
 
 
@@ -160,20 +159,20 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 }
 
 
-bool gui_screen_animations_startup(bool refresh) {
+gui_refresh_t gui_screen_animations_startup(bool refresh) {
 	g_device_microcontroller.mutex_enter("gpio");
 	gui_screen_animations_load("/system/gui/screen/animations/startup.json");
 	g_device_microcontroller.mutex_exit("gpio");
-	gui_screen_set("animations", gui_screen_animations);
-	return false;
+	gui_screen_set("animations", gui_screen_animations, false);
+	return RefreshIgnore;
 }
 
 
-bool gui_screen_animations_shutdown(bool refresh) {
+gui_refresh_t gui_screen_animations_shutdown(bool refresh) {
 	g_device_microcontroller.mutex_enter("gpio");
 	gui_screen_animations_load("/system/gui/screen/animations/shutdown.json");
 	g_device_microcontroller.mutex_exit("gpio");
-	gui_screen_set("animations", gui_screen_animations);
-	return false;
+	gui_screen_set("animations", gui_screen_animations, false);
+	return RefreshIgnore;
 }
 

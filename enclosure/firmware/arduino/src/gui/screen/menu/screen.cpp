@@ -3,10 +3,11 @@
 #include "globals.h"
 
 
-bool gui_screen_menu(bool refresh) {
+gui_refresh_t gui_screen_menu(bool refresh) {
 	static etl::string<GLOBAL_VALUE_SIZE>  menu_title;
 	static etl::string<GLOBAL_VALUE_SIZE>  menu_item;
 	       TFT_eSPI* gui;
+	       gui_refresh_t gui_refresh = RefreshIgnore;
 
 	gui = &g_gui_screen;
 	if(g_gui_screen.getPointer() == nullptr) {
@@ -28,8 +29,10 @@ bool gui_screen_menu(bool refresh) {
 		gui->drawString(menu_title.c_str(), (gui->width()-GUI_SCREEN_WIDTH)/2+GUI_SCREEN_WIDTH/2, (gui->height()-GUI_SCREEN_HEIGHT)/2+GUI_SCREEN_HEIGHT/8*3);
 		gui->setTextSize(3);
 		gui->drawString(menu_item.c_str(), (gui->width()-GUI_SCREEN_WIDTH)/2+GUI_SCREEN_WIDTH/2, (gui->height()-GUI_SCREEN_HEIGHT)/2+GUI_SCREEN_HEIGHT/8*5);
-		refresh = true;
+		if(gui == &g_gui_screen) {
+			gui_refresh = RefreshScreen;
+		}
 	}
-	return refresh;
+	return gui_refresh;
 }
 

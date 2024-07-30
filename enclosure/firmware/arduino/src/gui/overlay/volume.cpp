@@ -1,4 +1,6 @@
 #include "gui/screen/screen.h"
+#include "gui/screen/idle/screen.h"
+#include "gui/screen/menu/screen.h"
 #include "gui/overlay/overlay.h"
 #include "util/jpeg.h"
 #include "globals.h"
@@ -7,13 +9,14 @@
 #define RADIUS_MAX (GUI_SCREEN_WIDTH/2 -  5)
 
 
-bool gui_overlay_volume(bool refresh) {
+gui_refresh_t gui_overlay_volume(bool refresh) {
 	static uint8_t  previous_volume_level = 255;
 	static uint16_t previous_volume_color = TFT_BLACK;
 	       uint16_t volume_color = TFT_WHITE;
 	       uint8_t  volume_level = 0;
 	       uint16_t log_ctr_x = GUI_SCREEN_WIDTH /2;
 	       uint16_t log_ctr_y = GUI_SCREEN_HEIGHT/2;
+	       gui_refresh_t gui_refresh = RefreshIgnore;
 
 	if(g_application.hasEnv("gui/overlay:volume/level") == true) {
 		volume_level = atoi(g_application.getEnv("gui/overlay:volume/level").c_str());
@@ -37,7 +40,10 @@ bool gui_overlay_volume(bool refresh) {
 		}
 	}
 	if(refresh == true) {
-		g_gui_overlay.setBitmapColor(volume_color, TFT_BLACK);
+		gui_screen_func screen_current;
+
+		screen_current = gui_screen_get();
+		gui_refresh = RefreshOverlay;
 		for(uint8_t d=0; d<=100; d+=1) {
 			double dx;
 			double dy;
@@ -48,11 +54,17 @@ bool gui_overlay_volume(bool refresh) {
 				g_gui_overlay.drawLine(log_ctr_x+(dx*RADIUS_MIN), log_ctr_y+(dy*RADIUS_MIN),
 				                       log_ctr_x+(dx*RADIUS_MAX), log_ctr_y+(dy*RADIUS_MAX), volume_color );
 			} else {
-				g_gui_overlay.drawLine(log_ctr_x+(dx*RADIUS_MIN), log_ctr_y+(dy*RADIUS_MIN),
-				                       log_ctr_x+(dx*RADIUS_MAX), log_ctr_y+(dy*RADIUS_MAX), TFT_BLACK );
+				if(screen_current == gui_screen_idle || screen_current == gui_screen_menu) {
+					g_gui_overlay.drawLine(log_ctr_x+(dx*RADIUS_MIN), log_ctr_y+(dy*RADIUS_MIN),
+					                       log_ctr_x+(dx*RADIUS_MAX), log_ctr_y+(dy*RADIUS_MAX), TFT_BLACK );
+				} else {
+					g_gui_overlay.drawLine(log_ctr_x+(dx*RADIUS_MIN), log_ctr_y+(dy*RADIUS_MIN),
+					                       log_ctr_x+(dx*RADIUS_MAX), log_ctr_y+(dy*RADIUS_MAX), TFT_TRANSPARENT );
+					gui_refresh = RefreshAll;
+				}
 			}
 		}
 	}
-	return refresh;
+	return gui_refresh;
 }
 

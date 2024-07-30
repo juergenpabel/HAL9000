@@ -50,21 +50,12 @@ void setup() {
 	g_gui.setRotation(TFT_ORIENTATION_LOGICAL);
 	g_gui.fillScreen(TFT_BLACK);
 	g_gui_screen.setColorDepth(16);
-	g_gui_screen.setTextColor(TFT_WHITE, TFT_BLACK, false);
-	g_gui_screen.setTextFont(1);
-	g_gui_screen.setTextSize(5);
-	g_gui_screen.setTextDatum(MC_DATUM);
 	g_gui_screen.createSprite(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
 	if(g_gui_screen.getPointer() == nullptr) {
 		g_util_webserial.send("syslog/warning", "out-of-memory: UI running without screen-sprite (no 'real' graphics)");
 		g_application.notifyError("warn", "11", "Disabled animations", "g_gui_screen.createSprite() failed");
 	}
-	g_gui_overlay.setColorDepth(1);
-	g_gui_overlay.setBitmapColor(TFT_WHITE, TFT_BLACK);
-	g_gui_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
-	g_gui_overlay.setTextFont(1);
-	g_gui_overlay.setTextSize(2);
-	g_gui_overlay.setTextDatum(MC_DATUM);
+	g_gui_overlay.setColorDepth(8);
 	g_gui_overlay.createSprite(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
 	if(g_gui_overlay.getPointer() == nullptr) {
 		g_util_webserial.send("syslog/warning", "out-of-memory: UI running without overlay-sprite");

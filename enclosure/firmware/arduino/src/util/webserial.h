@@ -1,6 +1,7 @@
 #ifndef __ROUNDYPI_UTIL_WEBSERIAL_H__
 #define __ROUNDYPI_UTIL_WEBSERIAL_H__
 
+#include "gui/gui.h"
 #include "device/board/include.h"
 #include <etl/string.h>
 #include <etl/map.h>
@@ -30,7 +31,7 @@ class WebSerial {
 		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 
 	friend class Application;
-	friend bool gui_screen_animations(bool refresh);
+	friend gui_refresh_t gui_screen_animations(bool refresh);
 };
 
 #endif

@@ -1,14 +1,16 @@
 #include <TimeLib.h>
+#include "gui/gui.h"
 #include "gui/screen/screen.h"
 #include "globals.h"
 
 
-bool gui_screen_idle(bool refresh) {
+gui_refresh_t gui_screen_idle(bool refresh) {
 	static time_t    clock_previous = 0;
 	       time_t    clock_current = now();
 	       bool      clock_show = true;
 	       bool      clock_synced = false;
                TFT_eSPI* gui;
+	       gui_refresh_t gui_refresh = RefreshIgnore;
 
 	gui = &g_gui_screen;
 	if(g_gui_screen.getPointer() == nullptr) {
@@ -44,9 +46,11 @@ bool gui_screen_idle(bool refresh) {
 				gui->setTextColor(TFT_RED, TFT_BLACK, true);
 			}
 			gui->drawString(clock, (gui->width()-GUI_SCREEN_WIDTH)+(GUI_SCREEN_WIDTH/2), (gui->height()-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/2));
-			refresh = true;
+			if(gui == &g_gui_screen) {
+				gui_refresh = RefreshScreen;
+			}
 		}
 	}
-	return refresh;
+	return gui_refresh;
 }
 

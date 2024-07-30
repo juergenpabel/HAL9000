@@ -21,7 +21,7 @@ static ColorMap g_colors = {{"black",  TFT_BLACK},
                             {"blue",   TFT_BLUE},
                             {"yellow", TFT_YELLOW},
                             {"orange", TFT_ORANGE},
-                            {"silver", TFT_SILVER}};
+                            {"grey",   TFT_DARKGREY}};
 
 typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, uint32_t, 3> TextsizeMap;
 static TextsizeMap g_textsizes = {{"small",  1},
@@ -29,17 +29,18 @@ static TextsizeMap g_textsizes = {{"small",  1},
                                   {"large",  3}};
 
 
-bool gui_screen_qrcode(bool refresh) {
+gui_refresh_t gui_screen_qrcode(bool refresh) {
 	etl::string<GLOBAL_VALUE_SIZE> text_above;
 	etl::string<GLOBAL_VALUE_SIZE> text_url;
 	etl::string<GLOBAL_VALUE_SIZE> text_below;
+	gui_refresh_t gui_refresh = RefreshIgnore;
 
 	if(refresh == true) {
-		TFT_eSPI* gui;
 		uint32_t  color_screen = TFT_BLACK;
 		uint32_t  color_text = TFT_WHITE;
 		uint32_t  textsize_above = 2;
 		uint32_t  textsize_below = 2;
+		TFT_eSPI* gui;
 
 		gui = &g_gui_screen;
 		if(g_gui_screen.getPointer() == nullptr) {
@@ -135,8 +136,10 @@ bool gui_screen_qrcode(bool refresh) {
 		}
 		if(gui == &g_gui) {
 			g_device_microcontroller.mutex_exit("gpio");
+		} else {
+			gui_refresh = RefreshScreen;
 		}
 	}
-	return refresh;
+	return gui_refresh;
 }
 

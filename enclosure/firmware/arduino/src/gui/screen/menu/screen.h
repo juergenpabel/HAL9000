@@ -1,2 +1,2 @@
-bool gui_screen_menu(bool refresh);
+gui_refresh_t gui_screen_menu(bool refresh);
 
