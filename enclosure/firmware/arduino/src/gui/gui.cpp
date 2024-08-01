@@ -9,7 +9,7 @@ void gui_update() {
 
 	gui_refresh |= gui_screen_update(false);
 	gui_refresh |= gui_overlay_update(false);
-	if(g_gui_screen.getPointer() != nullptr && g_gui_overlay.getPointer() != nullptr) {
+	if(g_gui_screen.getPointer() != nullptr) {
 		uint16_t offset_x = (g_gui.width() -GUI_SCREEN_WIDTH )/2;
 		uint16_t offset_y = (g_gui.height()-GUI_SCREEN_HEIGHT)/2;
 
@@ -17,13 +17,21 @@ void gui_update() {
 			case RefreshScreen:
 				g_device_microcontroller.mutex_enter("gpio");
 				g_gui_screen.pushSprite(offset_x, offset_y);
-				g_gui_overlay.pushSprite(offset_x, offset_y, TFT_TRANSPARENT);
+				if(g_gui_overlay.getPointer() != nullptr) {
+					g_gui_overlay.pushSprite(offset_x, offset_y, TFT_TRANSPARENT);
+				} else {
+					gui_overlay_update(true);
+				}
 				g_device_microcontroller.mutex_exit("gpio");
 				break;
 			default:
 				if((gui_refresh & RefreshOverlay) == RefreshOverlay) {
 					g_device_microcontroller.mutex_enter("gpio");
-					g_gui_overlay.pushSprite(offset_x, offset_y, TFT_TRANSPARENT);
+					if(g_gui_overlay.getPointer() != nullptr) {
+						g_gui_overlay.pushSprite(offset_x, offset_y, TFT_TRANSPARENT);
+					} else {
+						gui_overlay_update(true);
+					}
 					g_device_microcontroller.mutex_exit("gpio");
 				}
 		}

@@ -71,9 +71,9 @@ class Action(HAL9000_Action):
 			synced = 'true' if self.daemon.plugins['brain'].time == 'synchronized' else 'false'
 			self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': synced}})
 			if self.daemon.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
-				self.send_frontend_command('gui/screen', {'idle': {}})
+				self.send_frontend_command('gui/screen', {'on': {}})
 			else:
-				self.send_frontend_command('gui/screen', {'none': {}})
+				self.send_frontend_command('gui/screen', {'off': {}})
 		if new_status in [Action.FRONTEND_STATUS_ONLINE, Action.FRONTEND_STATUS_OFFLINE]:
 			return True
 		return False
@@ -81,6 +81,9 @@ class Action(HAL9000_Action):
 
 	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_screen: str, new_screen: str) -> bool:
 		self.daemon.logger.debug(f"STATUS at screen transition = {self.daemon.plugins}")
+		if old_screen == 'off' and new_screen == 'on':
+			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
+			self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 		return True
 
 
@@ -156,13 +159,9 @@ class Action(HAL9000_Action):
 					                                                                    'value': 'false'}}},
 					                            'frontend:gui/screen#animations/loop:timeout')
 				else:
-					#TODO: displayOn
-					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
-				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'on', 'parameter': {}}}})
 			case Daemon.BRAIN_STATUS_ASLEEP:
-				self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
-				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-				#TODO: displayOff
+				self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}}}})
 		return True
 
 

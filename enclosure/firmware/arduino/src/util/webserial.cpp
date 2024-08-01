@@ -4,6 +4,7 @@
 
 #include "util/webserial.h"
 #include "gui/screen/screen.h"
+#include "gui/screen/animations/screen.h"
 #include "gui/screen/error/screen.h"
 #include "globals.h"
 
@@ -68,7 +69,7 @@ void WebSerial::update() {
 	       size_t serial_available = 0;
 
 	if(Serial == false) {
-		if(gui_screen_get() != gui_screen_error) {
+		if(gui_screen_get() != gui_screen_animations && gui_screen_get() != gui_screen_error) {
 			Error error("error", "09", "Lost connection to host", "ERROR #09");
 
 			g_util_webserial.send(error.level.insert(0, "syslog/"), error.message); // TODO: + " => " + error.detail);

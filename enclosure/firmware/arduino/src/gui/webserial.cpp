@@ -17,6 +17,14 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 	static gui_screen_name screen_name;
 	       gui_screen_func screen_func = nullptr;
 
+	if(body.containsKey("off") == true) {
+		screen_name = "off";
+		screen_func = gui_screen_off;
+	}
+	if(body.containsKey("on") == true) {
+		screen_name = "on";
+		screen_func = gui_screen_on;
+	}
 	if(body.containsKey("animations") == true) {
 		g_application.delEnv("gui/screen:animations/name");
 		if(body["animations"].containsKey("name") == true) {

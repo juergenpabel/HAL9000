@@ -4,7 +4,7 @@
 #include "globals.h"
 
 
-static gui_screen_func  g_screen = gui_screen_none;
+static gui_screen_func  g_screen = gui_screen_on;
 static bool             g_screen_refresh = false;
 
 
@@ -13,18 +13,27 @@ gui_screen_func gui_screen_get() {
 }
 
 
-void gui_screen_set(const gui_screen_name& screen_name, gui_screen_func screen_func, bool screen_refresh) {
+gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_func screen_func, bool screen_refresh) {
 	static etl::string<GLOBAL_VALUE_SIZE> payload;
+	       gui_screen_func                previous_screen = nullptr;
 
 	if(screen_func != nullptr && screen_func != g_screen) {
+		previous_screen = g_screen;
 		g_screen = screen_func;
 		g_screen_refresh = screen_refresh;
-		if(screen_name.size() > 0) {
-			payload = "{\"screen\":\"<NAME>\"}";
-			payload.replace(11, 6, screen_name);
-			g_util_webserial.send("gui/event", payload, false);
+		if(screen_refresh == true) {
+                        if(g_gui_screen.getPointer() != nullptr) {
+                                g_gui_screen.fillSprite(TFT_TRANSPARENT);
+                        }
+			gui_overlay_set_refresh();
+			if(screen_name.size() > 0) {
+				payload = "{\"screen\":\"<NAME>\"}";
+				payload.replace(11, 6, screen_name);
+				g_util_webserial.send("gui/event", payload, false);
+			}
 		}
 	}
+	return previous_screen;
 }
 
 
@@ -39,6 +48,24 @@ gui_refresh_t gui_screen_update(bool refresh) {
 		refresh = true;
 	}
 	return g_screen(refresh);
+}
+
+
+gui_refresh_t gui_screen_off(bool refresh) {
+	if(refresh == true) {
+		gui_overlay_set("off", gui_overlay_off, false);
+		g_device_board.displayOff();
+	}
+	return RefreshIgnore;
+}
+
+
+gui_refresh_t gui_screen_on(bool refresh) {
+	if(refresh == true) {
+		g_device_board.displayOn();
+		gui_overlay_set("on", gui_overlay_on, false);
+	}
+	return RefreshAll;
 }
 
 
