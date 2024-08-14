@@ -11,12 +11,13 @@
 
 
        const etl::string<GLOBAL_VALUE_SIZE> Application::Null;
-static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown", "starting", "configuring", "waiting",
-                                                                       "ready", "running", "resetting", "rebooting", "halting" };
+static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown", "starting", "configuring", "ready", "running",
+                                                                       "resetting", "rebooting", "halting" };
 
 
 Application::Application() 
             :m_status(StatusUnknown)
+            ,m_errors()
             ,m_environment()
             ,m_settings("/system/application/settings.ini") {
 }
@@ -121,71 +122,63 @@ void Application::delSetting(const etl::string<GLOBAL_KEY_SIZE>& key) {
 }
 
 
-static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> g_application_configuration;
-
-
 void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-	JsonObject current;
+	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> configuration;
+	       JsonObject                                          current;
 
-	if(command == "") { // empty line means end-of-configuration
-		File file;
-
-		file = LittleFS.open("/system/application/configuration.json", "w");
-		if(file == true) {
-			serializeJson(g_application_configuration, file);
-			file.close();
-			g_application_configuration.clear();
-		} else {
-			g_util_webserial.send("syslog/warning", "Application::onConfiguration() failed to open '/system/application/configuration.json' "
-			                                        "in write-mode, not persisting application-configuration (=> no fast resets)");
+	if(g_application.getStatus() == StatusConfiguring) {
+		if(command != "") { // non-empty line means configuration instruction
+			current = configuration.createNestedObject();
+			current["command"].set((char*)command.c_str());
+			current["data"].set(data);
 		}
-		g_application.setStatus(StatusWaiting);
-		g_util_webserial.send("syslog/debug", "Application::onConfiguration() changed status to 'waiting'");
-		return;
-	}
-	if(gui_screen_get() == gui_screen_error) {
-		gui_screen_set("", gui_screen_animations_startup);
-	}
-	current = g_application_configuration.createNestedObject();
-	current["command"].set((char*)command.c_str());
-	current["data"].set(data);
-}
+		if(command == "") { // empty line means end-of-configuration
+			if(configuration.size() > 0) {
+				File file;
 
-
-void Application::onWaiting() {
-	if(LittleFS.exists("/system/application/configuration.json") == true) {
-		File file;
-
-		file = LittleFS.open("/system/application/configuration.json", "r");
-		if(file == true) {
-			g_application_configuration.clear();
-			if(deserializeJson(g_application_configuration, file) != DeserializationError::Ok) {
-				g_application.notifyError("error", "12", "Configuration error", "/system/application/configuration.json");
-			}
-			if(g_application_configuration.isNull() == false) {
-				for(JsonObject item : g_application_configuration.as<JsonArray>()) {
-					if(item.containsKey("command") == true && item.containsKey("data") == true) {
-						g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
-					}
+				g_util_webserial.send("syslog/debug", "saving application configuration to '/system/application/configuration.json'");
+				file = LittleFS.open("/system/application/configuration.json", "w");
+				if(file == true) {
+					serializeJson(configuration, file);
+					file.close();
+					configuration.clear();
+				} else {
+					g_util_webserial.send("syslog/warning", "Application::onConfiguration() failed to open '/system/application/configuration.json' "
+					                                        "in write-mode, not persisting application-configuration");
 				}
 			}
-			file.close();
+			g_application.setStatus(StatusReady);
 		}
+	} else {
+		if(configuration.size() == 0) {
+			if(LittleFS.exists("/system/application/configuration.json") == true) {
+				File file;
+
+				file = LittleFS.open("/system/application/configuration.json", "r");
+				if(file == true) {
+					configuration.clear();
+					if(deserializeJson(configuration, file) != DeserializationError::Ok) {
+						g_application.notifyError("error", "12", "Configuration error", "/system/application/configuration.json");
+					} else {
+						g_util_webserial.send("syslog/debug", "application configuration loaded from '/system/application/configuration.json'");
+					}
+					file.close();
+				} else {
+					g_application.notifyError("error", "14", "Config file error", "/system/application/configuration.json");
+				}
+			} else {
+				g_application.notifyError("error", "15", "No config file", "/system/application/configuration.json");
+			}
+		}
+		if(configuration.size() > 0) {
+			for(JsonObject item : configuration.as<JsonArray>()) {
+				if(item.containsKey("command") == true && item.containsKey("data") == true) {
+					g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
+				}
+			}
+		}
+		configuration.clear();
 	}
-}
-
-
-void Application::onReady() {
-	while(this->m_errors.empty() == false) {
-		const Error& error = this->m_errors.front();
-
-		this->notifyError(error.level, error.id, error.message, error.detail);
-		this->m_errors.pop();
-	}
-}
-
-
-void Application::onRunning() {
 }
 
 
@@ -206,6 +199,6 @@ void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const e
 	webserial_body["error"]["id"] = id.c_str();
 	webserial_body["error"]["message"] = message.c_str();
 	webserial_body["error"]["detail"] = detail.c_str();
-	g_util_webserial.send("application/event", webserial_body);
+	g_util_webserial.send("application/error", webserial_body);
 }
 

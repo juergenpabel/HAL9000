@@ -205,7 +205,7 @@ void MCP23X17::check() {
 							input_device = (MCP23X17_InputDevice*)device;
 							input_device->process(MCP23X17::PIN_NAMES[nr], MCP23X17::PIN_VALUES[new_value], json);
 							if(json.size() > 0) {
-								g_util_webserial.send("device/event", json);
+								g_util_webserial.send("device/input", json);
 							}
 						}
 					}

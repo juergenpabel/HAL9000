@@ -27,12 +27,18 @@ class HAL9000(Frontend):
 		arduino_device   = configuration.getstring('frontend:arduino', 'device',   fallback=None)
 		arduino_baudrate = configuration.getint   ('frontend:arduino', 'baudrate', fallback=115200)
 		arduino_timeout  = configuration.getfloat ('frontend:arduino', 'timeout',  fallback=0.01)
+		arduino_config   = configuration.getstring('frontend:arduino', 'configuration', fallback='littlefs')
 		if arduino_device is None:
 			logging_getLogger('uvicorn').info(f"[frontend:arduino] no device configured (section 'frontend:arduino', option 'device' in frontend.ini)")
 			return None
 		if os_path_exists(arduino_device) is False:
 			logging_getLogger('uvicorn').error(f"[frontend:arduino] configured device '{arduino_device}' does not exist")
 			return None
+		if arduino_config in ['littlefs', 'frontend']:
+			logging_getLogger('uvicorn').info(f"[frontend:arduino] using '{arduino_config}' as configuration-source for arduino application")
+		else:
+			logging_getLogger('uvicorn').warning(f"[frontend:arduino] unsupported value for 'configuration' in section 'frontend:arduino': " \
+			                                     f"'{arduino_config}' (falling back to 'littlefs')")
 		while self.serial is None:
 			try:
 				self.serial = serial_Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate,
@@ -52,13 +58,18 @@ class HAL9000(Frontend):
 							logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
 				logging_getLogger('uvicorn').debug(f"[frontend:arduino] MCU exited status 'starting' (now: '{response[1]['status']['name']}')")
 				if response[0] == 'application/runtime' \
-				    and 'status' in response[1] and 'name' in response[1]['status'] \
-				    and response[1]['status']['name'] == 'configuring':
+				or response[1] is not False and 'status' in response[1] \
+				                            and 'name' in response[1]['status'] \
+				                            and 'configuring' == response[1]['status']['name']:
 					arduino_name = None
 					for bus in usb_busses():
 						for device in bus.devices:
 							arduino_name = configuration.get('arduino:devices', f'{device.idVendor:04x}:{device.idProduct:04x}', fallback=arduino_name)
 					if arduino_name is not None:
+						logging_getLogger('uvicorn').info(f"[frontend:arduino] identified /dev/ttyHAL9000 as '{arduino_name}'")
+					else:
+						logging_getLogger('uvicorn').warning(f"[frontend:arduino] unspecified /dev/ttyHAL9000")
+					if arduino_config == 'frontend' and arduino_name is not None:
 						i2c_bus = configuration.getint(f'arduino:{arduino_name}', 'i2c-bus', fallback=0)
 						i2c_addr = configuration.getint(f'arduino:{arduino_name}', 'i2c-address', fallback=32)
 						await self.serial_writeline('["device/mcp23X17", {"init":{"i2c-bus":%d,"i2c-address":%d}}]' % (i2c_bus, i2c_addr))
@@ -87,8 +98,9 @@ class HAL9000(Frontend):
 					await asyncio_sleep(0.5)
 					logging_getLogger('uvicorn').debug(f"[frontend:arduino] configured '{arduino_device}'")
 				while response[0] != 'application/runtime' \
-				    or 'status' not in response[1] or 'name' not in response[1]['status'] \
-				    or response[1]['status']['name'] == 'configuring':
+				   or response[1] is False or 'status'  not in response[1] \
+				                           or 'name'    not in response[1]['status'] \
+				                           or 'configuring' == response[1]['status']['name']:
 					await asyncio_sleep(0.5)
 					line = None
 					while line is None:
@@ -98,11 +110,12 @@ class HAL9000(Frontend):
 					except Exception as e:
 						logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
 				logging_getLogger('uvicorn').debug(f"[frontend:arduino] MCU exited status 'configuring' (now: '{response[1]['status'] ['name']}')")
-				if response[1]['status']['name'] == 'waiting':
+				if response[1]['status']['name'] == 'ready':
 					await self.serial_writeline('["application/environment", {"set":{"key": "gui/screen:animations/loop", "value": "false"}}]')
 				while response[0] != 'application/runtime' \
-				    or 'status' not in response[1] or 'name' not in response[1]['status'] \
-				    or response[1]['status']['name'] != 'running':
+				   or response[1] is False or 'status' not in response[1] \
+				                           or 'name' not in response[1]['status'] \
+				                           or 'running' != response[1]['status']['name']:
 					line = None
 					while line is None:
 						line = await self.serial_readline(timeout=1.0)

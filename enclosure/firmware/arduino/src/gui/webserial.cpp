@@ -108,7 +108,7 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 	if(screen_func != nullptr) {
 		gui_screen_set(screen_name, screen_func);
 		response.clear();
-		response[screen_name.c_str()] = JsonObject();
+		response["screen"] = screen_name.c_str();
 		g_util_webserial.send("gui/screen", response);
 	} else {
 		g_util_webserial.send("syslog/error", body);
@@ -145,7 +145,7 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 	if(overlay_func != nullptr) {
 		gui_overlay_set(overlay_name, overlay_func);
 		response.clear();
-		response[overlay_name.c_str()] = JsonObject();
+		response["overlay"] = overlay_name.c_str();
 		g_util_webserial.send("gui/overlay", response);
 	} else {
 		g_util_webserial.send("syslog/error", body);

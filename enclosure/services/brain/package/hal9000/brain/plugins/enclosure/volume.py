@@ -22,21 +22,23 @@ class Volume(EnclosureComponent):
 		self.daemon.plugins['enclosure'].addSignalHandler(self.on_enclosure_signal)
 
 
-	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str) -> bool:
-		if new_runlevel == HAL9000_Plugin.RUNLEVEL_READY:
-			if self.daemon.plugins['kalliope'].volume == HAL9000_Plugin_Status.UNINITIALIZED:
-				self.daemon.plugins['kalliope'].volume = int(self.config['initial-volume'])
-			if self.daemon.plugins['kalliope'].mute == HAL9000_Plugin_Status.UNINITIALIZED:
-				self.daemon.plugins['kalliope'].mute = str(self.config['initial-mute']).lower()
+	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
+		if pending is False:
+			if new_runlevel == HAL9000_Plugin.RUNLEVEL_READY:
+				if self.daemon.plugins['kalliope'].volume == HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
+					self.daemon.plugins['kalliope'].volume = int(self.config['initial-volume'])
+				if self.daemon.plugins['kalliope'].mute == HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
+					self.daemon.plugins['kalliope'].mute = str(self.config['initial-mute']).lower()
 		return True
 
 
-	def on_kalliope_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str) -> bool:
-		if new_runlevel == HAL9000_Plugin.RUNLEVEL_READY:
-			if self.daemon.plugins['kalliope'].volume == HAL9000_Plugin_Status.UNINITIALIZED:
-				self.daemon.plugins['kalliope'].volume = int(self.config['initial-volume'])
-			if self.daemon.plugins['kalliope'].mute == HAL9000_Plugin_Status.UNINITIALIZED:
-				self.daemon.plugins['kalliope'].mute = str(self.config['initial-mute']).lower()
+	def on_kalliope_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
+		if pending is False:
+			if new_runlevel == HAL9000_Plugin.RUNLEVEL_READY:
+				if self.daemon.plugins['kalliope'].volume == HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
+					self.daemon.plugins['kalliope'].volume = int(self.config['initial-volume'])
+				if self.daemon.plugins['kalliope'].mute == HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
+					self.daemon.plugins['kalliope'].mute = str(self.config['initial-mute']).lower()
 		return True
 
 

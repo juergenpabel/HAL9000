@@ -11,6 +11,6 @@ class Motion(EnclosureComponent):
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		EnclosureComponent.configure(self, configuration, section_name)
-#TODO		self.daemon.plugins['enclosure'].addNames('motion_timestamp')
+#TODO		self.daemon.plugins['enclosure'].addLocalNames('motion_timestamp')
 #TODO		self.daemon.plugins['enclosure'].motion_timestamp = None
 

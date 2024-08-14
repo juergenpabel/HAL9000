@@ -13,14 +13,13 @@ typedef enum {
 	StatusUnknown      = 0x00,
 	StatusStarting     = 0x01,
 	StatusConfiguring  = 0x02,
-	StatusWaiting      = 0x03,
-	StatusReady        = 0x04,
-	StatusRunning      = 0x05,
-	StatusResetting    = 0x06,
-	StatusRebooting    = 0x07,
-	StatusHalting      = 0x08,
-	StatusPanicing     = 0x09,
-	StatusMAX          = 0x09
+	StatusReady        = 0x03,
+	StatusRunning      = 0x04,
+	StatusResetting    = 0x05,
+	StatusRebooting    = 0x06,
+	StatusHalting      = 0x07,
+	StatusPanicing     = 0x08,
+	StatusMAX          = 0x08
 } Status;
 
 
@@ -28,9 +27,9 @@ class Application {
 	private:
 		Status      m_status;
 	protected:
+		ErrorQueue  m_errors;
 		Environment m_environment;
 		Settings    m_settings;
-		ErrorQueue  m_errors;
 	public:
 		Application();
 		bool loadSettings();
@@ -55,12 +54,10 @@ class Application {
 		                 const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_VALUE_SIZE>& detail);
 
 	static void onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
-	       void onWaiting();
-	       void onReady();
-	       void onRunning();
 
 	static const etl::string<GLOBAL_VALUE_SIZE> Null;
 	friend class EnvironmentWriter;
+	friend void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 	friend void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 	friend void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 };

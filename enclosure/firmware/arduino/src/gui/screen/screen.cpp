@@ -26,11 +26,6 @@ gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_fu
                                 g_gui_screen.fillSprite(TFT_TRANSPARENT);
                         }
 			gui_overlay_set_refresh();
-			if(screen_name.size() > 0) {
-				payload = "{\"screen\":\"<NAME>\"}";
-				payload.replace(11, 6, screen_name);
-				g_util_webserial.send("gui/event", payload, false);
-			}
 		}
 	}
 	return previous_screen;

@@ -125,13 +125,13 @@ bool MCP23X17_InputDevice::configure(const etl::string<GLOBAL_KEY_SIZE>& device_
 
 
 void MCP23X17_InputDevice::process(const etl::string<2>& pin_name, const etl::string<4>& pin_value, JsonDocument& result) {
+	result.createNestedObject("source");
+	result["source"]["type"] = this->device_type.c_str();
+	result["source"]["name"] = this->device_name.c_str();
 	result.createNestedObject("device");
-	result["device"]["type"] = this->device_type.c_str();
-	result["device"]["name"] = this->device_name.c_str();
-	result.createNestedObject("input");
 	if(pin_name.size() > 0 && pin_value.size() > 0) {
-		result["input"]["pin"] = pin_name.c_str();
-		result["input"]["value"] = pin_value.c_str();
+		result["device"]["pin"] = pin_name.c_str();
+		result["device"]["value"] = pin_value.c_str();
 	}
 	result.createNestedObject("event");
 }

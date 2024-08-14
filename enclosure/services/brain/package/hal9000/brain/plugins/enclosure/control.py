@@ -13,7 +13,7 @@ class Control(EnclosureComponent):
 		self.config['menu']['menu-main'] = {}
 		self.config['menu']['menu-main']['title'] = ''
 		self.config['menu']['menu-main']['items'] = []
-		self.daemon.plugins['frontend'].addNames(['menu_item', 'menu_name'])
+		self.daemon.plugins['frontend'].addLocalNames(['menu_item', 'menu_name'])
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
@@ -56,10 +56,11 @@ class Control(EnclosureComponent):
 					self.configure_menu(menu_config, menu_entry)
 
 
-	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_screen: str, new_screen: str) -> bool:
-		if old_screen == 'menu':
-			self.daemon.plugins['frontend'].menu_name = None
-			self.daemon.plugins['frontend'].menu_item = None
+	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_screen: str, new_screen: str, pending: bool) -> bool:
+		if pending is False:
+			if old_screen == 'menu':
+				self.daemon.plugins['frontend'].menu_name = None
+				self.daemon.plugins['frontend'].menu_item = None
 		return True
 
 

@@ -1,3 +1,4 @@
+#include <ArduinoJson.h>
 #include <etl/string.h>
 #include <etl/format_spec.h>
 #include <etl/to_string.h>

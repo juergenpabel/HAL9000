@@ -200,7 +200,7 @@ class HAL9000(Frontend):
 	def show_none(self, display):
 		display.content.shapes = []
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'none'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'none': null}})
 
 
 	def show_idle(self, display):
@@ -210,7 +210,7 @@ class HAL9000(Frontend):
 		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'idle'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'idle': null}})
 
 
 	def show_animations(self, display, data):
@@ -223,7 +223,7 @@ class HAL9000(Frontend):
 		else:
 			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'assets/system/gui/screen/animations/{data['name']}.json'")
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'animations'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'animations': null}})
 
 
 	def show_menu(self, display, data):
@@ -237,7 +237,7 @@ class HAL9000(Frontend):
 		                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'menu'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'menu': null}})
 
 
 	def show_qrcode(self, display, data):
@@ -265,21 +265,21 @@ class HAL9000(Frontend):
 		                                                                    size=int(display.page.scale*(data['hint-size'] if 'hint-size' in data else 14))),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'qrcode'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'qrcode': null}})
 
 
 	def show_splash(self, display, data):
 		self.show_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
 		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Splash-database',
 		                           'hint': f"Splash ID: {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
-		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'splash'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'splash': null}})
 
 
 	def show_error(self, display, data):
 		self.show_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'red', 'title-color': 'white',
 		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
 		                           'hint': f"Error {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
-		self.events.put_nowait({'topic': 'gui/event', 'payload': {'screen': 'error'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'error': null}})
 
 
 	def on_button_wakeup(self, event):
@@ -289,22 +289,22 @@ class HAL9000(Frontend):
 		self.events.put_nowait({'topic': 'hal9000/command/brain/status', 'payload': 'asleep'})
 
 	def on_control_up(self, event):
-		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "rotary", "name": "control"}, "event": {"delta": "+1"}}'})
+		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "rotary", "name": "control"}, "event": {"delta": "+1"}}'})
 
 	def on_control_down(self, event):
-		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "rotary", "name": "control"}, "event": {"delta": "-1"}}'})
+		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "rotary", "name": "control"}, "event": {"delta": "-1"}}'})
 
 	def on_control_select(self, event):
-		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "button", "name": "control"}, "event": {"status": "clicked"}}'})
+		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "button", "name": "control"}, "event": {"status": "clicked"}}'})
 
 	def on_volume_up(self, event):
-		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "rotary", "name": "volume"}, "event": {"delta": "+1"}}'})
+		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "rotary", "name": "volume"}, "event": {"delta": "+1"}}'})
 
 	def on_volume_down(self, event):
-		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "rotary", "name": "volume"}, "event": {"delta": "-1"}}'})
+		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "rotary", "name": "volume"}, "event": {"delta": "-1"}}'})
 
 	def on_volume_mute(self, event):
-		self.events.put_nowait({'topic': 'device/event', 'payload': '{"device": {"type": "button", "name": "volume"}, "event": {"status": "clicked"}}'})
+		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "button", "name": "volume"}, "event": {"status": "clicked"}}'})
 
 
 	def flet_on_disconnect(self, event):

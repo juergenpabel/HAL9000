@@ -4,6 +4,6 @@
   {"title": "Starting...", "directory": "/images/animations/startup/system-waiting/loop",     "frames": 64, "delay":   0, "loop": true},
   {"title": "Starting...", "directory": "/images/animations/startup/system-waiting/fade-out", "frames": 20, "delay":   0, "loop": false},
   {"title": "Welcome...",  "directory": "/images/animations/startup/welcome",                 "frames": 34, "delay":  25, "loop": false,
-                           "on:next": {"webserial": "[\"application/runtime\", {\"ready\":{}}]"}}
+                           "on:next": {"webserial": "[\"application/runtime\", {\"RUN\":{}}]"}}
 ]
 

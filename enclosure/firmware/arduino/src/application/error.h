@@ -30,6 +30,7 @@ class Error {
 	friend class WebSerial;
 	friend void setup();
 	friend void loop();
+	friend void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 };
 
 

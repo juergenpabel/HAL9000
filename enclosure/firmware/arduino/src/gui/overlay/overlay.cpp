@@ -24,11 +24,6 @@ gui_overlay_func gui_overlay_set(const gui_overlay_name& overlay_name, gui_overl
 				g_gui_overlay.fillSprite(TFT_TRANSPARENT);
 			}
 			gui_screen_set_refresh();
-			if(overlay_name.size() > 0) {
-				payload = "{\"overlay\":\"<NAME>\"}";
-				payload.replace(12, 6, overlay_name);
-				g_util_webserial.send("gui/event", payload, false);
-			}
 		}
 	}
 	return previous_overlay;

@@ -3,7 +3,7 @@ from json import loads as json_loads
 from jsonpath_ng.ext import parse as jsonpath_ng_ext_parse
 from configparser import ConfigParser as configparser_ConfigParser
 from aiomqtt import Message as aiomqtt_Message
-import logging
+from logging import getLogger as logging_getLogger
 
 from hal9000.brain.plugin import HAL9000_Trigger, HAL9000_Plugin_Status
 
@@ -34,7 +34,7 @@ class Trigger(HAL9000_Trigger):
 
 
 	def handle(self, message: aiomqtt_Message) -> dict:
-		signal = {}
+		signal = None
 		if self.config['signal-json-formatter'] is not None:
 			try:
 				payload = message.payload.decode('utf-8')
@@ -46,10 +46,14 @@ class Trigger(HAL9000_Trigger):
 					for match in self.payload_jsonpath_parser.find(json_loads(f'[{payload}]')):
 						signal = json_loads(self.config['signal-json-formatter'] % {'jsonpath': match.value})
 			except Exception as e:
-				self.daemon.logger.error(f"Exception in MQTT.Trigger.handle() => {e}")
-		if isinstance(signal, dict) is False:
-				self.daemon.logger.error(f"[trigger:mqtt] for message received on topic '{self.config['topic']}': '{signal}' is not " \
-				                         f"an instance of python 'dict', dropping it")
-				signal = {}
+				logging_getLogger().error(f"Exception in MQTT.Trigger.handle() => {e}")
+			if signal is not None:
+				if isinstance(signal, list) is False:
+					logging_getLogger().error(f"[trigger:mqtt] for message received on topic '{self.config['topic']}': '{signal}' is not " \
+					                          f"an instance of python 'list', dropping it")
+					signal = {}
+				if len(signal) != 2 or isinstance(signal[0], str) is False or isinstance(signal[1], dict) is False:
+					logging_getLogger().error(f"[trigger:mqtt] for message received on topic '{self.config['topic']}': '{signal}' is not " \
+					                          f"a python 'list' with 2 elements of types 'str' and 'dict', dropping it")
 		return signal
 

@@ -7,7 +7,7 @@ from hal9000.brain.plugins.enclosure import EnclosureComponent
 class RFID(EnclosureComponent):
 	def __init__(self, **kwargs) -> None:
 		EnclosureComponent.__init__(self, **kwargs)
-		self.daemon.plugins['enclosure'].addNames(['rfid'])
+		self.daemon.plugins['enclosure'].addRemoteNames(['rfid'])
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
@@ -17,7 +17,7 @@ class RFID(EnclosureComponent):
 		self.daemon.plugins['enclosure'].rfid = None
 
 
-	def on_enclosure_rfid_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_rfid, new_rfid) -> bool:
+	def on_enclosure_rfid_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_rfid: str, new_rfid:str, pending: bool) -> bool:
 		pass #TODO
 		return True
 

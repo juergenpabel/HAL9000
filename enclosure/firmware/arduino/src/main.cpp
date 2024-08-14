@@ -61,7 +61,6 @@ void setup() {
 		g_util_webserial.send("syslog/warning", "out-of-memory: UI running without overlay-sprite");
 		g_application.notifyError("warn", "11", "Disabled overlays", "g_gui_overlay.createSprite() failed");
 	}
-	g_util_webserial.setCommand("application/runtime", on_application_runtime);
 }
 
 
@@ -83,16 +82,19 @@ void loop() {
 				}
 				gui_screen_set("", gui_screen_animations_startup);
 				g_application.setStatus(StatusConfiguring);
+				g_util_webserial.setCommand("application/runtime", on_application_runtime);
 				break;
 			case StatusConfiguring:
 				configurationTimeout = millis() + 90000; //TODO:config option
 				g_util_webserial.setCommand("*", Application::onConfiguration);
 				break;
-			case StatusWaiting:
+			case StatusReady:
 				configurationTimeout = 0;
 				g_util_webserial.setCommand("*", nullptr);
 				g_util_webserial.setCommand("application/environment", on_application_environment);
 				g_util_webserial.setCommand("application/settings", on_application_settings);
+				break;
+			case StatusRunning:
 				g_util_webserial.setCommand("device/board", on_device_board);
 				g_util_webserial.setCommand("device/microcontroller", on_device_microcontroller);
 				g_util_webserial.setCommand("device/mcp23X17", on_device_mcp23X17);
@@ -100,14 +102,7 @@ void loop() {
 				g_util_webserial.setCommand("device/sdcard", on_device_sdcard);
 				g_util_webserial.setCommand("gui/screen", on_gui_screen);
 				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
-				g_application.onWaiting();
-				break;
-			case StatusReady:
-				g_application.onReady();
-				g_application.setStatus(StatusRunning);
-				break;
-			case StatusRunning:
-				g_application.onRunning();
+				Application::onConfiguration(Application::Null, JsonVariant());
 				break;
 			case StatusResetting:
 				gui_screen_set("none", gui_screen_none);

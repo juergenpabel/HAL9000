@@ -1,0 +1,7 @@
+[{"command":"device/mcp23X17","data":{"init":{"i2c-bus":0,"i2c-address":32}}},
+ {"command":"device/mcp23X17","data":{"config":{"device":{"type":"rotary","name":"control","inputs":[{"pin":"A1","label":"SigA"},{"pin":"A0","label":"SigB"}]}}}},
+ {"command":"device/mcp23X17","data":{"config":{"device":{"type":"button","name":"control","inputs":[{"pin":"A2","label":"SigX","pullup":"true"}],"events":{"low":"on","high":"off"}}}}},
+ {"command":"device/mcp23X17","data":{"config":{"device":{"type":"rotary","name":"volume","inputs":[{"pin":"A5","label":"SigA"},{"pin":"A4","label":"SigB"}]}}}},
+ {"command":"device/mcp23X17","data":{"config":{"device":{"type":"button","name":"volume","inputs":[{"pin":"A6","label":"SigX","pullup":"true"}],"events":{"low":"on","high":"off"}}}}},
+ {"command":"device/mcp23X17","data":{"start":true}}]
+
