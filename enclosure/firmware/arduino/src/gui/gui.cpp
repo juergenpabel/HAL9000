@@ -22,7 +22,7 @@ void gui_update() {
 				} else {
 					gui_overlay_update(true);
 				}
-				g_device_microcontroller.mutex_exit("gpio");
+				g_device_microcontroller.mutex_leave("gpio");
 				break;
 			default:
 				if((gui_refresh & RefreshOverlay) == RefreshOverlay) {
@@ -32,7 +32,7 @@ void gui_update() {
 					} else {
 						gui_overlay_update(true);
 					}
-					g_device_microcontroller.mutex_exit("gpio");
+					g_device_microcontroller.mutex_leave("gpio");
 				}
 		}
 	}

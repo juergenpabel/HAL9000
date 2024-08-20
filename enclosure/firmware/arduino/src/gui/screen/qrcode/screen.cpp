@@ -135,7 +135,7 @@ gui_refresh_t gui_screen_qrcode(bool refresh) {
 			gui->drawString(text_below.c_str(), pos_x, pos_y+gui->fontHeight()+5);
 		}
 		if(gui == &g_gui) {
-			g_device_microcontroller.mutex_exit("gpio");
+			g_device_microcontroller.mutex_leave("gpio");
 		} else {
 			gui_refresh = RefreshScreen;
 		}

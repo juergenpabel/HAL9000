@@ -140,14 +140,14 @@ void loop() {
 	}
 	gui_update();
 	if(currentStatus == StatusRunning) {
-		static TickType_t    previousTicks = 0;
-		       TickType_t    currentTicks;
+		static unsigned long previousMillis = 0;
+		       unsigned long currentMillis;
 
-		currentTicks = xTaskGetTickCount();
-		if((currentTicks-previousTicks) < pdMS_TO_TICKS(50)) {
-			vTaskDelay(pdMS_TO_TICKS(50) - (currentTicks-previousTicks));
+		currentMillis = millis();
+		if((currentMillis-previousMillis) < 50) {
+			delay(50 - (currentMillis-previousMillis));
 		}
-		previousTicks = currentTicks;
+		previousMillis = currentMillis;
 	}
 }
 

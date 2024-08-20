@@ -9,14 +9,14 @@
 #include "globals.h"
 
 
-WebSerial::WebSerial() {
+WebSerial::WebSerial()
+          : queue_recv("webserial_recv")
+          , queue_send("webserial_send") {
 }
 
 
 void WebSerial::begin() {
 	Serial.begin(115200);
-	this->queue_recv_handle = xQueueCreateStatic(UTIL_WEBSERIAL_QUEUE_RECV_MAX, WEBSERIAL_LINE_SIZE, this->queue_recv_itemdata, &this->queue_recv_metadata);
-	this->queue_send_handle = xQueueCreateStatic(UTIL_WEBSERIAL_QUEUE_SEND_MAX, WEBSERIAL_LINE_SIZE, this->queue_send_itemdata, &this->queue_send_metadata);
 }
 
 
@@ -52,7 +52,7 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 	}
 	line += "]";
 
-	if(xQueueSend(this->queue_send_handle, line.c_str(), 50) != pdTRUE) {
+	if(this->queue_send.push(line) != true) {
 		Serial.write("[\"syslog/critical\", \"send queue full in Webserial::send(), sending out-of-order:\"]\n");
 		Serial.write(line.c_str());
 		Serial.write('\n');
@@ -62,11 +62,11 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 
 
 void WebSerial::update() {
-	       char   webserial_send_line[WEBSERIAL_LINE_SIZE];
-	       char   webserial_recv_line[WEBSERIAL_LINE_SIZE];
 	static char   receive_buffer[WEBSERIAL_LINE_SIZE] = {0};
 	static size_t receive_buffer_pos = 0;
 	       size_t serial_available = 0;
+	       etl::string<WEBSERIAL_LINE_SIZE> webserial_recv_line;
+	       etl::string<WEBSERIAL_LINE_SIZE> webserial_send_line;
 
 	if(Serial == false) {
 		if(gui_screen_get() != gui_screen_animations && gui_screen_get() != gui_screen_error) {
@@ -79,19 +79,19 @@ void WebSerial::update() {
 		}
 		return;
 	}
-	while(uxQueueMessagesWaiting(this->queue_send_handle) > 0) {
-		if(xQueueReceive(this->queue_send_handle, webserial_send_line, 0) == pdTRUE) {
-			Serial.write(webserial_send_line);
+	while(this->queue_send.size() > 0) {
+		if(this->queue_send.pop(webserial_send_line) == true) {
+			Serial.write(webserial_send_line.c_str());
 			Serial.write('\n');
 			Serial.flush();
 		}
 	}
-	while(uxQueueMessagesWaiting(this->queue_recv_handle) > 0) {
-		if(xQueueReceive(this->queue_recv_handle, webserial_recv_line, 0) == pdTRUE) {
+	while(this->queue_recv.size() > 0) {
+		if(this->queue_send.pop(webserial_recv_line) == true) {
 			this->handle(webserial_recv_line);
-			while(uxQueueMessagesWaiting(this->queue_send_handle) > 0) {
-				if(xQueueReceive(this->queue_send_handle, webserial_send_line, 0) == pdTRUE) {
-					Serial.write(webserial_send_line);
+			while(this->queue_send.size() > 0) {
+				if(this->queue_send.pop(webserial_send_line) == true) {
+					Serial.write(webserial_send_line.c_str());
 					Serial.write('\n');
 					Serial.flush();
 				}
@@ -100,7 +100,7 @@ void WebSerial::update() {
 	}
 
 	serial_available = Serial.available();
-	while(serial_available > 0 && uxQueueSpacesAvailable(this->queue_recv_handle) > 0) {
+	while(serial_available > 0 && this->queue_recv.available() > 0) {
 		receive_buffer_pos += Serial.readBytes(&receive_buffer[receive_buffer_pos], min(serial_available, WEBSERIAL_LINE_SIZE-receive_buffer_pos-1));
 		receive_buffer[receive_buffer_pos] = '\0';
 		if(receive_buffer_pos > 0) {
@@ -109,12 +109,11 @@ void WebSerial::update() {
 
 			input_chunk = receive_buffer;
 			input_chunk_pos = input_chunk.find('\n');
-			while(input_chunk_pos != input_chunk.npos && uxQueueSpacesAvailable(this->queue_recv_handle) > 0) {
-				memcpy(webserial_recv_line, input_chunk.c_str(), input_chunk_pos);
-				webserial_recv_line[input_chunk_pos] = '\0';
-				if(xQueueSend(this->queue_recv_handle, webserial_recv_line, 0) != pdTRUE) {
+			while(input_chunk_pos != input_chunk.npos && this->queue_recv.available() > 0) {
+				webserial_recv_line = input_chunk.substr(0, input_chunk_pos);
+				if(this->queue_recv.push(webserial_recv_line) != true) {
 					Serial.write("[\"syslog/critical\", \"recv queue full in Webserial::update(), dropping:\"]\n");
-					Serial.write(webserial_recv_line);
+					Serial.write(webserial_recv_line.c_str());
 					Serial.write('\n');
 					Serial.flush();
 				}
@@ -126,12 +125,12 @@ void WebSerial::update() {
 			serial_available = Serial.available();
 		}
 	}
-	while(uxQueueMessagesWaiting(this->queue_recv_handle) > 0) {
-		if(xQueueReceive(this->queue_recv_handle, webserial_recv_line, 0) == pdTRUE) {
+	while(this->queue_recv.size() > 0) {
+		if(this->queue_recv.pop(webserial_recv_line) == true) {
 			this->handle(webserial_recv_line);
-			while(uxQueueMessagesWaiting(this->queue_send_handle) > 0) {
-				if(xQueueReceive(this->queue_send_handle, webserial_send_line, 0) == pdTRUE) {
-					Serial.write(webserial_send_line);
+			while(this->queue_send.size() > 0) {
+				if(this->queue_send.pop(webserial_send_line) == true) {
+					Serial.write(webserial_send_line.c_str());
 					Serial.write('\n');
 					Serial.flush();
 				}

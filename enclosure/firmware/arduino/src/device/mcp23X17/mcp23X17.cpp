@@ -149,7 +149,7 @@ bool MCP23X17::start() {
 	}
 	g_device_microcontroller.mutex_enter("gpio");
 	this->mcp23X17_gpio_values = this->mcp23X17.readGPIOAB();
-	g_device_microcontroller.mutex_exit("gpio");
+	g_device_microcontroller.mutex_leave("gpio");
 	this->status = MCP23X17_STATE_RUNNING;
 	g_device_microcontroller.task_create("MCP23X17", MCP23X17::loop, 1);
 	return true;
@@ -157,17 +157,17 @@ bool MCP23X17::start() {
 
 
 void MCP23X17::loop() {
-	TickType_t ticks_previous;
-	TickType_t ticks_current;
+	unsigned long millis_previous;
+	unsigned long millis_current;
 
 	g_util_webserial.send("syslog/debug", "MCP23X17::loop() now running on 2nd core");
-	ticks_current = xTaskGetTickCount();
+	millis_current = millis();
 	while(true) {
-		ticks_previous = ticks_current;
+		millis_previous = millis_current;
 		g_device_mcp23X17.check();
-		ticks_current = xTaskGetTickCount();
-		if((ticks_current-ticks_previous) < pdMS_TO_TICKS(5)) {
-			vTaskDelay(pdMS_TO_TICKS(5) - (ticks_current-ticks_previous));
+		millis_current = millis();
+		if((millis_current-millis_previous) < 5) {
+			delay(5 - (millis_current-millis_previous));
 		}
 		yield();
 	}
@@ -182,7 +182,7 @@ void MCP23X17::check() {
 	}
 	g_device_microcontroller.mutex_enter("gpio");
 	mcp23X17_gpio_values = this->mcp23X17.readGPIOAB();
-	g_device_microcontroller.mutex_exit("gpio");
+	g_device_microcontroller.mutex_leave("gpio");
 	if(mcp23X17_gpio_values != this->mcp23X17_gpio_values) {
 
 		for(int nr=0; nr<16; nr++) {

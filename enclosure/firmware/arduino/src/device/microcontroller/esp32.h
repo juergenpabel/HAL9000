@@ -47,7 +47,7 @@ class Microcontroller : public AbstractMicrocontroller {
 		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name, bool recursive);
 		virtual bool mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
-		virtual bool mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name);
+		virtual bool mutex_leave(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_destroy(const etl::string<GLOBAL_KEY_SIZE>& name);
 
 		virtual TwoWire* twowire_get(uint8_t instance);

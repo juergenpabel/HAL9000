@@ -3,8 +3,6 @@
 
 #ifdef ARDUINO_SBCOMPONENTS_ROUNDYPI
 
-#include <FreeRTOS.h>
-#include <queue.h>
 #include "device/board/board.h"
 
 

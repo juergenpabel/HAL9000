@@ -37,7 +37,7 @@ gui_refresh_t gui_screen_animations(bool refresh) {
 		filename += ".json";
 		g_device_microcontroller.mutex_enter("gpio");
 		gui_screen_animations_load(filename);
-		g_device_microcontroller.mutex_exit("gpio");
+		g_device_microcontroller.mutex_leave("gpio");
 		g_application.delEnv("gui/screen:animations/name");
 		if(g_animation.empty() == true) {
 			g_util_webserial.send("syslog/error", "error loading json data for gui/screen 'animations':");
@@ -90,11 +90,11 @@ gui_refresh_t gui_screen_animations(bool refresh) {
 				g_gui.setTextSize(3);
 				g_gui.setTextDatum(MC_DATUM);
 				g_gui.drawString(current_animation->title.c_str(), g_gui.width()/2, g_gui.height()/2);
-				g_device_microcontroller.mutex_exit("gpio");
+				g_device_microcontroller.mutex_leave("gpio");
 			}
-			vTaskDelay(pdMS_TO_TICKS(50)); // roughly estimated image loading-time difference
+			delay(50); // roughly estimated image loading-time difference
 		}
-		vTaskDelay(pdMS_TO_TICKS(current_animation->delay));
+		delay(current_animation->delay);
 		g_current_frame++;
 	}
 	return RefreshIgnore;
@@ -162,7 +162,7 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 gui_refresh_t gui_screen_animations_startup(bool refresh) {
 	g_device_microcontroller.mutex_enter("gpio");
 	gui_screen_animations_load("/system/gui/screen/animations/startup.json");
-	g_device_microcontroller.mutex_exit("gpio");
+	g_device_microcontroller.mutex_leave("gpio");
 	gui_screen_set("animations", gui_screen_animations, false);
 	return RefreshIgnore;
 }
@@ -171,7 +171,7 @@ gui_refresh_t gui_screen_animations_startup(bool refresh) {
 gui_refresh_t gui_screen_animations_shutdown(bool refresh) {
 	g_device_microcontroller.mutex_enter("gpio");
 	gui_screen_animations_load("/system/gui/screen/animations/shutdown.json");
-	g_device_microcontroller.mutex_exit("gpio");
+	g_device_microcontroller.mutex_leave("gpio");
 	gui_screen_set("animations", gui_screen_animations, false);
 	return RefreshIgnore;
 }

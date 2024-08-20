@@ -3,7 +3,6 @@
 
 #ifdef ARDUINO_M5STACK_Core2
 
-#include <freertos/queue.h>
 #include "device/board/board.h"
 
 class Board : public AbstractBoard {

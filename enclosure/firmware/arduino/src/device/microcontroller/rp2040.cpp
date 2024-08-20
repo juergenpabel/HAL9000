@@ -129,7 +129,7 @@ bool Microcontroller::mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name) {
 }
 
 
-bool Microcontroller::mutex_exit(const etl::string<GLOBAL_KEY_SIZE>& name) {
+bool Microcontroller::mutex_leave(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	bool result = false;
 
 	if(this->mutex_map.count(name) == 1) {

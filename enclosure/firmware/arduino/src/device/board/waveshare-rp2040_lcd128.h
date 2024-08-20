@@ -3,8 +3,6 @@
 
 #ifdef ARDUINO_WAVESHARE_RP2040_LCD128
 
-#include <FreeRTOS.h>
-#include <queue.h>
 #include "device/board/board.h"
 
 
