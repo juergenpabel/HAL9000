@@ -16,5 +16,5 @@ RUN pip install --no-cache-dir -r requirements.txt -r data/requirements.txt
 EXPOSE 5000
 
 WORKDIR /kalliope/data/
-CMD kalliope start
+CMD if [ -x ./run.sh ] ; then ./run.sh ; else kalliope start ; fi
 

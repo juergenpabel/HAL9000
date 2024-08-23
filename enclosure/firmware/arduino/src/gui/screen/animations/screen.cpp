@@ -38,7 +38,6 @@ gui_refresh_t gui_screen_animations(bool refresh) {
 		g_device_microcontroller.mutex_enter("gpio");
 		gui_screen_animations_load(filename);
 		g_device_microcontroller.mutex_leave("gpio");
-		g_application.delEnv("gui/screen:animations/name");
 		if(g_animation.empty() == true) {
 			g_util_webserial.send("syslog/error", "error loading json data for gui/screen 'animations':");
 			g_util_webserial.send("syslog/error", filename);
@@ -51,9 +50,11 @@ gui_refresh_t gui_screen_animations(bool refresh) {
 		if(g_current_frame >= current_animation->frames) {
 			g_current_frame = 0;
 			if(current_animation->loop == true) {
-				if(g_application.getEnv("gui/screen:animations/loop") == "false") {
-					g_application.delEnv("gui/screen:animations/loop");
-					current_animation->loop = false;
+				if(g_application.hasEnv("gui/screen:animations/loop") == true) {
+					if(g_application.getEnv("gui/screen:animations/loop") == "false") {
+						g_application.delEnv("gui/screen:animations/loop");
+						current_animation->loop = false;
+					}
 				}
 			}
 			if(current_animation->loop == false) {
@@ -105,6 +106,8 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> animationsJSON;
 	       File file;
 
+	g_application.delEnv("gui/screen:animations/name");
+	g_application.delEnv("gui/screen:animations/loop");
 	if(LittleFS.exists(filename.c_str()) == false) {
 		g_application.notifyError("error", "13", "Animation error", filename);
 		return;

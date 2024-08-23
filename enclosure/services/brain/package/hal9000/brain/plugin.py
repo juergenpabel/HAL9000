@@ -140,6 +140,7 @@ class HAL9000_Plugin(object):
 	RUNLEVEL_STARTING = "starting"
 	RUNLEVEL_READY    = "ready"
 	RUNLEVEL_RUNNING  = "running"
+	RUNLEVEL_KILLED   = "killed"
 
 	def __init__(self, plugin_type: str, plugin_class: str, plugin_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
 		self.name = f"{plugin_type}:{plugin_class}:{plugin_name}"
@@ -181,10 +182,12 @@ class HAL9000_Action(HAL9000_Plugin):
 class HAL9000_Trigger(HAL9000_Plugin):
 	def __init__(self, trigger_class: str, trigger_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
 		HAL9000_Plugin.__init__(self, "trigger", trigger_class, trigger_name, plugin_status, **kwargs)
+		self.sleepless = False
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		HAL9000_Plugin.configure(self, configuration, section_name, None)
+		self.sleepless = configuration.get(section_name, 'sleepless', fallback=False)
 
 
 	def runlevel(self) -> str:

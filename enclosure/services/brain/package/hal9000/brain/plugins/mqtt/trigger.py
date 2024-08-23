@@ -37,7 +37,7 @@ class Trigger(HAL9000_Trigger):
 		signal = None
 		if self.config['signal-json-formatter'] is not None:
 			try:
-				payload = message.payload.decode('utf-8')
+				payload = message.payload.decode('utf-8', 'surrogateescape')
 				if self.config['payload-regex'] is not None:
 					matches = re_match(self.config['payload-regex'], payload)
 					if matches is not None:

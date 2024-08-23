@@ -29,6 +29,7 @@ class Action(HAL9000_Action):
 		self.daemon.plugins['frontend'].addNameCallback(self.on_frontend_screen_callback, 'screen')
 		self.daemon.plugins['frontend'].addSignalHandler(self.on_frontend_signal)
 		self.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_status_callback, 'status')
+		self.daemon.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
 		self.daemon.plugins['brain'].addSignalHandler(self.on_brain_signal)
@@ -157,26 +158,36 @@ class Action(HAL9000_Action):
 				self.daemon.plugins['frontend'].overlay = signal['gui']['overlay']['name'], status
 
 
+	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
+		if pending is False:
+			match new_runlevel:
+#TODO				case HAL9000_Plugin.RUNLEVEL_READY:
+#TODO					self.daemon.plugins['frontend'].screen = 'animations:waiting'
+#TODO					self.send_frontend_command('gui/screen', {'animations': {'name': 'waiting'}})
+				case HAL9000_Plugin.RUNLEVEL_RUNNING:
+					if self.daemon.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
+						self.daemon.plugins['frontend'].screen = 'animations:hal9000'
+						self.send_frontend_command('gui/screen', {'animations': {'name': 'hal9000'}})
+						self.daemon.schedule_signal(4, 'frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop',
+						                                                                    'value': 'false'}}},
+						                            'frontend:gui/screen#animations/loop:timeout')
+		return True
+
+
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
 			match new_status:
 				case Daemon.BRAIN_STATUS_AWAKE:
-					if old_status == HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
-						self.daemon.plugins['frontend'].screen = 'animations'
-						self.send_frontend_command('gui/screen', {'animations': {'name': 'hal9000'}})
-						self.daemon.schedule_signal(2, 'frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop',
-						                                                                    'value': 'false'}}},
-						                            'frontend:gui/screen#animations/loop:timeout')
-					else:
+					if old_status == Daemon.BRAIN_STATUS_ASLEEP:
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'on', 'parameter': {}}}})
+						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 				case Daemon.BRAIN_STATUS_ASLEEP:
-					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}}}})
-					self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-					# commit screen & overlay values explicitly due to disabled triggers while asleep
-					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}, 'origin': 'frontend'}}})
-					self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}, 'origin': 'frontend'}}})
-#					self.daemon.plugins['frontend'].screen = 'off', HAL9000_Plugin_Status.STATUS_CONFIRMED
-#					self.daemon.plugins['frontend'].overlay = 'none', HAL9000_Plugin_Status.STATUS_CONFIRMED
+					if old_status == Daemon.BRAIN_STATUS_AWAKE:
+						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}}}})
+						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+						# commit screen & overlay values explicitly due to disabled triggers while asleep
+						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}, 'origin': 'frontend'}}})
+						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}, 'origin': 'frontend'}}})
 		return True
 
 

@@ -47,6 +47,7 @@ class FrontendManager:
 				logging_getLogger("uvicorn").debug(f"[frontend] - MQTT connection attempt #{counter+1}")
 				try:
 					self.mqtt_client.connect(self.config['frontend:broker-ipv4'], self.config['frontend:broker-port'])
+					self.mqtt_client.will_set('hal9000/event/frontend/runlevel', 'killed')
 					self.mqtt_client.subscribe('hal9000/command/frontend/#')
 					self.mqtt_client.on_message = self.on_mqtt_message
 					self.mqtt_client.loop(timeout=1)

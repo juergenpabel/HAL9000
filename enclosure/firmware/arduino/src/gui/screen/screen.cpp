@@ -23,7 +23,7 @@ gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_fu
 		g_screen_refresh = screen_refresh;
 		if(screen_refresh == true) {
                         if(g_gui_screen.getPointer() != nullptr) {
-                                g_gui_screen.fillSprite(TFT_TRANSPARENT);
+                                g_gui_screen.fillSprite(TFT_BLACK);
                         }
 			gui_overlay_set_refresh();
 		}
