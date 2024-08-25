@@ -93,22 +93,13 @@ class Action(HAL9000_Action):
 
 	async def on_frontend_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
 		if 'runlevel' in signal:
-			match self.daemon.plugins['frontend'].runlevel:
-				case HAL9000_Plugin.RUNLEVEL_UNKNOWN:
-					if signal['runlevel'] == HAL9000_Plugin.RUNLEVEL_STARTING:
-						self.daemon.plugins['frontend'].runlevel = signal['runlevel']
-					if signal['runlevel'] in [HAL9000_Plugin.RUNLEVEL_READY, \
-					                          HAL9000_Plugin.RUNLEVEL_RUNNING]:
-						self.daemon.plugins['frontend'].screen = 'none'
-						self.send_frontend_command('gui/screen', {'none': {}})
-						self.daemon.plugins['frontend'].overlay = 'none'
-						self.send_frontend_command('gui/overlay', {'none': {}})
-						# set screen&overlay values explicitly to avoid delayed logging during startup
-						self.daemon.plugins['frontend'].screen = 'none'
-						self.daemon.plugins['frontend'].overlay = 'none'
-						self.daemon.plugins['frontend'].runlevel = signal['runlevel']
+			match signal['runlevel']:
 				case HAL9000_Plugin.RUNLEVEL_STARTING:
-					if signal['runlevel'] == HAL9000_Plugin.RUNLEVEL_READY:
+					if self.daemon.plugins['frontend'].runlevel == HAL9000_Plugin.RUNLEVEL_UNKNOWN:
+						self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_STARTING
+				case HAL9000_Plugin.RUNLEVEL_READY | HAL9000_Plugin.RUNLEVEL_RUNNING:
+					self.daemon.plugins['frontend'].runlevel = signal['runlevel']
+					if self.daemon.plugins['frontend'].screen == HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
 						self.daemon.plugins['frontend'].screen = 'none'
 						self.send_frontend_command('gui/screen', {'none': {}})
 						self.daemon.plugins['frontend'].overlay = 'none'
@@ -116,18 +107,16 @@ class Action(HAL9000_Action):
 						# set screen&overlay values explicitly to avoid delayed logging during startup
 						self.daemon.plugins['frontend'].screen = 'none'
 						self.daemon.plugins['frontend'].overlay = 'none'
-						self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_READY
-				case HAL9000_Plugin.RUNLEVEL_READY:
-					if signal['runlevel'] == HAL9000_Plugin.RUNLEVEL_RUNNING:
-						self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_RUNNING
+				case HAL9000_Plugin.RUNLEVEL_KILLED:
+					self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_KILLED
+					self.daemon.plugins['frontend'].screen = HAL9000_Plugin.STATUS_UNINITIALIZED
+					self.daemon.plugins['frontend'].overlay = HAL9000_Plugin.STATUS_UNINITIALIZED
 		if 'status' in signal:
-			match self.daemon.plugins['frontend'].status:
-				case Action.FRONTEND_STATUS_ONLINE:
-					if signal['status'] == Action.FRONTEND_STATUS_OFFLINE:
-						self.daemon.plugins['frontend'].status = Action.FRONTEND_STATUS_OFFLINE
+			match signal['status']:
 				case Action.FRONTEND_STATUS_OFFLINE:
-					if signal['status'] == Action.FRONTEND_STATUS_ONLINE:
-						self.daemon.plugins['frontend'].status = Action.FRONTEND_STATUS_ONLINE
+					self.daemon.plugins['frontend'].status = Action.FRONTEND_STATUS_OFFLINE
+				case Action.FRONTEND_STATUS_ONLINE:
+					self.daemon.plugins['frontend'].status = Action.FRONTEND_STATUS_ONLINE
 		if 'environment' in signal:
 			if 'set' in signal['environment']:
 				if 'key' in signal['environment']['set'] and 'value' in signal['environment']['set']:

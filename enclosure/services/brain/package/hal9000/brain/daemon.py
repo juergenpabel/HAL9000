@@ -155,7 +155,6 @@ class Daemon(object):
 						for id, plugin in plugins[runlevel].items():
 							plugin_runlevel = plugin.runlevel()
 							if plugin_runlevel != runlevel:
-								self.logger.info(f"[daemon] Plugin '{id.split(':').pop()}' is now in runlevel '{plugin_runlevel}'")
 								plugins[runlevel][id] = None
 								plugins[plugin_runlevel][id] = plugin
 						plugins[runlevel] = {id:plugin for id,plugin in plugins[runlevel].items() if plugin is not None}
