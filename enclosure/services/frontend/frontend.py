@@ -45,17 +45,10 @@ class FrontendManager:
 		for counter in range(0, 4):
 			if self.mqtt_client.is_connected() is False:
 				logging_getLogger("uvicorn").debug(f"[frontend] - MQTT connection attempt #{counter+1}")
-				try:
-					self.mqtt_client.connect(self.config['frontend:broker-ipv4'], self.config['frontend:broker-port'])
-					self.mqtt_client.will_set('hal9000/event/frontend/runlevel', 'killed')
-					self.mqtt_client.subscribe('hal9000/command/frontend/#')
-					self.mqtt_client.on_message = self.on_mqtt_message
-					self.mqtt_client.loop(timeout=1)
-				except ConnectionRefusedError:
+				if self.mqtt_connect() is False:
 					delay = pow(2, counter)
 					logging_getLogger("uvicorn").debug(f"[frontend] - MQTT connection attempt failed, waiting {delay} seconds before next attempt")
 					await asyncio_sleep(delay)
-					self.mqtt_client = mqtt_Client(mqtt_CallbackAPIVersion.VERSION2, client_id='frontend')
 		if self.mqtt_client.is_connected() is False:
 			logging_getLogger("uvicorn").error(f"[frontend] ERROR: MQTT broker unavailable at '{self.config['frontend:broker-ipv4']}'")
 			return False
@@ -87,13 +80,33 @@ class FrontendManager:
 		return Frontend.FRONTEND_STATUS_OFFLINE
 
 
-	def on_mqtt_message(self, client, userdata, message):
-		if message.topic[0:25] != 'hal9000/command/frontend/':
-			logging_getLogger("uvicorn").warning(f"[frontend] ignoring mqtt message on unexpected topic '{message.topic}'")
+	async def mqtt_connect(self) -> bool:
+		if self.mqtt_client.is_connected() is False:
+			try:
+				self.mqtt_client.connect(self.config['frontend:broker-ipv4'], self.config['frontend:broker-port'])
+				self.mqtt_client.will_set('hal9000/event/frontend/runlevel', 'killed')
+				self.mqtt_client.subscribe('hal9000/command/frontend/#')
+				self.mqtt_client.subscribe('hal9000/brain/event/runlevel')
+				self.mqtt_client.on_message = self.mqtt_subscriber_message
+				self.mqtt_client.loop(timeout=1)
+			except ConnectionRefusedError:
+				self.mqtt_client = mqtt_Client(mqtt_CallbackAPIVersion.VERSION2, client_id='frontend')
+		return self.mqtt_client.is_connected()
+
+
+	def mqtt_subscriber_message(self, client, userdata, message):
+		topic = message.topic
+		payload = message.payload.decode('utf-8', 'surrogateescape')
+		if topic == 'hal9000/event/brain/runlevel':
+			if payload == 'killed':
+				logging_getLogger("uvicorn").warning(f"[frontend] received mqtt message that brain component has disconnected, showing error screen")
+				for frontend in self.frontends:
+					frontend.commands.put_nowait({"topic": 'gui/screen', "payload": {'on': {}}})
+					frontend.commands.put_nowait({"topic": 'gui/screen', "payload": {'error': {'message': 'System error',
+					                                                                           'url': 'https://github.com/juergenpabel/HAL9000/wiki/ERROR_07',
+					                                                                           'id': 'TODO'}}})
 			return
-		topic = message.topic[25:] # remove 'hal9000/command/frontend/' prefix
-		payload = message.payload.decode('utf-8')
-		match topic:
+		match topic[25:]: #remove 'hal9000/command/frontend/' prefix
 			case 'runlevel':
 				if self.startup is False:
 					self.mqtt_client.publish('hal9000/event/frontend/runlevel', self.calculate_runlevel())
@@ -110,12 +123,12 @@ class FrontendManager:
 				except Exception:
 					pass
 				for frontend in self.frontends:
-					frontend.commands.put_nowait({"topic": topic, "payload": payload})
+					frontend.commands.put_nowait({"topic": topic[25:], "payload": payload})
 
 
-	async def command_listener(self):
+	async def mqtt_subscriber(self):
 		startup_last_publish = time_monotonic()
-		while self.tasks['command_listener'].cancelled() is False:
+		while self.tasks['mqtt_subscriber'].cancelled() is False:
 			while self.mqtt_client.is_connected():
 				if self.startup is True:
 					if (time_monotonic() - startup_last_publish) > 1:
@@ -128,17 +141,17 @@ class FrontendManager:
 				self.mqtt_client = mqtt_Client(mqtt_CallbackAPIVersion.VERSION2, client_id='frontend')
 				self.mqtt_client.connect(self.config['frontend:broker-ipv4'], self.config['frontend:broker-port'])
 				self.mqtt_client.subscribe('hal9000/command/frontend/#')
-				self.mqtt_client.on_message = self.on_mqtt_message
+				self.mqtt_client.on_message = self.mqtt_subscriber_message
 				self.mqtt_client.loop(timeout=1)
 			except ConnectionRefusedError:
 				await asyncio_sleep(1)
-		logging_getLogger("uvicorn").info(f"[frontend] command_listener() exiting due to task being cancelled")
+		logging_getLogger("uvicorn").info(f"[frontend] mqtt_subscriber() exiting due to task being cancelled")
 
 
-	async def event_listener(self):
+	async def mqtt_publisher(self):
 		last_runlevel = None
 		last_status = None
-		while self.tasks['event_listener'].cancelled() is False:
+		while self.tasks['mqtt_publisher'].cancelled() is False:
 			match self.mqtt_client.is_connected():
 				case True:
 					for frontend in self.frontends:
@@ -173,9 +186,9 @@ class FrontendManager:
 								self.mqtt_client.publish(topic, payload)
 					await asyncio_sleep(0.01)
 				case False:
-					logging_getLogger("uvicorn").debug(f"[frontend] event_listener() no mqtt connection...")
+					logging_getLogger("uvicorn").debug(f"[frontend] mqtt_publisher() no mqtt connection...")
 					await asyncio_sleep(1)
-		logging_getLogger("uvicorn").info(f"[frontend] event_listener() exiting due to task being cancelled")
+		logging_getLogger("uvicorn").info(f"[frontend] mqtt_publisher() exiting due to task being cancelled")
 
 
 async def fastapi_lifespan(app: fastapi_FastAPI):
@@ -185,8 +198,8 @@ async def fastapi_lifespan(app: fastapi_FastAPI):
 	if await manager.configure(sys_argv[1]) is False:
 		logging_getLogger("uvicorn").critical(f"[frontend] configuration failed, exiting...")
 		sys_exit(1)
-	manager.tasks['command_listener'] = asyncio_create_task(manager.command_listener())
-	manager.tasks['event_listener'] = asyncio_create_task(manager.event_listener())
+	manager.tasks['mqtt_subscriber'] = asyncio_create_task(manager.mqtt_subscriber())
+	manager.tasks['mqtt_publisher'] = asyncio_create_task(manager.mqtt_publisher())
 	for frontend_name in manager.config['frontend:plugins']:
 		logging_getLogger("uvicorn").info(f"[frontend] Loading frontend '{frontend_name}'...'")
 		module = importlib_import_module(manager.config[f'frontend:{frontend_name}:module'])

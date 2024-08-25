@@ -27,6 +27,7 @@ from asyncio import create_task as asyncio_create_task, \
                     CancelledError as asyncio_CancelledError
 
 from aiomqtt import Client as aiomqtt_Client, \
+                    Will as aiomqtt_Will, \
                     MqttError as aiomqtt_MqttError
 from apscheduler.schedulers.asyncio import AsyncIOScheduler as apscheduler_schedulers_AsyncIOScheduler
 from dbus_fast.aio import MessageBus
@@ -148,7 +149,7 @@ class Daemon(object):
 				self.logger.info(f"[daemon]  - Plugin '{plugin_name}'")
 				self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/{plugin_name}/runlevel', 'payload': ''})
 			self.logger.debug(f"[daemon] STATUS at startup = {self.plugins}")
-			while self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_STARTING:
+			while self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_STARTING and self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				for runlevel in [HAL9000_Plugin.RUNLEVEL_UNKNOWN, HAL9000_Plugin.RUNLEVEL_STARTING]:
 					if runlevel in plugins:
 						for id, plugin in plugins[runlevel].items():
@@ -165,7 +166,7 @@ class Daemon(object):
 							error = plugin.runlevel_error()
 							await self.process_error('critical', error['id'], f"    Plugin '{id.split(':').pop()}'", error['message'])
 						self.logger.debug(f"[daemon] STATUS at startup-timeout = {self.plugins}")
-						raise Exception("Terminating due to plugins that haven't reached runlevel 'starting' within timelimit")
+						self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 					if len(plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN]) == 0:
 						self.logger.info(f"[daemon] Startup in progress for all plugins")
 						startup_timeout = None
@@ -179,34 +180,40 @@ class Daemon(object):
 							self.logger.info(f"[daemon] Startup completed for all plugins")
 							self.plugins['brain'].runlevel = HAL9000_Plugin.RUNLEVEL_READY
 				await asyncio_sleep(0.1)
-			self.logger.debug(f"[daemon] STATUS after startup = {self.plugins}")
-			if self.config['brain:sleep-time'] is not None:
-				try:
-					time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
-					self.scheduler.add_job(self.on_scheduler, 'cron', hour=time_sleep.hour, minute=time_sleep.minute,
-					                       args=['brain', {'status': Daemon.BRAIN_STATUS_ASLEEP}], id='brain:sleep', name='brain:sleep')
-				except ValueError as e:
-					self.logger.error(f"[daemon] sleep-time: failed to parse '{self.config['brain:sleep-time']}' as (an ISO-8601 formatted) time")
-			if self.config['brain:wakeup-time'] is not None:
-				try:
-					time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
-					self.scheduler.add_job(self.on_scheduler, 'cron', hour=time_wakeup.hour, minute=time_wakeup.minute,
-					                       args=['brain', {'status': Daemon.BRAIN_STATUS_AWAKE}], id='brain:wakeup', name='brain:wakeup')
-				except ValueError as e:
-					self.logger.error(f"[daemon] wakeup-time: failed to parse '{self.config['brain:wakeup-time']}' as (an ISO-8601 formatted) time")
-			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
-				await asyncio_sleep(0.1)
+			if self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
+				self.logger.debug(f"[daemon] STATUS after startup = {self.plugins}")
+				if self.config['brain:sleep-time'] is not None:
+					try:
+						time_sleep = datetime_time.fromisoformat(self.config['brain:sleep-time'])
+						self.scheduler.add_job(self.on_scheduler, 'cron', hour=time_sleep.hour, minute=time_sleep.minute,
+						                       args=['brain', {'status': Daemon.BRAIN_STATUS_ASLEEP}], id='brain:sleep', name='brain:sleep')
+					except ValueError as e:
+						self.logger.error(f"[daemon] sleep-time: failed to parse '{self.config['brain:sleep-time']}' as (an ISO-8601 formatted) time")
+				if self.config['brain:wakeup-time'] is not None:
+					try:
+						time_wakeup = datetime_time.fromisoformat(self.config['brain:wakeup-time'])
+						self.scheduler.add_job(self.on_scheduler, 'cron', hour=time_wakeup.hour, minute=time_wakeup.minute,
+						                       args=['brain', {'status': Daemon.BRAIN_STATUS_AWAKE}], id='brain:wakeup', name='brain:wakeup')
+					except ValueError as e:
+						self.logger.error(f"[daemon] wakeup-time: failed to parse '{self.config['brain:wakeup-time']}' as (an ISO-8601 formatted) time")
+				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.loop() running...")
+				while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
+					await asyncio_sleep(0.1)
+				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.loop() ...dying")
 		except Exception as e:
+			self.logger.debug(f"[daemon] {e}")
 			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			results['main'] = e
+		self.logger.debug(f"[daemon] cancelling and gathering tasks...")
 		for name, task in self.tasks.copy().items():
+			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.loop() cancelling and gathering task '{name}'...")
 			task.cancel()
 			results[name] = (await asyncio_gather(task, return_exceptions=True)).pop()
 		return results
 			
 
 	async def task_mqtt_subscriber(self, mqtt: aiomqtt_Client) -> None:
-		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] starting mqtt-subscriber task")
+		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt_subscriber() running")
 		try:
 			async for message in mqtt.messages:
 				topic = message.topic.value
@@ -224,13 +231,13 @@ class Daemon(object):
 							if self.plugins['brain'].status == Daemon.BRAIN_STATUS_ASLEEP:
 								triggers = [trigger for trigger in triggers if trigger.sleepless is True]
 							self.logger.debug(f"[daemon] TRIGGERS: {','.join(str(x).split(':',2).pop(2) for x in triggers)}")
-							self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] STATUS before triggers = {self.plugins}")
+							self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt_subscriber() STATUS before triggers = {self.plugins}")
 							for trigger in triggers:
 								signal = trigger.handle(message)
 								if signal is not None and bool(signal) is not False:
 									trigger_id = str(trigger).split(':', 2)[2]
 									signals[trigger_id] = signal
-						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] SIGNALS generated by TRIGGERS: {signals}")
+						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt_subscriber() SIGNALS generated by TRIGGERS: {signals}")
 						for trigger_id, signal in signals.items():
 							plugin_name = signal[0]
 							signal = signal[1]
@@ -241,18 +248,18 @@ class Daemon(object):
 								self.logger.debug(f"[daemon] SIGNAL for plugin '{plugin_name}' " \
 								                  f"generated by trigger '{trigger_id}': '{signal}'")
 								await self.plugins[plugin_name].signal(signal)
-						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] STATUS after signals   = {self.plugins}")
+						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt_subscriber() STATUS after signals   = {self.plugins}")
 		except aiomqtt_MqttError as e:
 			if self.tasks['mqtt'].cancelled() is False and self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				raise e
 		except asyncio_CancelledError as e:
 			pass
 		finally:
-			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] exiting mqtt-subscriber task")
+			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt_subscriber() exiting")
 
 
 	async def task_mqtt_publisher(self, mqtt: aiomqtt_Client) -> None:
-		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] starting mqtt-publisher task")
+		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt_publisher() running")
 		try:
 			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				if self.mqtt_publish_queue.empty() is False:
@@ -268,48 +275,39 @@ class Daemon(object):
 		except asyncio_CancelledError as e:
 			pass
 		finally:
-			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] exiting mqtt-publisher task")
+			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt_publisher() exiting")
 
 
 	async def task_mqtt(self) -> None:
-		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] starting mqtt task")
+		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() running")
 		try:
-			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'], identifier='hal9000-brain') as mqtt:
-				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT.will_set('hal9000/event/brain/runlevel', 'killed')")
-				mqtt.will_set('hal9000/event/brain/runlevel', 'killed')
-				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
-				await mqtt.subscribe('hal9000/command/brain/status')
-				for mqtt_topic, trigger in self.callbacks['mqtt'].items():
-					await mqtt.subscribe(mqtt_topic)
-					self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
-				self.tasks['mqtt:publisher'] = asyncio_create_task(self.task_mqtt_publisher(mqtt))
-				self.tasks['mqtt:subscriber'] = asyncio_create_task(self.task_mqtt_subscriber(mqtt))
-				while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
-					await asyncio_sleep(0.1)
-				self.tasks['mqtt:publisher'].cancel()
-				self.tasks['mqtt:subscriber'].cancel()
-				await asyncio_gather(self.tasks['mqtt:publisher'], self.tasks['mqtt:subscriber'])
+			self.logger.info(f"[daemon] MQTT.connect(host='{self.config['mqtt:server']}', port={self.config['mqtt:port']}) for plugin 'brain'")
+			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'], will=aiomqtt_Will('hal9000/event/brain/runlevel', 'killed'), identifier='hal9000-brain') as mqtt:
+				try:
+					self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
+					await mqtt.subscribe('hal9000/command/brain/status')
+					for mqtt_topic, trigger in self.callbacks['mqtt'].items():
+						await mqtt.subscribe(mqtt_topic)
+						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
+					self.tasks['mqtt:publisher'] = asyncio_create_task(self.task_mqtt_publisher(mqtt))
+					self.tasks['mqtt:subscriber'] = asyncio_create_task(self.task_mqtt_subscriber(mqtt))
+					while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
+						await asyncio_sleep(0.1)
+				except (asyncio_CancelledError, Exception) as e:
+					await mqtt.publish('hal9000/event/brain/runlevel', 'killed')
+					raise e
 		except asyncio_CancelledError as e:
-			if 'mqtt:publisher' in self.tasks:
-				self.tasks['mqtt:publisher'].cancel()
-				await asyncio_gather(self.tasks['mqtt:publisher'])
-				del self.tasks['mqtt:publisher']
-			if 'mqtt:subscriber' in self.tasks:
-				self.tasks['mqtt:subscriber'].cancel()
-				await asyncio_gather(self.tasks['mqtt:subscriber'])
-				del self.tasks['mqtt:subscriber']
-			self.mqtt_publish_queue = None
+			self.logger.info(f"[daemon] task mqtt has been cancelled")
 		except Exception as e:
-			self.logger.critical(f"[daemon] Daemon.task_mqtt(): {str(e)}")
-			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
-			self.logger.critical(e)
+			self.logger.critical(f"[daemon] {str(e)}")
 			raise e
 		finally:
-			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] exiting mqtt task")
+			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
+			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() exiting")
 
 
 	async def task_signal(self) -> None:
-		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] starting signal task")
+		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_signal() running")
 		try:
 			while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				if self.signal_queue.empty() is False:
@@ -317,7 +315,7 @@ class Daemon(object):
 					if isinstance(data, dict) is True and 'plugin' in data and 'signal' in data:
 						plugin = data['plugin']
 						signal = data['signal']
-						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] SIGNAL for plugin '{plugin}': '{signal}'")
+						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_signal() SIGNAL for plugin '{plugin}': '{signal}'")
 						if plugin in self.plugins:
 							plugin = self.plugins[plugin]
 							await plugin.signal(signal)
@@ -333,7 +331,7 @@ class Daemon(object):
 			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			raise e
 		finally:
-			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] exiting signal task")
+			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_signal() exiting")
 
 
 	async def on_scheduler(self, plugin: str, signal: dict) -> None:
