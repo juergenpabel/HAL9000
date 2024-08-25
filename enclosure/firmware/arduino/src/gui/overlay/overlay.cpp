@@ -45,18 +45,24 @@ gui_refresh_t gui_overlay_update(bool refresh) {
 
 
 gui_refresh_t gui_overlay_off(bool refresh) {
+	if(refresh == true) {
+		g_gui_overlay.fillSprite(TFT_TRANSPARENT);
+	}
 	return RefreshIgnore;
 }
 
 
 gui_refresh_t gui_overlay_on(bool refresh) {
+	if(refresh == true) {
+		g_gui_overlay.fillSprite(TFT_TRANSPARENT);
+	}
 	return RefreshIgnore;
 }
 
 
 gui_refresh_t gui_overlay_none(bool refresh) {
 	if(refresh == true) {
-		return RefreshScreen;
+		g_gui_overlay.fillSprite(TFT_TRANSPARENT);
 	}
 	return RefreshIgnore;
 }
