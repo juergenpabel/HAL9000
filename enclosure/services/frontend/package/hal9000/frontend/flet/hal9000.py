@@ -95,6 +95,10 @@ class HAL9000(Frontend):
 					case 'gui/screen':
 						for screen in command['payload'].keys():
 							match screen:
+								case 'off':
+									pass
+								case 'on':
+									pass
 								case 'none':
 									self.show_none(display)
 								case 'idle':
@@ -200,7 +204,7 @@ class HAL9000(Frontend):
 	def show_none(self, display):
 		display.content.shapes = []
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'none': None}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'none'}})
 
 
 	def show_idle(self, display):
@@ -210,7 +214,7 @@ class HAL9000(Frontend):
 		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'idle': None}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'idle'}})
 
 
 	def show_animations(self, display, data):
@@ -223,7 +227,7 @@ class HAL9000(Frontend):
 		else:
 			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'assets/system/gui/screen/animations/{data['name']}.json'")
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'animations': None}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'animations'}})
 
 
 	def show_menu(self, display, data):
@@ -237,10 +241,29 @@ class HAL9000(Frontend):
 		                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'menu': None}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'menu'}})
 
 
 	def show_qrcode(self, display, data):
+		self.render_qrcode(display, data)
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'qrcode'}})
+
+
+	def show_splash(self, display, data):
+		self.render_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
+		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Splash-database',
+		                           'hint': f"Splash ID: {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'splash'}})
+
+
+	def show_error(self, display, data):
+		self.render_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'red', 'title-color': 'white',
+		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
+		                           'hint': f"Error {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'error'}})
+
+
+	def render_qrcode(self, display, data):
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Circle(x=display.radius, y=display.radius, radius=display.radius,
 		                                                 paint=flet.Paint(color=data['bg-color'] if 'bg-color' in data else 'black')))
@@ -265,21 +288,6 @@ class HAL9000(Frontend):
 		                                                                    size=int(display.page.scale*(data['hint-size'] if 'hint-size' in data else 14))),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'qrcode': None}})
-
-
-	def show_splash(self, display, data):
-		self.show_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
-		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Splash-database',
-		                           'hint': f"Splash ID: {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'splash': None}})
-
-
-	def show_error(self, display, data):
-		self.show_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'red', 'title-color': 'white',
-		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
-		                           'hint': f"Error {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'error': None}})
 
 
 	def on_button_wakeup(self, event):

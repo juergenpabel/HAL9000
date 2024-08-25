@@ -45,7 +45,7 @@ class FrontendManager:
 		for counter in range(0, 4):
 			if self.mqtt_client.is_connected() is False:
 				logging_getLogger("uvicorn").debug(f"[frontend] - MQTT connection attempt #{counter+1}")
-				if self.mqtt_connect() is False:
+				if await self.mqtt_connect() is False:
 					delay = pow(2, counter)
 					logging_getLogger("uvicorn").debug(f"[frontend] - MQTT connection attempt failed, waiting {delay} seconds before next attempt")
 					await asyncio_sleep(delay)
@@ -83,10 +83,10 @@ class FrontendManager:
 	async def mqtt_connect(self) -> bool:
 		if self.mqtt_client.is_connected() is False:
 			try:
-				self.mqtt_client.connect(self.config['frontend:broker-ipv4'], self.config['frontend:broker-port'])
 				self.mqtt_client.will_set('hal9000/event/frontend/runlevel', 'killed')
+				self.mqtt_client.connect(self.config['frontend:broker-ipv4'], self.config['frontend:broker-port'])
 				self.mqtt_client.subscribe('hal9000/command/frontend/#')
-				self.mqtt_client.subscribe('hal9000/brain/event/runlevel')
+				self.mqtt_client.subscribe('hal9000/event/brain/runlevel')
 				self.mqtt_client.on_message = self.mqtt_subscriber_message
 				self.mqtt_client.loop(timeout=1)
 			except ConnectionRefusedError:
@@ -102,9 +102,9 @@ class FrontendManager:
 				logging_getLogger("uvicorn").warning(f"[frontend] received mqtt message that brain component has disconnected, showing error screen")
 				for frontend in self.frontends:
 					frontend.commands.put_nowait({"topic": 'gui/screen', "payload": {'on': {}}})
-					frontend.commands.put_nowait({"topic": 'gui/screen', "payload": {'error': {'message': 'System error',
+					frontend.commands.put_nowait({"topic": 'gui/screen', "payload": {'error': {'message': 'System failure',
 					                                                                           'url': 'https://github.com/juergenpabel/HAL9000/wiki/ERROR_07',
-					                                                                           'id': 'TODO'}}})
+					                                                                           'id': '07'}}})
 			return
 		match topic[25:]: #remove 'hal9000/command/frontend/' prefix
 			case 'runlevel':

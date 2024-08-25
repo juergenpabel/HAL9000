@@ -26,6 +26,7 @@ class Action(HAL9000_Action):
 		self.config['kalliope:status-mqtt-topic'] = configuration.get(section_name, 'kalliope-status-mqtt-topic',
 		                                                                 fallback='hal9000/command/kalliope/status')
 		self.config['kalliope:trigger-mqtt-topic'] = configuration.get(section_name, 'kalliope-trigger-mqtt-topic', fallback=None)
+		self.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_runlevel_callback, 'runlevel')
 		self.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_status_callback, 'status')
 		self.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_volume_callback, 'volume')
 		self.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_mute_callback, 'mute')
@@ -48,7 +49,8 @@ class Action(HAL9000_Action):
 		if 'runlevel' in signal:
 			match signal['runlevel']:
 				case HAL9000_Plugin.RUNLEVEL_STARTING:
-					if self.daemon.plugins['kalliope'].runlevel == HAL9000_Plugin.RUNLEVEL_UNKNOWN:
+					if self.daemon.plugins['kalliope'].runlevel in [HAL9000_Plugin.RUNLEVEL_UNKNOWN, \
+					                                                HAL9000_Plugin.RUNLEVEL_KILLED]:
 						self.daemon.plugins['kalliope'].runlevel = HAL9000_Plugin.RUNLEVEL_STARTING
 				case HAL9000_Plugin.RUNLEVEL_READY:
 					if self.daemon.plugins['kalliope'].runlevel in [HAL9000_Plugin.RUNLEVEL_UNKNOWN, \
@@ -61,6 +63,13 @@ class Action(HAL9000_Action):
 					self.daemon.plugins['kalliope'].audio_in = 'none'
 					self.daemon.plugins['kalliope'].audio_out = 'none'
 					self.daemon.queue_signal('kalliope', {'status': Action.KALLIOPE_STATUS_WAITING})
+				case HAL9000_Plugin.RUNLEVEL_KILLED:
+					self.daemon.plugins['kalliope'].runlevel = HAL9000_Plugin.RUNLEVEL_KILLED
+					self.daemon.plugins['kalliope'].status = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
+					self.daemon.plugins['kalliope'].volume = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
+					self.daemon.plugins['kalliope'].mute = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
+					self.daemon.plugins['kalliope'].audio_in = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
+					self.daemon.plugins['kalliope'].audio_out = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
 		if 'status' in signal:
 			match signal['status']:
 				case Action.KALLIOPE_STATUS_WAITING:
@@ -79,10 +88,24 @@ class Action(HAL9000_Action):
 					self.daemon.plugins['kalliope'].status = Action.KALLIOPE_STATUS_SLEEPING
 
 
+	def on_kalliope_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
+		if pending is False:
+			match new_runlevel:
+				case HAL9000_Plugin.RUNLEVEL_STARTING:
+					if old_runlevel == HAL9000_Plugin.RUNLEVEL_KILLED:
+						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
+				case HAL9000_Plugin.RUNLEVEL_KILLED:
+					self.daemon.process_error('critical', '08', "System failure", f"service 'kalliope' (voice interaction) is unavailable")
+		return True
+
+
 	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
 			match new_status:
-				case  Action.KALLIOPE_STATUS_WAITING:
+				case HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
+					if self.daemon.plugins['kalliope'].runlevel != HAL9000_Plugin.RUNLEVEL_KILLED:
+						return False
+				case Action.KALLIOPE_STATUS_WAITING:
 					self.daemon.plugins['kalliope'].audio_in = 'wake-word-detector'
 					self.daemon.plugins['kalliope'].audio_out = 'none'
 					if old_status == Action.KALLIOPE_STATUS_SLEEPING:
@@ -108,14 +131,14 @@ class Action(HAL9000_Action):
 
 
 	def on_kalliope_volume_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_volume: int, new_volume: int, pending: bool) -> bool:
-		if pending is False:
+		if pending is False and new_volume != HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
 			if plugin.mute in ['false', HAL9000_Plugin_Status.STATUS_UNINITIALIZED]:
 				self.daemon.mqtt_publish_queue.put_nowait({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': new_volume}})
 		return True
 
 
 	def on_kalliope_mute_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_mute: str, new_mute: str, pending: bool) -> bool:
-		if pending is False:
+		if pending is False and new_mute != HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
 			match new_mute:
 				case 'true':
 					self.daemon.mqtt_publish_queue.put_nowait({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': 0}})

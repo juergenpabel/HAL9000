@@ -164,7 +164,7 @@ class Daemon(object):
 						self.logger.critical(f"[daemon] Startup failed (plugins that haven't reported their runlevel):")
 						for id, plugin in plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN].items():
 							error = plugin.runlevel_error()
-							await self.process_error('critical', error['id'], f"    Plugin '{id.split(':').pop()}'", error['message'])
+							self.process_error('critical', error['id'], f"    Plugin '{id.split(':').pop()}'", error['message'])
 						self.logger.debug(f"[daemon] STATUS at startup-timeout = {self.plugins}")
 						self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 					if len(plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN]) == 0:
@@ -293,11 +293,10 @@ class Daemon(object):
 					self.tasks['mqtt:subscriber'] = asyncio_create_task(self.task_mqtt_subscriber(mqtt))
 					while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 						await asyncio_sleep(0.1)
-				except (asyncio_CancelledError, Exception) as e:
+				finally:
 					await mqtt.publish('hal9000/event/brain/runlevel', 'killed')
-					raise e
 		except asyncio_CancelledError as e:
-			self.logger.info(f"[daemon] task mqtt has been cancelled")
+			self.logger.debug(f"[daemon] task mqtt has been cancelled")
 		except Exception as e:
 			self.logger.critical(f"[daemon] {str(e)}")
 			raise e
@@ -428,16 +427,21 @@ class Daemon(object):
 						self.plugins['brain'].status = signal['status']
 				case Daemon.BRAIN_STATUS_DYING:
 					pass
+		if 'error' in signal:
+			error = {'level': 'error', 'id': '00', 'title': 'UNEXPECTED ERROR', 'details': ''}
+			for field in error.keys():
+				if field in signal['error']:
+					error[field] = signal['error'][field]
+			self.process_error(signal['error']['level'], signal['error']['id'], signal['error']['title'], signal['error']['details'])
 		if 'time:sync' in signal:
 			time_synchronized = os_path_exists('/run/systemd/timesync/synchronized')
 			self.plugins['brain'].time = 'synchronized' if time_synchronized is True else 'unsynchronized'
 
 
-	async def process_error(self, level: str, id: str, title: str, details: str='<no details>') -> None:
+	def process_error(self, level: str, id: str, title: str, details: str='<no details>') -> None:
 		self.logger.log(getattr(logging, level.upper()), f"[daemon] ERROR #{id}: {title} => {details}")
-		if self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_RUNNING:
-			url = self.config['help:error-url'].format(id=id)
-			await self.signal('frontend', {'gui': {'screen': {'name': 'error', 'parameter': {'id': id, 'url': url, 'message': title}}}}) #TODO: non-frontend
+		if self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_RUNNING and self.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
+			self.queue_signal('frontend', {'gui': {'screen': {'name': 'error', 'parameter': {'id': id, 'url': self.config['help:error-url'].format(error_id=id), 'message': title}}}}) #TODO: non-frontend
 
 
 	async def signal(self, plugin: str, signal: dict) -> None:
