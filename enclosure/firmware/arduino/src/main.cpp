@@ -15,6 +15,7 @@
 #include "util/webserial.h"
 #include "util/jpeg.h"
 
+bool core1_separate_stack = true;
 
 void setup() {
 	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> json;
@@ -49,17 +50,11 @@ void setup() {
 	g_gui.begin();
 	g_gui.setRotation(TFT_ORIENTATION_LOGICAL);
 	g_gui.fillScreen(TFT_BLACK);
-	g_gui_screen.setColorDepth(16);
-	g_gui_screen.createSprite(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
-	if(g_gui_screen.getPointer() == nullptr) {
-		g_util_webserial.send("syslog/warning", "out-of-memory: UI running without screen-sprite (no 'real' graphics)");
-		g_application.notifyError("warn", "11", "Disabled animations", "g_gui_screen.createSprite() failed");
-	}
-	g_gui_overlay.setColorDepth(8);
-	g_gui_overlay.createSprite(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
-	if(g_gui_overlay.getPointer() == nullptr) {
-		g_util_webserial.send("syslog/warning", "out-of-memory: UI running without overlay-sprite");
-		g_application.notifyError("warn", "11", "Disabled overlays", "g_gui_overlay.createSprite() failed");
+	g_gui_buffer.setColorDepth(16);
+	g_gui_buffer.createSprite(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
+	if(g_gui_buffer.getPointer() == nullptr) {
+		g_util_webserial.send("syslog/warning", "out-of-memory: UI running without frame buffer (reduced graphics)");
+		g_application.notifyError("warn", "11", "Reduced graphics", "g_gui_buffer.createSprite() failed");
 	}
 }
 
@@ -111,14 +106,14 @@ void loop() {
 			case StatusRebooting:
 				gui_screen_set("", gui_screen_animations_shutdown);
 				while(gui_screen_get() == gui_screen_animations) {
-					gui_screen_update(true);
+					gui_update();
 				}
 				g_device_board.reset(true);
 				break;
 			case StatusHalting:
 				gui_screen_set("", gui_screen_animations_shutdown);
 				while(gui_screen_get() == gui_screen_animations) {
-					gui_screen_update(true);
+					gui_update();
 				}
 				g_device_board.halt();
 				break;
@@ -139,15 +134,5 @@ void loop() {
 		configurationTimeout = 0;
 	}
 	gui_update();
-	if(currentStatus == StatusRunning) {
-		static unsigned long previousMillis = 0;
-		       unsigned long currentMillis;
-
-		currentMillis = millis();
-		if((currentMillis-previousMillis) < 50) {
-			delay(50 - (currentMillis-previousMillis));
-		}
-		previousMillis = currentMillis;
-	}
 }
 

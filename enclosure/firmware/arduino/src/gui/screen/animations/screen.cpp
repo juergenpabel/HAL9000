@@ -11,103 +11,112 @@
 #include "globals.h"
 
 
-static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& filename);
-
 typedef struct {
-	etl::string<GLOBAL_FILENAME_SIZE> directory;
 	etl::string<GLOBAL_VALUE_SIZE>    title;
-	int                               frames;
-	int                               delay;
+	unsigned long                     duration;
+	etl::string<GLOBAL_FILENAME_SIZE> directory;
+	unsigned int                      frames;
 	boolean                           loop;
 	etl::string<GLOBAL_VALUE_SIZE>    onthis_webserial;
 	etl::string<GLOBAL_VALUE_SIZE>    onnext_webserial;
 } animation_t;
 
-static etl::list<animation_t, 8>  g_animation;
-static int                        g_current_frame = 0;
+typedef etl::list<animation_t, 8>  animations_t;
 
 
-gui_refresh_t gui_screen_animations(bool refresh) {
-	static etl::string<GLOBAL_FILENAME_SIZE> filename;
-	static etl::format_spec                  frame_format(10, 2, 0, false, false, false, false, '0');
+static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& filename, animations_t& animations);
+
+
+unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
+	static animations_t  animations;
+	static unsigned int  animation_frame = 0;
 
 	if(g_application.hasEnv("gui/screen:animations/name") == true) {
+		static etl::string<GLOBAL_FILENAME_SIZE> filename;
+
+		lastDraw = GUI_UPDATE;
+		animation_frame = 0;
 		filename  = "/system/gui/screen/animations/";
 		filename += g_application.getEnv("gui/screen:animations/name");
 		filename += ".json";
 		g_device_microcontroller.mutex_enter("gpio");
-		gui_screen_animations_load(filename);
+		gui_screen_animations_load(filename, animations);
 		g_device_microcontroller.mutex_leave("gpio");
-		if(g_animation.empty() == true) {
+		if(animations.empty() == true) {
 			g_util_webserial.send("syslog/error", "error loading json data for gui/screen 'animations':");
 			g_util_webserial.send("syslog/error", filename);
 		}
+		g_application.delEnv("gui/screen:animations/name");
+		if(g_application.hasEnv("gui/screen:animations/loop") == true) {
+			g_application.delEnv("gui/screen:animations/loop");
+		}
 	}
-	if(g_animation.empty() == false) {
-		animation_t* current_animation = nullptr;
+	if(animations.empty() == false) {
+		animation_t* animation_current = nullptr;
 
-		current_animation = &g_animation.front();
-		if(g_current_frame >= current_animation->frames) {
-			g_current_frame = 0;
-			if(current_animation->loop == true) {
+		animation_current = &animations.front();
+		if((millis()-lastDraw) < (animation_current->duration/animation_current->frames)) {
+			return lastDraw;
+		}
+		if(animation_frame >= animation_current->frames) {
+			animation_frame = 0;
+			if(animation_current->loop == true) {
 				if(g_application.hasEnv("gui/screen:animations/loop") == true) {
 					if(g_application.getEnv("gui/screen:animations/loop") == "false") {
 						g_application.delEnv("gui/screen:animations/loop");
-						current_animation->loop = false;
+						animation_current->loop = false;
 					}
 				}
 			}
-			if(current_animation->loop == false) {
-				if(current_animation->onnext_webserial.empty() == false) {
-					g_util_webserial.handle(current_animation->onnext_webserial);
+			if(animation_current->loop == false) {
+				if(animation_current->onnext_webserial.empty() == false) {
+					g_util_webserial.handle(animation_current->onnext_webserial);
 				}
-				g_animation.pop_front();
-				if(g_animation.empty() == true) {
-					return RefreshIgnore;
+				animations.pop_front();
+				if(animations.empty() == true) {
+					return lastDraw;
 				}
-				current_animation = &g_animation.front();
+				animation_current = &animations.front();
 			}
 		}
-		if(g_current_frame == 0) {
-			if(current_animation->onthis_webserial.empty() == false) {
-				g_util_webserial.handle(current_animation->onthis_webserial);
+		if(animation_frame == 0) {
+			if(animation_current->onthis_webserial.empty() == false) {
+				g_util_webserial.handle(animation_current->onthis_webserial);
 			}
 		}
-		if(g_gui_screen.getPointer() != nullptr) {
-			filename = current_animation->directory;
+		if(gui == &g_gui_buffer) {
+			static etl::string<GLOBAL_FILENAME_SIZE> filename;
+			static etl::format_spec                  frame_format(10, 2, 0, false, false, false, false, '0');
+
+			filename = animation_current->directory;
 			if(filename.back() != '/') {
 				filename += "/";
 			}
-			etl::to_string(g_current_frame, filename, frame_format, true);
+			etl::to_string(animation_frame, filename, frame_format, true);
 			filename += ".jpg";
-			util_jpeg_decode565_littlefs(filename.c_str(), (uint16_t*)g_gui_screen.getPointer(), GUI_SCREEN_WIDTH*GUI_SCREEN_HEIGHT*sizeof(uint16_t));
-			g_gui_screen.pushSprite((g_gui.width()-GUI_SCREEN_WIDTH)/2, (g_gui.height()-GUI_SCREEN_HEIGHT)/2);
+			util_jpeg_decode565_littlefs(filename.c_str(), (uint16_t*)g_gui_buffer.getPointer(), GUI_SCREEN_WIDTH*GUI_SCREEN_HEIGHT*sizeof(uint16_t));
 		} else {
-			if(g_current_frame == 0) {
+			if(animation_frame == 0 || lastDraw == GUI_UPDATE) {
 				g_device_microcontroller.mutex_enter("gpio");
 				g_gui.fillScreen(TFT_BLACK);
 				g_gui.setTextColor(TFT_RED, TFT_BLACK, false);
 				g_gui.setTextFont(1);
 				g_gui.setTextSize(3);
 				g_gui.setTextDatum(MC_DATUM);
-				g_gui.drawString(current_animation->title.c_str(), g_gui.width()/2, g_gui.height()/2);
+				g_gui.drawString(animation_current->title.c_str(), g_gui.width()/2, g_gui.height()/2);
 				g_device_microcontroller.mutex_leave("gpio");
 			}
-			delay(50); // roughly estimated image loading-time difference
 		}
-		delay(current_animation->delay);
-		g_current_frame++;
+		animation_frame++;
 	}
-	return RefreshIgnore;
+	return millis();
 }
 
 
-static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
+static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& filename, animations_t& animations) {
 	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> animationsJSON;
 	       File file;
 
-	g_application.delEnv("gui/screen:animations/name");
-	g_application.delEnv("gui/screen:animations/loop");
 	if(LittleFS.exists(filename.c_str()) == false) {
 		g_application.notifyError("error", "13", "Animation error", filename);
 		return;
@@ -122,26 +131,24 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 	for(JsonVariant animationJSON : animationsJSON.as<JsonArray>()) {
 		static animation_t animation;
 
-		animation.directory.clear();
 		animation.title.clear();
+		animation.duration = 0;
+		animation.directory.clear();
 		animation.frames = 0;
-		animation.delay = 0;
 		animation.loop = false;
 		animation.onthis_webserial.clear();
 		animation.onnext_webserial.clear();
-		if(animationJSON.containsKey("directory") == false) {
-			g_application.notifyError("error", "13", "Animation error", filename);
-			return;
-		}
-		animation.directory = animationJSON["directory"].as<const char*>();
 		if(animationJSON.containsKey("title") == true) {
 			animation.title = animationJSON["title"].as<const char*>();
 		}
-		if(animationJSON.containsKey("frames") == true) {
-			animation.frames = animationJSON["frames"].as<int>();
+		if(animationJSON.containsKey("duration") == true) {
+			animation.duration = animationJSON["duration"].as<unsigned long>();
 		}
-		if(animationJSON.containsKey("delay") == true) {
-			animation.delay = animationJSON["delay"].as<int>();
+		if(animationJSON.containsKey("directory") == true) {
+			animation.directory = animationJSON["directory"].as<const char*>();
+		}
+		if(animationJSON.containsKey("frames") == true) {
+			animation.frames = animationJSON["frames"].as<unsigned int>();
 		}
 		if(animationJSON.containsKey("loop") == true) {
 			animation.loop = animationJSON["loop"].as<bool>();
@@ -156,26 +163,25 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 				animation.onnext_webserial = animationJSON["on:next"]["webserial"].as<const char*>();
 			}
 		}
-		g_animation.push_back(animation);
+		if(animation.directory == "" || animation.frames == 0) {
+			g_application.notifyError("error", "13", "Animation data error", filename);
+			return;
+		}
+		animations.push_back(animation);
 	}
-	g_current_frame = 0;
 }
 
 
-gui_refresh_t gui_screen_animations_startup(bool refresh) {
-	g_device_microcontroller.mutex_enter("gpio");
-	gui_screen_animations_load("/system/gui/screen/animations/startup.json");
-	g_device_microcontroller.mutex_leave("gpio");
-	gui_screen_set("animations", gui_screen_animations, false);
-	return RefreshIgnore;
+unsigned long gui_screen_animations_startup(unsigned long lastDraw, TFT_eSPI* gui) {
+	g_application.setEnv("gui/screen:animations/name", "startup");
+	gui_screen_set("animations", gui_screen_animations);
+	return 0;
 }
 
 
-gui_refresh_t gui_screen_animations_shutdown(bool refresh) {
-	g_device_microcontroller.mutex_enter("gpio");
-	gui_screen_animations_load("/system/gui/screen/animations/shutdown.json");
-	g_device_microcontroller.mutex_leave("gpio");
-	gui_screen_set("animations", gui_screen_animations, false);
-	return RefreshIgnore;
+unsigned long gui_screen_animations_shutdown(unsigned long lastDraw, TFT_eSPI* gui) {
+	g_application.setEnv("gui/screen:animations/name", "shutdown");
+	gui_screen_set("animations", gui_screen_animations);
+	return 0;
 }
 

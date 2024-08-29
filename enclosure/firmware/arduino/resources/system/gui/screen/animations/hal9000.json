@@ -1,6 +1,6 @@
-[ {"title": "...",     "directory": "/images/animations/hal9000/fade-in",  "frames": 10, "delay": 0, "loop": false},
-  {"title": "HAL9000", "directory": "/images/animations/hal9000/loop",     "frames": 10, "delay": 0, "loop": true},
-  {"title": "...",     "directory": "/images/animations/hal9000/fade-out", "frames": 10, "delay": 0, "loop": false,
+[ {"title": "...",     "duration": 1000, "directory": "/images/animations/hal9000/fade-in",  "frames": 10, "loop": false},
+  {"title": "HAL9000", "duration": 1000, "directory": "/images/animations/hal9000/loop",     "frames": 10, "loop": true},
+  {"title": "...",     "duration": 1000, "directory": "/images/animations/hal9000/fade-out", "frames": 10, "loop": false,
                        "on:next": {"webserial": "[\"gui/screen\", {\"idle\": {}}]"}}
 ]
 

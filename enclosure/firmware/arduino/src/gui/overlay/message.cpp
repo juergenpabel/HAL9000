@@ -5,24 +5,18 @@
 #include "globals.h"
 
 
-gui_refresh_t gui_overlay_message(bool refresh) {
+unsigned long gui_overlay_message(unsigned long lastDraw, TFT_eSPI* gui) {
 	static etl::string<GLOBAL_VALUE_SIZE>  message;
-	       gui_refresh_t gui_refresh = RefreshIgnore;
 
-	if(refresh == true) {
-		message.clear();
-	}
-	if(message.compare(g_application.getEnv("gui/overlay:message/text")) != 0) {
+	if(lastDraw == GUI_UPDATE) {
 		message = g_application.getEnv("gui/overlay:message/text");
-		g_gui_overlay.fillSprite(TFT_TRANSPARENT);
-		g_gui_overlay.setTextColor(TFT_WHITE, TFT_BLACK, false);
-		g_gui_overlay.setTextFont(1);
-		g_gui_overlay.setTextSize(2);
-		g_gui_overlay.setTextDatum(MC_DATUM);
-		g_gui_overlay.drawString(message.c_str(), (g_gui_overlay.width()-GUI_SCREEN_WIDTH)/2+(GUI_SCREEN_WIDTH/2),
-		                                          (g_gui_overlay.height()-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*5));
-		gui_refresh = RefreshAll;
+		gui->setTextColor(TFT_WHITE, TFT_BLACK, false);
+		gui->setTextFont(1);
+		gui->setTextSize(2);
+		gui->setTextDatum(MC_DATUM);
+		gui->drawString(message.c_str(), (gui->width()-GUI_SCREEN_WIDTH)/2+(GUI_SCREEN_WIDTH/2), (gui->height()-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*5));
+		return millis();
 	}
-	return gui_refresh;
+	return lastDraw;
 }
 

@@ -18,8 +18,7 @@ extern Board           g_device_board;
 extern MCP23X17        g_device_mcp23X17;
 
 extern TFT_eSPI        g_gui;
-extern TFT_eSprite     g_gui_screen;
-extern TFT_eSprite     g_gui_overlay;
+extern TFT_eSprite     g_gui_buffer;
 
 extern JPEGDEC         g_util_jpeg;
 extern WebSerial       g_util_webserial;

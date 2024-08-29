@@ -10,13 +10,14 @@
 #include "globals.h"
 
 
-gui_refresh_t gui_screen_error(bool refresh) {
+unsigned long gui_screen_error(unsigned long lastDraw, TFT_eSPI* gui) {
 	etl::string<GLOBAL_VALUE_SIZE> error_message;
 	etl::string<GLOBAL_VALUE_SIZE> error_url;
 	etl::string<GLOBAL_VALUE_SIZE> error_id;
-	gui_refresh_t gui_refresh = RefreshIgnore;
 
-	if(refresh == true) {
+	if(lastDraw == GUI_UPDATE) {
+		unsigned long currentDraw = GUI_UPDATE;
+
 		if(g_application.hasEnv("gui/screen:error/id") == true) {
 			error_id = g_application.getEnv("gui/screen:error/id");
 		}
@@ -35,7 +36,7 @@ gui_refresh_t gui_screen_error(bool refresh) {
 		g_application.setEnv("gui/screen:qrcode/text-above", error_message);
 		g_application.setEnv("gui/screen:qrcode/text-url",   error_url);
 		g_application.setEnv("gui/screen:qrcode/text-below", error_id.insert(0, "Error: "));
-		gui_refresh = gui_screen_qrcode(refresh);
+		currentDraw = gui_screen_qrcode(lastDraw, gui);
 		g_application.delEnv("gui/screen:qrcode/text-below");
 		g_application.delEnv("gui/screen:qrcode/text-url");
 		g_application.delEnv("gui/screen:qrcode/text-above");
@@ -43,7 +44,8 @@ gui_refresh_t gui_screen_error(bool refresh) {
 		g_application.delEnv("gui/screen:qrcode/textsize-above");
 		g_application.delEnv("gui/screen:qrcode/color-text");
 		g_application.delEnv("gui/screen:qrcode/color-screen");
+		return currentDraw;
 	}
-	return gui_refresh;
+	return lastDraw;
 }
 

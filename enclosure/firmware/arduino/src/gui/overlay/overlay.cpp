@@ -2,7 +2,7 @@
 #include "gui/overlay/overlay.h"
 #include "globals.h"
 
-static gui_overlay_func  g_overlay = gui_overlay_off;
+static gui_overlay_func  g_overlay = gui_overlay_none;
 static bool              g_overlay_refresh = false;
 
 
@@ -11,21 +11,13 @@ gui_overlay_func gui_overlay_get() {
 }
 
 
-gui_overlay_func gui_overlay_set(const gui_overlay_name& overlay_name, gui_overlay_func overlay_func, bool overlay_refresh) {
-	static etl::string<GLOBAL_VALUE_SIZE> payload;
-	       gui_overlay_func               previous_overlay = nullptr;
+gui_overlay_func gui_overlay_set(const gui_overlay_name& overlay_name, gui_overlay_func overlay_func) {
+	gui_overlay_func previous_overlay = nullptr;
 
-	if(overlay_func != nullptr && overlay_func != g_overlay) {
-		previous_overlay = g_overlay;
-		g_overlay = overlay_func;
-		g_overlay_refresh = overlay_refresh;
-		if(overlay_refresh == true) {
-			if(g_gui_overlay.getPointer() != nullptr) {
-				g_gui_overlay.fillSprite(TFT_TRANSPARENT);
-			}
-			gui_screen_set_refresh();
-		}
-	}
+	previous_overlay = g_overlay;
+	g_overlay = overlay_func;
+	gui_screen_set_refresh();
+	gui_overlay_set_refresh();
 	return previous_overlay;
 }
 
@@ -35,35 +27,26 @@ void gui_overlay_set_refresh() {
 }
 
 
-gui_refresh_t gui_overlay_update(bool refresh) {
+unsigned long gui_overlay_update(unsigned long lastDraw, TFT_eSPI* gui) {
 	if(g_overlay_refresh == true) {
+		lastDraw = GUI_UPDATE;
 		g_overlay_refresh = false;
-		refresh = true;
 	}
-	return g_overlay(refresh);
+	return g_overlay(lastDraw, gui);
 }
 
 
-gui_refresh_t gui_overlay_off(bool refresh) {
-	if(refresh == true) {
-		g_gui_overlay.fillSprite(TFT_TRANSPARENT);
-	}
-	return RefreshIgnore;
+unsigned long gui_overlay_off(unsigned long lastDraw, TFT_eSPI* gui) {
+	return GUI_IGNORE;
 }
 
 
-gui_refresh_t gui_overlay_on(bool refresh) {
-	if(refresh == true) {
-		g_gui_overlay.fillSprite(TFT_TRANSPARENT);
-	}
-	return RefreshIgnore;
+unsigned long gui_overlay_on(unsigned long lastDraw, TFT_eSPI* gui) {
+	return GUI_IGNORE;
 }
 
 
-gui_refresh_t gui_overlay_none(bool refresh) {
-	if(refresh == true) {
-		g_gui_overlay.fillSprite(TFT_TRANSPARENT);
-	}
-	return RefreshIgnore;
+unsigned long gui_overlay_none(unsigned long lastDraw, TFT_eSPI* gui) {
+	return GUI_IGNORE;
 }
 

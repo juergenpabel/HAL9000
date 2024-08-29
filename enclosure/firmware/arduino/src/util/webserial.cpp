@@ -9,6 +9,25 @@
 #include "globals.h"
 
 
+template<const size_t VSize>
+WebSerialQueue<VSize>::WebSerialQueue(const etl::string<GLOBAL_KEY_SIZE> name)
+               : mutex_name(name) {
+	g_device_microcontroller.mutex_create(this->mutex_name, true);
+}
+
+
+template<const size_t VSize>
+void WebSerialQueue<VSize>::lock() const {
+	g_device_microcontroller.mutex_enter(this->mutex_name);
+}
+
+
+template<const size_t VSize>
+void WebSerialQueue<VSize>::unlock() const {
+	g_device_microcontroller.mutex_leave(this->mutex_name);
+}
+
+
 WebSerial::WebSerial()
           : queue_recv("webserial_recv")
           , queue_send("webserial_send") {

@@ -4,6 +4,7 @@
 #include <etl/string.h>
 #include <etl/map.h>
 #include <etl/queue_lockable.h>
+#include <TFT_eSPI.h>
 
 #include "gui/gui.h"
 #include "device/microcontroller/include.h"
@@ -18,10 +19,10 @@ template<const size_t VSize> class WebSerialQueue : public etl::queue_lockable<e
 	private:
 		const etl::string<GLOBAL_KEY_SIZE> mutex_name;
 	public:
-		WebSerialQueue(const etl::string<GLOBAL_KEY_SIZE> name) : mutex_name(name) { g_device_microcontroller.mutex_create(this->mutex_name, true); };
+		WebSerialQueue(const etl::string<GLOBAL_KEY_SIZE> name);
 	protected:
-		virtual void   lock() const { g_device_microcontroller.mutex_enter(this->mutex_name); };
-		virtual void unlock() const { g_device_microcontroller.mutex_leave(this->mutex_name); };
+		virtual void   lock() const;
+		virtual void unlock() const;
 };
 
 
@@ -42,7 +43,7 @@ class WebSerial {
 		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 
 	friend class Application;
-	friend gui_refresh_t gui_screen_animations(bool refresh);
+	friend unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui);
 };
 
 #endif

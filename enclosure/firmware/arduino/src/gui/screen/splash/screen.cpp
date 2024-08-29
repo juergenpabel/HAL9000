@@ -7,13 +7,14 @@
 #include "globals.h"
 
 
-gui_refresh_t gui_screen_splash(bool refresh) {
+unsigned long gui_screen_splash(unsigned long lastDraw, TFT_eSPI* gui) {
 	etl::string<GLOBAL_VALUE_SIZE> splash_message;
 	etl::string<GLOBAL_VALUE_SIZE> splash_url;
 	etl::string<GLOBAL_VALUE_SIZE> splash_id;
-	gui_refresh_t                  gui_refresh = RefreshIgnore;
 
-	if(refresh == true) {
+	if(lastDraw == GUI_UPDATE) {
+		unsigned long currentDraw = GUI_UPDATE;
+
 		if(g_application.hasEnv("gui/screen:splash/id") == true) {
 			splash_id = g_application.getEnv("gui/screen:splash/id");
 		}
@@ -32,7 +33,7 @@ gui_refresh_t gui_screen_splash(bool refresh) {
 		g_application.setEnv("gui/screen:qrcode/text-above", splash_message);
 		g_application.setEnv("gui/screen:qrcode/text-url",   splash_url);
 		g_application.setEnv("gui/screen:qrcode/text-below", splash_id.insert(0, "ID: "));
-		gui_refresh = gui_screen_qrcode(refresh);
+		currentDraw = gui_screen_qrcode(lastDraw, gui);
 		g_application.delEnv("gui/screen:qrcode/text-below");
 		g_application.delEnv("gui/screen:qrcode/text-url");
 		g_application.delEnv("gui/screen:qrcode/text-above");
@@ -40,7 +41,8 @@ gui_refresh_t gui_screen_splash(bool refresh) {
 		g_application.delEnv("gui/screen:qrcode/textsize-above");
 		g_application.delEnv("gui/screen:qrcode/color-text");
 		g_application.delEnv("gui/screen:qrcode/color-screen");
+		return currentDraw;
 	}
-	return gui_refresh;
+	return lastDraw;
 }
 

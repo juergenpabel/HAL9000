@@ -1,2 +1,2 @@
-gui_refresh_t gui_screen_qrcode(bool refresh);
+unsigned long gui_screen_qrcode(unsigned long lastDraw, TFT_eSPI* gui);
 

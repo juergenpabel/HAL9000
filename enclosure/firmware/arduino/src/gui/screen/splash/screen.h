@@ -1,2 +1,2 @@
-gui_refresh_t gui_screen_splash(bool refresh);
+unsigned long gui_screen_splash(unsigned long lastDraw, TFT_eSPI* gui);
 

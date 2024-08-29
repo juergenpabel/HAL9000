@@ -1,2 +1,2 @@
-gui_refresh_t gui_screen_idle(bool refresh);
+unsigned long gui_screen_idle(unsigned long lastDraw, TFT_eSPI* gui);
 

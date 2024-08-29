@@ -13,21 +13,13 @@ gui_screen_func gui_screen_get() {
 }
 
 
-gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_func screen_func, bool screen_refresh) {
-	static etl::string<GLOBAL_VALUE_SIZE> payload;
-	       gui_screen_func                previous_screen = nullptr;
+gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_func screen_func) {
+	gui_screen_func previous_screen = nullptr;
 
-	if(screen_func != nullptr && screen_func != g_screen) {
-		previous_screen = g_screen;
-		g_screen = screen_func;
-		g_screen_refresh = screen_refresh;
-		if(screen_refresh == true) {
-                        if(g_gui_screen.getPointer() != nullptr) {
-                                g_gui_screen.fillSprite(TFT_BLACK);
-                        }
-			gui_overlay_set_refresh();
-		}
-	}
+	previous_screen = g_screen;
+	g_screen = screen_func;
+	gui_screen_set_refresh();
+	gui_overlay_set_refresh();
 	return previous_screen;
 }
 
@@ -37,37 +29,39 @@ void gui_screen_set_refresh() {
 }
 
 
-gui_refresh_t gui_screen_update(bool refresh) {
+unsigned long gui_screen_update(unsigned long lastDraw, TFT_eSPI* gui) {
 	if(g_screen_refresh == true) {
 		g_screen_refresh = false;
-		refresh = true;
+		lastDraw = GUI_UPDATE;
 	}
-	return g_screen(refresh);
+	return g_screen(lastDraw, gui);
 }
 
 
-gui_refresh_t gui_screen_off(bool refresh) {
-	if(refresh == true) {
-		gui_overlay_set("off", gui_overlay_off, false);
+unsigned long gui_screen_off(unsigned long lastDraw, TFT_eSPI* gui) {
+	if(lastDraw == GUI_UPDATE) {
+		gui_overlay_set("off", gui_overlay_off);
 		g_device_board.displayOff();
+		return GUI_IGNORE;
 	}
-	return RefreshIgnore;
+	return lastDraw;
 }
 
 
-gui_refresh_t gui_screen_on(bool refresh) {
-	if(refresh == true) {
+unsigned long gui_screen_on(unsigned long lastDraw, TFT_eSPI* gui) {
+	if(lastDraw == GUI_UPDATE) {
 		g_device_board.displayOn();
-		gui_overlay_set("on", gui_overlay_on, false);
+		gui_overlay_set("on", gui_overlay_on);
+		return GUI_IGNORE;
 	}
-	return RefreshAll;
+	return lastDraw;
 }
 
 
-gui_refresh_t gui_screen_none(bool refresh) {
-	if(refresh == true) {
-		return RefreshScreen;
+unsigned long gui_screen_none(unsigned long lastDraw, TFT_eSPI* gui) {
+	if(lastDraw == GUI_UPDATE) {
+		return GUI_IGNORE;
 	}
-	return RefreshIgnore;
+	return lastDraw;
 }
 

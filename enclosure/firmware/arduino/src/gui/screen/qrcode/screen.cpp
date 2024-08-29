@@ -29,24 +29,17 @@ static TextsizeMap g_textsizes = {{"small",  1},
                                   {"large",  3}};
 
 
-gui_refresh_t gui_screen_qrcode(bool refresh) {
+unsigned long gui_screen_qrcode(unsigned long lastDraw, TFT_eSPI* gui) {
 	etl::string<GLOBAL_VALUE_SIZE> text_above;
 	etl::string<GLOBAL_VALUE_SIZE> text_url;
 	etl::string<GLOBAL_VALUE_SIZE> text_below;
-	gui_refresh_t gui_refresh = RefreshIgnore;
 
-	if(refresh == true) {
+	if(lastDraw == GUI_UPDATE) {
 		uint32_t  color_screen = TFT_BLACK;
 		uint32_t  color_text = TFT_WHITE;
 		uint32_t  textsize_above = 2;
 		uint32_t  textsize_below = 2;
-		TFT_eSPI* gui;
 
-		gui = &g_gui_screen;
-		if(g_gui_screen.getPointer() == nullptr) {
-			gui = &g_gui;
-			g_util_webserial.send("syslog/debug", "gui_screen_qrcode() using direct rendering because no screen-sprite");
-		}
 		if(g_application.hasEnv("gui/screen:qrcode/text-above") == true) {
 			text_above = g_application.getEnv("gui/screen:qrcode/text-above");
 		}
@@ -79,9 +72,6 @@ gui_refresh_t gui_screen_qrcode(bool refresh) {
 			if(iter != g_textsizes.end()) {
 				textsize_below = iter->second;
 			}
-		}
-		if(gui == &g_gui) {
-			g_device_microcontroller.mutex_enter("gpio");
 		}
 		gui->fillScreen(color_screen);
 		if(text_above.size() > 0) {
@@ -134,12 +124,8 @@ gui_refresh_t gui_screen_qrcode(bool refresh) {
 			gui->setTextDatum(MC_DATUM);
 			gui->drawString(text_below.c_str(), pos_x, pos_y+gui->fontHeight()+5);
 		}
-		if(gui == &g_gui) {
-			g_device_microcontroller.mutex_leave("gpio");
-		} else {
-			gui_refresh = RefreshScreen;
-		}
+		return millis();
 	}
-	return gui_refresh;
+	return lastDraw;
 }
 

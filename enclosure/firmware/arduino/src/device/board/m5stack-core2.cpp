@@ -20,11 +20,10 @@ Board::Board()
 
 void Board::start(bool& host_booting) {
 	AbstractBoard::start(host_booting);
-	if(PMU.begin(Wire1, AXP192_SLAVE_ADDRESS, 21, 22) != true) {
-		while(true) {
-			g_util_webserial.send("syslog/error", "PMU.begin() failed");
-			delay(1000);
-		}
+	while(PMU.begin(Wire1, AXP192_SLAVE_ADDRESS, 21, 22) != true) {
+		Serial.write("[\"syslog/error\", \"m5stack-core2: PMU.begin() failed, retrying in 1 second\"]\n");
+		Serial.flush();
+		delay(1000);
 	}
 	PMU.setSysPowerDownVoltage(2700);
 	PMU.setVbusVoltageLimit(XPOWERS_AXP192_VBUS_VOL_LIM_4V5);

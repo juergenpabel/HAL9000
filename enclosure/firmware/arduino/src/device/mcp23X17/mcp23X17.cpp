@@ -165,11 +165,11 @@ void MCP23X17::loop() {
 	while(true) {
 		millis_previous = millis_current;
 		g_device_mcp23X17.check();
+		yield();
 		millis_current = millis();
 		if((millis_current-millis_previous) < 5) {
 			delay(5 - (millis_current-millis_previous));
 		}
-		yield();
 	}
 }
 
