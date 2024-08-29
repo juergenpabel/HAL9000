@@ -109,8 +109,8 @@ class Action(HAL9000_Action):
 						self.daemon.plugins['frontend'].overlay = 'none'
 				case HAL9000_Plugin.RUNLEVEL_KILLED:
 					self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_KILLED
-					self.daemon.plugins['frontend'].screen = HAL9000_Plugin.STATUS_UNINITIALIZED
-					self.daemon.plugins['frontend'].overlay = HAL9000_Plugin.STATUS_UNINITIALIZED
+					self.daemon.plugins['frontend'].screen = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
+					self.daemon.plugins['frontend'].overlay = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
 		if 'status' in signal:
 			match signal['status']:
 				case Action.FRONTEND_STATUS_OFFLINE:
