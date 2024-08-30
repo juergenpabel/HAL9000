@@ -14,9 +14,12 @@
 
 void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& body) {
 	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
-	static gui_screen_name screen_name;
+	static etl::string<GLOBAL_KEY_SIZE> screen_name;
+	static etl::string<GLOBAL_KEY_SIZE> screen_data;
 	       gui_screen_func screen_func = nullptr;
 
+	screen_name.clear();
+	screen_data.clear();
 	if(body.containsKey("off") == true) {
 		screen_name = "off";
 		screen_func = gui_screen_off;
@@ -31,6 +34,7 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 			g_application.setEnv("gui/screen:animations/name", body["animations"]["name"].as<const char*>());
 		}
 		screen_name = "animations";
+		screen_data = g_application.getEnv("gui/screen:animations/name");
 		screen_func = gui_screen_animations;
 	}
 	if(body.containsKey("error") == true) {
@@ -47,6 +51,7 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 			g_application.setEnv("gui/screen:error/url", body["error"]["url"].as<const char*>());
 		}
 		screen_name = "error";
+		screen_data = g_application.getEnv("gui/screen:error/id");
 		screen_func = gui_screen_error;
 	}
 	if(body.containsKey("idle") == true) {
@@ -103,9 +108,14 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 			g_application.setEnv("gui/screen:splash/id", body["splash"]["id"].as<const char*>());
 		}
 		screen_name = "splash";
+		screen_data = g_application.getEnv("gui/screen:splash/id");
 		screen_func = gui_screen_splash;
 	}
 	if(screen_func != nullptr) {
+		if(screen_data.empty() == false) {
+			screen_name += ":";
+			screen_name += screen_data;
+		}
 		gui_screen_set(screen_name, screen_func);
 		response.clear();
 		response["screen"] = screen_name.c_str();

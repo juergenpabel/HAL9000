@@ -174,14 +174,14 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 
 unsigned long gui_screen_animations_startup(unsigned long lastDraw, TFT_eSPI* gui) {
 	g_application.setEnv("gui/screen:animations/name", "startup");
-	gui_screen_set("animations", gui_screen_animations);
+	gui_screen_set("animations:startup", gui_screen_animations);
 	return 0;
 }
 
 
 unsigned long gui_screen_animations_shutdown(unsigned long lastDraw, TFT_eSPI* gui) {
 	g_application.setEnv("gui/screen:animations/name", "shutdown");
-	gui_screen_set("animations", gui_screen_animations);
+	gui_screen_set("animations:shutdown", gui_screen_animations);
 	return 0;
 }
 

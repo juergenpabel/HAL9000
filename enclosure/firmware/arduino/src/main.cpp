@@ -75,7 +75,7 @@ void loop() {
 				if(g_application.loadSettings() == false) {
 					g_util_webserial.send("syslog/critical", "failed to load application settings, will probably be non-functional");
 				}
-				gui_screen_set("", gui_screen_animations_startup);
+				gui_screen_set("startup", gui_screen_animations_startup);
 				g_application.setStatus(StatusConfiguring);
 				g_util_webserial.setCommand("application/runtime", on_application_runtime);
 				break;
@@ -104,14 +104,14 @@ void loop() {
 				g_device_board.reset(false);
 				break;
 			case StatusRebooting:
-				gui_screen_set("", gui_screen_animations_shutdown);
+				gui_screen_set("shutdown", gui_screen_animations_shutdown);
 				while(gui_screen_get() == gui_screen_animations) {
 					gui_update();
 				}
 				g_device_board.reset(true);
 				break;
 			case StatusHalting:
-				gui_screen_set("", gui_screen_animations_shutdown);
+				gui_screen_set("shutdown", gui_screen_animations_shutdown);
 				while(gui_screen_get() == gui_screen_animations) {
 					gui_update();
 				}
@@ -125,12 +125,12 @@ void loop() {
 		previousStatus = currentStatus;
 	}
 	if(configurationTimeout > 0 && millis() > configurationTimeout) {
-		Error error("error", "01", "No connection to host", "ERROR #01");
+		Error error("critical", "01", "No connection to host", "ERROR #01");
 
 		g_util_webserial.send(error.level.insert(0, "syslog/"), error.message); // TODO: + " => " + error.detail);
 		g_application.setEnv("gui/screen:error/id", error.id);
 		g_application.setEnv("gui/screen:error/message", error.message);
-		gui_screen_set("error", gui_screen_error);
+		gui_screen_set("error:01", gui_screen_error);
 		configurationTimeout = 0;
 	}
 	gui_update();

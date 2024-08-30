@@ -4,23 +4,30 @@
 #include "globals.h"
 
 
-static gui_screen_func  g_screen = gui_screen_on;
+static gui_screen_func  g_screen_func = gui_screen_on;
+static gui_screen_name  g_screen_name = "on";
 static bool             g_screen_refresh = false;
 
 
+gui_screen_name gui_screen_getname() {
+	return g_screen_name;
+}
+
+
 gui_screen_func gui_screen_get() {
-	return g_screen;
+	return g_screen_func;
 }
 
 
 gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_func screen_func) {
-	gui_screen_func previous_screen = nullptr;
+	gui_screen_func previous_screen_func = nullptr;
 
-	previous_screen = g_screen;
-	g_screen = screen_func;
+	previous_screen_func = g_screen_func;
+	g_screen_name = screen_name;
+	g_screen_func = screen_func;
 	gui_screen_set_refresh();
 	gui_overlay_set_refresh();
-	return previous_screen;
+	return previous_screen_func;
 }
 
 
@@ -34,7 +41,7 @@ unsigned long gui_screen_update(unsigned long lastDraw, TFT_eSPI* gui) {
 		g_screen_refresh = false;
 		lastDraw = GUI_UPDATE;
 	}
-	return g_screen(lastDraw, gui);
+	return g_screen_func(lastDraw, gui);
 }
 
 

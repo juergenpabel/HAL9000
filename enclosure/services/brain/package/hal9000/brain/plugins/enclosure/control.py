@@ -59,8 +59,8 @@ class Control(EnclosureComponent):
 	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_screen: str, new_screen: str, pending: bool) -> bool:
 		if pending is False:
 			if old_screen == 'menu':
-				self.daemon.plugins['frontend'].menu_name = None
-				self.daemon.plugins['frontend'].menu_item = None
+				self.daemon.plugins['frontend'].menu_name = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
+				self.daemon.plugins['frontend'].menu_item = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
 		return True
 
 

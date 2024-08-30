@@ -97,20 +97,21 @@ class Action(HAL9000_Action):
 				case HAL9000_Plugin.RUNLEVEL_STARTING:
 					if self.daemon.plugins['frontend'].runlevel == HAL9000_Plugin.RUNLEVEL_UNKNOWN:
 						self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_STARTING
-				case HAL9000_Plugin.RUNLEVEL_READY | HAL9000_Plugin.RUNLEVEL_RUNNING:
-					self.daemon.plugins['frontend'].runlevel = signal['runlevel']
+				case HAL9000_Plugin.RUNLEVEL_READY:
+					self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_READY
 					if self.daemon.plugins['frontend'].screen == HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
-						self.daemon.plugins['frontend'].screen = 'none'
+						self.daemon.plugins['frontend'].screen = 'none', HAL9000_Plugin_Status.STATUS_CONFIRMED
 						self.send_frontend_command('gui/screen', {'none': {}})
-						self.daemon.plugins['frontend'].overlay = 'none'
+						self.daemon.plugins['frontend'].overlay = 'none', HAL9000_Plugin_Status.STATUS_CONFIRMED
 						self.send_frontend_command('gui/overlay', {'none': {}})
-						# set screen&overlay values explicitly to avoid delayed logging during startup
-						self.daemon.plugins['frontend'].screen = 'none'
-						self.daemon.plugins['frontend'].overlay = 'none'
+				case HAL9000_Plugin.RUNLEVEL_RUNNING:
+					self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_RUNNING
+					self.daemon.plugins['frontend'].screen = 'idle'
+					self.send_frontend_command('gui/screen', {'idle': {}})
 				case HAL9000_Plugin.RUNLEVEL_KILLED:
 					self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_KILLED
-					self.daemon.plugins['frontend'].screen = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
-					self.daemon.plugins['frontend'].overlay = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
+					self.daemon.plugins['frontend'].screen = HAL9000_Plugin_Status.STATUS_UNINITIALIZED, HAL9000_Plugin_Status.STATUS_CONFIRMED
+					self.daemon.plugins['frontend'].overlay = HAL9000_Plugin_Status.STATUS_UNINITIALIZED, HAL9000_Plugin_Status.STATUS_CONFIRMED
 		if 'status' in signal:
 			match signal['status']:
 				case Action.FRONTEND_STATUS_OFFLINE:
@@ -198,7 +199,7 @@ class Action(HAL9000_Action):
 	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
 			if old_status == Kalliope_Action.KALLIOPE_STATUS_WAITING and new_status == Kalliope_Action.KALLIOPE_STATUS_LISTENING:
-				self.daemon.plugins['frontend'].screen = 'animations'
+				self.daemon.plugins['frontend'].screen = 'animations:hal9000'
 				self.send_frontend_command('gui/screen', {'animations': {'name': 'hal9000'}})
 			if old_status == Kalliope_Action.KALLIOPE_STATUS_SPEAKING and new_status == Kalliope_Action.KALLIOPE_STATUS_WAITING:
 				self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
