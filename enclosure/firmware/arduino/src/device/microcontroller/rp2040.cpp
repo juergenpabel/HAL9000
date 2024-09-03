@@ -164,8 +164,9 @@ bool Microcontroller::task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name,
 	bool result = false;
 
 	if(core == 1) {
-		multicore_launch_core1(task_function);
-		result = true;
+		g_util_webserial.send("syslog/warn", "task_create() disabled on RP2040 due to stability issues (https://github.com/juergenpabel/HAL9000/issues/2)");
+//TODO		multicore_launch_core1(task_function);
+//TODO		result = true;
 	}
 	return result;
 }

@@ -12,13 +12,15 @@ gui_overlay_func gui_overlay_get() {
 
 
 gui_overlay_func gui_overlay_set(const gui_overlay_name& overlay_name, gui_overlay_func overlay_func) {
-	gui_overlay_func previous_overlay = nullptr;
+	gui_overlay_func previous_overlay_func = nullptr;
 
-	previous_overlay = g_overlay;
-	g_overlay = overlay_func;
-	gui_screen_set_refresh();
-	gui_overlay_set_refresh();
-	return previous_overlay;
+	if(overlay_func != nullptr) {
+		previous_overlay_func = g_overlay;
+		g_overlay = overlay_func;
+		gui_screen_set_refresh();
+		gui_overlay_set_refresh();
+	}
+	return previous_overlay_func;
 }
 
 

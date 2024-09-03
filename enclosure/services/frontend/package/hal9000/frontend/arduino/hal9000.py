@@ -41,14 +41,23 @@ class HAL9000(Frontend):
 			                                     f"'{arduino_config}' (falling back to 'littlefs')")
 		while self.serial is None:
 			try:
+				arduino_name = None
+				for bus in usb_busses():
+					for device in bus.devices:
+						arduino_name = configuration.get('arduino:devices', f'{device.idVendor:04x}:{device.idProduct:04x}', fallback=arduino_name)
+				if arduino_name is not None:
+					logging_getLogger('uvicorn').info(f"[frontend:arduino] identified /dev/ttyHAL9000 as '{arduino_name}'")
+				else:
+					logging_getLogger('uvicorn').warning(f"[frontend:arduino] unidentified board on /dev/ttyHAL9000 " \
+					                                     f"(application configuration only loadable from littlefs)")
 				self.serial = serial_Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate,
 				                            bytesize=serial_EIGHTBITS, parity=serial_PARITY_NONE, stopbits=serial_STOPBITS_ONE)
 				logging_getLogger('uvicorn').debug(f"[frontend:arduino] opened '{arduino_device}'")
+				await self.serial_writeline('["application/runtime", {"status":"?"}]')
 				response = ['application/runtime', {'status': {'name': 'starting'}}]
 				while response[0] != 'application/runtime' \
 				    or 'status' not in response[1] or 'name' not in response[1]['status'] \
 				    or response[1]['status']['name'] == 'starting':
-					await self.serial_writeline('["application/runtime", {"status":"?"}]')
 					await asyncio_sleep(0.5)
 					line = await self.serial_readline(timeout=0.5)
 					if line is not None:
@@ -56,19 +65,8 @@ class HAL9000(Frontend):
 							response = json_loads(line)
 						except Exception as e:
 							logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
-				logging_getLogger('uvicorn').debug(f"[frontend:arduino] MCU exited status 'starting' (now: '{response[1]['status']['name']}')")
-				if response[0] == 'application/runtime' \
-				or response[1] is not False and 'status' in response[1] \
-				                            and 'name' in response[1]['status'] \
-				                            and 'configuring' == response[1]['status']['name']:
-					arduino_name = None
-					for bus in usb_busses():
-						for device in bus.devices:
-							arduino_name = configuration.get('arduino:devices', f'{device.idVendor:04x}:{device.idProduct:04x}', fallback=arduino_name)
-					if arduino_name is not None:
-						logging_getLogger('uvicorn').info(f"[frontend:arduino] identified /dev/ttyHAL9000 as '{arduino_name}'")
-					else:
-						logging_getLogger('uvicorn').warning(f"[frontend:arduino] unspecified /dev/ttyHAL9000")
+				if response[1]['status']['name'] == 'configuring':
+					logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'configuring'")
 					if arduino_config == 'frontend' and arduino_name is not None:
 						i2c_bus = configuration.getint(f'arduino:{arduino_name}', 'i2c-bus', fallback=0)
 						i2c_addr = configuration.getint(f'arduino:{arduino_name}', 'i2c-address', fallback=32)
@@ -94,13 +92,14 @@ class HAL9000(Frontend):
 								raise configparser_ParsingError(f"Unsupported item '{key}' in section '{arduino_name}:mcp23X17')")
 						await self.serial_writeline('["device/mcp23X17", {"start":true}]')
 						await asyncio_sleep(0.5)
+						logging_getLogger('uvicorn').debug(f"[frontend:arduino] '{arduino_device}' is now configured via frontend-configuration")
 					await self.serial_writeline('["", ""]')
 					await asyncio_sleep(0.5)
-					logging_getLogger('uvicorn').debug(f"[frontend:arduino] configured '{arduino_device}'")
 				while response[0] != 'application/runtime' \
 				   or response[1] is False or 'status'  not in response[1] \
 				                           or 'name'    not in response[1]['status'] \
 				                           or 'configuring' == response[1]['status']['name']:
+					await self.serial_writeline('["application/runtime", {"status":"?"}]')
 					await asyncio_sleep(0.5)
 					line = None
 					while line is None:
@@ -109,8 +108,8 @@ class HAL9000(Frontend):
 						response = json_loads(line)
 					except Exception as e:
 						logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
-				logging_getLogger('uvicorn').debug(f"[frontend:arduino] MCU exited status 'configuring' (now: '{response[1]['status'] ['name']}')")
 				if response[1]['status']['name'] == 'ready':
+					logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'ready'")
 					await self.serial_writeline('["application/environment", {"set":{"key": "gui/screen:animations/loop", "value": "false"}}]')
 				while response[0] != 'application/runtime' \
 				   or response[1] is False or 'status' not in response[1] \
@@ -123,7 +122,7 @@ class HAL9000(Frontend):
 						response = json_loads(line)
 					except Exception as e:
 						logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
-				logging_getLogger('uvicorn').debug(f"[frontend:arduino] MCU entered status 'running'")
+				logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'running'")
 			except (configparser_ParsingError, serial_SerialException) as e:
 				logging_getLogger('uvicorn').error(f"[frontend:arduino] {e}")
 				if self.serial is not None:
@@ -233,8 +232,11 @@ class HAL9000(Frontend):
 							if event[0].startswith('syslog/'):
 								log_level = event[0][7:].upper()
 								if hasattr(logging, log_level) is True:
-									logging_getLogger('uvicorn').log(getattr(logging, log_level), f"Arduino {event[0]}: " \
+									logging_getLogger('uvicorn').log(getattr(logging, log_level), f"[frontend:arduino] {event[0]}: " \
 									                                                              f"{json_dumps(event[1])}")
+							if isinstance(event[1], dict) is True:
+								if 'origin' not in event[1]:
+									event[1]['origin'] = 'frontend:arduino'
 							self.events.put_nowait({'topic': event[0], 'payload': event[1]})
 						else:
 							logging_getLogger('uvicorn').warning(f"[frontend:arduino] unexpected (but valid) JSON structure received: {line}")

@@ -363,6 +363,7 @@ class Daemon(object):
 
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
 		if pending is False:
+			self.logger.info(f"[daemon] STATUS at runlevel change from '{old_runlevel}' to '{new_runlevel}' = {self.plugins}")
 			self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/event/brain/runlevel', 'payload': new_runlevel})
 			if new_runlevel == HAL9000_Plugin.RUNLEVEL_READY:
 				self.queue_signal('brain', {'time:sync': {}})
@@ -396,9 +397,9 @@ class Daemon(object):
 				case 'unsynchronized':
 					if self.config['brain:require-synced-time'] is True:
 						logging_getLogger().info(f"Waiting for system time to become synchronized... (require-synced-time=true)")
-					self.schedule_signal(1, 'brain', {'time:sync': {}}, 'brain:time:sync', 'interval')
+					self.schedule_signal(1, 'brain', {'time:sync': {}}, 'scheduler://brain/time:sync', 'interval')
 				case 'synchronized':
-					self.remove_scheduled_signal('brain:time:sync')
+					self.remove_scheduled_signal('scheduler://brain/time:sync')
 				case other:
 					return False
 		return True

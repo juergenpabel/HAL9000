@@ -18,6 +18,7 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 	static etl::string<GLOBAL_KEY_SIZE> screen_data;
 	       gui_screen_func screen_func = nullptr;
 
+	response.clear();
 	screen_name.clear();
 	screen_data.clear();
 	if(body.containsKey("off") == true) {
@@ -32,10 +33,10 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		g_application.delEnv("gui/screen:animations/name");
 		if(body["animations"].containsKey("name") == true) {
 			g_application.setEnv("gui/screen:animations/name", body["animations"]["name"].as<const char*>());
+			screen_name = "animations";
+			screen_data = g_application.getEnv("gui/screen:animations/name");
+			screen_func = gui_screen_animations;
 		}
-		screen_name = "animations";
-		screen_data = g_application.getEnv("gui/screen:animations/name");
-		screen_func = gui_screen_animations;
 	}
 	if(body.containsKey("error") == true) {
 		g_application.delEnv("gui/screen:error/message");
@@ -117,7 +118,6 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 			screen_name += screen_data;
 		}
 		gui_screen_set(screen_name, screen_func);
-		response.clear();
 		response["screen"] = screen_name.c_str();
 		g_util_webserial.send("gui/screen", response);
 	} else {
@@ -131,6 +131,8 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 	static gui_overlay_name overlay_name;
 	       gui_overlay_func overlay_func = nullptr;
 
+	response.clear();
+	overlay_name.clear();
 	if(body.containsKey("none") == true) {
 		overlay_name = "none";
 		overlay_func = gui_overlay_none;
@@ -154,7 +156,6 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 	}
 	if(overlay_func != nullptr) {
 		gui_overlay_set(overlay_name, overlay_func);
-		response.clear();
 		response["overlay"] = overlay_name.c_str();
 		g_util_webserial.send("gui/overlay", response);
 	} else {

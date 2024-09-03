@@ -22,11 +22,13 @@ gui_screen_func gui_screen_get() {
 gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_func screen_func) {
 	gui_screen_func previous_screen_func = nullptr;
 
-	previous_screen_func = g_screen_func;
-	g_screen_name = screen_name;
-	g_screen_func = screen_func;
-	gui_screen_set_refresh();
-	gui_overlay_set_refresh();
+	if(screen_func != nullptr) {
+		previous_screen_func = g_screen_func;
+		g_screen_name = screen_name;
+		g_screen_func = screen_func;
+		gui_screen_set_refresh();
+		gui_overlay_set_refresh();
+	}
 	return previous_screen_func;
 }
 
@@ -47,7 +49,7 @@ unsigned long gui_screen_update(unsigned long lastDraw, TFT_eSPI* gui) {
 
 unsigned long gui_screen_off(unsigned long lastDraw, TFT_eSPI* gui) {
 	if(lastDraw == GUI_UPDATE) {
-		gui_overlay_set("off", gui_overlay_off);
+//TODO		gui_overlay_set("off", gui_overlay_off);
 		g_device_board.displayOff();
 		return GUI_IGNORE;
 	}
@@ -58,7 +60,7 @@ unsigned long gui_screen_off(unsigned long lastDraw, TFT_eSPI* gui) {
 unsigned long gui_screen_on(unsigned long lastDraw, TFT_eSPI* gui) {
 	if(lastDraw == GUI_UPDATE) {
 		g_device_board.displayOn();
-		gui_overlay_set("on", gui_overlay_on);
+//TODO		gui_overlay_set("on", gui_overlay_on);
 		return GUI_IGNORE;
 	}
 	return lastDraw;

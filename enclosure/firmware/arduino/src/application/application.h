@@ -26,12 +26,15 @@ typedef enum {
 class Application {
 	private:
 		Status      m_status;
+		time_t      m_time_offset;
 	protected:
 		ErrorQueue  m_errors;
 		Environment m_environment;
 		Settings    m_settings;
+		void        setTime(time_t time);
 	public:
 		Application();
+
 		bool loadSettings();
 		bool saveSettings();
 		bool resetSettings();
@@ -52,6 +55,8 @@ class Application {
 
 		void notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& id,
 		                 const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_VALUE_SIZE>& detail);
+
+	static time_t getTime();
 
 	static void onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 

@@ -53,6 +53,10 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 				g_util_webserial.send("syslog/error", "application/runtime:time/epoch => invalid epoch timestamp");
 				response["time"]["epoch"] = "error";
 			} else {
+				if(g_application.getTime() == 0L) {
+					setSyncProvider(Application::getTime);
+					setSyncInterval(3600);
+				}
 				setTime(timestamp);
 				response["time"]["epoch"] = "OK";
 			}

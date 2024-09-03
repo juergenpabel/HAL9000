@@ -17,6 +17,7 @@ static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown"
 
 Application::Application() 
             :m_status(StatusUnknown)
+            ,m_time_offset(0)
             ,m_errors()
             ,m_environment()
             ,m_settings("/system/application/settings.ini") {
@@ -25,6 +26,16 @@ Application::Application()
 
 const etl::string<GLOBAL_KEY_SIZE>& Application::getStatusName() {
 	return ApplicationStatusNames[this->m_status];
+}
+
+
+void Application::setTime(time_t time) {
+	this->m_time_offset = time - (millis()/1000);
+}
+
+
+time_t Application::getTime() {
+	return g_application.m_time_offset + (millis()/1000);
 }
 
 
@@ -126,58 +137,79 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> configuration;
 	       JsonObject                                          current;
 
-	if(g_application.getStatus() == StatusConfiguring) {
-		if(command != "") { // non-empty line means configuration instruction
-			current = configuration.createNestedObject();
-			current["command"].set((char*)command.c_str());
-			current["data"].set(data);
-		}
-		if(command == "") { // empty line means end-of-configuration
-			if(configuration.size() > 0) {
-				File file;
-
-				g_util_webserial.send("syslog/debug", "saving application configuration to '/system/application/configuration.json'");
-				file = LittleFS.open("/system/application/configuration.json", "w");
-				if(file == true) {
-					serializeJson(configuration, file);
-					file.close();
-					configuration.clear();
-				} else {
-					g_util_webserial.send("syslog/warning", "Application::onConfiguration() failed to open '/system/application/configuration.json' "
-					                                        "in write-mode, not persisting application-configuration");
+	switch(g_application.getStatus()) {
+		case StatusConfiguring:
+			if(command != "") { // non-empty line means configuration instruction
+				if(g_util_webserial.hasCommand(command) == true) {
+					current = configuration.createNestedObject();
+					current["command"].set((char*)command.c_str());
+					current["data"].set(data);
 				}
 			}
-			g_application.setStatus(StatusReady);
-		}
-	} else {
-		if(configuration.size() == 0) {
-			if(LittleFS.exists("/system/application/configuration.json") == true) {
-				File file;
+			if(command == "") { // empty line means end-of-configuration
+				if(configuration.size() > 0) {
+					File file;
 
-				file = LittleFS.open("/system/application/configuration.json", "r");
-				if(file == true) {
-					configuration.clear();
-					if(deserializeJson(configuration, file) != DeserializationError::Ok) {
-						g_application.notifyError("error", "12", "Configuration error", "/system/application/configuration.json");
+					g_util_webserial.send("syslog/debug", "saving application configuration to (littlefs:)" \
+					                                      "'/system/application/configuration.json'");
+					file = LittleFS.open("/system/application/configuration.json", "w");
+					if(file == true) {
+						serializeJson(configuration, file);
+						file.close();
+						configuration.clear();
+						g_util_webserial.send("syslog/debug", "saved application configuration to (littlefs:)" \
+						                                      "'/system/application/configuration.json'");
 					} else {
-						g_util_webserial.send("syslog/debug", "application configuration loaded from '/system/application/configuration.json'");
+						g_util_webserial.send("syslog/warn", "failed to open (littlefs:)'/system/application/configuration.json' in " \
+						                                     "write-mode, unable to persist configuration for future application startups");
 					}
-					file.close();
+				}
+				g_application.setStatus(StatusReady);
+			}
+			break;
+		case StatusRunning:
+			if(configuration.size() == 0) {
+				if(LittleFS.exists("/system/application/configuration.json") == true) {
+					File file;
+
+					file = LittleFS.open("/system/application/configuration.json", "r");
+					if(file == true) {
+						configuration.clear();
+						if(deserializeJson(configuration, file) == DeserializationError::Ok) {
+							g_util_webserial.send("syslog/debug", "application configuration loaded from (littlefs:)" \
+							                                      "'/system/application/configuration.json'");
+						} else {
+							g_application.notifyError("error", "12", "Configuration error", "JSON error in (littlefs:)" \
+							                                                                "'/system/application/configuration.json'");
+							configuration.clear();
+						}
+						file.close();
+					} else {
+						g_application.notifyError("error", "14", "Config file error", "failed to open *supposedly existing* (littlefs:)" \
+						                                                              "'/system/application/configuration.json' in " \
+						                                                              "read-mode (probably need to reflash littlefs)");
+					}
 				} else {
-					g_application.notifyError("error", "14", "Config file error", "/system/application/configuration.json");
-				}
-			} else {
-				g_application.notifyError("error", "15", "No config file", "/system/application/configuration.json");
-			}
-		}
-		if(configuration.size() > 0) {
-			for(JsonObject item : configuration.as<JsonArray>()) {
-				if(item.containsKey("command") == true && item.containsKey("data") == true) {
-					g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
+					g_application.notifyError("error", "15", "No config file", "file not found in (littlefs:)" \
+					                                                           "'/system/application/configuration.json'");
 				}
 			}
-		}
-		configuration.clear();
+			if(configuration.size() > 0) {
+				g_util_webserial.send("syslog/debug", "activating application configuration...");
+				for(JsonObject item : configuration.as<JsonArray>()) {
+					if(item.containsKey("command") == true && item.containsKey("data") == true) {
+						g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
+					}
+				}
+				configuration.clear();
+				g_util_webserial.send("syslog/debug", "...application configuration activated");
+			}
+			break;
+		default:
+			etl::string<GLOBAL_VALUE_SIZE> log_message("Application::onConfiguration() called in unexpected application-status: ");
+
+			log_message += g_application.getStatusName();
+			g_util_webserial.send("syslog/warn", log_message);
 	}
 }
 

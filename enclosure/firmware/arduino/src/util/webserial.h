@@ -38,6 +38,7 @@ class WebSerial {
 		WebSerial();
 		void begin();
 		void setCommand(const etl::string<GLOBAL_KEY_SIZE>& command, webserial_command_func handler);
+		bool hasCommand(const etl::string<GLOBAL_KEY_SIZE>& command);
 		void update();
 		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::string<GLOBAL_VALUE_SIZE>& data, bool data_stringify = true);
 		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);

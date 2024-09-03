@@ -15,6 +15,7 @@
 
 
 class MCP23X17 {
+	friend void loop();
 	friend class MCP23X17_Rotary;
 	friend class MCP23X17_Switch;
 	friend class MCP23X17_Button;
@@ -34,9 +35,9 @@ class MCP23X17 {
 		bool config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& inputs, const JsonObject& status);
 		bool config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, const etl::string<GLOBAL_KEY_SIZE>& device_name, const JsonArray& outputs);
 
-		bool start();
+		bool start(bool run_as_task);
 	protected:
-		void check();
+		void check(bool from_task);
 		static void loop();
 };
 

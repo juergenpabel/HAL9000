@@ -64,6 +64,7 @@ void loop() {
 	static Status        previousStatus = StatusUnknown;
 	       Status        currentStatus = StatusUnknown;
 
+	g_device_mcp23X17.check(false);
 	g_util_webserial.update();
 	currentStatus = g_application.getStatus();
 	if(currentStatus != previousStatus) {
@@ -81,6 +82,15 @@ void loop() {
 				break;
 			case StatusConfiguring:
 				configurationTimeout = millis() + 90000; //TODO:config option
+				g_util_webserial.setCommand("application/environment", nullptr);
+				g_util_webserial.setCommand("application/settings", nullptr);
+				g_util_webserial.setCommand("device/board", nullptr);
+				g_util_webserial.setCommand("device/microcontroller", nullptr);
+				g_util_webserial.setCommand("device/mcp23X17", nullptr);
+				g_util_webserial.setCommand("device/display", nullptr);
+				g_util_webserial.setCommand("device/sdcard", nullptr);
+				g_util_webserial.setCommand("gui/screen", nullptr);
+				g_util_webserial.setCommand("gui/overlay", nullptr);
 				g_util_webserial.setCommand("*", Application::onConfiguration);
 				break;
 			case StatusReady:

@@ -96,9 +96,9 @@ class HAL9000(Frontend):
 						for screen in command['payload'].keys():
 							match screen:
 								case 'off':
-									pass
+									self.show_off(display)
 								case 'on':
-									pass
+									self.show_on(display)
 								case 'none':
 									self.show_none(display)
 								case 'idle':
@@ -125,6 +125,8 @@ class HAL9000(Frontend):
 							match overlay:
 								case 'none':
 									display.content.update()
+									self.events.put_nowait({'topic': 'gui/overlay',
+									                        'payload': {'overlay': 'none', 'origin': 'frontend:flet'}})
 								case 'volume':
 									radius = display.radius
 									for level in range(0, int(command['payload']['volume']['level'])):
@@ -139,6 +141,8 @@ class HAL9000(Frontend):
 										                                               paint=flet.Paint(color=color),
 										                                               data='overlay'))
 									display.content.update()
+									self.events.put_nowait({'topic': 'gui/overlay',
+									                        'payload': {'overlay': 'volume', 'origin': 'frontend:flet'}})
 								case other:
 									self.show_error(display, {'title': 'Unsupported overlay',
 									                          'message': overlay,
@@ -160,7 +164,13 @@ class HAL9000(Frontend):
 		while page.session_id in self.command_session_queues:
 			clock = display.data['idle_clock'].current
 			if clock is not None:
-				clock.style.color='white' if page.session.get('idle_clock:synced') == 'true' else 'red'
+				if page.session.contains_key("idle_clock:synced") is False or page.session.get("idle_clock:synced") == 'unknown':
+					page.session.set("idle_clock:synced", os_path_exists('/run/systemd/timesync/synchronized'))
+				match page.session.get("idle_clock:synced"):
+					case True | 'true':
+						clock.style.color = 'white'
+					case False | 'false':
+						clock.style.color = 'red'
 				now = datetime_datetime.now()
 				if now.second % 2 == 0:
 					clock.text = now.strftime('%H:%M')
@@ -176,14 +186,14 @@ class HAL9000(Frontend):
 				name = display.data['animations']['name']
 				if len(display.data['animations']['json']) > 0:
 					animation = display.data['animations']['json'].pop(0)
-					if 'directory' in animation and 'frames' in animation and 'delay' in animation and 'loop' in animation:
+					if 'directory' in animation and 'frames' in animation and 'duration' in animation and 'loop' in animation:
 						display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 						do_loop = True
 						while do_loop is True:
 							for nr in range(0, animation['frames']):
 								display.background_image_src = f'{animation["directory"]}/{nr:02}.jpg'
 								display.update()
-								await asyncio_sleep(0.2+float(animation['delay'])/1000)
+								await asyncio_sleep((float(animation['duration'])/(animation['frames']*1000))+0.1)
 							do_loop = bool(animation['loop'])
 							if do_loop is True:
 								do_loop = json_loads(self.environment.get('gui/screen:animations/loop', 'true'))
@@ -201,10 +211,22 @@ class HAL9000(Frontend):
 			await asyncio_sleep(0.1)
 
 
+	def show_off(self, display):
+		display.content.shapes = []
+		display.content.update()
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'off', 'origin': 'frontend:flet'}})
+
+
+	def show_on(self, display):
+		display.content.shapes = []
+		display.content.update()
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'on', 'origin': 'frontend:flet'}})
+
+
 	def show_none(self, display):
 		display.content.shapes = []
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'none'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'none', 'origin': 'frontend:flet'}})
 
 
 	def show_idle(self, display):
@@ -214,7 +236,7 @@ class HAL9000(Frontend):
 		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'idle'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'idle', 'origin': 'frontend:flet'}})
 
 
 	def show_animations(self, display, data):
@@ -227,7 +249,7 @@ class HAL9000(Frontend):
 		else:
 			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'assets/system/gui/screen/animations/{data['name']}.json'")
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'animations'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': f'animations:{data["name"]}', 'origin': 'frontend:flet'}})
 
 
 	def show_menu(self, display, data):
@@ -241,26 +263,26 @@ class HAL9000(Frontend):
 		                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'),
 		                                               alignment=flet_core.alignment.center))
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'menu'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'menu', 'origin': 'frontend:flet'}})
 
 
 	def show_qrcode(self, display, data):
 		self.render_qrcode(display, data)
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'qrcode'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'qrcode', 'origin': 'frontend:flet'}})
 
 
 	def show_splash(self, display, data):
 		self.render_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
 		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Splash-database',
 		                           'hint': f"Splash ID: {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'splash'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'splash', 'origin': 'frontend:flet'}})
 
 
 	def show_error(self, display, data):
 		self.render_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'red', 'title-color': 'white',
 		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
 		                           'hint': f"Error {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'error'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'error', 'origin': 'frontend:flet'}})
 
 
 	def render_qrcode(self, display, data):

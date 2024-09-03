@@ -151,10 +151,13 @@ void on_device_mcp23X17(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 			i2c_address = data["init"]["i2c-address"].as<int>();
 		}
 		if(g_device_mcp23X17.init(i2c_bus, i2c_address) == true) {
-			response["init"]["i2c-bus"] = i2c_bus;
-			response["init"]["i2c-address"] = i2c_address;
+			response["init"]["result"] = "OK";
 		} else {
-			response["init"]["error"] = "init failed"; //TODO:error codes
+			response["init"]["result"] = "error";
+			response["init"]["error"] = JsonObject();
+			response["init"]["error"]["message"] = "I2C initialization failed";
+			response["init"]["error"]["i2c-bus"] = i2c_bus;
+			response["init"]["error"]["i2c-address"] = i2c_address;
 		}
 		g_util_webserial.send("device/mcp23X17", response);
 	}
@@ -173,9 +176,15 @@ void on_device_mcp23X17(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 			device_inputs = data["config"]["device"]["inputs"].as<JsonArray>();
 			device_events = data["config"]["device"]["events"].as<JsonObject>();
 			if(g_device_mcp23X17.config_inputs(device_type, device_name, device_inputs, device_events) == true) {
-				response["config"]["inputs"] = "OK";
+				response["config"]["result"] = "OK";
 			} else {
-				response["config"]["inputs"] = "error"; //TODO:error codes
+				response["config"]["result"] = "error";
+				response["config"]["error"] = JsonObject();
+				response["config"]["error"]["message"] = "configuration of input device failed";
+				response["config"]["error"]["type"] = device_type;
+				response["config"]["error"]["name"] = device_name;
+				response["config"]["error"]["inputs"] = device_inputs;
+				response["config"]["error"]["events"] = device_events;
 			}
 		}
 		if(data["config"]["device"].containsKey("outputs")) {
@@ -183,20 +192,33 @@ void on_device_mcp23X17(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 
 			device_outputs = data["config"]["device"]["outputs"].as<JsonArray>();
 			if(g_device_mcp23X17.config_outputs(device_type, device_name, device_outputs) == true) {
-				response["config"]["outputs"] = "OK";
+				response["config"]["result"] = "OK";
 			} else {
-				response["config"]["outputs"] = "error"; //TODO:error codes
+				response["config"]["result"] = "error";
+				response["config"]["error"] = JsonObject();
+				response["config"]["error"]["message"] = "configuration of output device failed";
+				response["config"]["error"]["type"] = device_type;
+				response["config"]["error"]["name"] = device_name;
+				response["config"]["error"]["outputs"] = device_outputs;
 			}
 		}
 		g_util_webserial.send("device/mcp23X17", response);
 	}
 	if(data.containsKey("start")) {
+		bool run_as_task = false;
+
 		response.clear();
 		response["start"] = JsonObject();
-		if(g_device_mcp23X17.start() == true) {
+		if(data["start"].containsKey("task")) {
+			run_as_task = data["start"]["task"].as<bool>();
+		}
+		if(g_device_mcp23X17.start(run_as_task) == true) {
 			response["start"]["result"] = "OK";
 		} else {
-			response["start"]["error"] = "start failed"; //TODO:error codes
+			response["start"]["result"] = "error";
+			response["start"]["error"] = JsonObject();
+			response["start"]["error"]["message"] = "MCP23X17 failed to start";
+			response["start"]["error"]["task"] = run_as_task;
 		}
 		g_util_webserial.send("device/mcp23X17", response);
 	}

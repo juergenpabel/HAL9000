@@ -177,28 +177,40 @@ void WebSerial::handle(const etl::string<WEBSERIAL_LINE_SIZE>& line) {
 
 
 void WebSerial::handle(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-	static etl::string<GLOBAL_KEY_SIZE> lookup;
+	webserial_command_func handler = nullptr;
 
-	lookup = command;
-	if(this->commands.count(lookup) == 0) {
-		lookup = "*";
-	}
-	if(this->commands.count(lookup) == 1) {
-		webserial_command_func handler;
-
-		handler = this->commands[lookup];
-		if(handler != nullptr) {
-			handler(command, data);
+	if(this->commands.count(command) == 1) {
+		handler = this->commands[command];
+		if(handler == nullptr) {
+			if(this->commands.count("*") == 1) {
+				handler = this->commands["*"];
+			}
 		}
+	} else {
+		if(command.compare("") == 0) {
+			if(this->commands.count("*") == 1) {
+				handler = this->commands["*"];
+			}
+		}
+	}
+	if(handler != nullptr) {
+		handler(command, data);
 	}
 }
 
 
+bool WebSerial::hasCommand(const etl::string<GLOBAL_KEY_SIZE>& command) {
+	if(this->commands.count(command) == 1) {
+		return true;
+	}
+	return false;
+}
+
+
 void WebSerial::setCommand(const etl::string<GLOBAL_KEY_SIZE>& command, webserial_command_func handler) {
-	if(handler != nullptr) {
-		this->commands[command] = handler;
-	} else {
-		this->commands.erase(command);
+	this->commands[command] = handler;
+	if(command.compare("*") == 0 && handler == nullptr) {
+		this->commands.erase("*");
 	}
 }
 

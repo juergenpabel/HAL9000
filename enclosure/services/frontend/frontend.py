@@ -227,6 +227,7 @@ if __name__ == '__main__':
 	if os_path_exists('assets') is False:
 		logging_getLogger().critical("[frontend] missing 'assets' directory (or symlink to directory)")
 		sys_exit(1)
+	logging_getLogger().info("[frontend] starting...")
 	try:
 		uvicorn_run('frontend:app', host='0.0.0.0', port=9000, log_level='info')
 	except KeyboardInterrupt:
