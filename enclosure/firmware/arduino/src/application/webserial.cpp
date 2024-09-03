@@ -21,6 +21,15 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 		}
 		return;
 	}
+	if(data.containsKey("END") == true) {
+		if(g_application.getStatus() == StatusHalting) {
+			g_device_board.halt();
+		}
+		if(g_application.getStatus() == StatusRebooting) {
+			g_device_board.reset(true);
+		}
+		return;
+	}
 	if(data.containsKey("status") == true) {
 		etl::string<2>  questionmark("?");
 

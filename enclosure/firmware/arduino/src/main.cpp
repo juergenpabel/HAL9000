@@ -109,23 +109,23 @@ void loop() {
 				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
 				Application::onConfiguration(Application::Null, JsonVariant());
 				break;
-			case StatusResetting:
-				gui_screen_set("none", gui_screen_none);
-				g_device_board.reset(false);
-				break;
 			case StatusRebooting:
+				g_util_webserial.setCommand(Application::Null, nullptr);
+				g_util_webserial.setCommand("application/runtime", on_application_runtime);
 				gui_screen_set("shutdown", gui_screen_animations_shutdown);
-				while(gui_screen_get() == gui_screen_animations) {
+				while(true) {
+					g_util_webserial.update();
 					gui_update();
 				}
-				g_device_board.reset(true);
 				break;
 			case StatusHalting:
+				g_util_webserial.setCommand(Application::Null, nullptr);
+				g_util_webserial.setCommand("application/runtime", on_application_runtime);
 				gui_screen_set("shutdown", gui_screen_animations_shutdown);
-				while(gui_screen_get() == gui_screen_animations) {
+				while(true) {
+					g_util_webserial.update();
 					gui_update();
 				}
-				g_device_board.halt();
 				break;
 			default:
 				g_util_webserial.send("syslog/error", "invalid application status => resetting");

@@ -11,8 +11,8 @@
 
 
        const etl::string<GLOBAL_VALUE_SIZE> Application::Null;
-static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown", "starting", "configuring", "ready", "running",
-                                                                       "resetting", "rebooting", "halting" };
+static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown", "starting", "configuring", "ready",
+                                                                       "running", "rebooting", "halting", "panicing" };
 
 
 Application::Application() 

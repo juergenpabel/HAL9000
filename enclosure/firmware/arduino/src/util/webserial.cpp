@@ -208,6 +208,10 @@ bool WebSerial::hasCommand(const etl::string<GLOBAL_KEY_SIZE>& command) {
 
 
 void WebSerial::setCommand(const etl::string<GLOBAL_KEY_SIZE>& command, webserial_command_func handler) {
+	if(command.compare(Application::Null) == 0) {
+		this->commands.clear();
+		return;
+	}
 	this->commands[command] = handler;
 	if(command.compare("*") == 0 && handler == nullptr) {
 		this->commands.erase("*");

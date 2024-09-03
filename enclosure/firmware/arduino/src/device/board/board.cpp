@@ -28,7 +28,7 @@ void AbstractBoard::start(bool& host_booting) {
 void AbstractBoard::reset(bool host_rebooting) {
 	LittleFS.end();
 	if(Serial == true) {
-		Serial.write("[\"syslog/info\", \"resetting NOW.\"\n");
+		Serial.write("[\"syslog/info\", \"resetting NOW.\"]\n");
 		Serial.flush();
 		Serial.end();
 		delay(100);
@@ -40,7 +40,7 @@ void AbstractBoard::reset(bool host_rebooting) {
 void AbstractBoard::halt() {
 	LittleFS.end();
 	if(Serial == true) {
-		Serial.write("[\"syslog/info\", \"halting NOW.\"\n");
+		Serial.write("[\"syslog/info\", \"halting NOW.\"]\n");
 		Serial.flush();
 		Serial.end();
 		delay(100);
