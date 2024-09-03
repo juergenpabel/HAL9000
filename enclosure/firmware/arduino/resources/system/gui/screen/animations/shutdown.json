@@ -1,2 +1,2 @@
-[ {"title": "Shutdown...", "duration": 21000, "directory": "/images/animations/shutdown", "frames": 70, "loop": false,
+[ {"title": "Shutdown...", "duration": 24500, "directory": "/images/animations/shutdown", "frames": 70, "loop": false,
                                               "on:next": {"webserial": "[\"application/runtime\", {\"END\":{}}]"} } ]
