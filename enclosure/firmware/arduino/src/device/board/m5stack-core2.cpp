@@ -18,12 +18,13 @@ Board::Board()
 }
 
 
-void Board::start(bool& host_booting) {
-	AbstractBoard::start(host_booting);
-	while(PMU.begin(Wire1, AXP192_SLAVE_ADDRESS, 21, 22) != true) {
-		Serial.write("[\"syslog/error\", \"m5stack-core2: PMU.begin() failed, retrying in 1 second\"]\n");
-		Serial.flush();
-		delay(1000);
+bool Board::start() {
+	if(AbstractBoard::start() == false) {
+		return false;
+	}
+	if(PMU.begin(Wire1, AXP192_SLAVE_ADDRESS, 21, 22) != true) {
+		g_application.notifyError("critical", "211", "Board error", "");
+		return false;
 	}
 	PMU.setSysPowerDownVoltage(2700);
 	PMU.setVbusVoltageLimit(XPOWERS_AXP192_VBUS_VOL_LIM_4V5);
@@ -41,6 +42,7 @@ void Board::start(bool& host_booting) {
 	PMU.enableLDO2();
 	delay(120);
 	this->displayOn();
+	return true;
 }
 
 
@@ -49,14 +51,14 @@ bool Board::configure(const JsonVariant& configuration) {
 }
 
 
-void Board::reset(bool host_rebooting) {
-	AbstractBoard::reset(host_rebooting);
+void Board::reset() {
+	AbstractBoard::reset();
 }
 
 
 void Board::halt() {
+	this->displayOff();
 	PMU.disableDC2();
-	PMU.disableDC3();
 	PMU.disableLDO2();
 	AbstractBoard::halt();
 }

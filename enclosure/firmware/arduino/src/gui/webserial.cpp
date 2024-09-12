@@ -39,14 +39,14 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		}
 	}
 	if(body.containsKey("error") == true) {
-		g_application.delEnv("gui/screen:error/message");
-		g_application.delEnv("gui/screen:error/url");
 		g_application.delEnv("gui/screen:error/id");
+		g_application.delEnv("gui/screen:error/title");
+		g_application.delEnv("gui/screen:error/url");
 		if(body["error"].containsKey("id") == true) {
 			g_application.setEnv("gui/screen:error/id", body["error"]["id"].as<const char*>());
 		}
-		if(body["error"].containsKey("message") == true) {
-			g_application.setEnv("gui/screen:error/message", body["error"]["message"].as<const char*>());
+		if(body["error"].containsKey("title") == true) {
+			g_application.setEnv("gui/screen:error/title", body["error"]["title"].as<const char*>());
 		}
 		if(body["error"].containsKey("url") == true) {
 			g_application.setEnv("gui/screen:error/url", body["error"]["url"].as<const char*>());

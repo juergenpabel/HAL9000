@@ -21,6 +21,8 @@ class FrontendManager:
 
 	def __init__(self):
 		self.startup = True
+		self.configuration = None
+		self.configuration_filename = None
 		self.config = {}
 		self.frontends = []
 		self.tasks = {}
@@ -28,6 +30,7 @@ class FrontendManager:
 
 	async def configure(self, filename):
 		logging_getLogger("uvicorn").info(f"[frontend] Using configuration file '{filename}'")
+		self.configuration_filename = filename
 		self.configuration = configparser_ConfigParser(delimiters='=', interpolation=None,
 		                                          converters={'list': lambda list: [item.strip().strip('"').strip("'") for item in list.split(',')],
 		                                                      'string': lambda string: string.strip('"').strip("'")})
@@ -102,9 +105,8 @@ class FrontendManager:
 				logging_getLogger("uvicorn").warning(f"[frontend] received mqtt message that brain component has disconnected, showing error screen")
 				for frontend in self.frontends:
 					frontend.commands.put_nowait({"topic": 'gui/screen', "payload": {'on': {}}})
-					frontend.commands.put_nowait({"topic": 'gui/screen', "payload": {'error': {'message': 'System failure',
-					                                                                           'url': 'https://github.com/juergenpabel/HAL9000/wiki/ERROR_07',
-					                                                                           'id': '07'}}})
+					frontend.commands.put_nowait({"topic": 'gui/screen', "payload": {'error': {'id': '100',
+					                                                                           'title': 'System offline'}}})
 			return
 		match topic[25:]: #remove 'hal9000/command/frontend/' prefix
 			case 'runlevel':
@@ -214,8 +216,7 @@ async def fastapi_lifespan(app: fastapi_FastAPI):
 						await frontend_instance.start()
 						logging_getLogger("uvicorn").info(f"[frontend] ...frontend '{frontend_name}' started")
 					case False:
-						logging_getLogger("uvicorn").error(f"[frontend] configuration of frontend '{frontend_name}' failed, check the " \
-						                                   f"configuration ('{manager.configuration}')' for potential issues")
+						logging_getLogger("uvicorn").critical(f"[frontend] configuration of frontend '{frontend_name}' failed")
 					case None:
 						logging_getLogger("uvicorn").info(f"[frontend] ...not starting frontend '{frontend_name}' as per configuration result")
 	yield

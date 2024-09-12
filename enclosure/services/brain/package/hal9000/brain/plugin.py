@@ -1,7 +1,11 @@
+from __future__ import annotations
+from typing import Callable as typing_Callable
 from configparser import ConfigParser as configparser_ConfigParser
 
+from aiomqtt import Message as aiomqtt_Message
 
-class HAL9000_Plugin_Status(object):
+
+class HAL9000_Plugin_Data(object):
 	STATUS_UNINITIALIZED = '<uninitialized>'
 	STATUS_REQUESTED = '<requested>'
 	STATUS_CONFIRMED = '<confirmed>'
@@ -12,9 +16,9 @@ class HAL9000_Plugin_Status(object):
 		self.local_names = ['runlevel', 'status']
 		self.local_names.extend(kwargs.get('local_names', []))
 		self.remote_names = {}
-		self.remote_names.update({x: HAL9000_Plugin_Status.STATUS_UNINITIALIZED for x in kwargs.get('remote_names', [])})
+		self.remote_names.update({x: HAL9000_Plugin_Data.STATUS_UNINITIALIZED for x in kwargs.get('remote_names', [])})
 		for name in self.local_names + list(self.remote_names.keys()):
-			super().__setattr__(name, kwargs.get(name, HAL9000_Plugin_Status.STATUS_UNINITIALIZED))
+			super().__setattr__(name, kwargs.get(name, HAL9000_Plugin_Data.STATUS_UNINITIALIZED))
 		for name, value in kwargs.items():
 			if name in self.local_names or name in self.remote_names:
 				super().__setattr__(name, value)
@@ -24,16 +28,16 @@ class HAL9000_Plugin_Status(object):
 
 	def addLocalNames(self, local_names: list) -> None:
 		for name in local_names:
-			if name not in HAL9000_Plugin_Status.SPECIAL_NAMES:
+			if name not in HAL9000_Plugin_Data.SPECIAL_NAMES:
 				self.local_names.append(name)
-				super().__setattr__(name, HAL9000_Plugin_Status.STATUS_UNINITIALIZED)
+				super().__setattr__(name, HAL9000_Plugin_Data.STATUS_UNINITIALIZED)
 
 
 	def addRemoteNames(self, remote_names: list) -> None:
 		for name in remote_names:
-			if name not in HAL9000_Plugin_Status.SPECIAL_NAMES:
-				self.remote_names[name] = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
-				super().__setattr__(name, HAL9000_Plugin_Status.STATUS_UNINITIALIZED)
+			if name not in HAL9000_Plugin_Data.SPECIAL_NAMES:
+				self.remote_names[name] = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
+				super().__setattr__(name, HAL9000_Plugin_Data.STATUS_UNINITIALIZED)
 
 
 	def delLocalNames(self, local_names: list) -> None:
@@ -50,22 +54,22 @@ class HAL9000_Plugin_Status(object):
 				delattr(self, name)
 
 
-	def addNameCallback(self, callback, name: str='*') -> None:
+	def addNameCallback(self, callback: typing_Callable[[str, str, str, bool], bool], name: str = '*') -> None:
 		if name not in self.callbacks_data:
 			self.callbacks_data[name] = set()
 		self.callbacks_data[name].add(callback)
 
 
-	def delNameCallback(self, callback, name: str='*') -> None:
+	def delNameCallback(self, callback: typing_Callable[[str, str, str, bool], bool], name: str = '*') -> None:
 		if name in self.callbacks_data:
 			self.callbacks_data[name].remove(callback)
 
 
-	def addSignalHandler(self, callback) -> None:
+	def addSignalHandler(self, callback: typing_Callable[[HAL9000_Plugin_Data, dict], None]) -> None:
 		self.callbacks_signal.add(callback)
 
 
-	def delSignalHandler(self, callback, name: str='*') -> None:
+	def delSignalHandler(self, callback: typing_Callable[[HAL9000_Plugin_Data, dict], None], name: str = '*') -> None:
 		self.callbacks_signal.remove(callback)
 
 
@@ -77,26 +81,26 @@ class HAL9000_Plugin_Status(object):
 	def __setattr__(self, name: str, new_value) -> None:
 		if isinstance(new_value, tuple):
 			if len(new_value) != 2:
-				raise Exception(f"HAL9000_Plugin_Status.__setattr__('{name}', '{new_value}'): valid tuples must be a value as the 1st item and " \
-				                f"either HAL9000_Plugin_Status.STATUS_REQUESTED or HAL9000_Plugin_Status.STATUS_CONFIRMED as the 2nd item")
+				raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): valid tuples must be a value as the 1st item and " \
+				                f"either HAL9000_Plugin_Data.STATUS_REQUESTED or HAL9000_Plugin_Data.STATUS_CONFIRMED as the 2nd item")
 			if name not in self.remote_names.keys():
-				raise Exception(f"HAL9000_Plugin_Status.__setattr__('{name}', '{new_value}'): '{name}' is not a remote item")
+				raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): '{name}' is not a remote item")
 			match new_value[1]:
-				case HAL9000_Plugin_Status.STATUS_REQUESTED:
+				case HAL9000_Plugin_Data.STATUS_REQUESTED:
 					self.remote_names[name] = getattr(self, name)
-				case HAL9000_Plugin_Status.STATUS_CONFIRMED:
+				case HAL9000_Plugin_Data.STATUS_CONFIRMED:
 					self.remote_names[name] = new_value[0]
 			new_value = new_value[0]
-		if name in HAL9000_Plugin_Status.SPECIAL_NAMES:
+		if name in HAL9000_Plugin_Data.SPECIAL_NAMES:
 			super().__setattr__(name, new_value)
 			return
 		if name not in self.local_names and name not in self.remote_names:
-			raise Exception(f"HAL9000_Plugin_Status.__setattr__('{name}', '{new_value}'): '{name}' is not a registered attribute name")
+			raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): '{name}' is not a registered attribute name")
 		old_value = None
 		if hasattr(self, name) is True:
 			old_value = getattr(self, name)
 		if new_value is None:
-			new_value = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
+			new_value = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
 		if old_value != new_value:
 			pending = False
 			if name in self.remote_names.keys():
@@ -108,7 +112,7 @@ class HAL9000_Plugin_Status(object):
 					for callback in self.callbacks_data[callback_name]:
 						result = callback(self, name, old_value, new_value, pending)
 						if pending is False and result is None:
-							raise Exception(f"HAL9000_Plugin_Status.__setattr__('{name}', '{new_value}'): a registerd callback " \
+							raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): a registerd callback " \
 							                f"returned <None> instead of a boolean value (BUG!) => {callback}")
 						commit_value &= result
 			if pending is True:
@@ -121,7 +125,7 @@ class HAL9000_Plugin_Status(object):
 		result = '{'
 		for name in self.local_names:
 			value = getattr(self, name)
-			if value != HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
+			if value != HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
 				result += f'{name}=\'{value}\', '
 		for name, pending_value in self.remote_names.items():
 			value = getattr(self, name)
@@ -142,7 +146,7 @@ class HAL9000_Plugin(object):
 	RUNLEVEL_RUNNING  = "running"
 	RUNLEVEL_KILLED   = "killed"
 
-	def __init__(self, plugin_type: str, plugin_class: str, plugin_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
+	def __init__(self, plugin_type: str, plugin_class: str, plugin_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		self.name = f"{plugin_type}:{plugin_class}:{plugin_name}"
 		self.daemon = kwargs.get('daemon', None)
 		if plugin_status is not None and self.daemon is not None:
@@ -163,14 +167,14 @@ class HAL9000_Plugin(object):
 
 
 	def runlevel_error(self) -> dict:
-		return {'id': '90',
+		return {'id': '911',
 		        'level': 'error',
-		        'message': "BUG: HAL9000_Plugin derived class did not implement runlevel_error()"}
+		        'title': "BUG: HAL9000_Plugin derived class did not implement runlevel_error()"}
 
 
 
 class HAL9000_Action(HAL9000_Plugin):
-	def __init__(self, action_class: str, action_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
+	def __init__(self, action_class: str, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Plugin.__init__(self, "action", action_class, action_name, plugin_status, **kwargs)
 
 
@@ -180,7 +184,7 @@ class HAL9000_Action(HAL9000_Plugin):
 
 
 class HAL9000_Trigger(HAL9000_Plugin):
-	def __init__(self, trigger_class: str, trigger_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
+	def __init__(self, trigger_class: str, trigger_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Plugin.__init__(self, "trigger", trigger_class, trigger_name, plugin_status, **kwargs)
 		self.sleepless = False
 
@@ -194,6 +198,6 @@ class HAL9000_Trigger(HAL9000_Plugin):
 		return HAL9000_Plugin.RUNLEVEL_RUNNING
 
 
-	def handle(self, data) -> dict:
+	def handle(self, data: aiomqtt_Message) -> dict:
 		return {}
 

@@ -6,6 +6,7 @@
 #include <pico/bootrom.h>
 #include <pico/multicore.h>
 #include <Wire.h>
+#include <etl/string.h>
 
 #include "device/microcontroller/rp2040.h"
 #include "globals.h"
@@ -18,12 +19,8 @@ Microcontroller::Microcontroller()
 }
 
 
-void Microcontroller::start(uint32_t& timestamp, bool& booting) {
-	booting = true;
+void Microcontroller::start(uint32_t& timestamp) {
 	if(watchdog_hw->scratch[5] == 0x00002001) {
-		if(watchdog_hw->scratch[6] == 0xfee1dead) {
-			booting = false;
-		}
 		timestamp = watchdog_hw->scratch[7];
 		watchdog_hw->scratch[5] = 0x00000000;
 		watchdog_hw->scratch[6] = 0x00000000;
@@ -33,38 +30,55 @@ void Microcontroller::start(uint32_t& timestamp, bool& booting) {
 
 
 bool Microcontroller::configure(const JsonVariant& configuration) {
-	uint8_t pin_sda;
-	uint8_t pin_scl;
+	static etl::string<GLOBAL_VALUE_SIZE> error_details;
+	       uint8_t pin_sda;
+	       uint8_t pin_scl;
 
-	if(configuration.containsKey("i2c") == true) {
+	error_details.clear();
+	if(configuration.containsKey("i2c") == false) {
+		error_details = "board configuration does not include an 'i2c' configuration section";
+	} else {
+		if(configuration["i2c"].containsKey("i2c-0") == false && configuration["i2c"].containsKey("i2c-1") == false) {
+			error_details = "board configuration does not include either an 'i2c-0' or 'i2c-1' configuration section";
+		}
+	}
+	if(error_details.empty() == true) {
 		if(configuration["i2c"].containsKey("i2c-0") == true) {
-			pin_sda = configuration["i2c"]["i2c-0"]["pin-sda"].as<unsigned char>();
-			pin_scl = configuration["i2c"]["i2c-0"]["pin-scl"].as<unsigned char>();
-			this->twowire_data[0].setSDA(pin_sda);
-			this->twowire_data[0].setSCL(pin_scl);
-			this->twowire_init[0] = true;
+			if(configuration["i2c"]["i2c-0"].containsKey("pin-sda") == true && configuration["i2c"]["i2c-0"].containsKey("pin-scl") == true) {
+				pin_sda = configuration["i2c"]["i2c-0"]["pin-sda"].as<unsigned char>();
+				pin_scl = configuration["i2c"]["i2c-0"]["pin-scl"].as<unsigned char>();
+				this->twowire_data[0].setSDA(pin_sda);
+				this->twowire_data[0].setSCL(pin_scl);
+				this->twowire_init[0] = true;
+			} else {
+				error_details = "board configuration for 'i2c-0' is missing 'pin-sda' and/or 'pin-scl' options";
+			}
 		}
 		if(configuration["i2c"].containsKey("i2c-1") == true) {
-			pin_sda = configuration["i2c"]["i2c-1"]["pin-sda"].as<unsigned char>();
-			pin_scl = configuration["i2c"]["i2c-1"]["pin-scl"].as<unsigned char>();
-			this->twowire_data[1].setSDA(pin_sda);
-			this->twowire_data[1].setSCL(pin_scl);
-			this->twowire_init[1] = true;
+			if(configuration["i2c"]["i2c-1"].containsKey("pin-sda") == true && configuration["i2c"]["i2c-1"].containsKey("pin-scl") == true) {
+				pin_sda = configuration["i2c"]["i2c-1"]["pin-sda"].as<unsigned char>();
+				pin_scl = configuration["i2c"]["i2c-1"]["pin-scl"].as<unsigned char>();
+				this->twowire_data[1].setSDA(pin_sda);
+				this->twowire_data[1].setSCL(pin_scl);
+				this->twowire_init[1] = true;
+			} else {
+				error_details = "board configuration for 'i2c-1' is missing 'pin-sda' and/or 'pin-scl' options";
+			}
 		}
+	}
+	if(error_details.empty() == false) {
+		g_application.notifyError("critical", "213", "Board error", error_details);
+		return false;
 	}
 	return true;
 }
 
 
-void Microcontroller::reset(uint32_t timestamp, bool rebooting) {
+void Microcontroller::reset(uint32_t timestamp) {
 	if(timestamp > 0) {
 		hw_clear_bits(&watchdog_hw->ctrl, WATCHDOG_CTRL_ENABLE_BITS);
 		watchdog_hw->scratch[5] = 0x00002001;
-		if(rebooting == true) {
-			watchdog_hw->scratch[6] = 0x00000000;
-		} else {
-			watchdog_hw->scratch[6] = 0xfee1dead;
-		}
+		watchdog_hw->scratch[6] = 0x00000000;
 		watchdog_hw->scratch[7] = timestamp;
 	}
 	multicore_reset_core1();
@@ -164,7 +178,8 @@ bool Microcontroller::task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name,
 	bool result = false;
 
 	if(core == 1) {
-		g_util_webserial.send("syslog/warn", "task_create() disabled on RP2040 due to stability issues (https://github.com/juergenpabel/HAL9000/issues/2)");
+		g_util_webserial.send("syslog/warn", "Microcontroller::task_create() disabled on RP2040 due to stability issues " \
+		                                     "(https://github.com/juergenpabel/HAL9000/issues/2)");
 //TODO		multicore_launch_core1(task_function);
 //TODO		result = true;
 	}

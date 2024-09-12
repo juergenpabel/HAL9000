@@ -2,11 +2,11 @@ from os import system as os_system
 from os.path import exists as os_path_exists
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Status
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data
 
 
 class Action(HAL9000_Action):
-	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
+	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'script', action_name, plugin_status, **kwargs)
 		self.scripts = {}
 
@@ -29,7 +29,7 @@ class Action(HAL9000_Action):
 		return HAL9000_Plugin.RUNLEVEL_RUNNING
 
 
-	async def on_script_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
+	async def on_script_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
 		if 'id' in signal:
 			script_id = signal['id']
 			if script_id not in self.scripts:

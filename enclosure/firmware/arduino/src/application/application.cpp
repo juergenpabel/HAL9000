@@ -16,9 +16,8 @@ static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown"
 
 
 Application::Application() 
-            :m_status(StatusUnknown)
+            :m_status(StatusStarting)
             ,m_time_offset(0)
-            ,m_errors()
             ,m_environment()
             ,m_settings("/system/application/settings.ini") {
 }
@@ -30,7 +29,12 @@ const etl::string<GLOBAL_KEY_SIZE>& Application::getStatusName() {
 
 
 void Application::setTime(time_t time) {
+	if(this->m_time_offset == 0) {
+		setSyncProvider(Application::getTime);
+		setSyncInterval(3600);
+	}
 	this->m_time_offset = time - (millis()/1000);
+	::setTime(time);
 }
 
 
@@ -174,24 +178,26 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 
 					file = LittleFS.open("/system/application/configuration.json", "r");
 					if(file == true) {
-						configuration.clear();
 						if(deserializeJson(configuration, file) == DeserializationError::Ok) {
 							g_util_webserial.send("syslog/debug", "application configuration loaded from (littlefs:)" \
 							                                      "'/system/application/configuration.json'");
 						} else {
-							g_application.notifyError("error", "12", "Configuration error", "JSON error in (littlefs:)" \
-							                                                                "'/system/application/configuration.json'");
+							g_application.setStatus(StatusPanicing);
+							g_application.notifyError("critical", "215", "Application error", "INI syntax error in (littlefs:)" \
+							                                                                  "'/system/application/configuration.json'");
 							configuration.clear();
 						}
 						file.close();
 					} else {
-						g_application.notifyError("error", "14", "Config file error", "failed to open *supposedly existing* (littlefs:)" \
-						                                                              "'/system/application/configuration.json' in " \
-						                                                              "read-mode (probably need to reflash littlefs)");
+						g_application.setStatus(StatusPanicing);
+						g_application.notifyError("critical", "212", "Filesystem error", "failed to open *supposedly existing* (littlefs:)" \
+						                                                                 "'/system/application/configuration.json' in " \
+						                                                                 "read-mode (probably need to reflash littlefs)");
 					}
 				} else {
-					g_application.notifyError("error", "15", "No config file", "file not found in (littlefs:)" \
-					                                                           "'/system/application/configuration.json'");
+					g_application.setStatus(StatusPanicing);
+					g_application.notifyError("error", "215", "Application error", "application configuration file not found: " \
+					                                                               "(littlefs:)'/system/application/configuration.json'");
 				}
 			}
 			if(configuration.size() > 0) {
@@ -214,23 +220,50 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 }
 
 
-void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& id,
-                              const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_VALUE_SIZE>& detail) {
+void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& error_level, const etl::string<GLOBAL_KEY_SIZE>& error_id,
+                              const etl::string<GLOBAL_VALUE_SIZE>& error_title, const etl::string<GLOBAL_VALUE_SIZE>& error_details) {
 	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> webserial_body;
+	static etl::string<GLOBAL_VALUE_SIZE>          url;
+	static etl::string<GLOBAL_KEY_SIZE>            log_topic;
+	static etl::string<GLOBAL_VALUE_SIZE>          log_payload;
 
-	if(this->getStatus() != StatusRunning) {
-		if(this->m_errors.full() == true) {
-			this->m_errors.pop();
+	url = this->m_settings["application/error:url/template"];
+	if(error_id.empty() == false) {
+		size_t url_id_offset;
+
+		url_id_offset = url.find("{error_id}");
+		if(url_id_offset != url.npos) {
+			url = url.replace(url_id_offset, 10, error_id);
 		}
-		this->m_errors.push(Error(level, id, message, detail));
-		return;
 	}
+	log_topic = "syslog/";
+	log_topic += error_level;
+	log_payload = "ERROR ";
+	log_payload += error_id;
+	log_payload += ": ";
+	log_payload += error_title;
+	log_payload += " => ";
+	log_payload += error_details;
+	g_util_webserial.send(log_topic, log_payload);
+
 	webserial_body.clear();
 	webserial_body.createNestedObject("error");
-	webserial_body["error"]["level"] = level.c_str();
-	webserial_body["error"]["id"] = id.c_str();
-	webserial_body["error"]["message"] = message.c_str();
-	webserial_body["error"]["detail"] = detail.c_str();
+	webserial_body["error"]["id"] = error_id.c_str();
+	webserial_body["error"]["level"] = error_level.c_str();
+	webserial_body["error"]["title"] = error_title.c_str();
+	webserial_body["error"]["details"] = error_details.c_str();
+	if(this->getStatus() == StatusPanicing) {
+		if(this->hasEnv("application/status:panicing/error") == false) {
+			EnvironmentWriter environment_writer(*this, "application/status:panicing/error");
+			serializeJson(webserial_body["error"], environment_writer);
+		}
+	}
+	webserial_body["error"]["url"] = url.c_str();
 	g_util_webserial.send("application/error", webserial_body);
+
+	this->setEnv("gui/screen:error/id", error_id);
+	this->setEnv("gui/screen:error/title", error_title);
+	this->setEnv("gui/screen:error/url", url);
+	gui_screen_set("error", gui_screen_error);
 }
 

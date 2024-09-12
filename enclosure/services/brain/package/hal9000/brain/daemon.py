@@ -35,7 +35,7 @@ from dbus_fast.auth import AuthExternal, UID_NOT_SPECIFIED
 from dbus_fast.constants import BusType
 
 
-from .plugin import HAL9000_Plugin, HAL9000_Plugin_Status
+from .plugin import HAL9000_Plugin, HAL9000_Plugin_Data
 
 
 class Daemon(object):
@@ -50,7 +50,7 @@ class Daemon(object):
 		self.logger = logging_getLogger()
 		self.config = {}
 		self.plugins = {}
-		self.plugins['brain'] = HAL9000_Plugin_Status('brain', runlevel=HAL9000_Plugin.RUNLEVEL_STARTING)
+		self.plugins['brain'] = HAL9000_Plugin_Data('brain', runlevel=HAL9000_Plugin.RUNLEVEL_STARTING)
 		self.plugins['brain'].addLocalNames(['time'])
 		self.tasks = {}
 		self.actions = {}
@@ -97,11 +97,11 @@ class Daemon(object):
 						case 'action':
 							Action = getattr(module, 'Action')
 							if Action is not None:
-								self.actions[plugin_id] = Action(plugin_id, HAL9000_Plugin_Status(plugin_id), daemon=self)
+								self.actions[plugin_id] = Action(plugin_id, HAL9000_Plugin_Data(plugin_id), daemon=self)
 						case 'trigger':
 							Trigger = getattr(module, 'Trigger')
 							if Trigger is not None:
-								self.triggers[plugin_id] = Trigger(plugin_id, HAL9000_Plugin_Status(plugin_id))
+								self.triggers[plugin_id] = Trigger(plugin_id, HAL9000_Plugin_Data(plugin_id))
 		for section_name in self.configuration.sections():
 			plugin_path = self.configuration.getstring(section_name, 'plugin', fallback=None)
 			if plugin_path is not None:
@@ -133,7 +133,7 @@ class Daemon(object):
 				await asyncio_sleep(0.1)
 			self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/event/brain/runlevel', 'payload': 'starting'})
 			startup_timeout = time_monotonic() + self.config['startup:init-timeout']
-			plugins = { HAL9000_Plugin_Status.STATUS_UNINITIALIZED: {},
+			plugins = { HAL9000_Plugin_Data.STATUS_UNINITIALIZED: {},
 			            HAL9000_Plugin.RUNLEVEL_UNKNOWN: {},
 			            HAL9000_Plugin.RUNLEVEL_STARTING: {},
 			            HAL9000_Plugin.RUNLEVEL_READY: {},
@@ -163,7 +163,7 @@ class Daemon(object):
 						self.logger.critical(f"[daemon] Startup failed (plugins that haven't reported their runlevel):")
 						for id, plugin in plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN].items():
 							error = plugin.runlevel_error()
-							self.process_error('critical', error['id'], f"    Plugin '{id.split(':').pop()}'", error['message'])
+							self.process_error('critical', error['id'], f"    Plugin '{id.split(':').pop()}'", error['title'])
 						self.logger.debug(f"[daemon] STATUS at startup-timeout = {self.plugins}")
 						self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 					if len(plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN]) == 0:
@@ -281,19 +281,21 @@ class Daemon(object):
 		self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() running")
 		try:
 			self.logger.info(f"[daemon] MQTT.connect(host='{self.config['mqtt:server']}', port={self.config['mqtt:port']}) for plugin 'brain'")
-			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'], will=aiomqtt_Will('hal9000/event/brain/runlevel', 'killed'), identifier='hal9000-brain') as mqtt:
+			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'],
+			                          will=aiomqtt_Will('hal9000/event/brain/runlevel', HAL9000_Plugin.RUNLEVEL_KILLED),
+			                          identifier='hal9000-brain') as mqtt:
+				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
+				await mqtt.subscribe('hal9000/command/brain/status')
+				for mqtt_topic, trigger in self.callbacks['mqtt'].items():
+					await mqtt.subscribe(mqtt_topic)
+					self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
+				self.tasks['mqtt:publisher'] = asyncio_create_task(self.task_mqtt_publisher(mqtt))
+				self.tasks['mqtt:subscriber'] = asyncio_create_task(self.task_mqtt_subscriber(mqtt))
 				try:
-					self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
-					await mqtt.subscribe('hal9000/command/brain/status')
-					for mqtt_topic, trigger in self.callbacks['mqtt'].items():
-						await mqtt.subscribe(mqtt_topic)
-						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() MQTT.subscribe('{mqtt_topic}') for trigger '{str(trigger)}'")
-					self.tasks['mqtt:publisher'] = asyncio_create_task(self.task_mqtt_publisher(mqtt))
-					self.tasks['mqtt:subscriber'] = asyncio_create_task(self.task_mqtt_subscriber(mqtt))
 					while self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 						await asyncio_sleep(0.1)
 				finally:
-					await mqtt.publish('hal9000/event/brain/runlevel', 'killed')
+					await mqtt.publish('hal9000/event/brain/runlevel', 'killed') # aiomqtt's will=... somehow doesn't work
 		except asyncio_CancelledError as e:
 			self.logger.debug(f"[daemon] task mqtt has been cancelled")
 		except Exception as e:
@@ -343,7 +345,7 @@ class Daemon(object):
 		return None
 
 
-	def on_plugin_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_value, new_value, pending: bool) -> bool:
+	def on_plugin_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_value, new_value, pending: bool) -> bool:
 		if pending is False:
 			if plugin.plugin_id == 'brain' and key == 'runlevel':
 				if new_value not in [HAL9000_Plugin.RUNLEVEL_STARTING, \
@@ -361,7 +363,7 @@ class Daemon(object):
 		return True
 
 
-	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
+	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
 		if pending is False:
 			self.logger.info(f"[daemon] STATUS at runlevel change from '{old_runlevel}' to '{new_runlevel}' = {self.plugins}")
 			self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/event/brain/runlevel', 'payload': new_runlevel})
@@ -370,13 +372,13 @@ class Daemon(object):
 		return True
 
 
-	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str, pending: bool) -> bool:
+	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
 			self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/event/brain/status', 'payload': new_status})
 		return True
 
 
-	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_time: str, new_time: str, pending: bool) -> bool:
+	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_time: str, new_time: str, pending: bool) -> bool:
 		if pending is False:
 			if (new_time == 'unsynchronized' and self.config['brain:require-synced-time'] is False) or (new_time == 'synchronized'):
 				next_brain_status = Daemon.BRAIN_STATUS_AWAKE
@@ -405,7 +407,7 @@ class Daemon(object):
 		return True
 
 
-	async def on_brain_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
+	async def on_brain_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
 		if 'runlevel' in signal:
 			match self.plugins['brain'].runlevel:
 				case HAL9000_Plugin.RUNLEVEL_STARTING:
@@ -420,7 +422,7 @@ class Daemon(object):
 					self.logger.error(f"[daemon] unexpected current runlevel '{self.plugins['brain'].runlevel}'")
 		if 'status' in signal:
 			match self.plugins['brain'].status:
-				case HAL9000_Plugin_Status.STATUS_UNINITIALIZED | Daemon.BRAIN_STATUS_AWAKE | Daemon.BRAIN_STATUS_ASLEEP:
+				case HAL9000_Plugin_Data.STATUS_UNINITIALIZED | Daemon.BRAIN_STATUS_AWAKE | Daemon.BRAIN_STATUS_ASLEEP:
 					if signal['status'] in [Daemon.BRAIN_STATUS_AWAKE, \
 					                           Daemon.BRAIN_STATUS_ASLEEP,\
 					                           Daemon.BRAIN_STATUS_DYING]:
@@ -428,7 +430,7 @@ class Daemon(object):
 				case Daemon.BRAIN_STATUS_DYING:
 					pass
 		if 'error' in signal:
-			error = {'level': 'error', 'id': '00', 'title': 'UNEXPECTED ERROR', 'details': ''}
+			error = {'level': 'error', 'id': '000', 'title': 'UNEXPECTED ERROR', 'details': ''}
 			for field in error.keys():
 				if field in signal['error']:
 					error[field] = signal['error'][field]
@@ -438,10 +440,11 @@ class Daemon(object):
 			self.plugins['brain'].time = 'synchronized' if time_synchronized is True else 'unsynchronized'
 
 
-	def process_error(self, level: str, id: str, title: str, details: str='<no details>') -> None:
+	def process_error(self, level: str, id: str, title: str, details: str = '<no details>') -> None:
 		self.logger.log(getattr(logging, level.upper()), f"[daemon] ERROR #{id}: {title} => {details}")
 		if self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_RUNNING and self.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
-			self.queue_signal('frontend', {'gui': {'screen': {'name': 'error', 'parameter': {'id': id, 'url': self.config['help:error-url'].format(error_id=id), 'message': title}}}}) #TODO: non-frontend
+			self.queue_signal('frontend', {'gui': {'screen': {'name': 'error',
+			                                                  'parameter': {'id': id, 'url': self.config['help:error-url'], 'title': title}}}})
 
 
 	async def signal(self, plugin: str, signal: dict) -> None:
@@ -453,7 +456,7 @@ class Daemon(object):
 		self.signal_queue.put_nowait({'plugin': plugin, 'signal': signal})
 
 
-	def schedule_signal(self, seconds: int, plugin: str, signal: dict, id=None, mode='single') -> None:
+	def schedule_signal(self, seconds: int, plugin: str, signal: dict, id: str | None = None, mode: str = 'single') -> None:
 		match mode:
 			case 'single':
 				self.scheduler.add_job(self.on_scheduler, 'date', run_date=datetime_datetime.now()+datetime_timedelta(seconds=seconds),

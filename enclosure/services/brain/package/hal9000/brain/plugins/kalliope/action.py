@@ -2,7 +2,7 @@ import os
 import json
 import configparser
 
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Status
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data
 from hal9000.brain.daemon import Daemon
 
 
@@ -15,7 +15,7 @@ class Action(HAL9000_Action):
 	KALLIOPE_STATUS_SLEEPING  = 'sleeping'
 
 
-	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
+	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'kalliope', action_name, plugin_status, **kwargs)
 		self.daemon.plugins['kalliope'].runlevel = HAL9000_Action.RUNLEVEL_UNKNOWN
 		self.daemon.plugins['kalliope'].addLocalNames(['audio_in', 'audio_out', 'volume', 'mute'])
@@ -40,12 +40,12 @@ class Action(HAL9000_Action):
 
 
 	def runlevel_error(self) -> dict:
-		return {'id': '02',
-		        'level': 'error',
-		        'message': "No connection to kalliope."}
+		return {'id': '300',
+		        'level': 'critical',
+		        'title': "Service 'kalliope' unavailable (voice interaction)"}
 
 
-	async def on_kalliope_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
+	async def on_kalliope_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
 		if 'runlevel' in signal:
 			match signal['runlevel']:
 				case HAL9000_Plugin.RUNLEVEL_STARTING:
@@ -65,11 +65,11 @@ class Action(HAL9000_Action):
 					self.daemon.queue_signal('kalliope', {'status': Action.KALLIOPE_STATUS_WAITING})
 				case HAL9000_Plugin.RUNLEVEL_KILLED:
 					self.daemon.plugins['kalliope'].runlevel = HAL9000_Plugin.RUNLEVEL_KILLED
-					self.daemon.plugins['kalliope'].status = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
-					self.daemon.plugins['kalliope'].volume = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
-					self.daemon.plugins['kalliope'].mute = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
-					self.daemon.plugins['kalliope'].audio_in = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
-					self.daemon.plugins['kalliope'].audio_out = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
+					self.daemon.plugins['kalliope'].status = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
+					self.daemon.plugins['kalliope'].volume = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
+					self.daemon.plugins['kalliope'].mute = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
+					self.daemon.plugins['kalliope'].audio_in = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
+					self.daemon.plugins['kalliope'].audio_out = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
 		if 'status' in signal:
 			match signal['status']:
 				case Action.KALLIOPE_STATUS_WAITING:
@@ -88,21 +88,21 @@ class Action(HAL9000_Action):
 					self.daemon.plugins['kalliope'].status = Action.KALLIOPE_STATUS_SLEEPING
 
 
-	def on_kalliope_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
+	def on_kalliope_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
 		if pending is False:
 			match new_runlevel:
 				case HAL9000_Plugin.RUNLEVEL_STARTING:
 					if old_runlevel == HAL9000_Plugin.RUNLEVEL_KILLED:
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
 				case HAL9000_Plugin.RUNLEVEL_KILLED:
-					self.daemon.process_error('critical', '08', "System failure", f"service 'kalliope' (voice interaction) is unavailable")
+					self.daemon.process_error('critical', '300', "System offline", f"Service 'kalliope' unavailable")
 		return True
 
 
-	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str, pending: bool) -> bool:
+	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
 			match new_status:
-				case HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
+				case HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
 					if self.daemon.plugins['kalliope'].runlevel != HAL9000_Plugin.RUNLEVEL_KILLED:
 						return False
 				case Action.KALLIOPE_STATUS_WAITING:
@@ -130,20 +130,20 @@ class Action(HAL9000_Action):
 		return True
 
 
-	def on_kalliope_volume_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_volume: int, new_volume: int, pending: bool) -> bool:
-		if pending is False and new_volume != HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
-			if plugin.mute in ['false', HAL9000_Plugin_Status.STATUS_UNINITIALIZED]:
+	def on_kalliope_volume_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_volume: int, new_volume: int, pending: bool) -> bool:
+		if pending is False and new_volume != HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
+			if plugin.mute in ['false', HAL9000_Plugin_Data.STATUS_UNINITIALIZED]:
 				self.daemon.mqtt_publish_queue.put_nowait({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': new_volume}})
 		return True
 
 
-	def on_kalliope_mute_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_mute: str, new_mute: str, pending: bool) -> bool:
-		if pending is False and new_mute != HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
+	def on_kalliope_mute_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_mute: str, new_mute: str, pending: bool) -> bool:
+		if pending is False and new_mute != HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
 			match new_mute:
 				case 'true':
 					self.daemon.mqtt_publish_queue.put_nowait({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': 0}})
 				case 'false':
-					if old_mute != HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
+					if old_mute != HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
 						self.daemon.mqtt_publish_queue.put_nowait({'topic': 'hal9000/command/kalliope/volume', 'payload': {'level': plugin.volume}})
 				case other:
 					self.daemon.logger.error(f"[kalliope] invalid value '{new_mute}' for mute, ignoring")
@@ -151,7 +151,7 @@ class Action(HAL9000_Action):
 		return True
 
 
-	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
+	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
 		if pending is False:
 			if old_runlevel == HAL9000_Plugin.RUNLEVEL_READY and new_runlevel == HAL9000_Plugin.RUNLEVEL_RUNNING:
 				if self.daemon.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
@@ -159,7 +159,7 @@ class Action(HAL9000_Action):
 		return True
 
 
-	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str, pending: bool) -> bool:
+	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
 			match new_status:
 				case Daemon.BRAIN_STATUS_AWAKE:

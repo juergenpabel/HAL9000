@@ -21,9 +21,9 @@ class Microcontroller : public AbstractMicrocontroller {
 		TwoWire   twowire_data[2];
 	public:
 		Microcontroller();
-		virtual void start(uint32_t& timestamp, bool& booting);
+		virtual void start(uint32_t& timestamp);
 		virtual bool configure(const JsonVariant& configuration);
-		virtual void reset(uint32_t timestamp, bool rebooting);
+		virtual void reset(uint32_t timestamp);
 		virtual void halt();
 		void reset_uf2();
 

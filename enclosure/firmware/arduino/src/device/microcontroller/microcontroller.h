@@ -14,9 +14,9 @@ class AbstractMicrocontroller {
 		AbstractMicrocontroller(const etl::string<GLOBAL_KEY_SIZE>& identifier) { this->m_identifier = identifier; };
 		const etl::string<GLOBAL_KEY_SIZE>& getIdentifier() { return this->m_identifier; };
 
-		virtual void start(uint32_t& timestamp, bool& booting) = 0;
+		virtual void start(uint32_t& timestamp) = 0;
 		virtual bool configure(const JsonVariant& configuration) = 0;
-		virtual void reset(uint32_t timestamp, bool rebooting) = 0;
+		virtual void reset(uint32_t timestamp) = 0;
 		virtual void halt() = 0;
 
 		virtual bool task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name, void (*task_function)(), uint8_t core) = 0;

@@ -5,7 +5,6 @@
 #include <etl/map.h>
 #include <ArduinoJson.h>
 
-#include "application/error.h"
 #include "application/settings.h"
 #include "application/environment.h"
 
@@ -27,7 +26,6 @@ class Application {
 		Status      m_status;
 		time_t      m_time_offset;
 	protected:
-		ErrorQueue  m_errors;
 		Environment m_environment;
 		Settings    m_settings;
 		void        setTime(time_t time);
@@ -53,7 +51,7 @@ class Application {
 		void                                  delSetting(const etl::string<GLOBAL_KEY_SIZE>& key);
 
 		void notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& id,
-		                 const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_VALUE_SIZE>& detail);
+		                 const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_VALUE_SIZE>& details);
 
 	static time_t getTime();
 

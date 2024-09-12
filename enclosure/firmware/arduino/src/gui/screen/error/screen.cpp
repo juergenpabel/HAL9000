@@ -6,12 +6,11 @@
 #include "gui/gui.h"
 #include "gui/screen/screen.h"
 #include "gui/screen/qrcode/screen.h"
-#include "application/error.h"
 #include "globals.h"
 
 
 unsigned long gui_screen_error(unsigned long lastDraw, TFT_eSPI* gui) {
-	etl::string<GLOBAL_VALUE_SIZE> error_message;
+	etl::string<GLOBAL_VALUE_SIZE> error_title;
 	etl::string<GLOBAL_VALUE_SIZE> error_url;
 	etl::string<GLOBAL_VALUE_SIZE> error_id;
 
@@ -24,16 +23,24 @@ unsigned long gui_screen_error(unsigned long lastDraw, TFT_eSPI* gui) {
 		if(g_application.hasEnv("gui/screen:error/url") == true) {
 			error_url = g_application.getEnv("gui/screen:error/url");
 		} else {
-			error_url = Error::calculateURL(error_id);
+			error_url = g_application.getSetting("application/error:url/template");
+			if(error_id.empty() == false) {
+				size_t url_id_offset;
+
+				url_id_offset = error_url.find("{error_id}");
+				if(url_id_offset != error_url.npos) {
+					error_url = error_url.replace(url_id_offset, 10, error_id);
+				}
+			}
 		}
-		if(g_application.hasEnv("gui/screen:error/message") == true) {
-			error_message = g_application.getEnv("gui/screen:error/message");
+		if(g_application.hasEnv("gui/screen:error/title") == true) {
+			error_title = g_application.getEnv("gui/screen:error/title");
 		}
 		g_application.setEnv("gui/screen:qrcode/color-screen",   "red");
 		g_application.setEnv("gui/screen:qrcode/color-text",     "white");
 		g_application.setEnv("gui/screen:qrcode/textsize-above", "small");
 		g_application.setEnv("gui/screen:qrcode/textsize-below", "normal");
-		g_application.setEnv("gui/screen:qrcode/text-above", error_message);
+		g_application.setEnv("gui/screen:qrcode/text-above", error_title);
 		g_application.setEnv("gui/screen:qrcode/text-url",   error_url);
 		g_application.setEnv("gui/screen:qrcode/text-below", error_id.insert(0, "Error: "));
 		currentDraw = gui_screen_qrcode(lastDraw, gui);

@@ -5,12 +5,12 @@ from configparser import ConfigParser as configparser_ConfigParser
 from aiomqtt import Message as aiomqtt_Message
 from logging import getLogger as logging_getLogger
 
-from hal9000.brain.plugin import HAL9000_Trigger, HAL9000_Plugin_Status
+from hal9000.brain.plugin import HAL9000_Trigger, HAL9000_Plugin_Data
 
 
 class Trigger(HAL9000_Trigger):
 
-	def __init__(self, trigger_name: str, plugin_status: HAL9000_Plugin_Status) -> None:
+	def __init__(self, trigger_name: str, plugin_status: HAL9000_Plugin_Data) -> None:
 		HAL9000_Trigger.__init__(self, 'mqtt', trigger_name, plugin_status)
 		self.payload_jsonpath_parser = None
 

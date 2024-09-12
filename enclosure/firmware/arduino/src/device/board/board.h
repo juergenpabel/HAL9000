@@ -12,9 +12,9 @@ class AbstractBoard {
 		AbstractBoard(const etl::string<GLOBAL_KEY_SIZE>& identifier) { this->m_identifier = identifier; };
 		const etl::string<GLOBAL_KEY_SIZE>& getIdentifier() { return this->m_identifier; };
 
-		virtual void start(bool& host_booting);
+		virtual bool start();
 		virtual bool configure(const JsonVariant& configuration) = 0;
-		virtual void reset(bool host_rebooting);
+		virtual void reset();
 		virtual void halt();
 
 		virtual void displayOn() = 0;

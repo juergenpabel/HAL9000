@@ -11,41 +11,23 @@
 #include "gui/screen/idle/screen.h"
 #include "gui/screen/splash/screen.h"
 #include "gui/screen/animations/screen.h"
+#include "gui/overlay/overlay.h"
 #include "gui/webserial.h"
 #include "util/webserial.h"
 #include "util/jpeg.h"
 
-bool core1_separate_stack = true;
 
 void setup() {
 	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> json;
-	       etl::string<GLOBAL_FILENAME_SIZE> filename;
+	static etl::string<GLOBAL_VALUE_SIZE>    error_details;
+	static etl::string<GLOBAL_FILENAME_SIZE> filename;
 	       File                              file;
-	       bool                              booting = true;
 
-	g_device_board.start(booting);
-	if(booting == true) {
-		g_util_webserial.send("syslog/debug", "system was hard-resetted or powered-on (starting => configuring => waiting => ready => running)");
-		g_application.setStatus(StatusStarting);
-	} else {
-		g_util_webserial.send("syslog/debug", "system was soft-resetted (starting => running)");
-		g_application.setStatus(StatusRunning);
-	}
-	filename  = "/system/board/";
-	filename += g_device_board.getIdentifier();
-	filename += "/configuration.json";
-	if(LittleFS.exists(filename.c_str()) == true) {
-		file = LittleFS.open(filename.c_str(), "r");
-		if(deserializeJson(json, file) != DeserializationError::Ok) {
-			g_application.notifyError("error", "12", "Configuration error", filename);
-			json.clear();
-		}
-		file.close();
-	}
-	if(json.isNull() == false) {
-		if(g_device_board.configure(json) == false) {
-			g_application.notifyError("error", "12", "Configuration error", g_device_board.getIdentifier());
-		}
+	if(g_device_board.start() == false) {
+		g_application.setStatus(StatusPanicing);
+		gui_screen_set("none", gui_screen_none);
+		gui_overlay_set("none", gui_overlay_none);
+		return;
 	}
 	g_gui.begin();
 	g_gui.setRotation(TFT_ORIENTATION_LOGICAL);
@@ -54,14 +36,64 @@ void setup() {
 	g_gui_buffer.createSprite(GUI_SCREEN_WIDTH, GUI_SCREEN_HEIGHT);
 	if(g_gui_buffer.getPointer() == nullptr) {
 		g_util_webserial.send("syslog/warning", "out-of-memory: UI running without frame buffer (reduced graphics)");
-		g_application.notifyError("warn", "11", "Reduced graphics", "g_gui_buffer.createSprite() failed");
 	}
+	filename  = "/system/board/";
+	filename += g_device_board.getIdentifier();
+	filename += "/configuration.json";
+	if(LittleFS.exists(filename.c_str()) == false) {
+		g_application.setStatus(StatusPanicing);
+		error_details  = "board configuration file (littlefs:)'";
+		error_details += filename;
+		error_details += "' not found";
+		g_application.notifyError("critical", "213", "Board error", error_details);
+		return;
+	}
+	file = LittleFS.open(filename.c_str(), "r");
+	if(file == false) {
+		g_application.setStatus(StatusPanicing);
+		error_details  = "failed to open *supposedly existing* (littlefs:)'";
+		error_details += filename;
+		error_details += "' in read-mode";
+		g_application.notifyError("critical", "212", "Filesystem error", error_details);
+		return;
+	}
+	if(deserializeJson(json, file) != DeserializationError::Ok) {
+		g_application.setStatus(StatusPanicing);
+		error_details  = "JSON (syntax) error in board configuration in (littlefs:)'";
+		error_details += filename;
+		error_details += "'";
+		g_application.notifyError("critical", "213", "Board error", error_details);
+		file.close();
+		return;
+	}
+	file.close();
+	if(g_device_board.configure(json) == false) {
+		g_application.setStatus(StatusPanicing);
+		error_details  = "board '";
+		error_details += g_device_board.getIdentifier();
+		error_details += "' reported an error applying config from (littlefs:)'";
+		error_details += filename;
+		error_details += "'";
+		g_application.notifyError("critical", "213", "Board error", error_details);
+		return;
+	}
+	if(g_application.loadSettings() == false) {
+		g_application.setStatus(StatusPanicing);
+		error_details  = "application failed to load persisted settings from (littlefs:)'";
+		error_details += filename;
+		error_details += "' (just reflashing littlefs might solve this issue...but not the root cause)";
+		g_application.notifyError("critical", "214", "Application error", error_details);
+		return;
+	}
+	g_application.setStatus(StatusConfiguring);
+	g_util_webserial.setCommand("application/runtime", on_application_runtime);
+	gui_screen_set("startup", gui_screen_animations_startup);
 }
 
 
 void loop() {
 	static unsigned long configurationTimeout = 0;
-	static Status        previousStatus = StatusUnknown;
+	static Status        previousStatus = StatusStarting;
 	       Status        currentStatus = StatusUnknown;
 
 	g_device_mcp23X17.check(false);
@@ -72,23 +104,20 @@ void loop() {
 
 		g_util_webserial.send("application/runtime", payloadStatus.replace(19, 8, g_application.getStatusName()), false);
 		switch(currentStatus) {
-			case StatusStarting:
-				if(g_application.loadSettings() == false) {
-					g_util_webserial.send("syslog/critical", "failed to load application settings, will probably be non-functional");
-				}
-				gui_screen_set("startup", gui_screen_animations_startup);
-				g_application.setStatus(StatusConfiguring);
-				g_util_webserial.setCommand("application/runtime", on_application_runtime);
-				break;
 			case StatusConfiguring:
-				configurationTimeout = millis() + 90000; //TODO:config option
+				if(g_application.hasSetting("application/runtime:configuration/timeout") == true) {
+					configurationTimeout = atoi(g_application.getSetting("application/runtime:configuration/timeout").c_str());
+				}
+				if(configurationTimeout == 0) {
+					configurationTimeout = APPLICATION_CONFIGURATION_TIMEOUT_MS;
+				}
+				configurationTimeout += millis();
 				g_util_webserial.setCommand("application/environment", nullptr);
 				g_util_webserial.setCommand("application/settings", nullptr);
 				g_util_webserial.setCommand("device/board", nullptr);
 				g_util_webserial.setCommand("device/microcontroller", nullptr);
 				g_util_webserial.setCommand("device/mcp23X17", nullptr);
 				g_util_webserial.setCommand("device/display", nullptr);
-				g_util_webserial.setCommand("device/sdcard", nullptr);
 				g_util_webserial.setCommand("gui/screen", nullptr);
 				g_util_webserial.setCommand("gui/overlay", nullptr);
 				g_util_webserial.setCommand("*", Application::onConfiguration);
@@ -104,7 +133,6 @@ void loop() {
 				g_util_webserial.setCommand("device/microcontroller", on_device_microcontroller);
 				g_util_webserial.setCommand("device/mcp23X17", on_device_mcp23X17);
 				g_util_webserial.setCommand("device/display", on_device_display);
-				g_util_webserial.setCommand("device/sdcard", on_device_sdcard);
 				g_util_webserial.setCommand("gui/screen", on_gui_screen);
 				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
 				Application::onConfiguration(Application::Null, JsonVariant());
@@ -112,36 +140,41 @@ void loop() {
 			case StatusRebooting:
 				g_util_webserial.setCommand(Application::Null, nullptr);
 				g_util_webserial.setCommand("application/runtime", on_application_runtime);
-				gui_screen_set("shutdown", gui_screen_animations_shutdown);
+				gui_screen_set("shutdown", gui_screen_animations_shutdown); //animation triggers reset after last frame
 				while(true) {
 					g_util_webserial.update();
 					gui_update();
 				}
-				break;
 			case StatusHalting:
 				g_util_webserial.setCommand(Application::Null, nullptr);
 				g_util_webserial.setCommand("application/runtime", on_application_runtime);
-				gui_screen_set("shutdown", gui_screen_animations_shutdown);
+				gui_screen_set("shutdown", gui_screen_animations_shutdown); //animation triggers halt after last frame
 				while(true) {
 					g_util_webserial.update();
 					gui_update();
 				}
-				break;
+			case StatusPanicing:
+				g_util_webserial.setCommand(Application::Null, nullptr);
+				g_util_webserial.setCommand("application/runtime", on_application_runtime);
+				gui_update();
+				while(true) {
+					g_util_webserial.update();
+				}
 			default:
-				g_util_webserial.send("syslog/error", "invalid application status => resetting");
-				g_util_webserial.send("application/runtime", "{\"status\":\"resetting\"}", false);
-				g_device_board.reset(false);
+				g_util_webserial.setCommand(Application::Null, nullptr);
+				while(true) {
+					g_util_webserial.send("syslog/critical", "BUG: invalid/unknown application status", true, true);
+					g_util_webserial.send("application/runtime", "{\"status\":\"unknown\"}", false, true);
+					delay(1000);
+				}
 		}
 		previousStatus = currentStatus;
 	}
-	if(configurationTimeout > 0 && millis() > configurationTimeout) {
-		Error error("critical", "01", "No connection to host", "ERROR #01");
-
-		g_util_webserial.send(error.level.insert(0, "syslog/"), error.message); // TODO: + " => " + error.detail);
-		g_application.setEnv("gui/screen:error/id", error.id);
-		g_application.setEnv("gui/screen:error/message", error.message);
-		gui_screen_set("error:01", gui_screen_error);
-		configurationTimeout = 0;
+	if(currentStatus == StatusConfiguring) {
+		if(configurationTimeout > 0 && millis() > configurationTimeout) {
+			g_application.notifyError("critical", "210", "No connection to host", "failed to establish communications with service 'frontend' (via USB)");
+			configurationTimeout = 0;
+		}
 	}
 	gui_update();
 }

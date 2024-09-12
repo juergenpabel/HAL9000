@@ -12,12 +12,15 @@ Board::Board()
 }
 
 
-void Board::start(bool& host_booting) {
-	AbstractBoard::start(host_booting);
+bool Board::start() {
+	if(AbstractBoard::start() == false) {
+		return false;
+	}
 	if(TFT_BL >= 0) {
 		pinMode(TFT_BL, OUTPUT);
 	}
 	this->displayOn();
+	return true;
 }
 
 
@@ -26,8 +29,8 @@ bool Board::configure(const JsonVariant& configuration) {
 }
 
 
-void Board::reset(bool host_rebooting) {
-	AbstractBoard::reset(host_rebooting);
+void Board::reset() {
+	AbstractBoard::reset();
 }
 
 

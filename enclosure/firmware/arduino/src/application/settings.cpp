@@ -25,23 +25,16 @@ bool Settings::load() {
 	       File                      file;
 
 	this->clear();
+	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 	file = LittleFS.open(this->filename.c_str(), "r");
-	if(!file) {
-		static LogString message;
-
-		message.clear();
-		message  = "Settings::load('";
-		message += this->filename;
-		message += "') => could not open file";
-		g_util_webserial.send("syslog/error", message);
-		return false;
+	if(file == false) {
+		return true;
 	}
 	if(file.size() == 0) {
 		file.close();
 		return true;
 	}
-	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
-	do {
+	while(file.position() < file.size() || line_buffer_pos > 0) {
 		if(file.position() < file.size()) {
 			line_buffer_pos += file.read((uint8_t*)&line_buffer[line_buffer_pos], sizeof(line_buffer)-line_buffer_pos-1);
 			line_buffer[line_buffer_pos] = '\0';
@@ -51,7 +44,7 @@ bool Settings::load() {
 		if(line_end_pos == line.npos) {
 			file.close();
 			this->clear();
-			g_util_webserial.send("syslog/error", LogString("Settings::load('").append(this->filename).append(LogString("') => no newline")));
+			g_application.notifyError("215", "error", "Application error", "missing newline in Settings::load()");
 			return false;
 		}
 		line_sep_pos = line.find('=');
@@ -68,7 +61,7 @@ bool Settings::load() {
 		}
 		line_buffer_pos -= line_end_pos+1;
 		line_buffer[line_buffer_pos] = '\0';
-	} while(file.position() < file.size() || line_buffer_pos > 0);
+	}
 	file.close();
 	return true;
 }
@@ -78,8 +71,8 @@ bool Settings::save() {
 	File    file;
 
 	file = LittleFS.open(this->filename.c_str(), "w");
-	if(!file) {
-		g_util_webserial.send("syslog/error", LogString("Settings::save('").append(this->filename).append(LogString("') => failed to open file")));
+	if(file == false) {
+		g_application.notifyError("215", "warn", "Application error", "LittleFS.open() failed in Settings::save()");
 		return false;
 	}
 	for(SettingsMap::iterator iter=this->begin(); iter!=this->end(); ++iter) {

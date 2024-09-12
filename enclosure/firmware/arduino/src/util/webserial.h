@@ -31,6 +31,10 @@ class WebSerial {
 		etl::map<etl::string<GLOBAL_KEY_SIZE>, webserial_command_func, UTIL_WEBSERIAL_COMMANDS_MAX> commands;
 		WebSerialQueue<UTIL_WEBSERIAL_QUEUE_RECV_MAX> queue_recv;
 		WebSerialQueue<UTIL_WEBSERIAL_QUEUE_SEND_MAX> queue_send;
+		unsigned long                                 millis_heartbeatRX;
+		unsigned long                                 millis_heartbeatTX;
+		void heartbeat();
+		bool isAlive();
 	protected:
 		void handle(const etl::string<WEBSERIAL_LINE_SIZE>& line);
 		void handle(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
@@ -40,8 +44,8 @@ class WebSerial {
 		void setCommand(const etl::string<GLOBAL_KEY_SIZE>& command, webserial_command_func handler);
 		bool hasCommand(const etl::string<GLOBAL_KEY_SIZE>& command);
 		void update();
-		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::string<GLOBAL_VALUE_SIZE>& data, bool data_stringify = true);
-		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::string<GLOBAL_VALUE_SIZE>& data, bool data_stringify = true, bool priority = false);
+		void send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data, bool priority = false);
 
 	friend class Application;
 	friend unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui);

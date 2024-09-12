@@ -1,3 +1,4 @@
+from typing import Any
 from json import loads as json_loads, \
                  dumps as json_dumps
 from os.path import exists as os_path_exists
@@ -5,7 +6,7 @@ from datetime import datetime as datetime_datetime, \
                      timedelta as datetime_timedelta
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Status
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data
 from hal9000.brain.daemon import Daemon
 from hal9000.brain.plugins.kalliope.action import Action as Kalliope_Action
 
@@ -16,7 +17,7 @@ class Action(HAL9000_Action):
 	FRONTEND_STATUS_ONLINE   = 'online'
 
 
-	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Status, **kwargs) -> None:
+	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'frontend', action_name, plugin_status, **kwargs)
 		self.daemon.plugins['frontend'].addRemoteNames(['screen', 'overlay'])
 		self.daemon.plugins['frontend'].runlevel = HAL9000_Action.RUNLEVEL_UNKNOWN
@@ -41,16 +42,16 @@ class Action(HAL9000_Action):
 
 
 	def runlevel_error(self) -> dict:
-		return {'id': '01',
-		        'level': 'error',
-		        'message': "No connection to microcontroller."}
+		return {'id': '200',
+		        'level': 'critical',
+		        'title': "Service 'frontend' unavailable (arduino/flet)"}
 
 
-	def send_frontend_command(self, topic:str , body: dict) -> None:
+	def send_frontend_command(self, topic:str, body: dict) -> None:
 		self.daemon.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/frontend/{topic}', 'payload': json_dumps(body)})
 
 
-	def on_frontend_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
+	def on_frontend_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
 		if pending is False:
 			match old_runlevel:
 				case HAL9000_Plugin.RUNLEVEL_UNKNOWN:
@@ -66,19 +67,21 @@ class Action(HAL9000_Action):
 						return False
 			match new_runlevel:
 				case HAL9000_Plugin.RUNLEVEL_READY | HAL9000_Plugin.RUNLEVEL_RUNNING:
-					if self.daemon.plugins['frontend'].status == HAL9000_Plugin_Status.STATUS_UNINITIALIZED:
+					if self.daemon.plugins['frontend'].status == HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
 						self.send_frontend_command('status', '')
+				case HAL9000_Plugin.RUNLEVEL_KILLED:
+					self.daemon.process_error('critical', '200', "System offline", f"Service 'frontend' unavailable")
 		return True
 
 
-	def on_frontend_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str, pending: bool) -> bool:
-		if new_status not in [HAL9000_Plugin_Status.STATUS_UNINITIALIZED, Action.FRONTEND_STATUS_OFFLINE, Action.FRONTEND_STATUS_ONLINE]:
+	def on_frontend_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, pending: bool) -> bool:
+		if new_status not in [HAL9000_Plugin_Data.STATUS_UNINITIALIZED, Action.FRONTEND_STATUS_OFFLINE, Action.FRONTEND_STATUS_ONLINE]:
 			return False
 		if pending is False:
 			match new_status:
 				case Action.FRONTEND_STATUS_OFFLINE:
-					self.daemon.plugins['frontend'].screen = HAL9000_Plugin_Status.STATUS_UNINITIALIZED, HAL9000_Plugin_Status.STATUS_CONFIRMED
-					self.daemon.plugins['frontend'].overlay = HAL9000_Plugin_Status.STATUS_UNINITIALIZED, HAL9000_Plugin_Status.STATUS_CONFIRMED
+					self.daemon.plugins['frontend'].screen = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, HAL9000_Plugin_Data.STATUS_CONFIRMED
+					self.daemon.plugins['frontend'].overlay = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, HAL9000_Plugin_Data.STATUS_CONFIRMED
 				case Action.FRONTEND_STATUS_ONLINE:
 					if self.daemon.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_RUNNING:
 						datetime_now = datetime_datetime.now()
@@ -90,12 +93,12 @@ class Action(HAL9000_Action):
 						else:
 							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}}}})
 					else:
-						self.daemon.plugins['frontend'].screen = 'none', HAL9000_Plugin_Status.STATUS_CONFIRMED
-						self.daemon.plugins['frontend'].overlay = 'none', HAL9000_Plugin_Status.STATUS_CONFIRMED
+						self.daemon.plugins['frontend'].screen = 'none', HAL9000_Plugin_Data.STATUS_CONFIRMED
+						self.daemon.plugins['frontend'].overlay = 'none', HAL9000_Plugin_Data.STATUS_CONFIRMED
 		return True
 
 
-	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_screen: str, new_screen: str, pending: bool) -> bool:
+	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_screen: str, new_screen: str, pending: bool) -> bool:
 		if pending is False:
 			self.daemon.logger.debug(f"STATUS at screen transition = {self.daemon.plugins}")
 			if new_screen == 'on':
@@ -104,7 +107,7 @@ class Action(HAL9000_Action):
 		return True
 
 
-	async def on_frontend_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
+	async def on_frontend_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
 		if 'runlevel' in signal:
 			match signal['runlevel']:
 				case HAL9000_Plugin.RUNLEVEL_STARTING:
@@ -116,9 +119,9 @@ class Action(HAL9000_Action):
 					self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_RUNNING
 				case HAL9000_Plugin.RUNLEVEL_KILLED:
 					self.daemon.plugins['frontend'].runlevel = HAL9000_Plugin.RUNLEVEL_KILLED
-					self.daemon.plugins['frontend'].status = HAL9000_Plugin_Status.STATUS_UNINITIALIZED
-					self.daemon.plugins['frontend'].screen = HAL9000_Plugin_Status.STATUS_UNINITIALIZED, HAL9000_Plugin_Status.STATUS_CONFIRMED
-					self.daemon.plugins['frontend'].overlay = HAL9000_Plugin_Status.STATUS_UNINITIALIZED, HAL9000_Plugin_Status.STATUS_CONFIRMED
+					self.daemon.plugins['frontend'].status = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
+					self.daemon.plugins['frontend'].screen = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, HAL9000_Plugin_Data.STATUS_CONFIRMED
+					self.daemon.plugins['frontend'].overlay = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, HAL9000_Plugin_Data.STATUS_CONFIRMED
 		if 'status' in signal:
 			match signal['status']:
 				case Action.FRONTEND_STATUS_OFFLINE:
@@ -134,28 +137,31 @@ class Action(HAL9000_Action):
 		if 'gui' in signal:
 			if 'screen' in signal['gui']:
 				if 'parameter' in signal['gui']['screen']:
+					parameter_id = ''
+					if 'id' in signal['gui']['screen']['parameter']:
+						parameter_id = signal['gui']['screen']['parameter']['id']
 					signal['gui']['screen']['parameter'] = self.substitute_vars(signal['gui']['screen']['parameter'],
 					                                                            {'ipv4': await self.daemon.get_system_ipv4(),
-					                                                             'error_id': 'TODO',
-					                                                             'splash_id': 'TODO'})
+					                                                             'error_id': parameter_id,
+					                                                             'splash_id': parameter_id})
 				status = None
 				if 'origin' in signal['gui']['screen'] and signal['gui']['screen']['origin'] == 'frontend':
-					status = HAL9000_Plugin_Status.STATUS_CONFIRMED
+					status = HAL9000_Plugin_Data.STATUS_CONFIRMED
 				else:
 					self.send_frontend_command('gui/screen', {signal['gui']['screen']['name']: signal['gui']['screen']['parameter']})
-					status = HAL9000_Plugin_Status.STATUS_REQUESTED
+					status = HAL9000_Plugin_Data.STATUS_REQUESTED
 				self.daemon.plugins['frontend'].screen = signal['gui']['screen']['name'], status
 			if 'overlay' in signal['gui']:
 				status = None
 				if 'origin' in signal['gui']['overlay'] and signal['gui']['overlay']['origin'] == 'frontend':
-					status = HAL9000_Plugin_Status.STATUS_CONFIRMED
+					status = HAL9000_Plugin_Data.STATUS_CONFIRMED
 				else:
 					self.send_frontend_command('gui/overlay', {signal['gui']['overlay']['name']: signal['gui']['overlay']['parameter']})
-					status = HAL9000_Plugin_Status.STATUS_REQUESTED
+					status = HAL9000_Plugin_Data.STATUS_REQUESTED
 				self.daemon.plugins['frontend'].overlay = signal['gui']['overlay']['name'], status
 
 
-	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
+	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
 		if pending is False:
 			match new_runlevel:
 				case HAL9000_Plugin.RUNLEVEL_RUNNING:
@@ -168,7 +174,7 @@ class Action(HAL9000_Action):
 		return True
 
 
-	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str, pending: bool) -> bool:
+	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
 			match new_status:
 				case Daemon.BRAIN_STATUS_AWAKE:
@@ -185,7 +191,7 @@ class Action(HAL9000_Action):
 		return True
 
 
-	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_time: str, new_time: str, pending: bool) -> bool:
+	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_time: str, new_time: str, pending: bool) -> bool:
 		if pending is False:
 			datetime_now = datetime_datetime.now()
 			epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
@@ -194,13 +200,13 @@ class Action(HAL9000_Action):
 		return True
 
 
-	async def on_brain_signal(self, plugin: HAL9000_Plugin_Status, signal: dict) -> None:
+	async def on_brain_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
 		if 'runlevel' in signal:
 			if signal['runlevel'] in [None, False, '', {}]:
 				self.daemon.mqtt_publish_queue.put_nowait({'topic': self.config['frontend-runlevel-mqtt-topic'], 'payload': ''})
 
 
-	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Status, key: str, old_status: str, new_status: str, pending: bool) -> bool:
+	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
 			if old_status == Kalliope_Action.KALLIOPE_STATUS_WAITING and new_status == Kalliope_Action.KALLIOPE_STATUS_LISTENING:
 				self.daemon.plugins['frontend'].screen = 'animations:hal9000'
@@ -210,7 +216,7 @@ class Action(HAL9000_Action):
 		return True
 
 
-	def substitute_vars(self, data, vars):
+	def substitute_vars(self, data: Any, vars: dict) -> Any:
 		if isinstance(data, list) is True:
 			for index, value in enumerate(list):
 				list[index] = self.substitute_vars(value, vars)

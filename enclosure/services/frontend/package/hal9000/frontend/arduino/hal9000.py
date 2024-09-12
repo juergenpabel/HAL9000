@@ -1,7 +1,8 @@
 from os.path import exists as os_path_exists
 from time import monotonic as time_monotonic
 from json import loads as json_loads, dumps as json_dumps
-from configparser import ParsingError as configparser_ParsingError
+from configparser import ConfigParser as configparser_ConfigParser, \
+                         ParsingError as configparser_ParsingError
 from logging import getLogger as logging_getLogger
 from serial import Serial as serial_Serial, EIGHTBITS as serial_EIGHTBITS, \
                    PARITY_NONE as serial_PARITY_NONE, STOPBITS_ONE as serial_STOPBITS_ONE, \
@@ -17,13 +18,13 @@ from hal9000.frontend import Frontend
 
 class HAL9000(Frontend):
 
-	def __init__(self, app: fastapi_FastAPI):
+	def __init__(self, app: fastapi_FastAPI) -> None:
 		super().__init__('arduino')
 		self.serial = None
 		self.serial_chunk = bytearray(b'')
 
 
-	async def configure(self, configuration) -> bool:
+	async def configure(self, configuration: configparser_ConfigParser) -> bool:
 		arduino_device   = configuration.getstring('frontend:arduino', 'device',   fallback=None)
 		arduino_baudrate = configuration.getint   ('frontend:arduino', 'baudrate', fallback=115200)
 		arduino_timeout  = configuration.getfloat ('frontend:arduino', 'timeout',  fallback=0.01)
@@ -111,6 +112,17 @@ class HAL9000(Frontend):
 				if response[1]['status']['name'] == 'ready':
 					logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'ready'")
 					await self.serial_writeline('["application/environment", {"set":{"key": "gui/screen:animations/loop", "value": "false"}}]')
+				if response[1]['status']['name'] == 'panicing':
+					error = 'no error details provided'
+					if 'error' in response[1]['status']:
+						try:
+							error = json_loads(response[1]['status']['error'])
+						except:
+							pass
+					logging_getLogger('uvicorn').critical(f"[frontend:arduino] application status is now 'panicing': {error}")
+					self.serial.close()
+					self.serial = None
+					return False
 				while response[0] != 'application/runtime' \
 				   or response[1] is False or 'status' not in response[1] \
 				                           or 'name' not in response[1]['status'] \
@@ -139,12 +151,12 @@ class HAL9000(Frontend):
 		self.tasks['device2host'] = asyncio_create_task(self.task_device2host())
 
 
-	async def serial_readline(self, timeout=None):
-		if timeout is not None:
+	async def serial_readline(self, timeout: float = 0) -> None:
+		if timeout > 0:
 			timeout += time_monotonic()
 		chunk = b''
 		while b'\n' not in chunk:
-			if timeout is not None and time_monotonic() > timeout:
+			if timeout > 0 and time_monotonic() > timeout:
 				return None
 			if self.serial is None or self.serial.is_open is False:
 				return None
@@ -174,15 +186,15 @@ class HAL9000(Frontend):
 		return line
 
 
-	async def serial_writeline(self, line):
-		if self.serial is not None and self.serial.is_open is True:
-			logging_getLogger('uvicorn').log(Frontend.LOG_LEVEL_TRACE, f"[frontend:arduino] H->D: {line}")
-			self.serial.write(f'{line}\n'.encode('utf-8'))
-		else:
-			logging_getLogger('uvicorn').error(f"[frontend:arduino] serial_writeline('{line}') failed due to missing serial connection")
+	async def serial_writeline(self, line: str) -> None:
+		if self.serial is None or self.serial.is_open is not True:
+			logging_getLogger('uvicorn').error(f"[frontend:arduino] serial_writeline('{line}') failed as serial connection is not established")
+			return
+		logging_getLogger('uvicorn').log(Frontend.LOG_LEVEL_TRACE, f"[frontend:arduino] H->D: {line}")
+		self.serial.write(f'{line}\n'.encode('utf-8'))
 
 
-	async def task_host2device(self):
+	async def task_host2device(self) -> None:
 		logging_getLogger('uvicorn').debug(f"[frontend:arduino] starting host2device-listener")
 		while os_path_exists(self.serial.port) and self.tasks['host2device'].cancelled() is False:
 			if self.serial.is_open is False:
@@ -195,7 +207,7 @@ class HAL9000(Frontend):
 					if self.status != Frontend.FRONTEND_STATUS_ONLINE:
 						self.status = Frontend.FRONTEND_STATUS_ONLINE
 					command = await self.commands.get()
-					logging_getLogger('uvicorn').debug(f"[frontend:arduino] received command: {command}")
+					logging_getLogger('uvicorn').debug(f"[frontend:arduino] host2device sends message: {command}")
 					if isinstance(command, dict) and 'topic' in command and 'payload' in command:
 						topic = command['topic']
 						payload = command['payload']
@@ -212,7 +224,7 @@ class HAL9000(Frontend):
 		del self.tasks['host2device']
 
 
-	async def task_device2host(self):
+	async def task_device2host(self) -> None:
 		logging_getLogger('uvicorn').debug(f"[frontend:arduino] starting device2host-listener")
 		while os_path_exists(self.serial.port) and self.tasks['device2host'].cancelled() is False:
 			if self.serial.is_open is False:
@@ -229,15 +241,21 @@ class HAL9000(Frontend):
 					try:
 						event = json_loads(line)
 						if isinstance(event, list) and len(event) == 2:
+							logging_getLogger('uvicorn').debug(f"[frontend:arduino] device2host reads message: " + \
+							                                   str({'topic': event[0], 'payload': event[1]}))
+							if event[0] == 'ping':
+								self.commands.put_nowait({'topic': 'pong', 'payload': ''})
+								event[0] = ''
 							if event[0].startswith('syslog/'):
 								log_level = event[0][7:].upper()
 								if hasattr(logging, log_level) is True:
-									logging_getLogger('uvicorn').log(getattr(logging, log_level), f"[frontend:arduino] {event[0]}: " \
-									                                                              f"{json_dumps(event[1])}")
+									logging_getLogger('uvicorn').log(getattr(logging, log_level),
+									                                 f"[frontend:arduino] {event[0]}: {json_dumps(event[1])}")
 							if isinstance(event[1], dict) is True:
 								if 'origin' not in event[1]:
 									event[1]['origin'] = 'frontend:arduino'
-							self.events.put_nowait({'topic': event[0], 'payload': event[1]})
+							if event[0] != '':
+								self.events.put_nowait({'topic': event[0], 'payload': event[1]})
 						else:
 							logging_getLogger('uvicorn').warning(f"[frontend:arduino] unexpected (but valid) JSON structure received: {line}")
 					except Exception as e:

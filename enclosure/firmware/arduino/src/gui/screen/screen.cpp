@@ -49,7 +49,6 @@ unsigned long gui_screen_update(unsigned long lastDraw, TFT_eSPI* gui) {
 
 unsigned long gui_screen_off(unsigned long lastDraw, TFT_eSPI* gui) {
 	if(lastDraw == GUI_UPDATE) {
-//TODO		gui_overlay_set("off", gui_overlay_off);
 		g_device_board.displayOff();
 		return GUI_IGNORE;
 	}
@@ -60,7 +59,6 @@ unsigned long gui_screen_off(unsigned long lastDraw, TFT_eSPI* gui) {
 unsigned long gui_screen_on(unsigned long lastDraw, TFT_eSPI* gui) {
 	if(lastDraw == GUI_UPDATE) {
 		g_device_board.displayOn();
-//TODO		gui_overlay_set("on", gui_overlay_on);
 		return GUI_IGNORE;
 	}
 	return lastDraw;

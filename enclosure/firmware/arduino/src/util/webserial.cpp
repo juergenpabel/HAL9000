@@ -30,24 +30,58 @@ void WebSerialQueue<VSize>::unlock() const {
 
 WebSerial::WebSerial()
           : queue_recv("webserial_recv")
-          , queue_send("webserial_send") {
+          , queue_send("webserial_send")
+          , millis_heartbeatRX(0)
+          , millis_heartbeatTX(0) {
 }
 
 
 void WebSerial::begin() {
 	Serial.begin(115200);
+	if(UTIL_WEBSERIAL_HEARTBEAT_MS > 0) {
+		this->millis_heartbeatRX = millis();
+		this->millis_heartbeatTX = millis();
+	}
 }
 
 
-void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& json) {
+void WebSerial::heartbeat() {
+	if(UTIL_WEBSERIAL_HEARTBEAT_MS > 0) {
+		if(Serial == true) {
+			unsigned long now;
+
+			now = millis();
+			if(now >= (this->millis_heartbeatTX + UTIL_WEBSERIAL_HEARTBEAT_MS)) {
+				this->send("ping", "", true, true);
+				this->millis_heartbeatTX = now;
+			}
+		}
+	}
+}
+
+
+bool WebSerial::isAlive() {
+	if(Serial == true) {
+		if(UTIL_WEBSERIAL_HEARTBEAT_MS == 0) {
+			return true;
+		}
+		if((this->millis_heartbeatRX + UTIL_WEBSERIAL_HEARTBEAT_MS + 1000L) > millis()) {
+			return true;
+		}
+	}
+	return false;
+}
+
+
+void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& json, bool priority) {
 	char payload[GLOBAL_VALUE_SIZE] = {0};
 
 	serializeJson(json, payload);
-	this->send(command, payload, false);
+	this->send(command, payload, priority);
 }
 
 
-void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::string<GLOBAL_VALUE_SIZE>& data, bool data_stringify) {
+void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::string<GLOBAL_VALUE_SIZE>& data, bool data_stringify, bool priority) {
 	etl::string<WEBSERIAL_LINE_SIZE> line;
 
 	line  = "[\"";
@@ -71,11 +105,18 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 	}
 	line += "]";
 
-	if(this->queue_send.push(line) != true) {
-		Serial.write("[\"syslog/critical\", \"send queue full in Webserial::send(), sending out-of-order:\"]\n");
+	priority |= this->queue_send.full();
+	if(priority == true) {
 		Serial.write(line.c_str());
 		Serial.write('\n');
 		Serial.flush();
+	} else {
+		if(this->queue_send.push(line) != true) {
+			Serial.write("[\"syslog/critical\", \"send queue full in Webserial::send(), sending out-of-order:\"]\n");
+			Serial.write(line.c_str());
+			Serial.write('\n');
+			Serial.flush();
+		}
 	}
 }
 
@@ -87,16 +128,18 @@ void WebSerial::update() {
 	       etl::string<WEBSERIAL_LINE_SIZE> webserial_recv_line;
 	       etl::string<WEBSERIAL_LINE_SIZE> webserial_send_line;
 
-	if(Serial == false) {
-		if(gui_screen_get() != gui_screen_animations && gui_screen_get() != gui_screen_error) {
-			Error error("error", "09", "Lost connection to host", "ERROR #09");
-
-			g_util_webserial.send(error.level.insert(0, "syslog/"), error.message); // TODO: + " => " + error.detail);
-			g_application.setEnv("gui/screen:error/id", error.id);
-			g_application.setEnv("gui/screen:error/message", error.message);
-			gui_screen_set("error", gui_screen_error);
+	this->heartbeat();
+	if(this->isAlive() == false) {
+		if(Serial.available() == 0) {
+			if(gui_screen_get() != gui_screen_animations && gui_screen_get() != gui_screen_error) {
+				g_application.notifyError("critical", "210", "No connection to host", "Serial is closed in WebSerial::update()");
+			}
+			return;
 		}
-		return;
+		if(gui_screen_get() == gui_screen_error) {
+			this->send("syslog/debug", "connection to host established, switching to screen 'none'");
+			gui_screen_set("none", gui_screen_none);
+		}
 	}
 	while(this->queue_send.size() > 0) {
 		if(this->queue_send.pop(webserial_send_line) == true) {
@@ -142,6 +185,9 @@ void WebSerial::update() {
 				input_chunk_pos = input_chunk.find('\n');
 			}
 			serial_available = Serial.available();
+			if(UTIL_WEBSERIAL_HEARTBEAT_MS > 0 && serial_available == false) {
+				this->millis_heartbeatRX = millis();
+			}
 		}
 	}
 	while(this->queue_recv.size() > 0) {
@@ -168,6 +214,13 @@ void WebSerial::handle(const etl::string<WEBSERIAL_LINE_SIZE>& line) {
 		this->send("syslog/error", line);
 	}
 	if(json.is<JsonArray>() && json.size() == 2) {
+		if(json[0] == String("ping")) {
+			this->send("pong", "");
+			return;
+		}
+		if(json[0] == String("pong")) {
+			return;
+		}
 		this->handle(json[0].as<const char*>(), json[1].as<JsonVariant>());
 	} else {
 		this->send("syslog/error", "JSON parse of received line returned unexpected JSON object:");

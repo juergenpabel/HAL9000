@@ -118,12 +118,12 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 	       File file;
 
 	if(LittleFS.exists(filename.c_str()) == false) {
-		g_application.notifyError("error", "13", "Animation error", filename);
+		g_application.notifyError("error", "217", "Animation error", filename);
 		return;
 	}
 	file = LittleFS.open(filename.c_str(), "r");
 	if(deserializeJson(animationsJSON, file) != DeserializationError::Ok) {
-		g_application.notifyError("error", "13", "Animation error", filename);
+		g_application.notifyError("error", "217", "Animation error", filename);
 		file.close();
 		return;
 	}
@@ -164,7 +164,7 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 			}
 		}
 		if(animation.directory == "" || animation.frames == 0) {
-			g_application.notifyError("error", "13", "Animation data error", filename);
+			g_application.notifyError("error", "217", "Animation data error", filename);
 			return;
 		}
 		animations.push_back(animation);

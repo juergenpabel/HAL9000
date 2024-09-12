@@ -5,6 +5,7 @@ from math import pi as math_pi, sin as math_sin, cos as math_cos
 from json import dumps as json_dumps, \
                  loads as json_loads, \
                  load as json_load
+from configparser import ConfigParser as configparser_ConfigParser
 from datetime import datetime as datetime_datetime
 from logging import getLogger as logging_getLogger
 from asyncio import Queue as asyncio_Queue, \
@@ -22,14 +23,14 @@ from hal9000.frontend import Frontend
 
 class HAL9000(Frontend):
 
-	def __init__(self, app: fastapi_FastAPI):
+	def __init__(self, app: fastapi_FastAPI) -> None:
 		super().__init__('flet')
 		self.flet_app = app
 		self.environment = {}
 		self.command_session_queues = {}
 
 
-	async def configure(self, configuration) -> bool:
+	async def configure(self, configuration: configparser_ConfigParser) -> bool:
 		self.flet_app.mount('/', flet.fastapi.app(self.flet, route_url_strategy='path', assets_dir=f'{os_getcwd()}/assets'))
 		return True
 
@@ -39,7 +40,7 @@ class HAL9000(Frontend):
 		self.tasks['command_listener'] = asyncio_create_task(self.task_command_listener())
 
 
-	async def task_command_listener(self):
+	async def task_command_listener(self) -> None:
 		logging_getLogger('uvicorn').debug(f"[frontend:flet] starting command-listener (event-listeners are started per flet-session)")
 		await asyncio_sleep(0.1)
 		self.runlevel = Frontend.FRONTEND_RUNLEVEL_STARTING
@@ -56,7 +57,7 @@ class HAL9000(Frontend):
 			return # ignore exception (return in finally block)
 
 
-	async def run_command_session_listener(self, page, display):
+	async def run_command_session_listener(self, page: flet.page, display: flet.CircleAvatar) -> None:
 		logging_getLogger('uvicorn').debug(f"[frontend:flet] starting command-listener for session '{page.session_id}'")
 		try:
 			command_session_queue = self.command_session_queues[page.session_id]
@@ -72,13 +73,13 @@ class HAL9000(Frontend):
 							target = command['payload']['shutdown']['target']
 							match target:
 								case 'poweroff':
-									self.show_error(display, {'title': 'System shutdown',
-									                          'message': f"Animation not implemented",
-									                          'id': '70'})
+									self.show_error(display, {'id': '921',
+									                          'title': 'Animation disabled',
+									                          'detail': f"BUG: Animation not implemented"})
 								case 'reboot':
-									self.show_error(display, {'title': 'System reboot',
-									                          'message': f"Animation not implemented",
-									                          'id': '70'})
+									self.show_error(display, {'id': '921',
+									                          'title': 'Animation disabled',
+									                          'detail': f"BUG: Animation not implemented"})
 								case other:
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported shutdown target '{target}' "
 									                                     f"in command 'application/runtime'")
@@ -114,9 +115,9 @@ class HAL9000(Frontend):
 								case 'error':
 									self.show_error(display, command['payload']['error'])
 								case other:
-									self.show_error(display, {'title': "Unsupported screen",
-									                          'message': screen,
-									                          'id': '71'})
+									self.show_error(display, {'title': "BUG: unsupported screen",
+									                          'detail': screen,
+									                          'id': '922'})
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported screen '{screen}' "
 									                                     f"in command 'gui/screen'")
 					case 'gui/overlay':
@@ -144,15 +145,15 @@ class HAL9000(Frontend):
 									self.events.put_nowait({'topic': 'gui/overlay',
 									                        'payload': {'overlay': 'volume', 'origin': 'frontend:flet'}})
 								case other:
-									self.show_error(display, {'title': 'Unsupported overlay',
-									                          'message': overlay,
-									                          'id': '72'})
+									self.show_error(display, {'title': 'BUG: unsupported overlay',
+									                          'detail': overlay,
+									                          'id': '923'})
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported overlay '{overlay}' "
 									                                     f"in command 'gui/overlay'")
 					case other:
-						self.show_error(display, {'title': 'Unsupported command',
-						                          'message': command['topic'],
-						                          'id': '73'})
+						self.show_error(display, {'title': 'BUG: Unsupported command',
+						                          'detail': command['topic'],
+						                          'id': '924'})
 						logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported command '{command['topic']}'")
 				command = await command_session_queue.get()
 		except Exception as e:
@@ -160,7 +161,7 @@ class HAL9000(Frontend):
 		logging_getLogger('uvicorn').debug(f"[frontend:flet] exiting command-listener for session '{page.session_id}'")
 
 
-	async def run_gui_screen_idle(self, page, display):
+	async def run_gui_screen_idle(self, page: flet.page, display: flet.CircleAvatar) -> None:
 		while page.session_id in self.command_session_queues:
 			clock = display.data['idle_clock'].current
 			if clock is not None:
@@ -180,7 +181,7 @@ class HAL9000(Frontend):
 			await asyncio_sleep(1)
 
 
-	async def run_gui_screen_animations(self, page, display):
+	async def run_gui_screen_animations(self, page: flet.page, display: flet.CircleAvatar) -> None:
 		while page.session_id in self.command_session_queues:
 			if 'name' in display.data['animations'] and 'json' in display.data['animations']:
 				name = display.data['animations']['name']
@@ -211,25 +212,25 @@ class HAL9000(Frontend):
 			await asyncio_sleep(0.1)
 
 
-	def show_off(self, display):
+	def show_off(self, display: flet.CircleAvatar) -> None:
 		display.content.shapes = []
 		display.content.update()
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'off', 'origin': 'frontend:flet'}})
 
 
-	def show_on(self, display):
+	def show_on(self, display: flet.CircleAvatar) -> None:
 		display.content.shapes = []
 		display.content.update()
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'on', 'origin': 'frontend:flet'}})
 
 
-	def show_none(self, display):
+	def show_none(self, display: flet.CircleAvatar) -> None:
 		display.content.shapes = []
 		display.content.update()
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'none', 'origin': 'frontend:flet'}})
 
 
-	def show_idle(self, display):
+	def show_idle(self, display: flet.CircleAvatar) -> None:
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(ref=display.data['idle_clock'],
 		                                               x=int(display.radius), y=int(display.radius),
@@ -239,7 +240,7 @@ class HAL9000(Frontend):
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'idle', 'origin': 'frontend:flet'}})
 
 
-	def show_animations(self, display, data):
+	def show_animations(self, display: flet.CircleAvatar, data: dict) -> None:
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.data['animations'] = {}
 		if os_path_exists(f'assets/system/gui/screen/animations/{data["name"]}.json') is True:
@@ -252,7 +253,7 @@ class HAL9000(Frontend):
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': f'animations:{data["name"]}', 'origin': 'frontend:flet'}})
 
 
-	def show_menu(self, display, data):
+	def show_menu(self, display: flet.CircleAvatar, data: dict) -> None:
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(text=data['title'],
 		                                               x=int(display.radius), y=int(0.5*display.radius),
@@ -266,26 +267,26 @@ class HAL9000(Frontend):
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'menu', 'origin': 'frontend:flet'}})
 
 
-	def show_qrcode(self, display, data):
+	def show_qrcode(self, display: flet.CircleAvatar, data: dict) -> None:
 		self.render_qrcode(display, data)
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'qrcode', 'origin': 'frontend:flet'}})
 
 
-	def show_splash(self, display, data):
-		self.render_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
+	def show_splash(self, display: flet.CircleAvatar, data: dict) -> None:
+		self.render_qrcode(display, {'title': data['title'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
 		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Splash-database',
 		                           'hint': f"Splash ID: {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'splash', 'origin': 'frontend:flet'}})
 
 
-	def show_error(self, display, data):
-		self.render_qrcode(display, {'title': data['message'], 'title-size': int(display.page.scale*18), 'bg-color': 'red', 'title-color': 'white',
-		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
-		                           'hint': f"Error {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
+	def show_error(self, display: flet.CircleAvatar, data: dict) -> None:
+		self.render_qrcode(display, {'title': data['title'], 'title-size': int(display.page.scale*18), 'bg-color': 'red', 'title-color': 'white',
+		                             'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
+		                             'hint': f"Error {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'error', 'origin': 'frontend:flet'}})
 
 
-	def render_qrcode(self, display, data):
+	def render_qrcode(self, display: flet.CircleAvatar, data: dict) -> None:
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Circle(x=display.radius, y=display.radius, radius=display.radius,
 		                                                 paint=flet.Paint(color=data['bg-color'] if 'bg-color' in data else 'black')))
@@ -312,32 +313,32 @@ class HAL9000(Frontend):
 		display.content.update()
 
 
-	def on_button_wakeup(self, event):
+	def on_button_wakeup(self, event: flet.ControlEvent) -> None:
 		self.events.put_nowait({'topic': 'hal9000/command/brain/status', 'payload': 'awake'})
 
-	def on_button_sleep(self, event):
+	def on_button_sleep(self, event: flet.ControlEvent) -> None:
 		self.events.put_nowait({'topic': 'hal9000/command/brain/status', 'payload': 'asleep'})
 
-	def on_control_up(self, event):
+	def on_control_up(self, event: flet.ControlEvent) -> None:
 		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "rotary", "name": "control"}, "event": {"delta": "+1"}}'})
 
-	def on_control_down(self, event):
+	def on_control_down(self, event: flet.ControlEvent) -> None:
 		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "rotary", "name": "control"}, "event": {"delta": "-1"}}'})
 
-	def on_control_select(self, event):
+	def on_control_select(self, event: flet.ControlEvent) -> None:
 		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "button", "name": "control"}, "event": {"status": "clicked"}}'})
 
-	def on_volume_up(self, event):
+	def on_volume_up(self, event: flet.ControlEvent) -> None:
 		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "rotary", "name": "volume"}, "event": {"delta": "+1"}}'})
 
-	def on_volume_down(self, event):
+	def on_volume_down(self, event: flet.ControlEvent) -> None:
 		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "rotary", "name": "volume"}, "event": {"delta": "-1"}}'})
 
-	def on_volume_mute(self, event):
+	def on_volume_mute(self, event: flet.ControlEvent) -> None:
 		self.events.put_nowait({'topic': 'device/input', 'payload': '{"source": {"type": "button", "name": "volume"}, "event": {"status": "clicked"}}'})
 
 
-	def flet_on_disconnect(self, event):
+	def flet_on_disconnect(self, event: flet.ControlEvent) -> None:
 		logging_getLogger('uvicorn').info(f"[frontend:flet] terminating flet session '{event.page.session_id}'")
 		if event.page.session_id in self.command_session_queues:
 			command_session_queue = self.command_session_queues[event.page.session_id]
@@ -347,7 +348,7 @@ class HAL9000(Frontend):
 				self.status = Frontend.FRONTEND_STATUS_OFFLINE
 		
 
-	async def flet(self, page: flet.Page):
+	async def flet(self, page: flet.Page) -> None:
 		logging_getLogger('uvicorn').info(f"[frontend:flet] starting new flet session '{page.session_id}'")
 		page.on_disconnect = self.flet_on_disconnect
 		page.title = "HAL9000"

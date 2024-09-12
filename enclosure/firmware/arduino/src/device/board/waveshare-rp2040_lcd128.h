@@ -9,9 +9,9 @@
 class Board : public AbstractBoard {
 	public:
 		Board();
-		virtual void start(bool& host_booting);
+		virtual bool start();
 		virtual bool configure(const JsonVariant& configuration);
-		virtual void reset(bool host_rebooting);
+		virtual void reset();
 		virtual void halt();
 
 		virtual void displayOn();

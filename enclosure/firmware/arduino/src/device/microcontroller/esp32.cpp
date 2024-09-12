@@ -11,7 +11,6 @@
 #include "globals.h"
 
 
-RTC_NOINIT_ATTR bool           Microcontroller::reset_booting;
 RTC_NOINIT_ATTR uint32_t       Microcontroller::reset_timestamp;
                 vprintf_like_t Microcontroller::original_vprintf;
 
@@ -24,12 +23,10 @@ Microcontroller::Microcontroller()
 }
 
 
-void Microcontroller::start(uint32_t& timestamp, bool& host_booting) {
+void Microcontroller::start(uint32_t& timestamp) {
 	if(esp_reset_reason() == ESP_RST_POWERON) {
-		host_booting = true;
 		timestamp = 0;
 	} else {
-		host_booting = Microcontroller::reset_booting;
 		if(Microcontroller::reset_timestamp > 1009843199 /*2001-12-31 23:59:59*/) {
 			timestamp = Microcontroller::reset_timestamp;
 		}
@@ -39,34 +36,54 @@ void Microcontroller::start(uint32_t& timestamp, bool& host_booting) {
 
 
 bool Microcontroller::configure(const JsonVariant& configuration) {
-	uint8_t pin_sda;
-	uint8_t pin_scl;
+	static etl::string<GLOBAL_VALUE_SIZE> error_details;
+	       uint8_t pin_sda;
+	       uint8_t pin_scl;
 
-	if(configuration.containsKey("i2c") == true) {
+	error_details.clear();
+	if(configuration.containsKey("i2c") == false) {
+		error_details = "board configuration does not include an 'i2c' configuration section";
+	} else {
+		if(configuration["i2c"].containsKey("i2c-0") == false && configuration["i2c"].containsKey("i2c-1") == false) {
+			error_details = "board configuration does not include either an 'i2c-0' or 'i2c-1' configuration section";
+		}
+	}
+	if(error_details.empty() == true) {
 		if(configuration["i2c"].containsKey("i2c-0") == true) {
-			pin_sda = configuration["i2c"]["i2c-0"]["pin-sda"].as<unsigned char>();
-			pin_scl = configuration["i2c"]["i2c-0"]["pin-scl"].as<unsigned char>();
-			this->twowire_data[0].setPins(pin_sda, pin_scl);
-			this->twowire_init[0] = true;
+			if(configuration["i2c"]["i2c-0"].containsKey("pin-sda") == true && configuration["i2c"]["i2c-0"].containsKey("pin-scl") == true) {
+				pin_sda = configuration["i2c"]["i2c-0"]["pin-sda"].as<unsigned char>();
+				pin_scl = configuration["i2c"]["i2c-0"]["pin-scl"].as<unsigned char>();
+				this->twowire_data[0].setPins(pin_sda, pin_scl);
+				this->twowire_init[0] = true;
+			} else {
+				error_details = "board configuration for 'i2c-0' is missing 'pin-sda' and/or 'pin-scl' options";
+			}
 		}
 		if(configuration["i2c"].containsKey("i2c-1") == true) {
-			pin_sda = configuration["i2c"]["i2c-1"]["pin-sda"].as<unsigned char>();
-			pin_scl = configuration["i2c"]["i2c-1"]["pin-scl"].as<unsigned char>();
-			this->twowire_data[1].setPins(pin_sda, pin_scl);
-			this->twowire_init[1] = true;
+			if(configuration["i2c"]["i2c-1"].containsKey("pin-sda") == true && configuration["i2c"]["i2c-1"].containsKey("pin-scl") == true) {
+				pin_sda = configuration["i2c"]["i2c-1"]["pin-sda"].as<unsigned char>();
+				pin_scl = configuration["i2c"]["i2c-1"]["pin-scl"].as<unsigned char>();
+				this->twowire_data[1].setPins(pin_sda, pin_scl);
+				this->twowire_init[1] = true;
+			} else {
+				error_details = "board configuration for 'i2c-1' is missing 'pin-sda' and/or 'pin-scl' options";
+			}
 		}
+	}
+	if(error_details.empty() == false) {
+		g_application.notifyError("critical", "213", "Board error", error_details);
+		return false;
 	}
 	return true;
 }
 
 
-void Microcontroller::reset(uint32_t timestamp, bool rebooting) {
+void Microcontroller::reset(uint32_t timestamp) {
 	for(uint8_t i=0; i<2; i++) {
 		if(this->twowire_init[i] == true) {
 			this->twowire_data[i].end();
 		}
 	}
-	Microcontroller::reset_booting   = rebooting;
 	Microcontroller::reset_timestamp = timestamp;
 	esp_restart();
 }
