@@ -108,13 +108,13 @@ void Microcontroller::halt() {
 }
 
 
-bool Microcontroller::mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name, bool recursive) {
+bool Microcontroller::mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	bool result = false;
 
 	if(this->mutex_map.count(name) == 0) {
 		if(this->mutex_map.size() < this->mutex_map.capacity()) {
 			this->mutex_map[name] = {0};
-			recursive_mutex_init(&this->mutex_map[name]); //TODO:recursive==false
+			mutex_init(&this->mutex_map[name]);
 			result = true;
 		}
 	}
@@ -126,7 +126,7 @@ bool Microcontroller::mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name) 
 	bool result = false;
 
 	if(this->mutex_map.count(name) == 1) {
-		result = recursive_mutex_try_enter(&this->mutex_map[name], nullptr);
+		result = ::mutex_try_enter(&this->mutex_map[name], nullptr);
 	}
 	return result;
 }
@@ -136,7 +136,7 @@ bool Microcontroller::mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	bool result = false;
 
 	if(this->mutex_map.count(name) == 1) {
-		recursive_mutex_enter_blocking(&this->mutex_map[name]);
+		mutex_enter_blocking(&this->mutex_map[name]);
 		result = true;
 	}
 	return result;
@@ -147,7 +147,7 @@ bool Microcontroller::mutex_leave(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	bool result = false;
 
 	if(this->mutex_map.count(name) == 1) {
-		recursive_mutex_exit(&this->mutex_map[name]);
+		mutex_exit(&this->mutex_map[name]);
 		result = true;
 	}
 	return result;

@@ -15,7 +15,6 @@
 
 typedef struct {
 	SemaphoreHandle_t  handle;
-	bool               recursive;
 	StaticSemaphore_t  data;
 } Semaphore;
 
@@ -43,7 +42,7 @@ class Microcontroller : public AbstractMicrocontroller {
 
 		virtual bool task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name, void (*task_function)(), uint8_t core);
 
-		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name, bool recursive);
+		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_leave(const etl::string<GLOBAL_KEY_SIZE>& name);

@@ -13,7 +13,7 @@
 template<const size_t VSize>
 WebSerialQueue<VSize>::WebSerialQueue(const etl::string<GLOBAL_KEY_SIZE> name)
                : mutex_name(name) {
-	g_device_microcontroller.mutex_create(this->mutex_name, true);
+	g_device_microcontroller.mutex_create(this->mutex_name);
 }
 
 

@@ -11,7 +11,7 @@
 #include "device/microcontroller/microcontroller.h"
 
 
-typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, recursive_mutex_t, 4> MutexMap;
+typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, mutex_t, 4> MutexMap;
 
 
 class Microcontroller : public AbstractMicrocontroller {
@@ -29,7 +29,7 @@ class Microcontroller : public AbstractMicrocontroller {
 
 		virtual bool task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name, void (*task_function)(), uint8_t core);
 
-		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name, bool recursive);
+		virtual bool mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name);
 		virtual bool mutex_leave(const etl::string<GLOBAL_KEY_SIZE>& name);

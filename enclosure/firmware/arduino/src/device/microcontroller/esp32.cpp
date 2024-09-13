@@ -98,19 +98,14 @@ void Microcontroller::halt() {
 }
 
 
-bool Microcontroller::mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name, bool recursive) {
+bool Microcontroller::mutex_create(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	bool              result = false;
 
 	if(this->mutex_map.count(name) == 0) {
 		if(this->mutex_map.size() < this->mutex_map.capacity()) {
 			Semaphore& semaphore = this->mutex_map[name];
 
-			if(recursive == true) {
-				semaphore.handle = xSemaphoreCreateRecursiveMutexStatic(&semaphore.data);
-			} else {
-				semaphore.handle = xSemaphoreCreateMutexStatic(&semaphore.data);
-			}
-			semaphore.recursive = recursive;
+			semaphore.handle = xSemaphoreCreateMutexStatic(&semaphore.data);
 			result = true;
 		}
 	}
@@ -124,15 +119,8 @@ bool Microcontroller::mutex_try_enter(const etl::string<GLOBAL_KEY_SIZE>& name) 
 	if(this->mutex_map.count(name) == 1) {
 		Semaphore& semaphore = this->mutex_map[name];
 
-		if(semaphore.recursive == true) {
-			if(xSemaphoreTakeRecursive(semaphore.handle, (TickType_t)10) == pdTRUE) {
-				result = true;
-			}
-		}
-		if(semaphore.recursive == false) {
-			if(xSemaphoreTake(semaphore.handle, (TickType_t)10) == pdTRUE) {
-				result = true;
-			}
+		if(xSemaphoreTake(semaphore.handle, (TickType_t)10) == pdTRUE) {
+			result = true;
 		}
 	}
 	return result;
@@ -146,15 +134,8 @@ bool Microcontroller::mutex_enter(const etl::string<GLOBAL_KEY_SIZE>& name) {
 		Semaphore& semaphore = this->mutex_map[name];
 
 		while(result != true) {
-			if(semaphore.recursive == true) {
-				if(xSemaphoreTakeRecursive(semaphore.handle, (TickType_t)0) == pdTRUE) {
-					result = true;
-				}
-			}
-			if(semaphore.recursive == false) {
-				if(xSemaphoreTake(semaphore.handle, (TickType_t)0) == pdTRUE) {
-					result = true;
-				}
+			if(xSemaphoreTake(semaphore.handle, (TickType_t)0) == pdTRUE) {
+				result = true;
 			}
 		}
 	}
@@ -168,11 +149,7 @@ bool Microcontroller::mutex_leave(const etl::string<GLOBAL_KEY_SIZE>& name) {
 	if(this->mutex_map.count(name) == 1) {
 		Semaphore& semaphore = this->mutex_map[name];
 
-		if(semaphore.recursive == true) {
-			xSemaphoreGiveRecursive(semaphore.handle);
-		} else {
-			xSemaphoreGive(semaphore.handle);
-		}
+		xSemaphoreGive(semaphore.handle);
 		result = true;
 	}
 	return result;
