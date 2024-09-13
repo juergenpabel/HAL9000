@@ -11,7 +11,7 @@
 
 
        const etl::string<GLOBAL_VALUE_SIZE> Application::Null;
-static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown", "starting", "configuring", "ready",
+static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown", "starting", "configuring", "waiting",
                                                                        "running", "rebooting", "halting", "panicing" };
 
 
@@ -157,7 +157,7 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 					g_util_webserial.send("syslog/debug", "saving application configuration to (littlefs:)" \
 					                                      "'/system/application/configuration.json'");
 					file = LittleFS.open("/system/application/configuration.json", "w");
-					if(file == true) {
+					if(static_cast<bool>(file) == true) {
 						serializeJson(configuration, file);
 						file.close();
 						configuration.clear();
@@ -168,7 +168,7 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 						                                     "write-mode, unable to persist configuration for future application startups");
 					}
 				}
-				g_application.setStatus(StatusReady);
+				g_application.setStatus(StatusWaiting);
 			}
 			break;
 		case StatusRunning:
@@ -177,7 +177,7 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 					File file;
 
 					file = LittleFS.open("/system/application/configuration.json", "r");
-					if(file == true) {
+					if(static_cast<bool>(file) == true) {
 						if(deserializeJson(configuration, file) == DeserializationError::Ok) {
 							g_util_webserial.send("syslog/debug", "application configuration loaded from (littlefs:)" \
 							                                      "'/system/application/configuration.json'");
@@ -223,17 +223,18 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& error_level, const etl::string<GLOBAL_KEY_SIZE>& error_id,
                               const etl::string<GLOBAL_VALUE_SIZE>& error_title, const etl::string<GLOBAL_VALUE_SIZE>& error_details) {
 	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> webserial_body;
-	static etl::string<GLOBAL_VALUE_SIZE>          url;
+	static etl::string<GLOBAL_VALUE_SIZE>          error_url;
 	static etl::string<GLOBAL_KEY_SIZE>            log_topic;
 	static etl::string<GLOBAL_VALUE_SIZE>          log_payload;
+	static etl::string<GLOBAL_KEY_SIZE>            screen_error_name;
 
-	url = this->m_settings["application/error:url/template"];
+	error_url = this->m_settings["application/error:url/template"];
 	if(error_id.empty() == false) {
 		size_t url_id_offset;
 
-		url_id_offset = url.find("{error_id}");
-		if(url_id_offset != url.npos) {
-			url = url.replace(url_id_offset, 10, error_id);
+		url_id_offset = error_url.find("{error_id}");
+		if(url_id_offset != error_url.npos) {
+			error_url = error_url.replace(url_id_offset, 10, error_id);
 		}
 	}
 	log_topic = "syslog/";
@@ -258,12 +259,14 @@ void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& error_level, c
 			serializeJson(webserial_body["error"], environment_writer);
 		}
 	}
-	webserial_body["error"]["url"] = url.c_str();
+	webserial_body["error"]["url"] = error_url.c_str();
 	g_util_webserial.send("application/error", webserial_body);
 
 	this->setEnv("gui/screen:error/id", error_id);
 	this->setEnv("gui/screen:error/title", error_title);
-	this->setEnv("gui/screen:error/url", url);
-	gui_screen_set("error", gui_screen_error);
+	this->setEnv("gui/screen:error/url", error_url);
+	screen_error_name  = "error:";
+	screen_error_name += error_id;
+	gui_screen_set(screen_error_name, gui_screen_error);
 }
 

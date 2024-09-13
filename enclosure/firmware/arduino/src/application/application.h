@@ -12,7 +12,7 @@ typedef enum {
 	StatusUnknown      = 0x00,
 	StatusStarting     = 0x01,
 	StatusConfiguring  = 0x02,
-	StatusReady        = 0x03,
+	StatusWaiting      = 0x03,
 	StatusRunning      = 0x04,
 	StatusRebooting    = 0x05,
 	StatusHalting      = 0x06,

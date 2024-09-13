@@ -49,7 +49,7 @@ void setup() {
 		return;
 	}
 	file = LittleFS.open(filename.c_str(), "r");
-	if(file == false) {
+	if(static_cast<bool>(file) == false) {
 		g_application.setStatus(StatusPanicing);
 		error_details  = "failed to open *supposedly existing* (littlefs:)'";
 		error_details += filename;
@@ -85,9 +85,8 @@ void setup() {
 		g_application.notifyError("critical", "214", "Application error", error_details);
 		return;
 	}
-	g_application.setStatus(StatusConfiguring);
 	g_util_webserial.setCommand("application/runtime", on_application_runtime);
-	gui_screen_set("startup", gui_screen_animations_startup);
+	g_application.setStatus(StatusConfiguring);
 }
 
 
@@ -105,8 +104,9 @@ void loop() {
 		g_util_webserial.send("application/runtime", payloadStatus.replace(19, 8, g_application.getStatusName()), false);
 		switch(currentStatus) {
 			case StatusConfiguring:
+				gui_screen_set("startup", gui_screen_animations_startup);
 				if(g_application.hasSetting("application/runtime:configuration/timeout") == true) {
-					configurationTimeout = atoi(g_application.getSetting("application/runtime:configuration/timeout").c_str());
+					configurationTimeout = atol(g_application.getSetting("application/runtime:configuration/timeout").c_str());
 				}
 				if(configurationTimeout == 0) {
 					configurationTimeout = APPLICATION_CONFIGURATION_TIMEOUT_MS;
@@ -122,7 +122,7 @@ void loop() {
 				g_util_webserial.setCommand("gui/overlay", nullptr);
 				g_util_webserial.setCommand("*", Application::onConfiguration);
 				break;
-			case StatusReady:
+			case StatusWaiting:
 				configurationTimeout = 0;
 				g_util_webserial.setCommand("*", nullptr);
 				g_util_webserial.setCommand("application/environment", on_application_environment);

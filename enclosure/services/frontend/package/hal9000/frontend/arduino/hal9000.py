@@ -107,10 +107,12 @@ class HAL9000(Frontend):
 						line = await self.serial_readline(timeout=0.5)
 					try:
 						response = json_loads(line)
+						if response[0] == 'ping':
+							await self.serial_writeline('["pong", ""]')
 					except Exception as e:
 						logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
-				if response[1]['status']['name'] == 'ready':
-					logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'ready'")
+				if response[1]['status']['name'] == 'waiting':
+					logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'waiting'")
 					await self.serial_writeline('["application/environment", {"set":{"key": "gui/screen:animations/loop", "value": "false"}}]')
 				if response[1]['status']['name'] == 'panicing':
 					error = 'no error details provided'
@@ -132,6 +134,8 @@ class HAL9000(Frontend):
 						line = await self.serial_readline(timeout=1.0)
 					try:
 						response = json_loads(line)
+						if response[0] == 'ping':
+							await self.serial_writeline('["pong", ""]')
 					except Exception as e:
 						logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
 				logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'running'")

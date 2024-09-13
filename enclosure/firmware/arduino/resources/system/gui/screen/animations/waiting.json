@@ -1,0 +1,6 @@
+[ {"title": "Waiting...", "duration":  1000, "directory": "/images/animations/startup/system-waiting/fade-in",  "frames": 10, "loop": false},
+  {"title": "Waiting...", "duration":  6400, "directory": "/images/animations/startup/system-waiting/loop",     "frames": 64, "loop": true},
+  {"title": "Waiting...", "duration":   700, "directory": "/images/animations/startup/system-waiting/fade-out", "frames":  7, "loop": false,
+                          "on:next": {"webserial": "[\"application/runtime\", {\"RUN\":{}}]"}}
+]
+

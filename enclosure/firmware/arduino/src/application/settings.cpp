@@ -27,7 +27,7 @@ bool Settings::load() {
 	this->clear();
 	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 	file = LittleFS.open(this->filename.c_str(), "r");
-	if(file == false) {
+	if(static_cast<bool>(file) == false) {
 		return true;
 	}
 	if(file.size() == 0) {
@@ -71,7 +71,7 @@ bool Settings::save() {
 	File    file;
 
 	file = LittleFS.open(this->filename.c_str(), "w");
-	if(file == false) {
+	if(static_cast<bool>(file) == false) {
 		g_application.notifyError("215", "warn", "Application error", "LittleFS.open() failed in Settings::save()");
 		return false;
 	}

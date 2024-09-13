@@ -1,8 +1,5 @@
 [ {"title": "Power-on...", "duration":  1500, "directory": "/images/animations/startup/power-on",                "frames": 15, "loop": false},
-  {"title": "Booting...",  "duration": 20000, "directory": "/images/animations/startup/system-starting",         "frames": 25, "loop": false},
-  {"title": "Starting...", "duration":  1000, "directory": "/images/animations/startup/system-waiting/fade-in",  "frames": 10, "loop": false},
-  {"title": "Starting...", "duration":  6400, "directory": "/images/animations/startup/system-waiting/loop",     "frames": 64, "loop": true},
-  {"title": "Starting...", "duration":   700, "directory": "/images/animations/startup/system-waiting/fade-out", "frames":  7, "loop": false,
-                           "on:next": {"webserial": "[\"application/runtime\", {\"RUN\":{}}]"}}
+  {"title": "Booting...",  "duration": 20000, "directory": "/images/animations/startup/system-starting",         "frames": 25, "loop": false,
+                           "on:next": {"webserial": "[\"application/runtime\", {\"WAIT\":{}}]"}}
 ]
 

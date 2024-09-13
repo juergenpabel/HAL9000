@@ -26,7 +26,7 @@ bool AbstractBoard::start() {
 
 void AbstractBoard::reset() {
 	LittleFS.end();
-	if(Serial == true) {
+	if(static_cast<bool>(Serial) == true) {
 		Serial.write("[\"syslog/info\", \"Arduino resetting NOW.\"]\n");
 		Serial.flush();
 		Serial.end();
@@ -38,7 +38,7 @@ void AbstractBoard::reset() {
 
 void AbstractBoard::halt() {
 	LittleFS.end();
-	if(Serial == true) {
+	if(static_cast<bool>(Serial) == true) {
 		Serial.write("[\"syslog/info\", \"Arduino halting NOW.\"]\n");
 		Serial.flush();
 		Serial.end();

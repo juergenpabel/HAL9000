@@ -47,7 +47,7 @@ void util_jpeg_decode565_littlefs(const etl::string<GLOBAL_FILENAME_SIZE>& filen
 	File  file;
 
 	file = LittleFS.open(filename.c_str(), "r");
-	if(file == false) {
+	if(static_cast<bool>(file) == false) {
 		g_util_webserial.send("syslog/warn", "util_jpeg_decode565_littlefs(): file not found");
 		g_util_webserial.send("syslog/warn", filename);
 		return;

@@ -8,6 +8,7 @@
 #include "application/application.h"
 #include "gui/screen/screen.h"
 #include "gui/screen/error/screen.h"
+#include "gui/screen/animations/screen.h"
 #include "globals.h"
 
 
@@ -15,8 +16,14 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 	static StaticJsonDocument<WEBSERIAL_LINE_SIZE*2> response;
 
 	response.clear();
+	if(data.containsKey("WAIT") == true) {
+		if(g_application.getStatus() == StatusConfiguring || g_application.getStatus() == StatusWaiting) {
+			gui_screen_set("waiting", gui_screen_animations_waiting);
+		}
+		return;
+	}
 	if(data.containsKey("RUN") == true) {
-		if(g_application.getStatus() == StatusReady) {
+		if(g_application.getStatus() == StatusWaiting) {
 			g_application.setStatus(StatusRunning);
 		}
 		return;

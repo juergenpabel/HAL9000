@@ -4,8 +4,9 @@
 
 #include "util/webserial.h"
 #include "gui/screen/screen.h"
-#include "gui/screen/animations/screen.h"
 #include "gui/screen/error/screen.h"
+#include "gui/screen/idle/screen.h"
+#include "gui/screen/animations/screen.h"
 #include "globals.h"
 
 
@@ -47,7 +48,7 @@ void WebSerial::begin() {
 
 void WebSerial::heartbeat() {
 	if(UTIL_WEBSERIAL_HEARTBEAT_MS > 0) {
-		if(Serial == true) {
+		if(static_cast<bool>(Serial) == true) {
 			unsigned long now;
 
 			now = millis();
@@ -61,11 +62,14 @@ void WebSerial::heartbeat() {
 
 
 bool WebSerial::isAlive() {
-	if(Serial == true) {
+	if(static_cast<bool>(Serial) == true) {
 		if(UTIL_WEBSERIAL_HEARTBEAT_MS == 0) {
 			return true;
 		}
-		if((this->millis_heartbeatRX + UTIL_WEBSERIAL_HEARTBEAT_MS + 1000L) > millis()) {
+		if(millis() < (this->millis_heartbeatRX + UTIL_WEBSERIAL_HEARTBEAT_MS + 1000L)) {
+			return true;
+		}
+		if(Serial.available() > 0) {
 			return true;
 		}
 	}
@@ -122,6 +126,8 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 
 
 void WebSerial::update() {
+	static gui_screen_func previous_gui_screen_func = nullptr;
+	static gui_screen_name previous_gui_screen_name;
 	static char   receive_buffer[WEBSERIAL_LINE_SIZE] = {0};
 	static size_t receive_buffer_pos = 0;
 	       size_t serial_available = 0;
@@ -130,15 +136,41 @@ void WebSerial::update() {
 
 	this->heartbeat();
 	if(this->isAlive() == false) {
-		if(Serial.available() == 0) {
-			if(gui_screen_get() != gui_screen_animations && gui_screen_get() != gui_screen_error) {
+		if(g_application.getStatus() > StatusConfiguring) {
+			if(gui_screen_get() != gui_screen_error) {
+				if(g_application.getStatus() == StatusRunning) {
+					previous_gui_screen_func = gui_screen_get();
+					previous_gui_screen_name = gui_screen_getname();
+				}
 				g_application.notifyError("critical", "210", "No connection to host", "Serial is closed in WebSerial::update()");
 			}
-			return;
 		}
-		if(gui_screen_get() == gui_screen_error) {
-			this->send("syslog/debug", "connection to host established, switching to screen 'none'");
-			gui_screen_set("none", gui_screen_none);
+		return;
+	}
+	if(gui_screen_get() == gui_screen_error && gui_screen_getname().compare("error:210") == 0) {
+		this->send("syslog/debug", "connection to host (re-)established");
+		switch(g_application.getStatus()) {
+			case StatusConfiguring:
+				gui_screen_set("waiting", gui_screen_animations_waiting);
+				break;
+			case StatusWaiting:
+				gui_screen_set("waiting", gui_screen_animations_waiting);
+				break;
+			case StatusRunning:
+				if(previous_gui_screen_func == nullptr || previous_gui_screen_name.empty() == true) {
+					previous_gui_screen_func = gui_screen_idle;
+					previous_gui_screen_name = "idle";
+				}
+				gui_screen_set(previous_gui_screen_name.c_str(), previous_gui_screen_func);
+				previous_gui_screen_func = nullptr;
+				previous_gui_screen_name = "";
+				break;
+			case StatusPanicing:
+				//TODO:??
+				break;
+			default:
+				gui_screen_set("none", gui_screen_none);
+				break;
 		}
 	}
 	while(this->queue_send.size() > 0) {
