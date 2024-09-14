@@ -136,7 +136,7 @@ void WebSerial::update() {
 
 	this->heartbeat();
 	if(this->isAlive() == false) {
-		if(g_application.getStatus() > StatusConfiguring) {
+		if(g_application.getStatus() == StatusWaiting || g_application.getStatus() == StatusRunning) {
 			if(gui_screen_get() != gui_screen_error) {
 				if(g_application.getStatus() == StatusRunning) {
 					previous_gui_screen_func = gui_screen_get();
