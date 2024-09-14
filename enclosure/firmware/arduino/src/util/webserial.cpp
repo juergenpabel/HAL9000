@@ -12,7 +12,8 @@
 
 template<const size_t VSize>
 WebSerialQueue<VSize>::WebSerialQueue(const etl::string<GLOBAL_KEY_SIZE> name)
-               : mutex_name(name) {
+               : etl::queue_lockable<etl::string<WEBSERIAL_LINE_SIZE>, VSize, etl::memory_model::MEMORY_MODEL_SMALL>()
+               , mutex_name(name) {
 	g_device_microcontroller.mutex_create(this->mutex_name);
 }
 
@@ -30,7 +31,8 @@ void WebSerialQueue<VSize>::unlock() const {
 
 
 WebSerial::WebSerial()
-          : queue_recv("webserial_recv")
+          : commands()
+          , queue_recv("webserial_recv")
           , queue_send("webserial_send")
           , millis_heartbeatRX(0)
           , millis_heartbeatTX(0) {
