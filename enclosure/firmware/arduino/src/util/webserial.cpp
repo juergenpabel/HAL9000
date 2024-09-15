@@ -139,7 +139,7 @@ void WebSerial::update() {
 	this->heartbeat();
 	if(this->isAlive() == false) {
 		if(g_application.getStatus() == StatusWaiting || g_application.getStatus() == StatusRunning) {
-			if(gui_screen_get() != gui_screen_error) {
+			if(gui_screen_get() != gui_screen_error || gui_screen_getname().compare("error:210") != 0) {
 				if(g_application.getStatus() == StatusRunning) {
 					previous_gui_screen_func = gui_screen_get();
 					previous_gui_screen_name = gui_screen_getname();
