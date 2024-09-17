@@ -128,7 +128,7 @@ void loop() {
 				g_util_webserial.setCommand("application/environment", on_application_environment);
 				g_util_webserial.setCommand("application/settings", on_application_settings);
 				break;
-			case StatusRunning:
+			case StatusReady:
 				g_util_webserial.setCommand("device/board", on_device_board);
 				g_util_webserial.setCommand("device/microcontroller", on_device_microcontroller);
 				g_util_webserial.setCommand("device/mcp23X17", on_device_mcp23X17);
@@ -136,6 +136,9 @@ void loop() {
 				g_util_webserial.setCommand("gui/screen", on_gui_screen);
 				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
 				Application::onConfiguration(Application::Null, JsonVariant());
+				g_application.setStatus(StatusRunning);
+				break;
+			case StatusRunning:
 				break;
 			case StatusRebooting:
 				g_util_webserial.setCommand(Application::Null, nullptr);

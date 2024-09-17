@@ -13,11 +13,12 @@ typedef enum {
 	StatusStarting     = 0x01,
 	StatusConfiguring  = 0x02,
 	StatusWaiting      = 0x03,
-	StatusRunning      = 0x04,
-	StatusRebooting    = 0x05,
-	StatusHalting      = 0x06,
-	StatusPanicing     = 0x07,
-	StatusMAX          = 0x07
+	StatusReady        = 0x04,
+	StatusRunning      = 0x05,
+	StatusRebooting    = 0x06,
+	StatusHalting      = 0x07,
+	StatusPanicing     = 0x08,
+	StatusMAX          = 0x08
 } Status;
 
 

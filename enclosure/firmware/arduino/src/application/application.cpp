@@ -11,7 +11,7 @@
 
 
        const etl::string<GLOBAL_VALUE_SIZE> Application::Null;
-static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown", "starting", "configuring", "waiting",
+static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown", "starting", "configuring", "waiting", "ready",
                                                                        "running", "rebooting", "halting", "panicing" };
 
 
@@ -143,14 +143,14 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 
 	switch(g_application.getStatus()) {
 		case StatusConfiguring:
-			if(command != "") { // non-empty line means configuration instruction
+			if(command.empty() == false) { // non-empty line means configuration instruction
 				if(g_util_webserial.hasCommand(command) == true) {
 					current = configuration.createNestedObject();
 					current["command"].set((char*)command.c_str());
 					current["data"].set(data);
 				}
 			}
-			if(command == "") { // empty line means end-of-configuration
+			if(command.empty() == true) { // empty line means end-of-configuration
 				if(configuration.size() > 0) {
 					File file;
 
@@ -171,7 +171,7 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 				g_application.setStatus(StatusWaiting);
 			}
 			break;
-		case StatusRunning:
+		case StatusReady:
 			if(configuration.size() == 0) {
 				if(LittleFS.exists("/system/application/configuration.json") == true) {
 					File file;
@@ -210,6 +210,7 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 				configuration.clear();
 				g_util_webserial.send("syslog/debug", "...application configuration activated");
 			}
+			g_application.setStatus(StatusRunning);
 			break;
 		default:
 			etl::string<GLOBAL_VALUE_SIZE> log_message("Application::onConfiguration() called in unexpected application-status: ");

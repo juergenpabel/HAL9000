@@ -10,8 +10,9 @@
 typedef etl::string<GLOBAL_VALUE_SIZE> LogString;
 
 
-Settings::Settings(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
-	this->filename = filename;
+Settings::Settings(const etl::string<GLOBAL_FILENAME_SIZE>& filename)
+         : SettingsMap()
+         , filename(filename) {
 	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 }
 
@@ -28,11 +29,8 @@ bool Settings::load() {
 	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 	file = LittleFS.open(this->filename.c_str(), "r");
 	if(static_cast<bool>(file) == false) {
-		return true;
-	}
-	if(file.size() == 0) {
-		file.close();
-		return true;
+		g_application.notifyError("215", "warn", "Application error", "LittleFS.open() failed in Settings::load()");
+		return false;
 	}
 	while(file.position() < file.size() || line_buffer_pos > 0) {
 		if(file.position() < file.size()) {
@@ -88,6 +86,7 @@ bool Settings::save() {
 
 bool Settings::reset() {
 	this->clear();
+	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 	return true;
 }
 

@@ -59,7 +59,7 @@ unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
 			animation_frame = 0;
 			if(animation_current->loop == true) {
 				if(g_application.hasEnv("gui/screen:animations/loop") == true) {
-					if(g_application.getEnv("gui/screen:animations/loop") == "false") {
+					if(g_application.getEnv("gui/screen:animations/loop").compare("false") == 0) {
 						g_application.delEnv("gui/screen:animations/loop");
 						animation_current->loop = false;
 					}
@@ -160,7 +160,7 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 				animation.onnext_webserial = animationJSON["on:next"]["webserial"].as<const char*>();
 			}
 		}
-		if(animation.directory == "" || animation.frames == 0) {
+		if(animation.directory.empty() == true || animation.frames == 0) {
 			g_application.notifyError("error", "217", "Animation data error", filename);
 			return;
 		}

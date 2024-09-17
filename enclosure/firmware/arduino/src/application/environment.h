@@ -10,6 +10,10 @@ typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, etl::string<GLOBAL_VALUE_SIZE>, A
 class Application;
 
 class Environment : public EnvironmentMap {
+	protected:
+		Environment() : EnvironmentMap() {};
+
+	friend class Application;
 };
 
 
@@ -17,11 +21,13 @@ class EnvironmentWriter {
 	private:
 		Application& m_application;
 		etl::string<GLOBAL_KEY_SIZE> m_key;
-	public:
+	protected:
 		EnvironmentWriter(Application& application, const etl::string<GLOBAL_KEY_SIZE>& key);
-
+	public:
 		size_t write(uint8_t c);
 		size_t write(const uint8_t *buffer, size_t length);
+
+	friend class Application;
 };
 
 #endif

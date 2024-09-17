@@ -47,8 +47,8 @@ class Action(HAL9000_Action):
 		        'title': "Service 'frontend' unavailable (arduino/flet)"}
 
 
-	def send_frontend_command(self, topic:str, body: dict) -> None:
-		self.daemon.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/frontend/{topic}', 'payload': json_dumps(body)})
+	def send_frontend_command(self, topic: str, body: dict) -> None:
+		self.daemon.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/frontend/{topic}', 'payload': json_dumps(body) if body is not None else None})
 
 
 	def on_frontend_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
@@ -68,7 +68,7 @@ class Action(HAL9000_Action):
 			match new_runlevel:
 				case HAL9000_Plugin.RUNLEVEL_READY | HAL9000_Plugin.RUNLEVEL_RUNNING:
 					if self.daemon.plugins['frontend'].status == HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
-						self.send_frontend_command('status', '')
+						self.send_frontend_command('status', None)
 				case HAL9000_Plugin.RUNLEVEL_KILLED:
 					self.daemon.process_error('critical', '200', "System offline", f"Service 'frontend' unavailable")
 		return True
@@ -168,9 +168,6 @@ class Action(HAL9000_Action):
 					if self.daemon.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
 						self.daemon.plugins['frontend'].screen = 'animations:hal9000'
 						self.send_frontend_command('gui/screen', {'animations': {'name': 'hal9000'}})
-						self.daemon.schedule_signal(4, 'frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop',
-						                                                                    'value': 'false'}}},
-						                            'frontend:gui/screen#animations/loop:timeout')
 		return True
 
 

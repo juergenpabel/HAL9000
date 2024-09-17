@@ -132,52 +132,36 @@ class Daemon(object):
 			while 'mqtt:publisher' not in self.tasks and 'mqtt:subscriber' not in self.tasks:
 				await asyncio_sleep(0.1)
 			self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/event/brain/runlevel', 'payload': 'starting'})
-			startup_timeout = time_monotonic() + self.config['startup:init-timeout']
-			plugins = { HAL9000_Plugin_Data.STATUS_UNINITIALIZED: {},
-			            HAL9000_Plugin.RUNLEVEL_UNKNOWN: {},
-			            HAL9000_Plugin.RUNLEVEL_STARTING: {},
-			            HAL9000_Plugin.RUNLEVEL_READY: {},
-			            HAL9000_Plugin.RUNLEVEL_RUNNING: {},
-			            HAL9000_Plugin.RUNLEVEL_KILLED: {} }
-			for plugin in list(self.triggers.values()) + list(self.actions.values()):
-				plugin_id = str(plugin)
-				plugin_runlevel = plugin.runlevel()
-				plugins[plugin_runlevel][plugin_id] = plugin
+			startup_plugins = list(self.triggers.values()) + list(self.actions.values())
+			startup_plugins = list(filter(lambda plugin: plugin.runlevel() == HAL9000_Plugin.RUNLEVEL_UNKNOWN, startup_plugins))
 			self.logger.info(f"[daemon] Startup initialized (plugins that need runtime registration):")
-			for plugin_id, plugin in plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN].items():
-				plugin_name = plugin_id.split(':').pop()
+			for plugin in filter(lambda plugin: plugin.runlevel() == HAL9000_Plugin.RUNLEVEL_UNKNOWN, startup_plugins):
+				plugin_name = str(plugin).split(':').pop()
 				self.logger.info(f"[daemon]  - Plugin '{plugin_name}'")
-				self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/{plugin_name}/runlevel', 'payload': ''})
+				self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/{plugin_name}/runlevel', 'payload': None})
 			self.logger.debug(f"[daemon] STATUS at startup = {self.plugins}")
+			startup_init_timeout = time_monotonic() + self.config['startup:init-timeout']
 			while self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_STARTING and self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
-				for runlevel in [HAL9000_Plugin.RUNLEVEL_UNKNOWN, HAL9000_Plugin.RUNLEVEL_STARTING]:
-					if runlevel in plugins:
-						for id, plugin in plugins[runlevel].items():
-							plugin_runlevel = plugin.runlevel()
-							if plugin_runlevel != runlevel:
-								plugins[runlevel][id] = None
-								plugins[plugin_runlevel][id] = plugin
-						plugins[runlevel] = {id:plugin for id,plugin in plugins[runlevel].items() if plugin is not None}
-				if startup_timeout is not None:
-					if time_monotonic() > startup_timeout:
+				if startup_init_timeout is not None:
+					if time_monotonic() > startup_init_timeout:
 						self.logger.critical(f"[daemon] Startup failed (plugins that haven't reported their runlevel):")
-						for id, plugin in plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN].items():
-							error = plugin.runlevel_error()
-							self.process_error('critical', error['id'], f"    Plugin '{id.split(':').pop()}'", error['title'])
+						for plugin in startup_plugins:
+							if plugin.runlevel() == HAL9000_Plugin.RUNLEVEL_UNKNOWN:
+								id = str(plugin)
+								error = plugin.runlevel_error()
+								self.process_error('critical', error['id'], f"    Plugin '{id.split(':').pop()}'", error['title'])
 						self.logger.debug(f"[daemon] STATUS at startup-timeout = {self.plugins}")
 						self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
-					if len(plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN]) == 0:
+					if len(list(filter(lambda plugin: plugin.runlevel() == HAL9000_Plugin.RUNLEVEL_UNKNOWN, startup_plugins))) == 0:
 						self.logger.info(f"[daemon] Startup in progress for all plugins")
-						startup_timeout = None
-						del plugins[HAL9000_Plugin.RUNLEVEL_UNKNOWN]
-						for plugin in self.plugins.values():
-							plugin.addNameCallback(self.on_plugin_callback, '*')
-				if startup_timeout is None:
-					if HAL9000_Plugin.RUNLEVEL_STARTING in plugins:
-						if len(plugins[HAL9000_Plugin.RUNLEVEL_STARTING]) == 0:
-							del plugins[HAL9000_Plugin.RUNLEVEL_STARTING]
-							self.logger.info(f"[daemon] Startup completed for all plugins")
-							self.plugins['brain'].runlevel = HAL9000_Plugin.RUNLEVEL_READY
+						for plugin in startup_plugins:
+							plugin_name = str(plugin).split(':').pop()
+							self.plugins[plugin_name].addNameCallback(self.on_plugin_callback, '*')
+						startup_init_timeout = None
+				if startup_init_timeout is None:
+					if len(list(filter(lambda plugin: plugin.runlevel() == HAL9000_Plugin.RUNLEVEL_RUNNING, startup_plugins))) == len(startup_plugins):
+						self.logger.info(f"[daemon] Startup completed for all plugins")
+						self.plugins['brain'].runlevel = HAL9000_Plugin.RUNLEVEL_READY
 				await asyncio_sleep(0.1)
 			if self.plugins['brain'].status != Daemon.BRAIN_STATUS_DYING:
 				self.logger.debug(f"[daemon] STATUS after startup = {self.plugins}")
@@ -327,7 +311,7 @@ class Daemon(object):
 		except asyncio_CancelledError as e:
 			self.signal_queue = None
 		except Exception as e:
-			self.logger.critical(f"[daemon] Daemon.task_signal(): {str(e)}")
+			self.logger.critical(f"[daemon] Daemon.task_signal(): ({type(e).__name__}) => {str(e)}")
 			self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
 			raise e
 		finally:

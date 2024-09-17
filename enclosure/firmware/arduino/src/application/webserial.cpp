@@ -22,9 +22,9 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 		}
 		return;
 	}
-	if(data.containsKey("RUN") == true) {
+	if(data.containsKey("READY") == true) {
 		if(g_application.getStatus() == StatusWaiting) {
-			g_application.setStatus(StatusRunning);
+			g_application.setStatus(StatusReady);
 		}
 		return;
 	}
@@ -38,7 +38,7 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 		return;
 	}
 	if(data.containsKey("status") == true) {
-		etl::string<2>  questionmark("?");
+		static etl::string<2>  questionmark("?");
 
 		response["status"] = JsonObject();
 		if(questionmark.compare(data["status"].as<const char*>()) == 0) {
@@ -123,8 +123,12 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 
 void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	static StaticJsonDocument<WEBSERIAL_LINE_SIZE*2> response;
+	static etl::string<GLOBAL_KEY_SIZE>              key;
+	static etl::string<GLOBAL_VALUE_SIZE>            value;
 
 	response.clear();
+	key.clear();
+	value.clear();
 	if(data.containsKey("list") == true) {
 		response["list"] = JsonObject();
 		for(EnvironmentMap::iterator iter=g_application.m_environment.begin(); iter!=g_application.m_environment.end(); ++iter) {
@@ -133,8 +137,6 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 		response["result"] = "OK";
 	}
 	if(data.containsKey("get") == true) {
-		etl::string<GLOBAL_KEY_SIZE> key;
-
 		response["get"] = JsonObject();
 		if(data["get"].containsKey("key") == true) {
 			key = data["get"]["key"].as<const char*>();
@@ -155,9 +157,6 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 		}
 	}
 	if(data.containsKey("set") == true) {
-		etl::string<GLOBAL_KEY_SIZE> key;
-		etl::string<GLOBAL_VALUE_SIZE> value;
-
 		response["set"] = JsonObject();
 		if(data["set"].containsKey("key") == true) {
 			key = data["set"]["key"].as<const char*>();
@@ -189,8 +188,12 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 
 void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
 	static StaticJsonDocument<WEBSERIAL_LINE_SIZE*2> response;
+	static etl::string<GLOBAL_KEY_SIZE>              key;
+	static etl::string<GLOBAL_VALUE_SIZE>            value;
 
 	response.clear();
+	key.clear();
+	value.clear();
 	if(data.containsKey("list") == true) {
 		response["list"] = JsonObject();
 		for(SettingsMap::iterator iter=g_application.m_settings.begin(); iter!=g_application.m_settings.end(); ++iter) {
@@ -199,8 +202,6 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 		response["result"] = "OK";
 	}
 	if(data.containsKey("get") == true) {
-		etl::string<GLOBAL_KEY_SIZE> key;
-
 		response["get"] = JsonObject();
 		if(data["get"].containsKey("key") == true) {
 			key = data["get"]["key"].as<const char*>();
@@ -225,9 +226,6 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 		}
 	}
 	if(data.containsKey("set") == true) {
-		etl::string<GLOBAL_KEY_SIZE> key;
-		etl::string<GLOBAL_VALUE_SIZE> value;
-
 		response["set"] = JsonObject();
 		if(data["set"].containsKey("key") == true) {
 			key = data["set"]["key"].as<const char*>();
