@@ -122,13 +122,11 @@ void loop() {
 				g_util_webserial.setCommand("gui/overlay", nullptr);
 				g_util_webserial.setCommand("*", Application::onConfiguration);
 				break;
-			case StatusWaiting:
+			case StatusReady:
 				configurationTimeout = 0;
 				g_util_webserial.setCommand("*", nullptr);
 				g_util_webserial.setCommand("application/environment", on_application_environment);
 				g_util_webserial.setCommand("application/settings", on_application_settings);
-				break;
-			case StatusReady:
 				g_util_webserial.setCommand("device/board", on_device_board);
 				g_util_webserial.setCommand("device/microcontroller", on_device_microcontroller);
 				g_util_webserial.setCommand("device/mcp23X17", on_device_mcp23X17);
@@ -136,7 +134,6 @@ void loop() {
 				g_util_webserial.setCommand("gui/screen", on_gui_screen);
 				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
 				Application::onConfiguration(Application::Null, JsonVariant());
-				g_application.setStatus(StatusRunning);
 				break;
 			case StatusRunning:
 				break;
@@ -159,6 +156,8 @@ void loop() {
 			case StatusPanicing:
 				g_util_webserial.setCommand(Application::Null, nullptr);
 				g_util_webserial.setCommand("application/runtime", on_application_runtime);
+				g_util_webserial.setCommand("application/environment", on_application_environment);
+				g_util_webserial.setCommand("application/settings", on_application_settings);
 				gui_update();
 				while(true) {
 					g_util_webserial.update();
@@ -177,6 +176,13 @@ void loop() {
 		if(configurationTimeout > 0 && millis() > configurationTimeout) {
 			g_application.notifyError("critical", "210", "No connection to host", "failed to establish communications with service 'frontend' (via USB)");
 			configurationTimeout = 0;
+		}
+	}
+	if(currentStatus == StatusReady) {
+		if(gui_screen_get() == gui_screen_animations) {
+			if(gui_screen_getname().compare("animations:startup") != 0) {
+				g_application.setStatus(StatusRunning);
+			}
 		}
 	}
 	gui_update();

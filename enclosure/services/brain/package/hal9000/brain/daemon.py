@@ -1,3 +1,4 @@
+from typing import Any
 from os import getenv as os_getenv, \
                system as os_system
 from os.path import exists as os_path_exists
@@ -300,9 +301,11 @@ class Daemon(object):
 						plugin = data['plugin']
 						signal = data['signal']
 						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_signal() SIGNAL for plugin '{plugin}': '{signal}'")
-						if plugin in self.plugins:
-							plugin = self.plugins[plugin]
-							await plugin.signal(signal)
+						if plugin == '*':
+							for plugin in self.plugins.values():
+								await plugin.signal(signal)
+						elif plugin in self.plugins:
+							await self.plugins[plugin].signal(signal)
 						else:
 							self.logger.warning(f"[daemon] Ignoring SIGNAL for unknown plugin '{plugin}' - ignoring it (=> BUG)")
 					else:
@@ -358,6 +361,7 @@ class Daemon(object):
 
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
+			self.logger.info(f"[daemon] STATUS at status change from '{old_status}' to '{new_status}' = {self.plugins}")
 			self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/event/brain/status', 'payload': new_status})
 		return True
 
@@ -382,7 +386,7 @@ class Daemon(object):
 			match new_time:
 				case 'unsynchronized':
 					if self.config['brain:require-synced-time'] is True:
-						logging_getLogger().info(f"Waiting for system time to become synchronized... (require-synced-time=true)")
+						logging_getLogger().info(f"[daemon] Waiting for system time to become synchronized... (require-synced-time=true)")
 					self.schedule_signal(1, 'brain', {'time:sync': {}}, 'scheduler://brain/time:sync', 'interval')
 				case 'synchronized':
 					self.remove_scheduled_signal('scheduler://brain/time:sync')
@@ -413,12 +417,12 @@ class Daemon(object):
 						self.plugins['brain'].status = signal['status']
 				case Daemon.BRAIN_STATUS_DYING:
 					pass
-		if 'error' in signal:
-			error = {'level': 'error', 'id': '000', 'title': 'UNEXPECTED ERROR', 'details': ''}
-			for field in error.keys():
-				if field in signal['error']:
-					error[field] = signal['error'][field]
-			self.process_error(signal['error']['level'], signal['error']['id'], signal['error']['title'], signal['error']['details'])
+#TODO		if 'error' in signal:
+#TODO			error = {'level': 'error', 'id': '000', 'title': 'UNEXPECTED ERROR', 'details': ''}
+#TODO			for field in error.keys():
+#TODO				if field in signal['error']:
+#TODO					error[field] = signal['error'][field]
+#TODO			self.process_error(error['level'], error['id'], error['title'], error['details'])
 		if 'time:sync' in signal:
 			time_synchronized = os_path_exists('/run/systemd/timesync/synchronized')
 			self.plugins['brain'].time = 'synchronized' if time_synchronized is True else 'unsynchronized'
@@ -427,8 +431,8 @@ class Daemon(object):
 	def process_error(self, level: str, id: str, title: str, details: str = '<no details>') -> None:
 		self.logger.log(getattr(logging, level.upper()), f"[daemon] ERROR #{id}: {title} => {details}")
 		if self.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_RUNNING and self.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
-			self.queue_signal('frontend', {'gui': {'screen': {'name': 'error',
-			                                                  'parameter': {'id': id, 'url': self.config['help:error-url'], 'title': title}}}})
+			url = self.substitute_vars(self.config['help:error-url'], {'error_id': id})
+			self.queue_signal('*', {'error': {'id': id, 'url': url, 'title': title, 'details': details}})
 
 
 	async def signal(self, plugin: str, signal: dict) -> None:
@@ -440,14 +444,13 @@ class Daemon(object):
 		self.signal_queue.put_nowait({'plugin': plugin, 'signal': signal})
 
 
-	def schedule_signal(self, seconds: int, plugin: str, signal: dict, id: str | None = None, mode: str = 'single') -> None:
+	def schedule_signal(self, seconds: float, plugin: str, signal: dict, id: str | None = None, mode: str = 'single') -> None:
 		match mode:
 			case 'single':
-				self.scheduler.add_job(self.on_scheduler, 'date', run_date=datetime_datetime.now()+datetime_timedelta(seconds=seconds),
-				                       args=[plugin, signal], id=id, name=id, replace_existing=True)
+				run_date = datetime_datetime.now() + datetime_timedelta(seconds=int(seconds), microseconds=int((seconds - int(seconds)) * 1000000))
+				self.scheduler.add_job(self.on_scheduler, 'date', run_date=run_date, args=[plugin, signal], id=id, name=id, replace_existing=True)
 			case 'interval':
-				self.scheduler.add_job(self.on_scheduler, 'interval', seconds=seconds,
-				                       args=[plugin, signal], id=id, name=id, replace_existing=True)
+				self.scheduler.add_job(self.on_scheduler, 'interval', seconds=int(seconds), args=[plugin, signal], id=id, name=id, replace_existing=True)
 			case other:
 				logging_getLogger().error(f"unsupported schedule mode '{mode}' in Daemon.schedule_signal()")
 
@@ -478,4 +481,16 @@ class Daemon(object):
 
 	def on_posix_signal(self, number: int, frame) -> None:
 		self.plugins['brain'].status = Daemon.BRAIN_STATUS_DYING
+
+
+	def substitute_vars(self, data: Any, vars: dict) -> Any:
+		if isinstance(data, list) is True:
+			for index, value in enumerate(list):
+				list[index] = self.substitute_vars(value, vars)
+		if isinstance(data, dict) is True:
+			for key, value in data.items():
+				data[key] = self.substitute_vars(value, vars)
+		if isinstance(data, str) is True:
+			data = data.format(**vars)
+		return data
 

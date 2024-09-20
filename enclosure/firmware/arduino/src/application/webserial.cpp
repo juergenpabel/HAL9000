@@ -17,15 +17,7 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 
 	response.clear();
 	if(data.containsKey("WAIT") == true) {
-		if(g_application.getStatus() == StatusConfiguring || g_application.getStatus() == StatusWaiting) {
-			gui_screen_set("waiting", gui_screen_animations_waiting);
-		}
-		return;
-	}
-	if(data.containsKey("READY") == true) {
-		if(g_application.getStatus() == StatusWaiting) {
-			g_application.setStatus(StatusReady);
-		}
+		gui_screen_set("waiting", gui_screen_animations_waiting);
 		return;
 	}
 	if(data.containsKey("END") == true) {

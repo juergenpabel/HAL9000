@@ -16,6 +16,7 @@ class Trigger(HAL9000_Trigger):
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
+		HAL9000_Trigger.configure(self, configuration, section_name)
 		self.config['topic'] = configuration.getstring(section_name, 'mqtt-topic', fallback=None)
 		self.config['payload-regex'] = configuration.getstring(section_name, 'mqtt-payload-regex', fallback=None)
 		self.config['payload-jsonpath'] = configuration.getstring(section_name, 'mqtt-payload-jsonpath', fallback=None)

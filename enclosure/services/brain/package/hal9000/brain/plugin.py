@@ -190,8 +190,8 @@ class HAL9000_Trigger(HAL9000_Plugin):
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
-		HAL9000_Plugin.configure(self, configuration, section_name, None)
-		self.sleepless = configuration.get(section_name, 'sleepless', fallback=False)
+		HAL9000_Plugin.configure(self, configuration, section_name)
+		self.sleepless = configuration.getboolean(section_name, 'sleepless', fallback=False)
 
 
 	def runlevel(self) -> str:

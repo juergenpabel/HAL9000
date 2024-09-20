@@ -98,7 +98,7 @@ class Control(EnclosureComponent):
 						self.daemon.schedule_signal(self.config['menu']['timeout'],
 						                            'frontend',
 						                            {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
-						                            'enclosure:control:menu:timeout')
+						                            'scheduler://enclosure:control/menu:timeout')
 						position = 0
 						for item in self.config['menu'][menu_name]['items']:
 							if item['item'] == menu_item:
@@ -113,10 +113,11 @@ class Control(EnclosureComponent):
 						self.daemon.plugins['frontend'].menu_name = menu_name
 						self.daemon.plugins['frontend'].menu_item = menu_item
 					if 'select' in signal['control']:
-						self.daemon.remove_scheduled_signal('enclosure:control:menu:timeout')
+						self.daemon.remove_scheduled_signal('scheduler://enclosure:control/menu:timeout')
 						if menu_item.startswith('item-'):
 							plugin = self.config['handlers'][menu_item]['plugin']
 							signal = self.config['handlers'][menu_item]['signal']
+							signal = self.daemon.substitute_vars(signal, {'ipv4': await self.daemon.get_system_ipv4()})
 							if isinstance(signal, dict):
 								self.daemon.queue_signal(plugin, signal)
 							elif isinstance(signal, list):
@@ -142,7 +143,7 @@ class Control(EnclosureComponent):
 							self.daemon.schedule_signal(self.config['menu']['timeout'],
 							                            'frontend',
 							                            {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
-							                            'enclosure:control:menu:timeout')
+							                            'scheduler://enclosure:control/menu:timeout')
 				case other:
 					self.daemon.logger.error(f"[enclosure/control]: unknown screen '{self.daemon.plugins['frontend'].screen}', " \
 					                         f"returning to screen 'idle'")

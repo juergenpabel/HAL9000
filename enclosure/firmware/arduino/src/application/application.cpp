@@ -11,7 +11,7 @@
 
 
        const etl::string<GLOBAL_VALUE_SIZE> Application::Null;
-static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown", "starting", "configuring", "waiting", "ready",
+static const etl::string<GLOBAL_KEY_SIZE> ApplicationStatusNames[] = { "unknown", "starting", "configuring", "ready",
                                                                        "running", "rebooting", "halting", "panicing" };
 
 
@@ -168,7 +168,7 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 						                                     "write-mode, unable to persist configuration for future application startups");
 					}
 				}
-				g_application.setStatus(StatusWaiting);
+				g_application.setStatus(StatusReady);
 			}
 			break;
 		case StatusReady:
@@ -210,7 +210,6 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 				configuration.clear();
 				g_util_webserial.send("syslog/debug", "...application configuration activated");
 			}
-			g_application.setStatus(StatusRunning);
 			break;
 		default:
 			etl::string<GLOBAL_VALUE_SIZE> log_message("Application::onConfiguration() called in unexpected application-status: ");

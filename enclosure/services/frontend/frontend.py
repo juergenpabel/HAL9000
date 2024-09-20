@@ -110,10 +110,7 @@ class FrontendManager:
 			return
 		match topic[25:]: #remove 'hal9000/command/frontend/' prefix
 			case 'runlevel':
-				if self.startup is False:
-					self.mqtt_client.publish('hal9000/event/frontend/runlevel', self.calculate_runlevel())
-				else:
-					logging_getLogger("uvicorn").debug(f"[frontend] ignoring mqtt command 'runlevel' because startup is still in progress")
+				self.mqtt_client.publish('hal9000/event/frontend/runlevel', self.calculate_runlevel())
 			case 'status':
 				if self.startup is False:
 					self.mqtt_client.publish('hal9000/event/frontend/status', self.calculate_status())
@@ -129,13 +126,8 @@ class FrontendManager:
 
 
 	async def mqtt_subscriber(self):
-		startup_last_publish = time_monotonic()
 		while self.tasks['mqtt_subscriber'].cancelled() is False:
 			while self.mqtt_client.is_connected():
-				if self.startup is True:
-					if (time_monotonic() - startup_last_publish) > 1:
-						startup_last_publish = time_monotonic()
-						self.mqtt_client.publish('hal9000/event/frontend/runlevel', 'starting')
 				self.mqtt_client.loop(timeout=0.01)
 				await asyncio_sleep(0.01)
 			logging_getLogger("uvicorn").warning(f"[frontend] MQTT is disconnected, reconnecting...")
@@ -153,6 +145,8 @@ class FrontendManager:
 	async def mqtt_publisher(self):
 		last_runlevel = None
 		last_status = None
+		if self.mqtt_client.is_connected():
+			self.mqtt_client.publish('hal9000/event/frontend/runlevel', 'starting')
 		while self.tasks['mqtt_publisher'].cancelled() is False:
 			match self.mqtt_client.is_connected():
 				case True:

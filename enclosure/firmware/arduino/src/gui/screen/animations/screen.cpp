@@ -34,19 +34,40 @@ unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
 	if(g_application.hasEnv("gui/screen:animations/name") == true) {
 		static etl::string<GLOBAL_FILENAME_SIZE> filename;
 
-		lastDraw = GUI_UPDATE;
-		animation_frame = 0;
-		filename  = "/system/gui/screen/animations/";
-		filename += g_application.getEnv("gui/screen:animations/name");
-		filename += ".json";
-		g_device_microcontroller.mutex_enter("gpio");
-		gui_screen_animations_load(filename, animations);
-		g_device_microcontroller.mutex_leave("gpio");
-		if(animations.empty() == true) {
-			g_util_webserial.send("syslog/error", "error loading json data for gui/screen 'animations':");
-			g_util_webserial.send("syslog/error", filename);
+		switch(animations.empty()) {
+			case false:
+				if(g_application.getEnv("gui/screen:animations/loop").compare("false") != 0) {
+					g_application.setEnv("gui/screen:animations/loop", "false");
+				}
+				break;
+			case true:
+				animation_frame = 0;
+				filename  = "/system/gui/screen/animations/";
+				filename += g_application.getEnv("gui/screen:animations/name");
+				filename += ".json";
+				g_device_microcontroller.mutex_enter("gpio");
+				gui_screen_animations_load(filename, animations);
+				g_device_microcontroller.mutex_leave("gpio");
+				if(animations.empty() == true) {
+					g_util_webserial.send("syslog/error", "error loading json data for gui/screen 'animations':");
+					g_util_webserial.send("syslog/error", filename);
+				}
+				g_application.delEnv("gui/screen:animations/name");
+				if(g_application.hasEnv("gui/screen:animations/loop") == true) {
+					if(g_application.getStatus() == StatusRunning) {
+						g_application.delEnv("gui/screen:animations/loop");
+					}
+				}
+				if(lastDraw != GUI_UPDATE) {
+					static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
+
+					response.clear();
+					response["screen"] = gui_screen_getname();
+					response["result"] = "OK";
+					g_util_webserial.send("gui/screen", response);
+					lastDraw = GUI_UPDATE;
+				}
 		}
-		g_application.delEnv("gui/screen:animations/name");
 	}
 	if(animations.empty() == false) {
 		animation_t* animation_current = nullptr;
@@ -114,6 +135,7 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> animationsJSON;
 	       File file;
 
+	animations.clear();
 	if(LittleFS.exists(filename.c_str()) == false) {
 		g_application.notifyError("error", "217", "Animation error", filename);
 		return;

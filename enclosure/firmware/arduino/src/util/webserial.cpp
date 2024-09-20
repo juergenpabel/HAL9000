@@ -4,8 +4,9 @@
 
 #include "util/webserial.h"
 #include "gui/screen/screen.h"
-#include "gui/screen/error/screen.h"
 #include "gui/screen/idle/screen.h"
+#include "gui/screen/error/screen.h"
+#include "gui/screen/panic/screen.h"
 #include "gui/screen/animations/screen.h"
 #include "globals.h"
 
@@ -128,8 +129,6 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 
 
 void WebSerial::update() {
-	static gui_screen_func previous_gui_screen_func = nullptr;
-	static gui_screen_name previous_gui_screen_name;
 	static char   receive_buffer[WEBSERIAL_LINE_SIZE] = {0};
 	static size_t receive_buffer_pos = 0;
 	       size_t serial_available = 0;
@@ -141,12 +140,8 @@ void WebSerial::update() {
 		Status status;
 
 		status = g_application.getStatus();
-		if(status == StatusWaiting || status == StatusReady || status == StatusRunning) {
+		if(status == StatusRunning) {
 			if(gui_screen_get() != gui_screen_error || gui_screen_getname().compare("error:210") != 0) {
-				if(status == StatusRunning) {
-					previous_gui_screen_func = gui_screen_get();
-					previous_gui_screen_name = gui_screen_getname();
-				}
 				g_application.notifyError("critical", "210", "No connection to host", "Serial is closed in WebSerial::update()");
 			}
 		}
@@ -158,23 +153,17 @@ void WebSerial::update() {
 			case StatusConfiguring:
 				gui_screen_set("waiting", gui_screen_animations_waiting);
 				break;
-			case StatusWaiting:
-				gui_screen_set("waiting", gui_screen_animations_waiting);
-				break;
 			case StatusRunning:
-				if(previous_gui_screen_func == nullptr || previous_gui_screen_name.empty() == true) {
-					previous_gui_screen_func = gui_screen_idle;
-					previous_gui_screen_name = "idle";
-				}
-				gui_screen_set(previous_gui_screen_name.c_str(), previous_gui_screen_func);
-				previous_gui_screen_func = nullptr;
-				previous_gui_screen_name = "";
+				gui_screen_set("idle", gui_screen_idle);
 				break;
 			case StatusPanicing:
-				//TODO:??
+				gui_screen_set("panic", gui_screen_panic);
 				break;
 			default:
-				gui_screen_set("none", gui_screen_none);
+				g_application.setEnv("gui/screen:error/id", "219");
+				g_application.setEnv("gui/screen:error/level", "error");
+				g_application.setEnv("gui/screen:error/title", "Application error");
+				gui_screen_set("error:219", gui_screen_error);
 				break;
 		}
 	}
