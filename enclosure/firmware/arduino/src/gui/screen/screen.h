@@ -3,8 +3,8 @@
 
 #include "gui/gui.h"
 
-typedef etl::string<GLOBAL_KEY_SIZE>   gui_screen_name;
-typedef unsigned long                (*gui_screen_func)(unsigned long lastDraw, TFT_eSPI* gui);
+typedef etl::string<GLOBAL_VALUE_SIZE>  gui_screen_name;
+typedef unsigned long                 (*gui_screen_func)(unsigned long lastDraw, TFT_eSPI* gui);
 
 gui_screen_name gui_screen_getname();
 gui_screen_func gui_screen_get();

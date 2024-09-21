@@ -7,6 +7,7 @@
 #include "gui/screen/screen.h"
 #include "gui/screen/error/screen.h"
 #include "gui/screen/animations/screen.h"
+#include "gui/overlay/overlay.h"
 #include "globals.h"
 
 
@@ -268,5 +269,6 @@ void Application::notifyError(const etl::string<GLOBAL_KEY_SIZE>& error_level, c
 	screen_error_name  = "error:";
 	screen_error_name += error_id;
 	gui_screen_set(screen_error_name, gui_screen_error);
+	gui_overlay_set("none", gui_overlay_none);
 }
 

@@ -16,18 +16,37 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 	static StaticJsonDocument<WEBSERIAL_LINE_SIZE*2> response;
 
 	response.clear();
-	if(data.containsKey("WAIT") == true) {
-		gui_screen_set("waiting", gui_screen_animations_waiting);
-		return;
+	if(data.containsKey("INTERNAL:CONFIG") == true) {
+		if(g_application.getStatus() == StatusStarting) {
+			g_application.setStatus(StatusConfiguring);
+			gui_screen_set("system-configuring", gui_screen_animations_system_configuring);
+			return;
+		}
+		response["result"] = "error";
+		response["error"] = JsonObject();
+		response["error"]["id"] = "216";
+		response["error"]["level"] = "warn";
+		response["error"]["title"] = "Invalid request";
+		response["error"]["details"] = "request for topic 'application/runtime' with operation 'INTERNAL:CONFIG' "
+		                               "only valid in status 'starting'";
 	}
-	if(data.containsKey("END") == true) {
-		if(g_application.getStatus() == StatusHalting) {
-			g_device_board.halt();
+	if(data.containsKey("INTERNAL:QUIT") == true) {
+		switch(g_application.getStatus()) {
+			case StatusHalting:
+				g_device_board.halt();
+				break;
+			case StatusRebooting:
+				g_device_board.reset();
+				break;
+			default:
+				response["result"] = "error";
+				response["error"] = JsonObject();
+				response["error"]["id"] = "216";
+				response["error"]["level"] = "warn";
+				response["error"]["title"] = "Invalid request";
+				response["error"]["details"] = "request for topic 'application/runtime' with operation 'INTERNAL:QUIT' "
+				                               "only valid in status 'halting' or 'rebooting'";
 		}
-		if(g_application.getStatus() == StatusRebooting) {
-			g_device_board.reset();
-		}
-		return;
 	}
 	if(data.containsKey("status") == true) {
 		static etl::string<2>  questionmark("?");

@@ -153,6 +153,9 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 		if(body["message"].containsKey("text") == true) {
 			g_application.setEnv("gui/overlay:message/text", body["message"]["text"].as<const char*>());
 		}
+		if(body["message"].containsKey("position-vertical") == true) {
+			g_application.setEnv("gui/overlay:message/position-vertical", body["message"]["position-vertical"].as<const char*>());
+		}
 		overlay_name = "message";
 		overlay_func = gui_overlay_message;
 	}

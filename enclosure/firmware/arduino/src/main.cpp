@@ -86,7 +86,7 @@ void setup() {
 		return;
 	}
 	g_util_webserial.setCommand("application/runtime", on_application_runtime);
-	g_application.setStatus(StatusConfiguring);
+	gui_screen_set("animations:system-booting", gui_screen_animations_system_booting);
 }
 
 
@@ -104,7 +104,6 @@ void loop() {
 		g_util_webserial.send("application/runtime", payloadStatus.replace(19, 8, g_application.getStatusName()), false);
 		switch(currentStatus) {
 			case StatusConfiguring:
-				gui_screen_set("startup", gui_screen_animations_startup);
 				if(g_application.hasSetting("application/runtime:configuration/timeout") == true) {
 					configurationTimeout = atol(g_application.getSetting("application/runtime:configuration/timeout").c_str());
 				}
@@ -123,7 +122,7 @@ void loop() {
 				g_util_webserial.setCommand("*", Application::onConfiguration);
 				break;
 			case StatusReady:
-				configurationTimeout = 0;
+				gui_screen_set("animations:system-starting", gui_screen_animations_system_starting);
 				g_util_webserial.setCommand("*", nullptr);
 				g_util_webserial.setCommand("application/environment", on_application_environment);
 				g_util_webserial.setCommand("application/settings", on_application_settings);
@@ -138,17 +137,17 @@ void loop() {
 			case StatusRunning:
 				break;
 			case StatusRebooting:
+				gui_screen_set("animations:system-terminating", gui_screen_animations_system_terminating); //animation triggers reset after last frame
 				g_util_webserial.setCommand(Application::Null, nullptr);
 				g_util_webserial.setCommand("application/runtime", on_application_runtime);
-				gui_screen_set("shutdown", gui_screen_animations_shutdown); //animation triggers reset after last frame
 				while(true) {
 					g_util_webserial.update();
 					gui_update();
 				}
 			case StatusHalting:
+				gui_screen_set("animations:system-terminating", gui_screen_animations_system_terminating); //animation triggers halt after last frame
 				g_util_webserial.setCommand(Application::Null, nullptr);
 				g_util_webserial.setCommand("application/runtime", on_application_runtime);
-				gui_screen_set("shutdown", gui_screen_animations_shutdown); //animation triggers halt after last frame
 				while(true) {
 					g_util_webserial.update();
 					gui_update();
@@ -180,7 +179,7 @@ void loop() {
 	}
 	if(currentStatus == StatusReady) {
 		if(gui_screen_get() == gui_screen_animations) {
-			if(gui_screen_getname().compare("animations:startup") != 0) {
+			if(gui_screen_getname().compare("animations:system-configuring") != 0) {
 				g_application.setStatus(StatusRunning);
 			}
 		}

@@ -151,7 +151,7 @@ void WebSerial::update() {
 		this->send("syslog/debug", "connection to host (re-)established");
 		switch(g_application.getStatus()) {
 			case StatusConfiguring:
-				gui_screen_set("waiting", gui_screen_animations_waiting);
+				gui_screen_set("animations:system-configuring", gui_screen_animations_system_configuring);
 				break;
 			case StatusRunning:
 				gui_screen_set("idle", gui_screen_idle);

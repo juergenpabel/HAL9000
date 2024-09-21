@@ -23,11 +23,9 @@ gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_fu
 	gui_screen_func previous_screen_func = nullptr;
 
 	if(screen_func != nullptr) {
-		if(screen_func != g_screen_func) {
-			previous_screen_func = g_screen_func;
-			gui_screen_set_refresh();
-			gui_overlay_set_refresh();
-		}
+		previous_screen_func = g_screen_func;
+		gui_screen_set_refresh();
+		gui_overlay_set_refresh();
 		g_screen_name = screen_name;
 		g_screen_func = screen_func;
 	}

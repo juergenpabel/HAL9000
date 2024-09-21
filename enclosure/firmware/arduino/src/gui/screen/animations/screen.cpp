@@ -29,7 +29,8 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 
 unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
 	static animations_t  animations;
-	static unsigned int  animation_frame = 0;
+	       animation_t*  animation_current = nullptr;
+	static unsigned int  animation_current_frame = 0;
 
 	if(g_application.hasEnv("gui/screen:animations/name") == true) {
 		static etl::string<GLOBAL_FILENAME_SIZE> filename;
@@ -37,11 +38,12 @@ unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
 		switch(animations.empty()) {
 			case false:
 				if(g_application.getEnv("gui/screen:animations/loop").compare("false") != 0) {
+//TODO:for i in aniations: if true then:
 					g_application.setEnv("gui/screen:animations/loop", "false");
 				}
 				break;
 			case true:
-				animation_frame = 0;
+				animation_current_frame = 0;
 				filename  = "/system/gui/screen/animations/";
 				filename += g_application.getEnv("gui/screen:animations/name");
 				filename += ".json";
@@ -51,6 +53,8 @@ unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
 				if(animations.empty() == true) {
 					g_util_webserial.send("syslog/error", "error loading json data for gui/screen 'animations':");
 					g_util_webserial.send("syslog/error", filename);
+					g_application.delEnv("gui/screen:animations/name");
+					return GUI_IGNORE;
 				}
 				g_application.delEnv("gui/screen:animations/name");
 				if(g_application.hasEnv("gui/screen:animations/loop") == true) {
@@ -69,64 +73,65 @@ unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
 				}
 		}
 	}
-	if(animations.empty() == false) {
-		animation_t* animation_current = nullptr;
-
-		animation_current = &animations.front();
-		if((millis()-lastDraw) < (animation_current->duration/animation_current->frames)) {
-			return lastDraw;
-		}
-		if(animation_frame >= animation_current->frames) {
-			animation_frame = 0;
-			if(animation_current->loop == true) {
-				if(g_application.hasEnv("gui/screen:animations/loop") == true) {
-					if(g_application.getEnv("gui/screen:animations/loop").compare("false") == 0) {
-						g_application.delEnv("gui/screen:animations/loop");
-						animation_current->loop = false;
-					}
-				}
-			}
-			if(animation_current->loop == false) {
-				if(animation_current->onnext_webserial.empty() == false) {
-					g_util_webserial.handle(animation_current->onnext_webserial);
-				}
-				animations.pop_front();
-				if(animations.empty() == true) {
-					return lastDraw;
-				}
-				animation_current = &animations.front();
-			}
-		}
-		if(animation_frame == 0) {
-			if(animation_current->onthis_webserial.empty() == false) {
-				g_util_webserial.handle(animation_current->onthis_webserial);
-			}
-		}
-		if(gui == &g_gui_buffer) {
-			static etl::string<GLOBAL_FILENAME_SIZE> filename;
-			static etl::format_spec                  frame_format(10, 2, 0, false, false, false, false, '0');
-
-			filename = animation_current->directory;
-			if(filename.back() != '/') {
-				filename += "/";
-			}
-			etl::to_string(animation_frame, filename, frame_format, true);
-			filename += ".jpg";
-			util_jpeg_decode565_littlefs(filename.c_str(), (uint16_t*)g_gui_buffer.getPointer(), GUI_SCREEN_WIDTH*GUI_SCREEN_HEIGHT*sizeof(uint16_t));
-		} else {
-			if(animation_frame == 0 || lastDraw == GUI_UPDATE) {
-				g_device_microcontroller.mutex_enter("gpio");
-				g_gui.fillScreen(TFT_BLACK);
-				g_gui.setTextColor(TFT_RED, TFT_BLACK, false);
-				g_gui.setTextFont(1);
-				g_gui.setTextSize(3);
-				g_gui.setTextDatum(MC_DATUM);
-				g_gui.drawString(animation_current->title.c_str(), g_gui.width()/2, g_gui.height()/2);
-				g_device_microcontroller.mutex_leave("gpio");
-			}
-		}
-		animation_frame++;
+	if(animations.empty() == true) {
+		return lastDraw;
 	}
+	animation_current = &animations.front();
+	if((millis()-lastDraw) < (animation_current->duration/animation_current->frames)) {
+		return lastDraw;
+	}
+	if(animation_current_frame >= animation_current->frames) {
+		animation_current_frame = 0;
+		if(animation_current->loop == true) {
+			if(g_application.hasEnv("gui/screen:animations/loop") == true) {
+				if(g_application.getEnv("gui/screen:animations/loop").compare("false") == 0) {
+					g_application.delEnv("gui/screen:animations/loop");
+					animation_current->loop = false;
+				}
+			}
+		}
+		if(animation_current->loop == false) {
+			if(animation_current->onnext_webserial.empty() == false) {
+				g_util_webserial.handle(animation_current->onnext_webserial);
+			}
+			animations.pop_front();
+			if(animations.empty() == true) {
+				animation_current = nullptr;
+				return lastDraw;
+			}
+			animation_current = &animations.front();
+		}
+	}
+	if(animation_current_frame == 0) {
+		if(animation_current->onthis_webserial.empty() == false) {
+			g_util_webserial.handle(animation_current->onthis_webserial);
+			animation_current->onthis_webserial.clear();
+		}
+	}
+	if(gui == &g_gui_buffer) {
+		static etl::string<GLOBAL_FILENAME_SIZE> filename;
+		static etl::format_spec                  frame_format(10, 2, 0, false, false, false, false, '0');
+
+		filename = animation_current->directory;
+		if(filename.back() != '/') {
+			filename += "/";
+		}
+		etl::to_string(animation_current_frame, filename, frame_format, true);
+		filename += ".jpg";
+		util_jpeg_decode565_littlefs(filename.c_str(), (uint16_t*)g_gui_buffer.getPointer(), GUI_SCREEN_WIDTH*GUI_SCREEN_HEIGHT*sizeof(uint16_t));
+	} else {
+		if(animation_current_frame == 0 || lastDraw == GUI_UPDATE) {
+			g_device_microcontroller.mutex_enter("gpio");
+			g_gui.fillScreen(TFT_BLACK);
+			g_gui.setTextColor(TFT_RED, TFT_BLACK, false);
+			g_gui.setTextFont(1);
+			g_gui.setTextSize(3);
+			g_gui.setTextDatum(MC_DATUM);
+			g_gui.drawString(animation_current->title.c_str(), g_gui.width()/2, g_gui.height()/2);
+			g_device_microcontroller.mutex_leave("gpio");
+		}
+	}
+	animation_current_frame++;
 	return millis();
 }
 
@@ -191,23 +196,30 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 }
 
 
-unsigned long gui_screen_animations_startup(unsigned long lastDraw, TFT_eSPI* gui) {
-	g_application.setEnv("gui/screen:animations/name", "startup");
-	gui_screen_set("animations:startup", gui_screen_animations);
+unsigned long gui_screen_animations_system_booting(unsigned long lastDraw, TFT_eSPI* gui) {
+	g_application.setEnv("gui/screen:animations/name", "system-booting");
+	gui_screen_set("animations:system-booting", gui_screen_animations);
 	return GUI_UPDATE;
 }
 
 
-unsigned long gui_screen_animations_waiting(unsigned long lastDraw, TFT_eSPI* gui) {
-	g_application.setEnv("gui/screen:animations/name", "waiting");
-	gui_screen_set("animations:waiting", gui_screen_animations);
+unsigned long gui_screen_animations_system_configuring(unsigned long lastDraw, TFT_eSPI* gui) {
+	g_application.setEnv("gui/screen:animations/name", "system-configuring");
+	gui_screen_set("animations:system-configuring", gui_screen_animations);
 	return GUI_UPDATE;
 }
 
 
-unsigned long gui_screen_animations_shutdown(unsigned long lastDraw, TFT_eSPI* gui) {
-	g_application.setEnv("gui/screen:animations/name", "shutdown");
-	gui_screen_set("animations:shutdown", gui_screen_animations);
+unsigned long gui_screen_animations_system_starting(unsigned long lastDraw, TFT_eSPI* gui) {
+	g_application.setEnv("gui/screen:animations/name", "system-starting");
+	gui_screen_set("animations:system-starting", gui_screen_animations);
+	return GUI_UPDATE;
+}
+
+
+unsigned long gui_screen_animations_system_terminating(unsigned long lastDraw, TFT_eSPI* gui) {
+	g_application.setEnv("gui/screen:animations/name", "terminating");
+	gui_screen_set("animations:system-terminating", gui_screen_animations);
 	return GUI_UPDATE;
 }
 
