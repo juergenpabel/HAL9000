@@ -54,11 +54,11 @@ class HAL9000(Frontend):
 				self.serial = serial_Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate,
 				                            bytesize=serial_EIGHTBITS, parity=serial_PARITY_NONE, stopbits=serial_STOPBITS_ONE)
 				logging_getLogger('uvicorn').debug(f"[frontend:arduino] opened '{arduino_device}'")
+				await self.serial_writeline('["application/runtime", {"status":"?"}]')
 				response = ['application/runtime', {'status': {'name': 'starting'}}]
 				while response[0] != 'application/runtime' \
 				    or 'status' not in response[1] or 'name' not in response[1]['status'] \
 				    or response[1]['status']['name'] == 'starting':
-					await self.serial_writeline('["application/runtime", {"status":"?"}]')
 					await asyncio_sleep(0.5)
 					line = await self.serial_readline(timeout=0.5)
 					if line is not None:

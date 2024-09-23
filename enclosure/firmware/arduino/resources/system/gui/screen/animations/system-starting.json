@@ -1,5 +1,7 @@
-[ {"title": "Starting...", "duration":  400, "directory": "/images/animations/startup/system-starting/fade-in",  "frames":  8, "loop": false},
+[ {"title": "Starting...", "duration":  400, "directory": "/images/animations/startup/system-starting/fade-in",  "frames":  8, "loop": false,
+                           "on:next": {"webserial": "[\"gui/overlay\", {\"message\": {\"text\": \"HAL9000\"}}]"}},
   {"title": "Starting...", "duration":  500, "directory": "/images/animations/startup/system-starting/loop",     "frames": 10, "loop": true,
-                           "on:this": {"webserial": "[\"gui/overlay\", {\"message\": {\"text\": \"HAL9000\"}}]"}},
-  {"title": "Starting...", "duration":  500, "directory": "/images/animations/startup/system-starting/fade-out", "frames": 10, "loop": false} ]
+                           "on:next": {"webserial": "[\"gui/overlay\", {\"message\": {\"text\": \"       \"}}]"}},
+  {"title": "Starting...", "duration":  500, "directory": "/images/animations/startup/system-starting/fade-out", "frames": 10, "loop": false,
+                           "on:next": {"webserial": "[\"gui/overlay\", {\"none\": {}}]"}} ]
 

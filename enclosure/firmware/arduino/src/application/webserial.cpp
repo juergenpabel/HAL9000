@@ -175,7 +175,7 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 		if(data["set"].containsKey("value") == true) {
 			value = data["set"]["value"].as<const char*>();
 		}
-		if(key.length() > 0 && value.length() > 0) {
+		if(key.length() > 0) {
 			g_application.setEnv(key, value);
 			response["set"]["key"] = key.c_str();
 			response["set"]["value"] = value.c_str();
@@ -186,8 +186,7 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 			response["error"]["id"] = "216";
 			response["error"]["level"] = "warn";
 			response["error"]["title"] = "Invalid request";
-			response["error"]["details"] = "request for topic 'application/environment' with operation 'set' has missing/empty value for parameters " \
-			                               "'key' and/or 'value')";
+			response["error"]["details"] = "request for topic 'application/environment' with operation 'set' has missing/empty value for parameter 'key')";
 			response["error"]["data"] = JsonObject();
 			response["error"]["data"]["key"] = key.c_str();
 			response["error"]["data"]["value"] = value.c_str();

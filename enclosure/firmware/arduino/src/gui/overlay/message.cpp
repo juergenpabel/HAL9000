@@ -27,7 +27,7 @@ unsigned long gui_overlay_message(unsigned long lastDraw, TFT_eSPI* gui) {
 	static int32_t                         text_horizontal;
 	static uint8_t                         text_datum;
 
-	if(lastDraw == GUI_UPDATE) {
+	if(lastDraw == GUI_UPDATE || g_application.hasEnv("gui/overlay:message/text") == true) {
 		if(g_application.hasEnv("gui/overlay:message/text") == true) {
 			text = g_application.getEnv("gui/overlay:message/text");
 			text_color = TFT_WHITE;
@@ -35,6 +35,7 @@ unsigned long gui_overlay_message(unsigned long lastDraw, TFT_eSPI* gui) {
 			text_vertical = (gui->height()-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/2);
 			text_horizontal = (gui->width()-GUI_SCREEN_WIDTH)/2+(GUI_SCREEN_WIDTH/2);
 			text_datum = MC_DATUM;
+			g_application.delEnv("gui/overlay:message/text");
 		}
 		if(g_application.hasEnv("gui/overlay:message/text-color") == true) {
 			ColorMap::iterator iter = g_colors.find(g_application.getEnv("gui/overlay:message/text-color"));

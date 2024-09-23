@@ -134,13 +134,18 @@ class Action(HAL9000_Action):
 					self.send_frontend_command('application/environment', {'set': {'key': key, 'value': value}})
 		if 'gui' in signal:
 			if 'screen' in signal['gui']:
+				screen = signal['gui']['screen']['name']
+				if 'parameter' in signal['gui']['screen'] and 'name' in signal['gui']['screen']['parameter']:
+					screen += ':' + signal['gui']['screen']['parameter']['name']
+				elif 'parameter' in signal['gui']['screen'] and 'id' in signal['gui']['screen']['parameter']:
+					screen += ':' + signal['gui']['screen']['parameter']['id']
 				status = None
 				if 'origin' in signal['gui']['screen'] and signal['gui']['screen']['origin'].startswith('frontend') == True:
 					status = HAL9000_Plugin_Data.STATUS_CONFIRMED
 				else:
 					self.send_frontend_command('gui/screen', {signal['gui']['screen']['name']: signal['gui']['screen']['parameter']})
 					status = HAL9000_Plugin_Data.STATUS_REQUESTED
-				self.daemon.plugins['frontend'].screen = signal['gui']['screen']['name'], status
+				self.daemon.plugins['frontend'].screen = screen, status
 			if 'overlay' in signal['gui']:
 				status = None
 				if 'origin' in signal['gui']['overlay'] and signal['gui']['overlay']['origin'].startswith('frontend') == True:

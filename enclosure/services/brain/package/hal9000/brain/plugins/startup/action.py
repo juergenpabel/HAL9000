@@ -32,11 +32,9 @@ class Action(HAL9000_Action):
 				match self.daemon.plugins['brain'].status:
 					case Daemon.BRAIN_STATUS_AWAKE:
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
-						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 						self.welcome_pending = True
 					case Daemon.BRAIN_STATUS_ASLEEP:
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}}}})
-						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 						self.daemon.queue_signal('kalliope', {'status': 'sleeping'})
 
 		return True

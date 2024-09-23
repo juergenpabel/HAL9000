@@ -1,5 +1,5 @@
-[ {"title": "Power-on...", "duration":  1500, "directory": "/images/animations/startup/power-on",       "frames": 15, "loop": false},
-  {"title": "Booting...",  "duration": 19200, "directory": "/images/animations/startup/system-booting", "frames": 32, "loop": false,
+[ {"title": "Power-on...", "duration":   750, "directory": "/images/animations/startup/power-on",       "frames": 15, "loop": false},
+  {"title": "Booting...",  "duration": 16000, "directory": "/images/animations/startup/system-booting", "frames": 32, "loop": false,
                            "on:next": {"webserial": "[\"application/runtime\", {\"INTERNAL:CONFIG\":{}}]"}}
 ]
 

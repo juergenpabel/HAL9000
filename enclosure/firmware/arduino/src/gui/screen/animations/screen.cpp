@@ -7,6 +7,7 @@
 
 #include "gui/screen/screen.h"
 #include "gui/screen/idle/screen.h"
+#include "gui/overlay/overlay.h"
 #include "util/jpeg.h"
 #include "globals.h"
 
@@ -218,7 +219,7 @@ unsigned long gui_screen_animations_system_starting(unsigned long lastDraw, TFT_
 
 
 unsigned long gui_screen_animations_system_terminating(unsigned long lastDraw, TFT_eSPI* gui) {
-	g_application.setEnv("gui/screen:animations/name", "terminating");
+	g_application.setEnv("gui/screen:animations/name", "system-terminating");
 	gui_screen_set("animations:system-terminating", gui_screen_animations);
 	return GUI_UPDATE;
 }
