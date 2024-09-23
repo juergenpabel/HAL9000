@@ -34,7 +34,8 @@ unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
 	static unsigned int  animation_current_frame = 0;
 
 	if(g_application.hasEnv("gui/screen:animations/name") == true) {
-		static etl::string<GLOBAL_FILENAME_SIZE> filename;
+		static etl::string<GLOBAL_FILENAME_SIZE>       filename;
+		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
 
 		switch(animations.empty()) {
 			case false:
@@ -63,15 +64,11 @@ unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
 						g_application.delEnv("gui/screen:animations/loop");
 					}
 				}
-				if(lastDraw != GUI_UPDATE) {
-					static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
-
-					response.clear();
-					response["screen"] = gui_screen_getname();
-					response["result"] = "OK";
-					g_util_webserial.send("gui/screen", response);
-					lastDraw = GUI_UPDATE;
-				}
+				response.clear();
+				response["screen"] = gui_screen_getname();
+				response["result"] = "OK";
+				g_util_webserial.send("gui/screen", response);
+				lastDraw = GUI_UPDATE;
 		}
 	}
 	if(animations.empty() == true) {

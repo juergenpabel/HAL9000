@@ -126,6 +126,12 @@ class Action(HAL9000_Action):
 					self.daemon.plugins['frontend'].status = Action.FRONTEND_STATUS_OFFLINE
 				case Action.FRONTEND_STATUS_ONLINE:
 					self.daemon.plugins['frontend'].status = Action.FRONTEND_STATUS_ONLINE
+		if 'error' in signal:
+			error = {'level': 'error', 'id': '000', 'title': 'UNEXPECTED ERROR', 'details': ''}
+			for field in error.keys():
+				if field in signal['error']:
+					error[field] = signal['error'][field]
+			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'error', 'parameter': error}}})
 		if 'environment' in signal:
 			if 'set' in signal['environment']:
 				if 'key' in signal['environment']['set'] and 'value' in signal['environment']['set']:
