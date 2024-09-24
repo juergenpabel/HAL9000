@@ -478,8 +478,8 @@ class Daemon(object):
 
 	def substitute_vars(self, data: Any, vars: dict) -> Any:
 		if isinstance(data, list) is True:
-			for index, value in enumerate(list):
-				list[index] = self.substitute_vars(value, vars)
+			for index, value in enumerate(data):
+				data[index] = self.substitute_vars(value, vars)
 		if isinstance(data, dict) is True:
 			for key, value in data.items():
 				data[key] = self.substitute_vars(value, vars)
