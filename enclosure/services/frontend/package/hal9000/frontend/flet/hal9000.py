@@ -73,13 +73,9 @@ class HAL9000(Frontend):
 							target = command['payload']['shutdown']['target']
 							match target:
 								case 'poweroff':
-									self.show_error(display, {'id': '921',
-									                          'title': 'Animation disabled',
-									                          'detail': f"BUG: Animation not implemented"})
+									self.show_animations(display, {'name': 'system-terminating'})
 								case 'reboot':
-									self.show_error(display, {'id': '921',
-									                          'title': 'Animation disabled',
-									                          'detail': f"BUG: Animation not implemented"})
+									self.show_animations(display, {'name': 'system-terminating'})
 								case other:
 									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported shutdown target '{target}' "
 									                                     f"in command 'application/runtime'")

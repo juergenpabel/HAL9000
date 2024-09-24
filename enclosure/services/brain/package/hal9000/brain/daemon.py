@@ -477,13 +477,19 @@ class Daemon(object):
 
 
 	def substitute_vars(self, data: Any, vars: dict) -> Any:
-		if isinstance(data, list) is True:
-			for index, value in enumerate(data):
-				data[index] = self.substitute_vars(value, vars)
-		if isinstance(data, dict) is True:
-			for key, value in data.items():
-				data[key] = self.substitute_vars(value, vars)
-		if isinstance(data, str) is True:
-			data = data.format(**vars)
+		try:
+			if isinstance(data, list) is True:
+				for index, value in enumerate(data):
+					data[index] = self.substitute_vars(value, vars)
+			if isinstance(data, dict) is True:
+				for key, value in data.items():
+					data[key] = self.substitute_vars(value, vars)
+			if isinstance(data, str) is True:
+				data = data.format(**vars)
+		except KeyError as e:
+			if str(e).isidentifier() is True:
+				logging_getLogger().warn(f"encountered unknown variable '{str(e)}' during substition")
+				logging_getLogger().debug(f"substition data (type={type(data)}): {str(data)}")
+				logging_getLogger().debug(f"substition vars (type={type(vars)}): {str(vars)}")
 		return data
 

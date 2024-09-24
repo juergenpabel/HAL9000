@@ -66,7 +66,7 @@ class Control(EnclosureComponent):
 
 	async def on_enclosure_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
 		if 'control' in signal:
-			match self.daemon.plugins['frontend'].screen.split(':', 1).pop():
+			match self.daemon.plugins['frontend'].screen.split(':', 1).pop(0):
 				case 'none':
 					pass
 				case 'idle':
