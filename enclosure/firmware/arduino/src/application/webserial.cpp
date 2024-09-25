@@ -16,7 +16,7 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 	static StaticJsonDocument<WEBSERIAL_LINE_SIZE*2> response;
 
 	response.clear();
-	if(data.containsKey("INTERNAL:CONFIG") == true) {
+	if(data.containsKey("SYSTEM:CONFIG") == true) {
 		if(g_application.getStatus() == StatusStarting) {
 			g_application.setStatus(StatusConfiguring);
 			gui_screen_set("system-configuring", gui_screen_animations_system_configuring);
@@ -27,10 +27,10 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 		response["error"]["id"] = "216";
 		response["error"]["level"] = "warn";
 		response["error"]["title"] = "Invalid request";
-		response["error"]["details"] = "request for topic 'application/runtime' with operation 'INTERNAL:CONFIG' "
+		response["error"]["details"] = "request for topic 'application/runtime' with operation 'SYSTEM:CONFIG' "
 		                               "only valid in status 'starting'";
 	}
-	if(data.containsKey("INTERNAL:QUIT") == true) {
+	if(data.containsKey("SYSTEM:STOP") == true) {
 		switch(g_application.getStatus()) {
 			case StatusHalting:
 				g_device_board.halt();
@@ -44,7 +44,7 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 				response["error"]["id"] = "216";
 				response["error"]["level"] = "warn";
 				response["error"]["title"] = "Invalid request";
-				response["error"]["details"] = "request for topic 'application/runtime' with operation 'INTERNAL:QUIT' "
+				response["error"]["details"] = "request for topic 'application/runtime' with operation 'SYSTEM:STOP' "
 				                               "only valid in status 'halting' or 'rebooting'";
 		}
 	}

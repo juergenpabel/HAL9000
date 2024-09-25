@@ -6,6 +6,7 @@
 #include "gui/gui.h"
 #include "gui/screen/screen.h"
 #include "gui/screen/qrcode/screen.h"
+#include "gui/overlay/overlay.h"
 #include "globals.h"
 
 
@@ -17,6 +18,9 @@ unsigned long gui_screen_error(unsigned long lastDraw, TFT_eSPI* gui) {
 	if(lastDraw == GUI_UPDATE) {
 		unsigned long currentDraw = GUI_UPDATE;
 
+		if(gui_overlay_get() != gui_overlay_none) {
+			gui_overlay_set("none", gui_overlay_none);
+		}
 		if(g_application.hasEnv("gui/screen:error/id") == true) {
 			error_id = g_application.getEnv("gui/screen:error/id");
 		}

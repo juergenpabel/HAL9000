@@ -60,7 +60,7 @@ unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
 				}
 				g_application.delEnv("gui/screen:animations/name");
 				if(g_application.hasEnv("gui/screen:animations/loop") == true) {
-					if(g_application.getStatus() == StatusRunning) {
+					if(g_application.getStatus() >= StatusRunning) {
 						g_application.delEnv("gui/screen:animations/loop");
 					}
 				}
@@ -139,6 +139,7 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 	       File file;
 
 	animations.clear();
+	animationsJSON.clear();
 	if(LittleFS.exists(filename.c_str()) == false) {
 		g_application.notifyError("error", "217", "Animation error", filename);
 		return;

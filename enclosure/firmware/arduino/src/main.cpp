@@ -140,6 +140,7 @@ void loop() {
 				gui_screen_set("animations:system-terminating", gui_screen_animations_system_terminating); //animation triggers reset after last frame
 				g_util_webserial.setCommand(Application::Null, nullptr);
 				g_util_webserial.setCommand("application/runtime", on_application_runtime);
+				g_util_webserial.setCommand("application/environment", on_application_environment);
 				while(true) {
 					g_util_webserial.update();
 					gui_update();
@@ -148,6 +149,7 @@ void loop() {
 				gui_screen_set("animations:system-terminating", gui_screen_animations_system_terminating); //animation triggers halt after last frame
 				g_util_webserial.setCommand(Application::Null, nullptr);
 				g_util_webserial.setCommand("application/runtime", on_application_runtime);
+				g_util_webserial.setCommand("application/environment", on_application_environment);
 				while(true) {
 					g_util_webserial.update();
 					gui_update();

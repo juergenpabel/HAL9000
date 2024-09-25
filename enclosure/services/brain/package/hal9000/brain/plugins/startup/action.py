@@ -29,14 +29,12 @@ class Action(HAL9000_Action):
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
 		if pending is False:
 			if new_runlevel == HAL9000_Plugin.RUNLEVEL_RUNNING:
-				match self.daemon.plugins['brain'].status:
-					case Daemon.BRAIN_STATUS_AWAKE:
-						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
-						self.welcome_pending = True
-					case Daemon.BRAIN_STATUS_ASLEEP:
-						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}}}})
-						self.daemon.queue_signal('kalliope', {'status': 'sleeping'})
-
+				match self.daemon.plugins['frontend'].screen:
+					case 'animations:system-starting':
+						self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
+					case other:
+						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
+				self.welcome_pending = True
 		return True
 
 
@@ -66,8 +64,17 @@ class Action(HAL9000_Action):
 
 	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_screen: str, new_screen: str, pending: bool) -> bool:
 		if pending is False:
-			if self.welcome_pending is True and new_screen == 'animations:hal9000':
-				self.daemon.schedule_signal(1.5, 'kalliope', {'command': {'name': 'welcome', 'parameter': None}}, 'scheduler://kalliope/welcome:delay)')
+			if self.welcome_pending is True:
+				if new_screen == 'none':
+					match self.daemon.plugins['brain'].status:
+						case Daemon.BRAIN_STATUS_ASLEEP:
+							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}}}})
+							self.daemon.queue_signal('kalliope', {'status': 'sleeping'})
+						case Daemon.BRAIN_STATUS_AWAKE:
+							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations',
+							                                                         'parameter': {'name': 'hal9000'}}}})
+							self.daemon.schedule_signal(1.5, 'kalliope', {'command': {'name': 'welcome', 'parameter': None}},
+							                            'scheduler://kalliope/welcome:delay)')
 				self.welcome_pending = False
 		return True
 

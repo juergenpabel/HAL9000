@@ -1,2 +1,5 @@
-[ {"title": "Shutdown...", "duration": 24500, "directory": "/images/animations/shutdown", "frames": 70, "loop": false,
-                                              "on:next": {"webserial": "[\"application/runtime\", {\"INTERNAL:QUIT\":{}}]"} } ]
+[ {"title": "Shutdown...", "duration": 10500, "directory": "/images/animations/shutdown/system-stopping",    "frames": 70, "loop": false},
+  {"title": "Shutdown...", "duration":  1000, "directory": "/images/animations/shutdown/power-off/fade-in",  "frames": 5, "loop": false},
+  {"title": "Shutdown...", "duration":  1600, "directory": "/images/animations/shutdown/power-off/loop",     "frames": 8, "loop": true},
+  {"title": "Shutdown...", "duration":  1000, "directory": "/images/animations/shutdown/power-off/fade-out", "frames": 5, "loop": false,
+                                              "on:next": {"webserial": "[\"application/runtime\", {\"SYSTEM:STOP\":{}}]"} } ]
