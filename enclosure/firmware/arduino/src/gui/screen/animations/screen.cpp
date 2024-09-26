@@ -72,7 +72,8 @@ unsigned long gui_screen_animations(unsigned long lastDraw, TFT_eSPI* gui) {
 		}
 	}
 	if(animations.empty() == true) {
-		return lastDraw;
+		gui_screen_set("none", gui_screen_none);
+		return GUI_UPDATE;
 	}
 	animation_current = &animations.front();
 	if((millis()-lastDraw) < (animation_current->duration/animation_current->frames)) {

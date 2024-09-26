@@ -30,12 +30,21 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 		response["error"]["details"] = "request for topic 'application/runtime' with operation 'SYSTEM:CONFIG' "
 		                               "only valid in status 'starting'";
 	}
-	if(data.containsKey("SYSTEM:STOP") == true) {
+	if(data.containsKey("SYSTEM:EXIT") == true) {
+		if(gui_screen_getname().compare("animations:system-terminating") == 0) {
+			g_application.setEnv("gui/screen:animations/loop", "false");
+			while(gui_screen_get() != gui_screen_none) {
+				gui_update();
+				delay(10);
+			}
+		}
 		switch(g_application.getStatus()) {
 			case StatusHalting:
+				g_device_board.displayOff();
 				g_device_board.halt();
 				break;
 			case StatusRebooting:
+				g_device_board.displayOn();
 				g_device_board.reset();
 				break;
 			default:
@@ -44,22 +53,34 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 				response["error"]["id"] = "216";
 				response["error"]["level"] = "warn";
 				response["error"]["title"] = "Invalid request";
-				response["error"]["details"] = "request for topic 'application/runtime' with operation 'SYSTEM:STOP' "
+				response["error"]["details"] = "request for topic 'application/runtime' with operation 'SYSTEM:EXIT' "
 				                               "only valid in status 'halting' or 'rebooting'";
 		}
 	}
 	if(data.containsKey("status") == true) {
 		static etl::string<2>  questionmark("?");
 
-		response["status"] = JsonObject();
 		if(questionmark.compare(data["status"].as<const char*>()) == 0) {
-			response["result"] = "OK";
-			response["status"]["name"] = g_application.getStatusName().c_str();
 			if(g_application.getStatus() == StatusPanicing) {
-				if(g_application.hasEnv("application/status:panicing/error") == true) {
-					response["status"]["error"] = g_application.getEnv("application/status:panicing/error");
+				g_util_webserial.send("syslog/info", "Arduino has panic'ed, dumping environment and settings next:");
+				for(EnvironmentMap::iterator iter=g_application.m_environment.begin(); iter!=g_application.m_environment.end(); ++iter) {
+					response.clear();
+					response["environment"] = JsonObject();
+					response["environment"][iter->first.c_str()] = iter->second.c_str();
+					g_util_webserial.send("syslog/info", response);
 				}
+				response["panicing"]["settings"] = JsonObject();
+				for(SettingsMap::iterator iter=g_application.m_settings.begin(); iter!=g_application.m_settings.end(); ++iter) {
+					response.clear();
+					response["setting"] = JsonObject();
+					response["setting"][iter->first.c_str()] = iter->second.c_str();
+					g_util_webserial.send("syslog/info", response);
+				}
+				response.clear();
 			}
+			response["result"] = "OK";
+			response["status"] = JsonObject();
+			response["status"]["name"] = g_application.getStatusName().c_str();
 		} else {
 			response["result"] = "error";
 			response["error"] = JsonObject();
@@ -207,7 +228,7 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 	if(data.containsKey("list") == true) {
 		response["list"] = JsonObject();
 		for(SettingsMap::iterator iter=g_application.m_settings.begin(); iter!=g_application.m_settings.end(); ++iter) {
-			response["list"][iter->first.c_str()].set((char*)iter->second.c_str());
+			response["list"][iter->first.c_str()] = iter->second.c_str();
 		}
 		response["result"] = "OK";
 	}
