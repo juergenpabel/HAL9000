@@ -3,10 +3,13 @@
 
 #include <etl/string.h>
 #include <etl/map.h>
+#include <etl/list.h>
 #include <ArduinoJson.h>
 
 #include "application/settings.h"
 #include "application/environment.h"
+
+typedef etl::list<etl::string<GLOBAL_VALUE_SIZE>, APPLICATION_ERROR_MAX> ErrorContext;
 
 typedef enum {
 	StatusUnknown      = 0x00,
@@ -23,12 +26,13 @@ typedef enum {
 
 class Application {
 	private:
-		Status      m_status;
-		time_t      m_time_offset;
+		Status        status;
+		time_t        time_offset;
 	protected:
-		Environment m_environment;
-		Settings    m_settings;
-		void        setTime(time_t time);
+		ErrorContext  error_context;
+		Environment   environment;
+		Settings      settings;
+		void          setTime(time_t time);
 	public:
 		Application();
 
@@ -36,8 +40,8 @@ class Application {
 		bool saveSettings();
 		bool resetSettings();
 
-		void                                  setStatus(Status status) { if(status > this->m_status && status <= StatusMAX) { this->m_status = status; } };
-		Status                                getStatus() { return this->m_status; };
+		void                                  setStatus(Status status) { if(status > this->status && status <= StatusMAX) { this->status = status; } };
+		Status                                getStatus() { return this->status; };
 		const etl::string<GLOBAL_KEY_SIZE>&   getStatusName();
 
 		bool                                  hasEnv(const etl::string<GLOBAL_KEY_SIZE>& key);
@@ -50,7 +54,8 @@ class Application {
 		void                                  setSetting(const etl::string<GLOBAL_KEY_SIZE>& key, const etl::string<GLOBAL_VALUE_SIZE>& value);
 		void                                  delSetting(const etl::string<GLOBAL_KEY_SIZE>& key);
 
-		void notifyError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& id,
+		void addErrorContext(const etl::string<GLOBAL_VALUE_SIZE>& context);
+		void processError(const etl::string<GLOBAL_KEY_SIZE>& level, const etl::string<GLOBAL_KEY_SIZE>& id,
 		                 const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_VALUE_SIZE>& details);
 
 	static time_t getTime();

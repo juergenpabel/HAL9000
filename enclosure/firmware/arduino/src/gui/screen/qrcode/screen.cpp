@@ -29,12 +29,12 @@ static TextsizeMap g_textsizes = {{"small",  1},
                                   {"large",  3}};
 
 
-unsigned long gui_screen_qrcode(unsigned long lastDraw, TFT_eSPI* gui) {
+unsigned long gui_screen_qrcode(unsigned long validity, TFT_eSPI* gui) {
 	etl::string<GLOBAL_VALUE_SIZE> text_above;
 	etl::string<GLOBAL_VALUE_SIZE> text_url;
 	etl::string<GLOBAL_VALUE_SIZE> text_below;
 
-	if(lastDraw == GUI_UPDATE) {
+	if(validity == GUI_INVALIDATED) {
 		uint32_t  color_screen = TFT_BLACK;
 		uint32_t  color_text = TFT_WHITE;
 		uint32_t  textsize_above = 2;
@@ -126,6 +126,6 @@ unsigned long gui_screen_qrcode(unsigned long lastDraw, TFT_eSPI* gui) {
 		}
 		return millis();
 	}
-	return lastDraw;
+	return validity;
 }
 

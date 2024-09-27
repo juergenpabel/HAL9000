@@ -17,7 +17,7 @@ bool AbstractBoard::start() {
                 g_util_webserial.send("syslog/debug", "system was hard-resetted or powered-on, unknown system time");
 	}
 	if(LittleFS.begin() != true) {
-		g_application.notifyError("critical", "212", "Filesystem error", "littlefs could not be started/mounted");
+		g_application.processError("panic", "212", "Filesystem error", "littlefs could not be started/mounted");
 		return false;
 	}
 	return true;

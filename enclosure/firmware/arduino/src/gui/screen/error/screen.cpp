@@ -10,13 +10,13 @@
 #include "globals.h"
 
 
-unsigned long gui_screen_error(unsigned long lastDraw, TFT_eSPI* gui) {
+unsigned long gui_screen_error(unsigned long validity, TFT_eSPI* gui) {
 	etl::string<GLOBAL_VALUE_SIZE> error_title;
 	etl::string<GLOBAL_VALUE_SIZE> error_url;
 	etl::string<GLOBAL_VALUE_SIZE> error_id;
 
-	if(lastDraw == GUI_UPDATE) {
-		unsigned long currentDraw = GUI_UPDATE;
+	if(validity == GUI_INVALIDATED) {
+		unsigned long currentDraw = GUI_INVALIDATED;
 
 		if(gui_overlay_get() != gui_overlay_none) {
 			gui_overlay_set("none", gui_overlay_none);
@@ -47,7 +47,7 @@ unsigned long gui_screen_error(unsigned long lastDraw, TFT_eSPI* gui) {
 		g_application.setEnv("gui/screen:qrcode/text-above", error_title);
 		g_application.setEnv("gui/screen:qrcode/text-url",   error_url);
 		g_application.setEnv("gui/screen:qrcode/text-below", error_id.insert(0, "Error: "));
-		currentDraw = gui_screen_qrcode(lastDraw, gui);
+		currentDraw = gui_screen_qrcode(validity, gui);
 		g_application.delEnv("gui/screen:qrcode/text-below");
 		g_application.delEnv("gui/screen:qrcode/text-url");
 		g_application.delEnv("gui/screen:qrcode/text-above");
@@ -57,6 +57,6 @@ unsigned long gui_screen_error(unsigned long lastDraw, TFT_eSPI* gui) {
 		g_application.delEnv("gui/screen:qrcode/color-screen");
 		return currentDraw;
 	}
-	return lastDraw;
+	return validity;
 }
 

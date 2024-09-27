@@ -19,7 +19,6 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 	if(data.containsKey("SYSTEM:CONFIG") == true) {
 		if(g_application.getStatus() == StatusStarting) {
 			g_application.setStatus(StatusConfiguring);
-			gui_screen_set("system-configuring", gui_screen_animations_system_configuring);
 			return;
 		}
 		response["result"] = "error";
@@ -55,6 +54,7 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 				response["error"]["title"] = "Invalid request";
 				response["error"]["details"] = "request for topic 'application/runtime' with operation 'SYSTEM:EXIT' "
 				                               "only valid in status 'halting' or 'rebooting'";
+				//TODO: show error screen about shutdown
 		}
 	}
 	if(data.containsKey("status") == true) {
@@ -63,24 +63,24 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 		if(questionmark.compare(data["status"].as<const char*>()) == 0) {
 			if(g_application.getStatus() == StatusPanicing) {
 				g_util_webserial.send("syslog/info", "Arduino has panic'ed, dumping environment and settings next:");
-				for(EnvironmentMap::iterator iter=g_application.m_environment.begin(); iter!=g_application.m_environment.end(); ++iter) {
+				for(EnvironmentMap::iterator iter=g_application.environment.begin(); iter!=g_application.environment.end(); ++iter) {
 					response.clear();
 					response["environment"] = JsonObject();
-					response["environment"][iter->first.c_str()] = iter->second.c_str();
+					response["environment"][iter->first] = iter->second;
 					g_util_webserial.send("syslog/info", response);
 				}
 				response["panicing"]["settings"] = JsonObject();
-				for(SettingsMap::iterator iter=g_application.m_settings.begin(); iter!=g_application.m_settings.end(); ++iter) {
+				for(SettingsMap::iterator iter=g_application.settings.begin(); iter!=g_application.settings.end(); ++iter) {
 					response.clear();
 					response["setting"] = JsonObject();
-					response["setting"][iter->first.c_str()] = iter->second.c_str();
+					response["setting"][iter->first] = iter->second;
 					g_util_webserial.send("syslog/info", response);
 				}
 				response.clear();
 			}
 			response["result"] = "OK";
 			response["status"] = JsonObject();
-			response["status"]["name"] = g_application.getStatusName().c_str();
+			response["status"]["name"] = g_application.getStatusName();
 		} else {
 			response["result"] = "error";
 			response["error"] = JsonObject();
@@ -102,7 +102,6 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 				response["result"] = "OK";
 				g_application.setTime(timestamp);
 			} else {
-				g_util_webserial.send("syslog/error", "application/runtime:time/epoch => invalid epoch timestamp");
 				response["result"] = "error";
 				response["error"]["id"] = "216";
 				response["error"]["level"] = "warn";
@@ -163,8 +162,8 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 	value.clear();
 	if(data.containsKey("list") == true) {
 		response["list"] = JsonObject();
-		for(EnvironmentMap::iterator iter=g_application.m_environment.begin(); iter!=g_application.m_environment.end(); ++iter) {
-			response["list"][iter->first.c_str()] = iter->second.c_str();
+		for(EnvironmentMap::iterator iter=g_application.environment.begin(); iter!=g_application.environment.end(); ++iter) {
+			response["list"][iter->first] = iter->second;
 		}
 		response["result"] = "OK";
 	}
@@ -175,8 +174,8 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 		}
 		if(key.length() > 0) {
 			response["result"] = "OK";
-			response["get"]["key"] = key.c_str();
-			response["get"]["value"] = g_application.getEnv(key).c_str();
+			response["get"]["key"] = key;
+			response["get"]["value"] = g_application.getEnv(key);
 		} else {
 			response["result"] = "error";
 			response["error"] = JsonObject();
@@ -185,7 +184,7 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 			response["error"]["title"] = "Invalid request";
 			response["error"]["details"] = "request for topic 'application/environment' with operation 'get' has missing/empty value for parameter 'key')";
 			response["error"]["data"] = JsonObject();
-			response["error"]["data"]["key"] = key.c_str();
+			response["error"]["data"]["key"] = key;
 		}
 	}
 	if(data.containsKey("set") == true) {
@@ -198,9 +197,9 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 		}
 		if(key.length() > 0) {
 			g_application.setEnv(key, value);
-			response["set"]["key"] = key.c_str();
-			response["set"]["value"] = value.c_str();
 			response["result"] = "OK";
+			response["set"]["key"] = key;
+			response["set"]["value"] = value;
 		} else {
 			response["result"] = "error";
 			response["error"] = JsonObject();
@@ -209,8 +208,8 @@ void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, con
 			response["error"]["title"] = "Invalid request";
 			response["error"]["details"] = "request for topic 'application/environment' with operation 'set' has missing/empty value for parameter 'key')";
 			response["error"]["data"] = JsonObject();
-			response["error"]["data"]["key"] = key.c_str();
-			response["error"]["data"]["value"] = value.c_str();
+			response["error"]["data"]["key"] = key;
+			response["error"]["data"]["value"] = value;
 		}
 	}
 	g_util_webserial.send("application/environment", response);
@@ -227,8 +226,8 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 	value.clear();
 	if(data.containsKey("list") == true) {
 		response["list"] = JsonObject();
-		for(SettingsMap::iterator iter=g_application.m_settings.begin(); iter!=g_application.m_settings.end(); ++iter) {
-			response["list"][iter->first.c_str()] = iter->second.c_str();
+		for(SettingsMap::iterator iter=g_application.settings.begin(); iter!=g_application.settings.end(); ++iter) {
+			response["list"][iter->first] = iter->second;
 		}
 		response["result"] = "OK";
 	}
@@ -238,9 +237,9 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 			key = data["get"]["key"].as<const char*>();
 		}
 		if(key.length() > 0) {
-			response["get"]["key"] = key.c_str();
+			response["get"]["key"] = key;
 			if(g_application.hasSetting(key) == true) {
-				response["get"]["value"] = g_application.getSetting(key).c_str();
+				response["get"]["value"] = g_application.getSetting(key);
 			} else {
 				response["get"]["value"] = (const char*)nullptr;
 			}
@@ -253,7 +252,7 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 			response["error"]["title"] = "Invalid request";
 			response["error"]["details"] = "request for topic 'application/settings' with operation 'get' has missing/empty value for parameter 'key'";
 			response["error"]["data"] = JsonObject();
-			response["error"]["data"]["key"] = key.c_str();
+			response["error"]["data"]["key"] = key;
 		}
 	}
 	if(data.containsKey("set") == true) {
@@ -267,8 +266,8 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 		if(key.length() > 0 && value.length() > 0) {
 			g_application.setSetting(key, value);
 			response["result"] = "OK";
-			response["set"]["key"] = key.c_str();
-			response["set"]["value"] = value.c_str();
+			response["set"]["key"] = key;
+			response["set"]["value"] = value;
 		} else {
 			response["result"] = "error";
 			response["error"] = JsonObject();
@@ -278,15 +277,15 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 			response["error"]["details"] = "request for topic 'application/settings' with operation 'set' has missing/empty value for parameters " \
 			                               "'key' and/or 'value')";
 			response["error"]["data"] = JsonObject();
-			response["error"]["data"]["key"] = key.c_str();
-			response["error"]["data"]["value"] = value.c_str();
+			response["error"]["data"]["key"] = key;
+			response["error"]["data"]["value"] = value;
 		}
 	}
 	if(data.containsKey("load") == true) {
 		response["load"] = JsonObject();
 		if(g_application.loadSettings() == true) {
 			response["result"] = "OK";
-			response["load"]["size"] = g_application.m_settings.size();
+			response["load"]["size"] = g_application.settings.size();
 		} else {
 			response["result"] = "error";
 			response["error"] = JsonObject();
@@ -300,8 +299,8 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 	if(data.containsKey("save") == true) {
 		response["save"] = JsonObject();
 		if(g_application.saveSettings() == true) {
-			response["save"]["size"] = g_application.m_settings.size();
 			response["result"] = "OK";
+			response["save"]["size"] = g_application.settings.size();
 		} else {
 			response["result"] = "error";
 			response["error"] = JsonObject();
@@ -315,8 +314,8 @@ void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const 
 	if(data.containsKey("reset") == true) {
 		response["reset"] = JsonObject();
 		if(g_application.resetSettings() == true) {
-			response["reset"]["size"] = g_application.m_settings.size();
 			response["result"] = "OK";
+			response["reset"]["size"] = g_application.settings.size();
 		} else {
 			response["result"] = "error";
 			response["error"] = JsonObject();

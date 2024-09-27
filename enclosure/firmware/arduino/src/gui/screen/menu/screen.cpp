@@ -3,11 +3,11 @@
 #include "globals.h"
 
 
-unsigned long gui_screen_menu(unsigned long lastDraw, TFT_eSPI* gui) {
+unsigned long gui_screen_menu(unsigned long validity, TFT_eSPI* gui) {
 	static etl::string<GLOBAL_VALUE_SIZE>  menu_title;
 	static etl::string<GLOBAL_VALUE_SIZE>  menu_item;
 
-	if(lastDraw == GUI_UPDATE) {
+	if(validity == GUI_INVALIDATED) {
 		menu_title = g_application.getEnv("gui/screen:menu/title");
 		menu_item  = g_application.getEnv("gui/screen:menu/text");
 		gui->fillScreen(TFT_BLACK);
@@ -20,6 +20,6 @@ unsigned long gui_screen_menu(unsigned long lastDraw, TFT_eSPI* gui) {
 		gui->drawString(menu_item.c_str(), (gui->width()-GUI_SCREEN_WIDTH)/2+GUI_SCREEN_WIDTH/2, (gui->height()-GUI_SCREEN_HEIGHT)/2+GUI_SCREEN_HEIGHT/8*5);
 		return millis();
 	}
-	return lastDraw;
+	return validity;
 }
 

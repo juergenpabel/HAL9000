@@ -1,2 +1,2 @@
-unsigned long gui_screen_menu(unsigned long lastDraw, TFT_eSPI* gui);
+unsigned long gui_screen_menu(unsigned long validity, TFT_eSPI* gui);
 

@@ -47,16 +47,16 @@ bool MCP23X17::init(uint8_t i2c_bus, uint8_t i2c_addr) {
 	TwoWire* twowire = nullptr;
 
 	if(this->status != MCP23X17_STATE_UNINITIALIZED) {
-		g_util_webserial.send("syslog/warn", "MCP23X17 already initialized");
+		g_application.addErrorContext("MCP23X17 already initialized");
 		return false;
 	}
 	twowire = g_device_microcontroller.twowire_get(i2c_bus);
 	if(twowire == nullptr) {
-		g_util_webserial.send("syslog/critical", "MCP23X17 could not obtain TwoWire instance");
+		g_application.addErrorContext("failed to obtain TwoWire instance for I2C communications with MCP23X17");
 		return false;
 	}
 	if(this->mcp23X17.begin_I2C(i2c_addr, twowire) == false) {
-		g_util_webserial.send("syslog/critical", "MCP23X17 failed to initialize");
+		g_application.addErrorContext("failed to initiate I2C communications with MCP23X17");
 		return false;
 	}
 	this->status = MCP23X17_STATE_INITIALIZED;
@@ -71,11 +71,11 @@ bool MCP23X17::config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, co
 		this->init();
 	}
 	if((this->status & MCP23X17_STATE_RUNNING) == MCP23X17_STATE_RUNNING) {
-		g_util_webserial.send("syslog/warn", "MCP23X17 already started, configuration of inputs not possible any more");
+		g_application.addErrorContext("MCP23X17 already started, configuration of inputs not possible any more");
 		return false;
 	}
 	if(device_type.size() == 0 || device_name.size() == 0) {
-		g_util_webserial.send("syslog/error", "MCP23X17::config_inputs(): invalid parameters name/type");
+		g_application.addErrorContext("MCP23X17::config_inputs(): invalid parameters name/type");
 		return false;
 	}
 	if(device_type.compare("switch") == 0) {
@@ -100,11 +100,11 @@ bool MCP23X17::config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, co
 		}
 	}
 	if(device == nullptr) {
-		g_util_webserial.send("syslog/error", "MCP23X17::config_inputs(): invalid parameter device_type");
+		g_application.addErrorContext("MCP23X17::config_inputs(): invalid value for parameter 'device_type'");
 		return false;
 	}
 	if(device->configure(device_name, &this->mcp23X17, inputs, events) == false) {
-		g_util_webserial.send("syslog/error", "MCP23X17::config_inputs(): device configuration failed");
+		g_application.addErrorContext("MCP23X17::config_inputs(): device configuration failed");
 		return false;
 	}
 	return true;
@@ -118,11 +118,11 @@ bool MCP23X17::config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, c
 		this->init();
 	}
 	if((this->status & MCP23X17_STATE_RUNNING) == MCP23X17_STATE_RUNNING) {
-		g_util_webserial.send("syslog/warn", "MCP23X17 already started, configuration of outputs not possible any more");
+		g_application.addErrorContext("MCP23X17 already started, configuration of outputs not possible any more");
 		return false;
 	}
 	if(device_type.size() == 0 || device_name.size() == 0) {
-		g_util_webserial.send("syslog/error", "MCP23X17::config_outputs(): invalid parameters name/type");
+		g_application.addErrorContext("MCP23X17::config_outputs(): invalid parameters name/type");
 		return false;
 	}
 	if(device_type.compare("digital") == 0) {
@@ -133,11 +133,11 @@ bool MCP23X17::config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, c
 		}
 	}
 	if(device == nullptr) {
-		g_util_webserial.send("syslog/error", "MCP23X17::config_outputs(): invalid parameter device_type");
+		g_application.addErrorContext("MCP23X17::config_outputs(): invalid value for parameter 'device_type'");
 		return false;
 	}
 	if(device->configure(device_name, &this->mcp23X17, outputs) == false) {
-		g_util_webserial.send("syslog/error", "MCP23X17::config_outputs(): device configuration failed");
+		g_application.addErrorContext("MCP23X17::config_outputs(): device configuration failed");
 		return false;
 	}
 	return true;
@@ -148,7 +148,7 @@ bool MCP23X17::start(bool run_as_task) {
 	bool result = false;
 
 	if(this->status != MCP23X17_STATE_INITIALIZED) {
-		g_util_webserial.send("syslog/warn", "MCP23X17::start() called with invalid state (BUG)");
+		g_application.addErrorContext("MCP23X17::start(): called with invalid state (BUG)");
 		return false;
 	}
 	g_device_microcontroller.mutex_enter("gpio");

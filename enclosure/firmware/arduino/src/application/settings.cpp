@@ -29,7 +29,7 @@ bool Settings::load() {
 	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 	file = LittleFS.open(this->filename.c_str(), "r");
 	if(static_cast<bool>(file) == false) {
-		g_application.notifyError("215", "warn", "Application error", "LittleFS.open() failed in Settings::load()");
+		g_application.processError("215", "warn", "Application error", "LittleFS.open() failed in Settings::load()");
 		return false;
 	}
 	while(file.position() < file.size() || line_buffer_pos > 0) {
@@ -42,7 +42,7 @@ bool Settings::load() {
 		if(line_end_pos == line.npos) {
 			file.close();
 			this->clear();
-			g_application.notifyError("215", "error", "Application error", "missing newline in Settings::load()");
+			g_application.processError("215", "error", "Application error", "missing newline in Settings::load()");
 			return false;
 		}
 		line_sep_pos = line.find('=');
@@ -70,7 +70,7 @@ bool Settings::save() {
 
 	file = LittleFS.open(this->filename.c_str(), "w");
 	if(static_cast<bool>(file) == false) {
-		g_application.notifyError("215", "warn", "Application error", "LittleFS.open() failed in Settings::save()");
+		g_application.processError("215", "warn", "Application error", "LittleFS.open() failed in Settings::save()");
 		return false;
 	}
 	for(SettingsMap::iterator iter=this->begin(); iter!=this->end(); ++iter) {

@@ -10,14 +10,15 @@ void on_device_board(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVari
 
 	if(data.containsKey("identify")) {
 		response.clear();
+		response["result"] = "OK";
 		response["identify"] = JsonObject();
-		response["identify"]["board"] = g_device_board.getIdentifier().c_str();
+		response["identify"]["board"] = g_device_board.getIdentifier();
 		g_util_webserial.send("device/board", response);
 	}
 	if(data.containsKey("reset")) {
 		response.clear();
-		response["reset"] = JsonObject();
 		response["result"] = "OK";
+		response["reset"] = JsonObject();
 		g_util_webserial.send("device/board", response, true);
 		g_device_board.reset();
 	}
@@ -29,19 +30,21 @@ void on_device_microcontroller(const etl::string<GLOBAL_KEY_SIZE>& command, cons
 
 	if(data.containsKey("identify")) {
 		response.clear();
+		response["result"] = "OK";
 		response["identify"] = JsonObject();
-		response["identify"]["board"] = g_device_microcontroller.getIdentifier().c_str();
+		response["identify"]["board"] = g_device_microcontroller.getIdentifier();
 		g_util_webserial.send("device/microcontroller", response);
 	}
 	if(data.containsKey("reset")) {
 		response.clear();
-		response["reset"] = JsonObject();
 		response["result"] = "OK";
+		response["reset"] = JsonObject();
 		g_util_webserial.send("device/microcontroller", response);
 		g_device_microcontroller.reset(now());
 	}
 	if(data.containsKey("halt")) {
 		response.clear();
+		response["result"] = "OK";
 		response["halt"] = JsonObject();
 		g_util_webserial.send("device/microcontroller", response);
 		g_device_microcontroller.halt();
@@ -90,10 +93,11 @@ void on_device_mcp23X17(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 		if(g_device_mcp23X17.init(i2c_bus, i2c_address) == true) {
 			response["result"] = "OK";
 		} else {
+			//TODO:g_application.processError()??
 			response["result"] = "error";
 			response["error"] = JsonObject();
 			response["error"]["id"] = "218";
-			response["error"]["level"] = "error";
+			response["error"]["level"] = "critical";
 			response["error"]["title"] = "Peripheral error";
 			response["error"]["details"] = "request for topic 'device/mcp23X17' with operation 'init': MCP23X17::init() failed";
 			response["error"]["data"] = JsonObject();
@@ -119,6 +123,7 @@ void on_device_mcp23X17(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 			if(g_device_mcp23X17.config_inputs(device_type, device_name, device_inputs, device_events) == true) {
 				response["result"] = "OK";
 			} else {
+				//TODO:g_application.processError()??
 				response["result"] = "error";
 				response["error"] = JsonObject();
 				response["error"]["id"] = "218";
@@ -139,6 +144,7 @@ void on_device_mcp23X17(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 			if(g_device_mcp23X17.config_outputs(device_type, device_name, device_outputs) == true) {
 				response["result"] = "OK";
 			} else {
+				//TODO:g_application.processError()??
 				response["result"] = "error";
 				response["error"] = JsonObject();
 				response["error"]["id"] = "218";
@@ -164,10 +170,11 @@ void on_device_mcp23X17(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 		if(g_device_mcp23X17.start(run_as_task) == true) {
 			response["result"] = "OK";
 		} else {
+			//TODO:g_application.processError()??
 			response["result"] = "error";
 			response["error"] = JsonObject();
 			response["error"]["id"] = "218";
-			response["error"]["level"] = "error";
+			response["error"]["level"] = "critical";
 			response["error"]["title"] = "Peripheral error";
 			response["error"]["details"] = "request for topic 'device/mcp23X17' with operation 'start': MCP23X17::start() failed";
 			response["error"]["data"] = JsonObject();

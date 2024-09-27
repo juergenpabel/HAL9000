@@ -32,8 +32,10 @@ class Action(HAL9000_Action):
 				match self.daemon.plugins['frontend'].screen:
 					case 'animations:system-starting':
 						self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
+						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 					case other:
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
+						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 				self.welcome_pending = True
 		return True
 
@@ -75,7 +77,7 @@ class Action(HAL9000_Action):
 							                                                         'parameter': {'name': 'hal9000'}}}})
 							self.daemon.schedule_signal(1.5, 'kalliope', {'command': {'name': 'welcome', 'parameter': None}},
 							                            'scheduler://kalliope/welcome:delay)')
-				self.welcome_pending = False
+					self.welcome_pending = False
 		return True
 
  

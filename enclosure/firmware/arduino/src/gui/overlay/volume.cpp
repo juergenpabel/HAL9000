@@ -9,7 +9,7 @@
 #define RADIUS_MAX (GUI_SCREEN_WIDTH/2 -  5)
 
 
-unsigned long gui_overlay_volume(unsigned long lastDraw, TFT_eSPI* gui) {
+unsigned long gui_overlay_volume(unsigned long validity, TFT_eSPI* gui) {
 	static uint8_t  previous_volume_level = 255;
 	static uint16_t previous_volume_color = TFT_BLACK;
 	       uint16_t volume_color = TFT_WHITE;
@@ -21,24 +21,24 @@ unsigned long gui_overlay_volume(unsigned long lastDraw, TFT_eSPI* gui) {
 		volume_level = atoi(g_application.getEnv("gui/overlay:volume/level").c_str());
 		if(volume_level != previous_volume_level) {
 			previous_volume_level = volume_level;
-			lastDraw = GUI_UPDATE;
+			validity = GUI_INVALIDATED;
 		}
 	}
 	if(g_application.getEnv("gui/overlay:volume/mute").compare("true") == 0) {
 		volume_color = TFT_RED;
 		if(volume_color != previous_volume_color) {
 			previous_volume_color = volume_color;
-			lastDraw = GUI_UPDATE;
+			validity = GUI_INVALIDATED;
 		}
 	}
 	if(g_application.getEnv("gui/overlay:volume/mute").compare("false") == 0) {
 		volume_color = TFT_WHITE;
 		if(volume_color != previous_volume_color) {
 			previous_volume_color = volume_color;
-			lastDraw = GUI_UPDATE;
+			validity = GUI_INVALIDATED;
 		}
 	}
-	if(lastDraw == GUI_UPDATE) {
+	if(validity == GUI_INVALIDATED) {
 		for(uint8_t d=0; d<volume_level; d++) {
 			double dx, dy;
 
@@ -48,6 +48,6 @@ unsigned long gui_overlay_volume(unsigned long lastDraw, TFT_eSPI* gui) {
 		}
 		return millis();
 	}
-	return lastDraw;
+	return validity;
 }
 

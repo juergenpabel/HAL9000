@@ -5,10 +5,11 @@
 
 
 void gui_update() {
-	static unsigned long previousScreenDraw = GUI_UPDATE;
-	static unsigned long previousOverlayDraw = GUI_UPDATE;
-	       unsigned long currentScreenDraw = GUI_UPDATE;
-	       unsigned long currentOverlayDraw = GUI_UPDATE;
+	static unsigned long prevScreenValidity = GUI_INVALIDATED;
+	static unsigned long prevOverlayValidity = GUI_INVALIDATED;
+	       unsigned long currentScreenValidity = GUI_INVALIDATED;
+	       unsigned long currentOverlayValidity = GUI_INVALIDATED;
+	       bool          gui_buffer_flush = false;
 	       TFT_eSPI*     gui = nullptr;
 
 	gui = &g_gui_buffer;
@@ -18,19 +19,29 @@ void gui_update() {
 	if(gui == &g_gui) {
 		g_device_microcontroller.mutex_enter("gpio");
 	}
-	currentScreenDraw = gui_screen_update(previousScreenDraw, gui);
-	if(currentScreenDraw != previousScreenDraw) {
-		previousOverlayDraw = GUI_UPDATE;
+	currentScreenValidity = gui_screen_update(prevScreenValidity, gui);
+	if(currentScreenValidity == GUI_ERROR) {
+		g_application.processError("error", "219", "GUI Error", gui_screen_getname());
+		return;
 	}
-	currentOverlayDraw = gui_overlay_update(previousOverlayDraw, gui);
-	if(currentOverlayDraw == GUI_UPDATE) {
-		previousScreenDraw = GUI_UPDATE;
+	if(prevScreenValidity != currentScreenValidity) {
+		prevOverlayValidity = GUI_INVALIDATED;
+		gui_buffer_flush = true;
+	}
+	currentOverlayValidity = gui_overlay_update(prevOverlayValidity, gui);
+	if(currentOverlayValidity == GUI_ERROR) {
+		g_application.processError("error", "219", "GUI Error", gui_overlay_getname());
+		return;
+	}
+	if(prevOverlayValidity != currentOverlayValidity) {
+		currentScreenValidity = GUI_INVALIDATED;
+		gui_buffer_flush = true;
 	}
 	if(gui == &g_gui) {
 		g_device_microcontroller.mutex_leave("gpio");
 	}
-	if(previousScreenDraw == GUI_UPDATE || previousOverlayDraw == GUI_UPDATE || currentScreenDraw != previousScreenDraw || currentOverlayDraw != previousOverlayDraw) {
-		if(gui == &g_gui_buffer) {
+	if(gui == &g_gui_buffer) {
+		if(gui_buffer_flush == true) {
 			uint16_t offset_x = (g_gui.width() -GUI_SCREEN_WIDTH )/2;
 			uint16_t offset_y = (g_gui.height()-GUI_SCREEN_HEIGHT)/2;
 
@@ -38,8 +49,8 @@ void gui_update() {
 			g_gui_buffer.pushSprite(offset_x, offset_y);
 			g_device_microcontroller.mutex_leave("gpio");
 		}
-		previousScreenDraw = currentScreenDraw;
-		previousOverlayDraw = currentOverlayDraw;
 	}
+	prevScreenValidity = currentScreenValidity;
+	prevOverlayValidity = currentOverlayValidity;
 }
 

@@ -23,10 +23,10 @@ void setup() {
 	static etl::string<GLOBAL_FILENAME_SIZE> filename;
 	       File                              file;
 
-	if(g_device_board.start() == false) {
-		g_application.setStatus(StatusPanicing);
-		gui_screen_set("none", gui_screen_none);
-		gui_overlay_set("none", gui_overlay_none);
+	if(g_device_board.start() == false) { //TODO: what to do??
+		g_application.setStatus(StatusPanicing); //TODO: what to do??
+		gui_screen_set("none", gui_screen_none); //TODO: what to do??
+		gui_overlay_set("none", gui_overlay_none); //TODO: what to do??
 		return;
 	}
 	g_gui.begin();
@@ -41,48 +41,43 @@ void setup() {
 	filename += g_device_board.getIdentifier();
 	filename += "/configuration.json";
 	if(LittleFS.exists(filename.c_str()) == false) {
-		g_application.setStatus(StatusPanicing);
 		error_details  = "board configuration file (littlefs:)'";
 		error_details += filename;
 		error_details += "' not found";
-		g_application.notifyError("critical", "213", "Board error", error_details);
+		g_application.processError("panic", "213", "Board error", error_details);
 		return;
 	}
 	file = LittleFS.open(filename.c_str(), "r");
 	if(static_cast<bool>(file) == false) {
-		g_application.setStatus(StatusPanicing);
 		error_details  = "failed to open *supposedly existing* (littlefs:)'";
 		error_details += filename;
 		error_details += "' in read-mode";
-		g_application.notifyError("critical", "212", "Filesystem error", error_details);
+		g_application.processError("panic", "212", "Filesystem error", error_details);
 		return;
 	}
 	if(deserializeJson(json, file) != DeserializationError::Ok) {
-		g_application.setStatus(StatusPanicing);
 		error_details  = "JSON (syntax) error in board configuration in (littlefs:)'";
 		error_details += filename;
 		error_details += "'";
-		g_application.notifyError("critical", "213", "Board error", error_details);
+		g_application.processError("panic", "213", "Board error", error_details);
 		file.close();
 		return;
 	}
 	file.close();
 	if(g_device_board.configure(json) == false) {
-		g_application.setStatus(StatusPanicing);
 		error_details  = "board '";
 		error_details += g_device_board.getIdentifier();
 		error_details += "' reported an error applying config from (littlefs:)'";
 		error_details += filename;
 		error_details += "'";
-		g_application.notifyError("critical", "213", "Board error", error_details);
+		g_application.processError("panic", "213", "Board error", error_details);
 		return;
 	}
 	if(g_application.loadSettings() == false) {
-		g_application.setStatus(StatusPanicing);
 		error_details  = "application failed to load persisted settings from (littlefs:)'";
 		error_details += filename;
 		error_details += "' (just reflashing littlefs might solve this issue...but not the root cause)";
-		g_application.notifyError("critical", "214", "Application error", error_details);
+		g_application.processError("panic", "214", "Application error", error_details);
 		return;
 	}
 	g_util_webserial.setCommand("application/runtime", on_application_runtime);
@@ -95,8 +90,6 @@ void loop() {
 	static Status        previousStatus = StatusStarting;
 	       Status        currentStatus = StatusUnknown;
 
-	g_device_mcp23X17.check(false);
-	g_util_webserial.update();
 	currentStatus = g_application.getStatus();
 	if(currentStatus != previousStatus) {
 		etl::string<GLOBAL_VALUE_SIZE> payloadStatus("{\"status\":{\"name\":\"<STATUS>\"}}");
@@ -104,6 +97,7 @@ void loop() {
 		g_util_webserial.send("application/runtime", payloadStatus.replace(19, 8, g_application.getStatusName()), false);
 		switch(currentStatus) {
 			case StatusConfiguring:
+				gui_screen_set("animations:system-configuring", gui_screen_animations_system_configuring);
 				if(g_application.hasSetting("application/runtime:configuration/timeout") == true) {
 					configurationTimeout = atol(g_application.getSetting("application/runtime:configuration/timeout").c_str());
 				}
@@ -133,8 +127,13 @@ void loop() {
 				g_util_webserial.setCommand("gui/screen", on_gui_screen);
 				g_util_webserial.setCommand("gui/overlay", on_gui_overlay);
 				Application::onConfiguration(Application::Null, JsonVariant());
+				g_application.setStatus(StatusRunning);
 				break;
 			case StatusRunning:
+				g_util_webserial.setCommand("device/board", nullptr);
+				g_util_webserial.setCommand("device/microcontroller", nullptr);
+				g_util_webserial.setCommand("device/display", nullptr);
+				g_util_webserial.setCommand("device/mcp23X17", nullptr);
 				break;
 			case StatusRebooting:
 				gui_screen_set("animations:system-terminating", gui_screen_animations_system_terminating); //animation triggers reset after last frame
@@ -164,28 +163,18 @@ void loop() {
 					g_util_webserial.update();
 				}
 			default:
-				g_util_webserial.setCommand(Application::Null, nullptr);
-				while(true) {
-					g_util_webserial.send("syslog/critical", "BUG: invalid/unknown application status", true, true);
-					g_util_webserial.send("application/runtime", "{\"status\":\"unknown\"}", false, true);
-					delay(1000);
-				}
+				g_application.processError("panic", "219", "Application error", "Unknown application status (BUG!), panicing");
 		}
 		previousStatus = currentStatus;
 	}
 	if(currentStatus == StatusConfiguring) {
 		if(configurationTimeout > 0 && millis() > configurationTimeout) {
-			g_application.notifyError("critical", "210", "No connection to host", "failed to establish communications with service 'frontend' (via USB)");
+			g_application.processError("critical", "210", "No connection to host", "failed to establish communications with service 'frontend' (via USB)");
 			configurationTimeout = 0;
 		}
 	}
-	if(currentStatus == StatusReady) {
-		if(gui_screen_get() == gui_screen_animations) {
-			if(gui_screen_getname().compare("animations:system-configuring") != 0) {
-				g_application.setStatus(StatusRunning);
-			}
-		}
-	}
+	g_device_mcp23X17.check(false);
+	g_util_webserial.update();
 	gui_update();
 }
 

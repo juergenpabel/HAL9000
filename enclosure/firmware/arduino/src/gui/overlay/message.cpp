@@ -19,7 +19,7 @@ static ColorMap g_colors = {{"black",  TFT_BLACK},
                             {"grey",   TFT_DARKGREY}};
 
 
-unsigned long gui_overlay_message(unsigned long lastDraw, TFT_eSPI* gui) {
+unsigned long gui_overlay_message(unsigned long validity, TFT_eSPI* gui) {
 	static etl::string<GLOBAL_VALUE_SIZE>  text;
 	static uint32_t                        text_color;
 	static uint32_t                        text_bgcolor;
@@ -27,7 +27,7 @@ unsigned long gui_overlay_message(unsigned long lastDraw, TFT_eSPI* gui) {
 	static int32_t                         text_horizontal;
 	static uint8_t                         text_datum;
 
-	if(lastDraw == GUI_UPDATE || g_application.hasEnv("gui/overlay:message/text") == true) {
+	if(validity == GUI_INVALIDATED || g_application.hasEnv("gui/overlay:message/text") == true) {
 		if(g_application.hasEnv("gui/overlay:message/text") == true) {
 			text = g_application.getEnv("gui/overlay:message/text");
 			text_color = TFT_WHITE;
@@ -80,6 +80,6 @@ unsigned long gui_overlay_message(unsigned long lastDraw, TFT_eSPI* gui) {
 		gui->drawString(text.c_str(), text_horizontal, text_vertical);
 		return millis();
 	}
-	return lastDraw;
+	return validity;
 }
 

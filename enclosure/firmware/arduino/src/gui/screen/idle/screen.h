@@ -1,2 +1,2 @@
-unsigned long gui_screen_idle(unsigned long lastDraw, TFT_eSPI* gui);
+unsigned long gui_screen_idle(unsigned long validity, TFT_eSPI* gui);
 

@@ -1,6 +1,5 @@
 #include "gui/screen/screen.h"
-#include "gui/screen/idle/screen.h"
-#include "gui/overlay/overlay.h"
+#include "gui/screen/animations/screen.h"
 #include "globals.h"
 
 
@@ -9,7 +8,7 @@ static gui_screen_name  g_screen_name = "on";
 static bool             g_screen_refresh = false;
 
 
-gui_screen_name gui_screen_getname() {
+const gui_screen_name& gui_screen_getname() {
 	return g_screen_name;
 }
 
@@ -23,11 +22,15 @@ gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_fu
 	gui_screen_func previous_screen_func = nullptr;
 
 	if(screen_func != nullptr) {
-		if(screen_func != g_screen_func) {
-			previous_screen_func = g_screen_func; //TODO: hack for webserial delayed response
+		previous_screen_func = g_screen_func;
+		if(screen_func == gui_screen_animations) {
+			if(g_screen_func != gui_screen_animations) {
+				gui_screen_animations(GUI_RELOAD, nullptr); // clear out any remaining animations from queue
+			} else {
+				previous_screen_func = nullptr; // for delayed serial response after 
+			}
 		}
 		gui_screen_set_refresh();
-		gui_overlay_set_refresh();
 		g_screen_name = screen_name;
 		g_screen_func = screen_func;
 	}
@@ -40,37 +43,40 @@ void gui_screen_set_refresh() {
 }
 
 
-unsigned long gui_screen_update(unsigned long lastDraw, TFT_eSPI* gui) {
+unsigned long gui_screen_update(unsigned long validity, TFT_eSPI* gui) {
 	if(g_screen_refresh == true) {
 		g_screen_refresh = false;
-		lastDraw = GUI_UPDATE;
+		validity = GUI_INVALIDATED;
 	}
-	return g_screen_func(lastDraw, gui);
+	return g_screen_func(validity, gui);
 }
 
 
-unsigned long gui_screen_off(unsigned long lastDraw, TFT_eSPI* gui) {
-	if(lastDraw == GUI_UPDATE) {
+unsigned long gui_screen_off(unsigned long validity, TFT_eSPI* gui) {
+	if(validity == GUI_INVALIDATED) {
+		gui->fillScreen(TFT_BLACK);
 		g_device_board.displayOff();
-		return GUI_IGNORE;
+		validity = millis();
 	}
-	return lastDraw;
+	return validity;
 }
 
 
-unsigned long gui_screen_on(unsigned long lastDraw, TFT_eSPI* gui) {
-	if(lastDraw == GUI_UPDATE) {
+unsigned long gui_screen_on(unsigned long validity, TFT_eSPI* gui) {
+	if(validity == GUI_INVALIDATED) {
+		gui->fillScreen(TFT_BLACK);
 		g_device_board.displayOn();
-		return GUI_IGNORE;
+		validity = millis();
 	}
-	return lastDraw;
+	return validity;
 }
 
 
-unsigned long gui_screen_none(unsigned long lastDraw, TFT_eSPI* gui) {
-	if(lastDraw == GUI_UPDATE) {
-		return GUI_IGNORE;
+unsigned long gui_screen_none(unsigned long validity, TFT_eSPI* gui) {
+	if(validity == GUI_INVALIDATED) {
+		gui->fillScreen(TFT_BLACK);
+		validity = millis();
 	}
-	return lastDraw;
+	return validity;
 }
 

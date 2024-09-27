@@ -19,8 +19,8 @@ class Environment : public EnvironmentMap {
 
 class EnvironmentWriter {
 	private:
-		Application& m_application;
-		etl::string<GLOBAL_KEY_SIZE> m_key;
+		Application& application;
+		etl::string<GLOBAL_KEY_SIZE> key;
 	protected:
 		EnvironmentWriter(Application& application, const etl::string<GLOBAL_KEY_SIZE>& key);
 	public:

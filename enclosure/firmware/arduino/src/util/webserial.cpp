@@ -4,7 +4,6 @@
 
 #include "util/webserial.h"
 #include "gui/screen/screen.h"
-#include "gui/screen/idle/screen.h"
 #include "gui/screen/error/screen.h"
 #include "gui/screen/panic/screen.h"
 #include "gui/screen/animations/screen.h"
@@ -119,7 +118,7 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 		Serial.flush();
 	} else {
 		if(this->queue_send.push(line) != true) {
-			Serial.write("[\"syslog/critical\", \"send queue full in Webserial::send(), sending out-of-order:\"]\n");
+			Serial.write("[\"syslog/warn\", \"send queue full in Webserial::send(), sending out-of-order:\"]\n");
 			Serial.write(line.c_str());
 			Serial.write('\n');
 			Serial.flush();
@@ -142,7 +141,7 @@ void WebSerial::update() {
 		status = g_application.getStatus();
 		if(status == StatusRunning) {
 			if(gui_screen_get() != gui_screen_error || gui_screen_getname().compare("error:210") != 0) {
-				g_application.notifyError("critical", "210", "No connection to host", "Serial is closed in WebSerial::update()");
+				g_application.processError("critical", "210", "No connection to host", "Serial is closed in WebSerial::update()");
 			}
 		}
 		return;
@@ -154,7 +153,7 @@ void WebSerial::update() {
 				gui_screen_set("animations:system-configuring", gui_screen_animations_system_configuring);
 				break;
 			case StatusRunning:
-				gui_screen_set("idle", gui_screen_idle);
+				gui_screen_set("none", gui_screen_none);
 				break;
 			case StatusPanicing:
 				gui_screen_set("panic", gui_screen_panic);
@@ -200,7 +199,7 @@ void WebSerial::update() {
 			while(input_chunk_pos != input_chunk.npos && this->queue_recv.available() > 0) {
 				webserial_recv_line = input_chunk.substr(0, input_chunk_pos);
 				if(this->queue_recv.push(webserial_recv_line) != true) {
-					Serial.write("[\"syslog/critical\", \"recv queue full in Webserial::update(), dropping:\"]\n");
+					Serial.write("[\"syslog/error\", \"recv queue full in Webserial::update(), dropping:\"]\n");
 					Serial.write(webserial_recv_line.c_str());
 					Serial.write('\n');
 					Serial.flush();
@@ -235,7 +234,7 @@ void WebSerial::handle(const etl::string<WEBSERIAL_LINE_SIZE>& line) {
 	static StaticJsonDocument<WEBSERIAL_LINE_SIZE*2> json;
 
 	json.clear();
-	if(deserializeJson(json, line.c_str()) != DeserializationError::Ok) {
+	if(deserializeJson(json, line) != DeserializationError::Ok) {
 		this->send("syslog/error", "JSON parse of received line failed:");
 		this->send("syslog/error", line);
 	}

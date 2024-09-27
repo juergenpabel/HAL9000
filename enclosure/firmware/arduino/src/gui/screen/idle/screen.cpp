@@ -4,12 +4,12 @@
 #include "globals.h"
 
 
-unsigned long gui_screen_idle(unsigned long lastDraw, TFT_eSPI* gui) {
+unsigned long gui_screen_idle(unsigned long validity, TFT_eSPI* gui) {
 	static time_t    clock_previous = 0;
 	       time_t    clock_current = 0;
 	       bool      clock_refresh = false;
 
-	if(lastDraw == GUI_UPDATE) {
+	if(validity == GUI_INVALIDATED) {
 		gui->fillScreen(TFT_BLACK);
 		if(g_application.hasEnv("gui/screen:idle/clock") == true) {
 			if(g_application.getEnv("gui/screen:idle/clock").compare("false") == 0) {
@@ -21,7 +21,7 @@ unsigned long gui_screen_idle(unsigned long lastDraw, TFT_eSPI* gui) {
 	if(hour(clock_current)!=hour(clock_previous) || minute(clock_current)!=minute(clock_previous) || second(clock_current)!=second(clock_previous)) {
 		clock_refresh = true;
 	}
-	if(lastDraw == GUI_UPDATE || clock_refresh == true) {
+	if(validity == GUI_INVALIDATED || clock_refresh == true) {
 		char output[6] = {0};
 
 		clock_previous = clock_current;
@@ -42,6 +42,6 @@ unsigned long gui_screen_idle(unsigned long lastDraw, TFT_eSPI* gui) {
 		gui->drawString(output, (gui->width()-GUI_SCREEN_WIDTH)+(GUI_SCREEN_WIDTH/2), (gui->height()-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/2));
 		return millis();
 	}
-	return lastDraw;
+	return validity;
 }
 

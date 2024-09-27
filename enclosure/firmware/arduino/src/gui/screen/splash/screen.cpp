@@ -7,13 +7,13 @@
 #include "globals.h"
 
 
-unsigned long gui_screen_splash(unsigned long lastDraw, TFT_eSPI* gui) {
+unsigned long gui_screen_splash(unsigned long validity, TFT_eSPI* gui) {
 	etl::string<GLOBAL_VALUE_SIZE> splash_message;
 	etl::string<GLOBAL_VALUE_SIZE> splash_url;
 	etl::string<GLOBAL_VALUE_SIZE> splash_id;
 
-	if(lastDraw == GUI_UPDATE) {
-		unsigned long currentDraw = GUI_UPDATE;
+	if(validity == GUI_INVALIDATED) {
+		unsigned long currentDraw = GUI_INVALIDATED;
 
 		if(g_application.hasEnv("gui/screen:splash/id") == true) {
 			splash_id = g_application.getEnv("gui/screen:splash/id");
@@ -33,7 +33,7 @@ unsigned long gui_screen_splash(unsigned long lastDraw, TFT_eSPI* gui) {
 		g_application.setEnv("gui/screen:qrcode/text-above", splash_message);
 		g_application.setEnv("gui/screen:qrcode/text-url",   splash_url);
 		g_application.setEnv("gui/screen:qrcode/text-below", splash_id.insert(0, "ID: "));
-		currentDraw = gui_screen_qrcode(lastDraw, gui);
+		currentDraw = gui_screen_qrcode(validity, gui);
 		g_application.delEnv("gui/screen:qrcode/text-below");
 		g_application.delEnv("gui/screen:qrcode/text-url");
 		g_application.delEnv("gui/screen:qrcode/text-above");
@@ -43,6 +43,6 @@ unsigned long gui_screen_splash(unsigned long lastDraw, TFT_eSPI* gui) {
 		g_application.delEnv("gui/screen:qrcode/color-screen");
 		return currentDraw;
 	}
-	return lastDraw;
+	return validity;
 }
 
