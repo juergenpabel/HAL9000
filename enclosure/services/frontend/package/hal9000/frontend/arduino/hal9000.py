@@ -55,20 +55,9 @@ class HAL9000(Frontend):
 				                            bytesize=serial_EIGHTBITS, parity=serial_PARITY_NONE, stopbits=serial_STOPBITS_ONE)
 				logging_getLogger('uvicorn').debug(f"[frontend:arduino] opened '{arduino_device}'")
 				await self.serial_writeline('["application/runtime", {"status":"?"}]')
-				response = ['application/runtime', {'status': {'name': 'starting'}}]
-				while response[0] != 'application/runtime' \
-				    or 'status' not in response[1] or 'name' not in response[1]['status'] \
-				    or response[1]['status']['name'] == 'starting':
-					await asyncio_sleep(0.5)
-					line = await self.serial_readline(timeout=0.5)
-					if line is not None:
-						try:
-							response = json_loads(line)
-							if response[0] == 'ping':
-								await self.serial_writeline('["pong", ""]')
-						except Exception as e:
-							logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
-				if response[1]['status']['name'] == 'configuring':
+				await asyncio_sleep(0.5)
+				arduino_status = await self.serial_await_arduino_status_change('starting')
+				if arduino_status == 'configuring':
 					logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'configuring'")
 					if arduino_config == 'frontend' and arduino_name is not None:
 						i2c_bus = configuration.getint(f'arduino:{arduino_name}', 'i2c-bus', fallback=0)
@@ -98,22 +87,8 @@ class HAL9000(Frontend):
 						logging_getLogger('uvicorn').debug(f"[frontend:arduino] '{arduino_device}' is now configured via frontend-configuration")
 					await self.serial_writeline('["", ""]')
 					await asyncio_sleep(0.5)
-				while response[0] != 'application/runtime' \
-				   or response[1] is False or 'status'  not in response[1] \
-				                           or 'name'    not in response[1]['status'] \
-				                           or 'configuring' == response[1]['status']['name']:
-					await self.serial_writeline('["application/runtime", {"status":"?"}]')
-					await asyncio_sleep(0.5)
-					line = None
-					while line is None:
-						line = await self.serial_readline(timeout=0.5)
-					try:
-						response = json_loads(line)
-						if response[0] == 'ping':
-							await self.serial_writeline('["pong", ""]')
-					except Exception as e:
-						logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
-				if response[1]['status']['name'] == 'panicing':
+					arduino_status = await self.serial_await_arduino_status_change('configuring')
+				if arduino_status == 'panicing':
 					error = 'no error details provided'
 					if 'error' in response[1]['status']:
 						try:
@@ -124,19 +99,8 @@ class HAL9000(Frontend):
 					self.serial.close()
 					self.serial = None
 					return False
-				while response[0] != 'application/runtime' \
-				   or response[1] is False or 'status' not in response[1] \
-				                           or 'name' not in response[1]['status'] \
-				                           or 'running' != response[1]['status']['name']:
-					line = None
-					while line is None:
-						line = await self.serial_readline(timeout=1.0)
-					try:
-						response = json_loads(line)
-						if response[0] == 'ping':
-							await self.serial_writeline('["pong", ""]')
-					except Exception as e:
-						logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
+				while arduino_status != 'running':
+					arduino_status = await self.serial_await_arduino_status_change(arduino_status)
 				logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'running'")
 			except (configparser_ParsingError, serial_SerialException) as e:
 				logging_getLogger('uvicorn').error(f"[frontend:arduino] {e}")
@@ -195,6 +159,26 @@ class HAL9000(Frontend):
 			return
 		logging_getLogger('uvicorn').log(Frontend.LOG_LEVEL_TRACE, f"[frontend:arduino] H->D: {line}")
 		self.serial.write(f'{line}\n'.encode('utf-8'))
+
+
+	async def serial_await_arduino_status_change(self, status: str, timeout: float = 1.0) -> str:
+		line = None
+		response = ['application/runtime', {'status': {'name': status}}]
+		while response[0] != 'application/runtime' \
+		   or response[1] is None \
+		   or 'status' not in response[1] \
+		   or 'name'   not in response[1]['status'] \
+		   or status       == response[1]['status']['name']:
+			line = None
+			while line is None:
+				line = await self.serial_readline(timeout=1.0)
+			try:
+				response = json_loads(line)
+				if response[0] == 'ping':
+					await self.serial_writeline('["pong", ""]')
+			except Exception as e:
+				logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
+		return response[1]['status']['name']
 
 
 	async def task_host2device(self) -> None:

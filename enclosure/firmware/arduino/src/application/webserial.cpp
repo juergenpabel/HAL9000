@@ -47,14 +47,8 @@ void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const J
 				g_device_board.reset();
 				break;
 			default:
-				response["result"] = "error";
-				response["error"] = JsonObject();
-				response["error"]["id"] = "216";
-				response["error"]["level"] = "warn";
-				response["error"]["title"] = "Invalid request";
-				response["error"]["details"] = "request for topic 'application/runtime' with operation 'SYSTEM:EXIT' "
-				                               "only valid in status 'halting' or 'rebooting'";
-				//TODO: show error screen about shutdown
+				g_application.processError("panic", "219", "Application exited", "Application execution terminated due to webserial request " \
+				                                                                 "'application/runtime' with (unexpected) operation 'SYSTEM:EXIT'");
 		}
 	}
 	if(data.containsKey("status") == true) {
