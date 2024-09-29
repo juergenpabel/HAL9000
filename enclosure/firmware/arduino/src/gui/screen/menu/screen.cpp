@@ -8,8 +8,8 @@ unsigned long gui_screen_menu(unsigned long validity, TFT_eSPI* gui) {
 	static etl::string<GLOBAL_VALUE_SIZE>  menu_item;
 
 	if(validity == GUI_INVALIDATED) {
-		menu_title = g_application.getEnv("gui/screen:menu/title");
-		menu_item  = g_application.getEnv("gui/screen:menu/text");
+		menu_title = g_system_application.getEnv("gui/screen:menu/title");
+		menu_item  = g_system_application.getEnv("gui/screen:menu/text");
 		gui->fillScreen(TFT_BLACK);
 		gui->setTextColor(TFT_WHITE, TFT_BLACK, true);
 		gui->setTextDatum(MC_DATUM);

@@ -10,7 +10,7 @@ bool MCP23X17_Device::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name)
 	bool  result = false;
 
 	if(this->isConfigured() == true) {
-		g_application.addErrorContext("MCP23X17_Device::configure(): instance already configured");
+		g_system_application.addErrorContext("MCP23X17_Device::configure(): instance already configured");
 		return false;
 	}
 	this->device_name = device_name;
@@ -48,7 +48,7 @@ bool MCP23X17_OutputDevice::configure(const etl::string<GLOBAL_KEY_SIZE>& device
 	bool  result = false;
 
 	if(this->isConfigured() == true) {
-		g_application.addErrorContext("MCP23X17_OutputDevice::configure(): instance already configured");
+		g_system_application.addErrorContext("MCP23X17_OutputDevice::configure(): instance already configured");
 		return false;
 	}
 	result = MCP23X17_Device::configure(device_name);
@@ -60,17 +60,17 @@ bool MCP23X17_OutputDevice::configure(const etl::string<GLOBAL_KEY_SIZE>& device
 
 		output = outputs[i].as<JsonObject>();
 		if(output.containsKey("pin") == false || output.containsKey("label") == false || output.containsKey("value") == false) {
-			g_application.addErrorContext("MCP23X17_OutputDevice::configure(): incomplete pin configuration");
+			g_system_application.addErrorContext("MCP23X17_OutputDevice::configure(): incomplete pin configuration");
 			return false;
 		}
 		pin = output["pin"].as<const char*>();
 		if(pin == nullptr || (pin[0] != 'A' && pin[0] != 'B') || pin[1] < 0x30 || pin[1] > 0x39) {
-			g_application.addErrorContext("MCP23X17_OutputDevice::configure(): invalid pin in outputs (A0-A7,B0-B7)");
+			g_system_application.addErrorContext("MCP23X17_OutputDevice::configure(): invalid pin in outputs (A0-A7,B0-B7)");
 			return false;
 		}
 		value = output["value"].as<const char*>();
 		if(value == nullptr || (value[0] != 'h' && value[0] != 'l')) {
-			g_application.addErrorContext("MCP23X17_OutputDevice::configure(): invalid value in output (low, high)");
+			g_system_application.addErrorContext("MCP23X17_OutputDevice::configure(): invalid value in output (low, high)");
 			return false;
 		}
 		gpio = (pin[0]-'A')*8 + pin[1]-'0';
@@ -101,7 +101,7 @@ bool MCP23X17_InputDevice::configure(const etl::string<GLOBAL_KEY_SIZE>& device_
 	bool  result = false;
 
 	if(this->isConfigured() == true) {
-		g_application.addErrorContext("MCP23X17_InputDevice::configure(): instance already configured");
+		g_system_application.addErrorContext("MCP23X17_InputDevice::configure(): instance already configured");
 		return false;
 	}
 	this->device_name = device_name;
@@ -157,11 +157,11 @@ static const unsigned char ttable[7][4] = {
 bool MCP23X17_Rotary::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name, Adafruit_MCP23X17* mcp23X17, const JsonArray& inputs, const JsonObject& events) {
 	this->rotary_state = R_START;
 	if(MCP23X17_InputDevice::configure(device_name, mcp23X17, inputs, events) == false) {
-		g_application.addErrorContext("MCP23X17_Rotary::configure(): MCP23X17_InputDevice::configure() failed");
+		g_system_application.addErrorContext("MCP23X17_Rotary::configure(): MCP23X17_InputDevice::configure() failed");
 		return false;
 	}
 	if(inputs.size() < 2) {
-		g_application.addErrorContext("MCP23X17_Rotary::configure(): inputs not a list (or empty/missing/incomplete)");
+		g_system_application.addErrorContext("MCP23X17_Rotary::configure(): inputs not a list (or empty/missing/incomplete)");
 		return false;
 	}
 	if(inputs.size() > 2) {
@@ -174,12 +174,12 @@ bool MCP23X17_Rotary::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name,
 
 		input = inputs[i].as<JsonObject>();
 		if(input.containsKey("pin") == false || input.containsKey("label") == false) {
-			g_application.addErrorContext("MCP23X17_Rotary::configure(): incomplete pin configuration");
+			g_system_application.addErrorContext("MCP23X17_Rotary::configure(): incomplete pin configuration");
 			return false;
 		}
 		pin = input["pin"].as<const char*>();
 		if(pin == nullptr || (pin[0] != 'A' && pin[0] != 'B') || pin[1] < 0x30 || pin[1] > 0x39) {
-			g_application.addErrorContext("MCP23X17_Rotary::configure(): invalid pin in inputs (A0-A7,B0-B7)");
+			g_system_application.addErrorContext("MCP23X17_Rotary::configure(): invalid pin in inputs (A0-A7,B0-B7)");
 			return false;
 		}
 		gpio = (pin[0]-'A')*8 + pin[1]-'0';
@@ -219,7 +219,7 @@ bool MCP23X17_Switch::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name,
 
 	result = MCP23X17_InputDevice::configure(device_name, mcp23X17, inputs, events);
 	if(inputs.size() == 0) {
-		g_application.addErrorContext("MCP23X17_Switch::configure(): inputs not a list (or empty/missing)");
+		g_system_application.addErrorContext("MCP23X17_Switch::configure(): inputs not a list (or empty/missing)");
 		return false;
 	}
 	if(inputs.size() > 1) {
@@ -232,12 +232,12 @@ bool MCP23X17_Switch::configure(const etl::string<GLOBAL_KEY_SIZE>& device_name,
 
 		pin = nullptr;
 		if(inputs[0].containsKey("pin") == false || inputs[0].containsKey("label") == false) {
-			g_application.addErrorContext("MCP23X17_Switch::configure(): incomplete pin configuration");
+			g_system_application.addErrorContext("MCP23X17_Switch::configure(): incomplete pin configuration");
 			return false;
 		}
 		pin = inputs[0]["pin"].as<const char*>();
 		if(pin == nullptr || (pin[0] != 'A' && pin[0] != 'B') || pin[1] < 0x30 || pin[1] > 0x39) {
-			g_application.addErrorContext("MCP23X17_Switch::configure(): invalid pin in inputs (A0-A7,B0-B7)");
+			g_system_application.addErrorContext("MCP23X17_Switch::configure(): invalid pin in inputs (A0-A7,B0-B7)");
 			return false;
 		}
 		if(inputs[0].containsKey("pullup")) {

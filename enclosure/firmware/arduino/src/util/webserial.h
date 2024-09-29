@@ -1,5 +1,5 @@
-#ifndef __ROUNDYPI_UTIL_WEBSERIAL_H__
-#define __ROUNDYPI_UTIL_WEBSERIAL_H__
+#ifndef __UTIL_WEBSERIAL_H__
+#define __UTIL_WEBSERIAL_H__
 
 #include <etl/string.h>
 #include <etl/map.h>

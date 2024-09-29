@@ -27,51 +27,51 @@ unsigned long gui_overlay_message(unsigned long validity, TFT_eSPI* gui) {
 	static int32_t                         text_horizontal;
 	static uint8_t                         text_datum;
 
-	if(validity == GUI_INVALIDATED || g_application.hasEnv("gui/overlay:message/text") == true) {
-		if(g_application.hasEnv("gui/overlay:message/text") == true) {
-			text = g_application.getEnv("gui/overlay:message/text");
+	if(validity == GUI_INVALIDATED || g_system_application.hasEnv("gui/overlay:message/text") == true) {
+		if(g_system_application.hasEnv("gui/overlay:message/text") == true) {
+			text = g_system_application.getEnv("gui/overlay:message/text");
 			text_color = TFT_WHITE;
 			text_bgcolor = TFT_BLACK;
 			text_vertical = (gui->height()-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/2);
 			text_horizontal = (gui->width()-GUI_SCREEN_WIDTH)/2+(GUI_SCREEN_WIDTH/2);
 			text_datum = MC_DATUM;
-			g_application.delEnv("gui/overlay:message/text");
+			g_system_application.delEnv("gui/overlay:message/text");
 		}
-		if(g_application.hasEnv("gui/overlay:message/text-color") == true) {
-			ColorMap::iterator iter = g_colors.find(g_application.getEnv("gui/overlay:message/text-color"));
+		if(g_system_application.hasEnv("gui/overlay:message/text-color") == true) {
+			ColorMap::iterator iter = g_colors.find(g_system_application.getEnv("gui/overlay:message/text-color"));
 			if(iter != g_colors.end()) {
 				text_color = iter->second;
 			}
-			g_application.delEnv("gui/overlay:message/text-color");
+			g_system_application.delEnv("gui/overlay:message/text-color");
 		}
-		if(g_application.hasEnv("gui/overlay:message/text-bgcolor") == true) {
-			ColorMap::iterator iter = g_colors.find(g_application.getEnv("gui/overlay:message/text-bgcolor"));
+		if(g_system_application.hasEnv("gui/overlay:message/text-bgcolor") == true) {
+			ColorMap::iterator iter = g_colors.find(g_system_application.getEnv("gui/overlay:message/text-bgcolor"));
 			if(iter != g_colors.end()) {
 				text_bgcolor = iter->second;
 			}
-			g_application.delEnv("gui/overlay:message/text-bgcolor");
+			g_system_application.delEnv("gui/overlay:message/text-bgcolor");
 		}
-		if(g_application.hasEnv("gui/overlay:message/position-vertical") == true) {
-			if(g_application.getEnv("gui/overlay:message/position-vertical").compare("above") == 0) {
+		if(g_system_application.hasEnv("gui/overlay:message/position-vertical") == true) {
+			if(g_system_application.getEnv("gui/overlay:message/position-vertical").compare("above") == 0) {
 				text_vertical = (gui->height()-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*3);
 				text_datum = TC_DATUM;
 			}
-			if(g_application.getEnv("gui/overlay:message/position-vertical").compare("below") == 0) {
+			if(g_system_application.getEnv("gui/overlay:message/position-vertical").compare("below") == 0) {
 				text_vertical = (gui->height()-GUI_SCREEN_HEIGHT)/2+(GUI_SCREEN_HEIGHT/8*5);
 				text_datum = BC_DATUM;
 			}
-			g_application.delEnv("gui/overlay:message/position-vertical");
+			g_system_application.delEnv("gui/overlay:message/position-vertical");
 		}
-		if(g_application.hasEnv("gui/overlay:message/position-horizontal") == true) {
-			if(g_application.getEnv("gui/overlay:message/position-horizontal").compare("left") == 0) {
+		if(g_system_application.hasEnv("gui/overlay:message/position-horizontal") == true) {
+			if(g_system_application.getEnv("gui/overlay:message/position-horizontal").compare("left") == 0) {
 				text_horizontal = (gui->width()-GUI_SCREEN_WIDTH)/2;
 				text_datum -= 1;
 			}
-			if(g_application.getEnv("gui/overlay:message/position-horizontal").compare("right") == 0) {
+			if(g_system_application.getEnv("gui/overlay:message/position-horizontal").compare("right") == 0) {
 				text_horizontal = gui->width() - (gui->width()-GUI_SCREEN_WIDTH)/2;
 				text_datum += 1;
 			}
-			g_application.delEnv("gui/overlay:message/position-horizontal");
+			g_system_application.delEnv("gui/overlay:message/position-horizontal");
 		}
 		gui->setTextColor(text_color, text_bgcolor, false);
 		gui->setTextFont(1);

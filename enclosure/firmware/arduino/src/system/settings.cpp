@@ -2,7 +2,7 @@
 #include <LittleFS.h>
 #include <etl/string.h>
 
-#include "application/settings.h"
+#include "system/settings.h"
 #include "globals.h"
 
 #define LINE_SIZE (GLOBAL_KEY_SIZE + 1 + GLOBAL_VALUE_SIZE + 1)
@@ -13,7 +13,7 @@ typedef etl::string<GLOBAL_VALUE_SIZE> LogString;
 Settings::Settings(const etl::string<GLOBAL_FILENAME_SIZE>& filename)
          : SettingsMap()
          , filename(filename) {
-	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
+	this->insert({"system/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 }
 
 
@@ -26,10 +26,10 @@ bool Settings::load() {
 	       File                      file;
 
 	this->clear();
-	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
+	this->insert({"system/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 	file = LittleFS.open(this->filename.c_str(), "r");
 	if(static_cast<bool>(file) == false) {
-		g_application.processError("215", "warn", "Application error", "LittleFS.open() failed in Settings::load()");
+		g_system_application.processError("215", "warn", "Application error", "LittleFS.open() failed in Settings::load()");
 		return false;
 	}
 	while(file.position() < file.size() || line_buffer_pos > 0) {
@@ -42,7 +42,7 @@ bool Settings::load() {
 		if(line_end_pos == line.npos) {
 			file.close();
 			this->clear();
-			g_application.processError("215", "error", "Application error", "missing newline in Settings::load()");
+			g_system_application.processError("215", "error", "Application error", "missing newline in Settings::load()");
 			return false;
 		}
 		line_sep_pos = line.find('=');
@@ -70,7 +70,7 @@ bool Settings::save() {
 
 	file = LittleFS.open(this->filename.c_str(), "w");
 	if(static_cast<bool>(file) == false) {
-		g_application.processError("215", "warn", "Application error", "LittleFS.open() failed in Settings::save()");
+		g_system_application.processError("215", "warn", "Application error", "LittleFS.open() failed in Settings::save()");
 		return false;
 	}
 	for(SettingsMap::iterator iter=this->begin(); iter!=this->end(); ++iter) {
@@ -86,7 +86,7 @@ bool Settings::save() {
 
 bool Settings::reset() {
 	this->clear();
-	this->insert({"application/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
+	this->insert({"system/error:url/template", "https://github.com/juergenpabel/HAL9000/wiki/Error-database"});
 	return true;
 }
 

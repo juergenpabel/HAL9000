@@ -1,5 +1,5 @@
-#ifndef __APPLICATION_ENVIRONMENT_H__
-#define __APPLICATION_ENVIRONMENT_H__
+#ifndef __SYSTEM_ENVIRONMENT_H__
+#define __SYSTEM_ENVIRONMENT_H__
 
 #include <etl/string.h>
 #include <etl/map.h>

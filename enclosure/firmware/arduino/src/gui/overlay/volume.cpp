@@ -17,21 +17,21 @@ unsigned long gui_overlay_volume(unsigned long validity, TFT_eSPI* gui) {
 	       uint16_t log_ctr_x = GUI_SCREEN_WIDTH /2;
 	       uint16_t log_ctr_y = GUI_SCREEN_HEIGHT/2;
 
-	if(g_application.hasEnv("gui/overlay:volume/level") == true) {
-		volume_level = atoi(g_application.getEnv("gui/overlay:volume/level").c_str());
+	if(g_system_application.hasEnv("gui/overlay:volume/level") == true) {
+		volume_level = atoi(g_system_application.getEnv("gui/overlay:volume/level").c_str());
 		if(volume_level != previous_volume_level) {
 			previous_volume_level = volume_level;
 			validity = GUI_INVALIDATED;
 		}
 	}
-	if(g_application.getEnv("gui/overlay:volume/mute").compare("true") == 0) {
+	if(g_system_application.getEnv("gui/overlay:volume/mute").compare("true") == 0) {
 		volume_color = TFT_RED;
 		if(volume_color != previous_volume_color) {
 			previous_volume_color = volume_color;
 			validity = GUI_INVALIDATED;
 		}
 	}
-	if(g_application.getEnv("gui/overlay:volume/mute").compare("false") == 0) {
+	if(g_system_application.getEnv("gui/overlay:volume/mute").compare("false") == 0) {
 		volume_color = TFT_WHITE;
 		if(volume_color != previous_volume_color) {
 			previous_volume_color = volume_color;

@@ -10,7 +10,7 @@
 #include <etl/map.h>
 #include <Wire.h>
 
-#include "application/application.h"
+#include "system/application.h"
 #include "microcontroller.h"
 
 typedef struct {

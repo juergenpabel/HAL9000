@@ -40,35 +40,35 @@ unsigned long gui_screen_qrcode(unsigned long validity, TFT_eSPI* gui) {
 		uint32_t  textsize_above = 2;
 		uint32_t  textsize_below = 2;
 
-		if(g_application.hasEnv("gui/screen:qrcode/text-above") == true) {
-			text_above = g_application.getEnv("gui/screen:qrcode/text-above");
+		if(g_system_application.hasEnv("gui/screen:qrcode/text-above") == true) {
+			text_above = g_system_application.getEnv("gui/screen:qrcode/text-above");
 		}
-		if(g_application.hasEnv("gui/screen:qrcode/text-url") == true) {
-			text_url = g_application.getEnv("gui/screen:qrcode/text-url");
+		if(g_system_application.hasEnv("gui/screen:qrcode/text-url") == true) {
+			text_url = g_system_application.getEnv("gui/screen:qrcode/text-url");
 		}
-		if(g_application.hasEnv("gui/screen:qrcode/text-below") == true) {
-			text_below = g_application.getEnv("gui/screen:qrcode/text-below");
+		if(g_system_application.hasEnv("gui/screen:qrcode/text-below") == true) {
+			text_below = g_system_application.getEnv("gui/screen:qrcode/text-below");
 		}
-		if(g_application.hasEnv("gui/screen:qrcode/color-screen") == true) {
-			ColorMap::iterator iter = g_colors.find(g_application.getEnv("gui/screen:qrcode/color-screen"));
+		if(g_system_application.hasEnv("gui/screen:qrcode/color-screen") == true) {
+			ColorMap::iterator iter = g_colors.find(g_system_application.getEnv("gui/screen:qrcode/color-screen"));
 			if(iter != g_colors.end()) {
 				color_screen = iter->second;
 			}
 		}
-		if(g_application.hasEnv("gui/screen:qrcode/color-text") == true) {
-			ColorMap::iterator iter = g_colors.find(g_application.getEnv("gui/screen:qrcode/color-text"));
+		if(g_system_application.hasEnv("gui/screen:qrcode/color-text") == true) {
+			ColorMap::iterator iter = g_colors.find(g_system_application.getEnv("gui/screen:qrcode/color-text"));
 			if(iter != g_colors.end()) {
 				color_text = iter->second;
 			}
 		}
-		if(g_application.hasEnv("gui/screen:qrcode/textsize-above") == true) {
-			TextsizeMap::iterator iter = g_textsizes.find(g_application.getEnv("gui/screen:qrcode/textsize-above"));
+		if(g_system_application.hasEnv("gui/screen:qrcode/textsize-above") == true) {
+			TextsizeMap::iterator iter = g_textsizes.find(g_system_application.getEnv("gui/screen:qrcode/textsize-above"));
 			if(iter != g_textsizes.end()) {
 				textsize_above = iter->second;
 			}
 		}
-		if(g_application.hasEnv("gui/screen:qrcode/textsize-below") == true) {
-			TextsizeMap::iterator iter = g_textsizes.find(g_application.getEnv("gui/screen:qrcode/textsize-below"));
+		if(g_system_application.hasEnv("gui/screen:qrcode/textsize-below") == true) {
+			TextsizeMap::iterator iter = g_textsizes.find(g_system_application.getEnv("gui/screen:qrcode/textsize-below"));
 			if(iter != g_textsizes.end()) {
 				textsize_below = iter->second;
 			}

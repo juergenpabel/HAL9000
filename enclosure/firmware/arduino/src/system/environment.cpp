@@ -1,7 +1,7 @@
 #include <TimeLib.h>
 
-#include "application/environment.h"
-#include "application/application.h"
+#include "system/environment.h"
+#include "system/application.h"
 
 
 EnvironmentWriter::EnvironmentWriter(Application& application, const etl::string<GLOBAL_KEY_SIZE>& key)

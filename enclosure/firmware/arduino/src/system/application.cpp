@@ -3,7 +3,7 @@
 #include <LittleFS.h>
 #include <etl/string.h>
 
-#include "application/application.h"
+#include "system/application.h"
 #include "gui/screen/screen.h"
 #include "gui/screen/error/screen.h"
 #include "gui/screen/animations/screen.h"
@@ -12,20 +12,20 @@
 
 
        const etl::string<GLOBAL_VALUE_SIZE> Application::Null;
-static const etl::string<GLOBAL_KEY_SIZE>   ApplicationStatusNames[] = { "unknown", "starting", "configuring", "ready",
-                                                                         "running", "rebooting", "halting", "panicing" };
+static const etl::string<GLOBAL_KEY_SIZE>   ApplicationRunlevelNames[] = { "unknown", "starting", "configuring", "ready",
+                                                                           "running", "restarting", "halting", "panicing" };
 
 
 Application::Application() 
-            :status(StatusStarting)
+            :runlevel(RunlevelStarting)
             ,time_offset(0)
             ,environment()
             ,settings("/system/application/settings.ini") {
 }
 
 
-const etl::string<GLOBAL_KEY_SIZE>& Application::getStatusName() {
-	return ApplicationStatusNames[this->status];
+const etl::string<GLOBAL_KEY_SIZE>& Application::getRunlevelName() {
+	return ApplicationRunlevelNames[this->runlevel];
 }
 
 
@@ -40,7 +40,7 @@ void Application::setTime(time_t time) {
 
 
 time_t Application::getTime() {
-	return g_application.time_offset + (millis()/1000);
+	return g_system_application.time_offset + (millis()/1000);
 }
 
 
@@ -142,8 +142,8 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> configuration;
 	       JsonObject                                          current;
 
-	switch(g_application.getStatus()) {
-		case StatusConfiguring:
+	switch(g_system_application.getRunlevel()) {
+		case RunlevelConfiguring:
 			if(command.empty() == false) { // non-empty line means configuration instruction
 				if(g_util_webserial.hasCommand(command) == true) {
 					current = configuration.createNestedObject();
@@ -169,10 +169,10 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 						                                     "write-mode, unable to persist configuration for future application startups");
 					}
 				}
-				g_application.setStatus(StatusReady);
+				g_system_application.setRunlevel(RunlevelWaiting);
 			}
 			break;
-		case StatusReady:
+		case RunlevelWaiting:
 			if(configuration.size() == 0) {
 				if(LittleFS.exists("/system/application/configuration.json") == true) {
 					File file;
@@ -180,21 +180,21 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 					file = LittleFS.open("/system/application/configuration.json", "r");
 					if(static_cast<bool>(file) == true) {
 						if(deserializeJson(configuration, file) == DeserializationError::Ok) {
-							g_util_webserial.send("syslog/debug", "application configuration loaded from (littlefs:)" \
+							g_util_webserial.send("syslog/debug", "system configuration loaded from (littlefs:)" \
 							                                      "'/system/application/configuration.json'");
 						} else {
-							g_application.processError("panic", "215", "Application error", "INI syntax error in (littlefs:)" \
+							g_system_application.processError("panic", "215", "Application error", "INI syntax error in (littlefs:)" \
 							                                                               "'/system/application/configuration.json'");
 							configuration.clear();
 						}
 						file.close();
 					} else {
-						g_application.processError("panic", "212", "Filesystem error", "failed to open *supposedly existing* (littlefs:)" \
+						g_system_application.processError("panic", "212", "Filesystem error", "failed to open *supposedly existing* (littlefs:)" \
 						                                                              "'/system/application/configuration.json' in " \
 						                                                              "read-mode (probably need to reflash littlefs)");
 					}
 				} else {
-					g_application.processError("warn", "215", "Application error", "application configuration file not found: " \
+					g_system_application.processError("warn", "215", "Application error", "system configuration file not found: " \
 					                                                              "(littlefs:)'/system/application/configuration.json'");
 				}
 			}
@@ -210,9 +210,10 @@ void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, c
 			}
 			break;
 		default:
-			etl::string<GLOBAL_VALUE_SIZE> log_message("Application::onConfiguration() called in unexpected application-status: ");
+			etl::string<GLOBAL_VALUE_SIZE> log_message;
 
-			log_message += g_application.getStatusName();
+			log_message  = "Application::onConfiguration() called in unexpected system-runlevel: ";
+			log_message += g_system_application.getRunlevelName();
 			g_util_webserial.send("syslog/warn", log_message);
 	}
 }
@@ -232,9 +233,9 @@ void Application::processError(const etl::string<GLOBAL_KEY_SIZE>& error_level, 
 	static etl::string<GLOBAL_KEY_SIZE>            screen_error_name;
 
 	if(error_level.compare("panic") == 0) {
-		g_application.setStatus(StatusPanicing);
+		g_system_application.setRunlevel(RunlevelPanicing);
 	}
-	error_url = this->settings["application/error:url/template"];
+	error_url = this->settings["system/error:url/template"];
 	if(error_id.empty() == false) {
 		size_t url_id_offset;
 
@@ -272,7 +273,7 @@ void Application::processError(const etl::string<GLOBAL_KEY_SIZE>& error_level, 
 			this->error_context.clear();
 		}
 		webserial_body["error"]["url"] = error_url;
-		g_util_webserial.send("application/error", webserial_body);
+		g_util_webserial.send("system/error", webserial_body);
 	}
 	this->setEnv("gui/screen:error/id", error_id);
 	this->setEnv("gui/screen:error/title", error_title);

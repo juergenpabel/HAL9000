@@ -11,8 +11,8 @@ unsigned long gui_screen_idle(unsigned long validity, TFT_eSPI* gui) {
 
 	if(validity == GUI_INVALIDATED) {
 		gui->fillScreen(TFT_BLACK);
-		if(g_application.hasEnv("gui/screen:idle/clock") == true) {
-			if(g_application.getEnv("gui/screen:idle/clock").compare("false") == 0) {
+		if(g_system_application.hasEnv("gui/screen:idle/clock") == true) {
+			if(g_system_application.getEnv("gui/screen:idle/clock").compare("false") == 0) {
 				return millis();
 			}
 		}
@@ -34,8 +34,8 @@ unsigned long gui_screen_idle(unsigned long validity, TFT_eSPI* gui) {
 		gui->setTextSize(5);
 		gui->setTextDatum(MC_DATUM);
 		gui->setTextColor(TFT_RED, TFT_BLACK, true);
-		if(g_application.hasEnv("application/runtime:time/synced") == true) {
-			if(g_application.getEnv("application/runtime:time/synced").compare("true") == 0) {
+		if(g_system_application.hasEnv("system/features:time/synced") == true) {
+			if(g_system_application.getEnv("system/features:time/synced").compare("true") == 0) {
 				gui->setTextColor(TFT_WHITE, TFT_BLACK, true);
 			}
 		}

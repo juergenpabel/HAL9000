@@ -1,5 +1,5 @@
-#ifndef __ROUNDYPI_MCP23X17_DEVICES_H__
-#define __ROUNDYPI_MCP23X17_DEVICES_H__
+#ifndef __PERIPHERALS_MCP23X17_DEVICES_H__
+#define __PERIPHERALS_MCP23X17_DEVICES_H__
 
 #include <Adafruit_MCP23X17.h>
 #include "globals.h"

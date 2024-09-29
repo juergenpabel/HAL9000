@@ -4,8 +4,8 @@
 #include <etl/to_string.h>
 
 #include "gui/overlay/overlay.h"
-#include "device/mcp23X17/devices.h"
-#include "device/mcp23X17/mcp23X17.h"
+#include "peripherals/mcp23X17/devices.h"
+#include "peripherals/mcp23X17/mcp23X17.h"
 #include "globals.h"
 
 static MCP23X17_Switch      g_devices_switch[2];
@@ -33,11 +33,11 @@ bool MCP23X17::init() {
 	int i2c_bus     = 0;
 	int i2c_address = 0x20;
 
-	if(g_application.hasSetting("device/mcp23X17:i2c/bus") == true) {
-		i2c_bus = atoi(g_application.getSetting("device/mcp23X17:i2c/bus").c_str());
+	if(g_system_application.hasSetting("peripherals/mcp23X17:i2c/bus") == true) {
+		i2c_bus = atoi(g_system_application.getSetting("peripherals/mcp23X17:i2c/bus").c_str());
 	}
-	if(g_application.hasSetting("device/mcp23X17:i2c/address") == true) {
-		i2c_address = atoi(g_application.getSetting("device/mcp23X17:i2c/address").c_str());
+	if(g_system_application.hasSetting("peripherals/mcp23X17:i2c/address") == true) {
+		i2c_address = atoi(g_system_application.getSetting("peripherals/mcp23X17:i2c/address").c_str());
 	}
 	return this->init(i2c_bus, i2c_address);
 }
@@ -47,16 +47,16 @@ bool MCP23X17::init(uint8_t i2c_bus, uint8_t i2c_addr) {
 	TwoWire* twowire = nullptr;
 
 	if(this->status != MCP23X17_STATE_UNINITIALIZED) {
-		g_application.addErrorContext("MCP23X17 already initialized");
+		g_system_application.addErrorContext("MCP23X17 already initialized");
 		return false;
 	}
 	twowire = g_device_microcontroller.twowire_get(i2c_bus);
 	if(twowire == nullptr) {
-		g_application.addErrorContext("failed to obtain TwoWire instance for I2C communications with MCP23X17");
+		g_system_application.addErrorContext("failed to obtain TwoWire instance for I2C communications with MCP23X17");
 		return false;
 	}
 	if(this->mcp23X17.begin_I2C(i2c_addr, twowire) == false) {
-		g_application.addErrorContext("failed to initiate I2C communications with MCP23X17");
+		g_system_application.addErrorContext("failed to initiate I2C communications with MCP23X17");
 		return false;
 	}
 	this->status = MCP23X17_STATE_INITIALIZED;
@@ -71,11 +71,11 @@ bool MCP23X17::config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, co
 		this->init();
 	}
 	if((this->status & MCP23X17_STATE_RUNNING) == MCP23X17_STATE_RUNNING) {
-		g_application.addErrorContext("MCP23X17 already started, configuration of inputs not possible any more");
+		g_system_application.addErrorContext("MCP23X17 already started, configuration of inputs not possible any more");
 		return false;
 	}
 	if(device_type.size() == 0 || device_name.size() == 0) {
-		g_application.addErrorContext("MCP23X17::config_inputs(): invalid parameters name/type");
+		g_system_application.addErrorContext("MCP23X17::config_inputs(): invalid parameters name/type");
 		return false;
 	}
 	if(device_type.compare("switch") == 0) {
@@ -100,11 +100,11 @@ bool MCP23X17::config_inputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, co
 		}
 	}
 	if(device == nullptr) {
-		g_application.addErrorContext("MCP23X17::config_inputs(): invalid value for parameter 'device_type'");
+		g_system_application.addErrorContext("MCP23X17::config_inputs(): invalid value for parameter 'device_type'");
 		return false;
 	}
 	if(device->configure(device_name, &this->mcp23X17, inputs, events) == false) {
-		g_application.addErrorContext("MCP23X17::config_inputs(): device configuration failed");
+		g_system_application.addErrorContext("MCP23X17::config_inputs(): device configuration failed");
 		return false;
 	}
 	return true;
@@ -118,11 +118,11 @@ bool MCP23X17::config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, c
 		this->init();
 	}
 	if((this->status & MCP23X17_STATE_RUNNING) == MCP23X17_STATE_RUNNING) {
-		g_application.addErrorContext("MCP23X17 already started, configuration of outputs not possible any more");
+		g_system_application.addErrorContext("MCP23X17 already started, configuration of outputs not possible any more");
 		return false;
 	}
 	if(device_type.size() == 0 || device_name.size() == 0) {
-		g_application.addErrorContext("MCP23X17::config_outputs(): invalid parameters name/type");
+		g_system_application.addErrorContext("MCP23X17::config_outputs(): invalid parameters name/type");
 		return false;
 	}
 	if(device_type.compare("digital") == 0) {
@@ -133,11 +133,11 @@ bool MCP23X17::config_outputs(const etl::string<GLOBAL_KEY_SIZE>& device_type, c
 		}
 	}
 	if(device == nullptr) {
-		g_application.addErrorContext("MCP23X17::config_outputs(): invalid value for parameter 'device_type'");
+		g_system_application.addErrorContext("MCP23X17::config_outputs(): invalid value for parameter 'device_type'");
 		return false;
 	}
 	if(device->configure(device_name, &this->mcp23X17, outputs) == false) {
-		g_application.addErrorContext("MCP23X17::config_outputs(): device configuration failed");
+		g_system_application.addErrorContext("MCP23X17::config_outputs(): device configuration failed");
 		return false;
 	}
 	return true;
@@ -148,7 +148,7 @@ bool MCP23X17::start(bool run_as_task) {
 	bool result = false;
 
 	if(this->status != MCP23X17_STATE_INITIALIZED) {
-		g_application.addErrorContext("MCP23X17::start(): called with invalid state (BUG)");
+		g_system_application.addErrorContext("MCP23X17::start(): called with invalid state (BUG)");
 		return false;
 	}
 	g_device_microcontroller.mutex_enter("gpio");
@@ -184,7 +184,7 @@ void MCP23X17::loop() {
 	g_util_webserial.send("syslog/debug", "MCP23X17::loop() now running on 2nd core");
 	while(true) {
 		millis_before = millis();
-		g_device_mcp23X17.check(true);
+		g_peripherals_mcp23X17.check(true);
 		yield();
 		millis_after = millis();
 		if((millis_after-millis_before) < MCP23X17_POLLING_INTERVAL_MS) {

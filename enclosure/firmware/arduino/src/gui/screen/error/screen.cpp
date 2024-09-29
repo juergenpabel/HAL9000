@@ -21,13 +21,13 @@ unsigned long gui_screen_error(unsigned long validity, TFT_eSPI* gui) {
 		if(gui_overlay_get() != gui_overlay_none) {
 			gui_overlay_set("none", gui_overlay_none);
 		}
-		if(g_application.hasEnv("gui/screen:error/id") == true) {
-			error_id = g_application.getEnv("gui/screen:error/id");
+		if(g_system_application.hasEnv("gui/screen:error/id") == true) {
+			error_id = g_system_application.getEnv("gui/screen:error/id");
 		}
-		if(g_application.hasEnv("gui/screen:error/url") == true) {
-			error_url = g_application.getEnv("gui/screen:error/url");
+		if(g_system_application.hasEnv("gui/screen:error/url") == true) {
+			error_url = g_system_application.getEnv("gui/screen:error/url");
 		} else {
-			error_url = g_application.getSetting("application/error:url/template");
+			error_url = g_system_application.getSetting("system/error:url/template");
 			if(error_id.empty() == false) {
 				size_t url_id_offset;
 
@@ -37,24 +37,24 @@ unsigned long gui_screen_error(unsigned long validity, TFT_eSPI* gui) {
 				}
 			}
 		}
-		if(g_application.hasEnv("gui/screen:error/title") == true) {
-			error_title = g_application.getEnv("gui/screen:error/title");
+		if(g_system_application.hasEnv("gui/screen:error/title") == true) {
+			error_title = g_system_application.getEnv("gui/screen:error/title");
 		}
-		g_application.setEnv("gui/screen:qrcode/color-screen",   "red");
-		g_application.setEnv("gui/screen:qrcode/color-text",     "white");
-		g_application.setEnv("gui/screen:qrcode/textsize-above", "small");
-		g_application.setEnv("gui/screen:qrcode/textsize-below", "normal");
-		g_application.setEnv("gui/screen:qrcode/text-above", error_title);
-		g_application.setEnv("gui/screen:qrcode/text-url",   error_url);
-		g_application.setEnv("gui/screen:qrcode/text-below", error_id.insert(0, "Error: "));
+		g_system_application.setEnv("gui/screen:qrcode/color-screen",   "red");
+		g_system_application.setEnv("gui/screen:qrcode/color-text",     "white");
+		g_system_application.setEnv("gui/screen:qrcode/textsize-above", "small");
+		g_system_application.setEnv("gui/screen:qrcode/textsize-below", "normal");
+		g_system_application.setEnv("gui/screen:qrcode/text-above", error_title);
+		g_system_application.setEnv("gui/screen:qrcode/text-url",   error_url);
+		g_system_application.setEnv("gui/screen:qrcode/text-below", error_id.insert(0, "Error: "));
 		currentDraw = gui_screen_qrcode(validity, gui);
-		g_application.delEnv("gui/screen:qrcode/text-below");
-		g_application.delEnv("gui/screen:qrcode/text-url");
-		g_application.delEnv("gui/screen:qrcode/text-above");
-		g_application.delEnv("gui/screen:qrcode/textsize-below");
-		g_application.delEnv("gui/screen:qrcode/textsize-above");
-		g_application.delEnv("gui/screen:qrcode/color-text");
-		g_application.delEnv("gui/screen:qrcode/color-screen");
+		g_system_application.delEnv("gui/screen:qrcode/text-below");
+		g_system_application.delEnv("gui/screen:qrcode/text-url");
+		g_system_application.delEnv("gui/screen:qrcode/text-above");
+		g_system_application.delEnv("gui/screen:qrcode/textsize-below");
+		g_system_application.delEnv("gui/screen:qrcode/textsize-above");
+		g_system_application.delEnv("gui/screen:qrcode/color-text");
+		g_system_application.delEnv("gui/screen:qrcode/color-screen");
 		return currentDraw;
 	}
 	return validity;

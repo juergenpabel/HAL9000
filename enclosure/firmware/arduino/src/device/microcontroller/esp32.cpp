@@ -71,7 +71,7 @@ bool Microcontroller::configure(const JsonVariant& configuration) {
 		}
 	}
 	if(error_details.empty() == false) {
-		g_application.processError("panic", "213", "Board error", error_details);
+		g_system_application.processError("panic", "213", "Board error", error_details);
 		return false;
 	}
 	return true;
@@ -184,7 +184,7 @@ static void task_start(void* parameter) {
 
 bool Microcontroller::task_create(const etl::string<GLOBAL_KEY_SIZE>& task_name, void (*task_function)(), uint8_t core) {
 	if(core != 0 && core != 1) {
-		g_application.addErrorContext("Microcontroller<ESP32>::task_create(): invalid core 'TODO:core'");
+		g_system_application.addErrorContext("Microcontroller<ESP32>::task_create(): invalid core 'TODO:core'");
 		return false;
 	}
 	xTaskCreatePinnedToCore(task_start, task_name.c_str(), 8192, (void*)task_function, configMAX_PRIORITIES/2, nullptr, 1-core);

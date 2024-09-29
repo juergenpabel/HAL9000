@@ -8,7 +8,7 @@
 #include "gui/screen/qrcode/screen.h"
 #include "gui/screen/splash/screen.h"
 #include "gui/overlay/overlay.h"
-#include "application/environment.h"
+#include "system/environment.h"
 #include "globals.h"
 
 
@@ -30,29 +30,29 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		screen_func = gui_screen_on;
 	}
 	if(body.containsKey("animations") == true) {
-		g_application.delEnv("gui/screen:animations/name");
+		g_system_application.delEnv("gui/screen:animations/name");
 		if(body["animations"].containsKey("name") == true) {
-			g_application.setEnv("gui/screen:animations/name", body["animations"]["name"].as<const char*>());
+			g_system_application.setEnv("gui/screen:animations/name", body["animations"]["name"].as<const char*>());
 			screen_name = "animations";
-			screen_data = g_application.getEnv("gui/screen:animations/name");
+			screen_data = g_system_application.getEnv("gui/screen:animations/name");
 			screen_func = gui_screen_animations;
 		}
 	}
 	if(body.containsKey("error") == true) {
-		g_application.delEnv("gui/screen:error/id");
-		g_application.delEnv("gui/screen:error/title");
-		g_application.delEnv("gui/screen:error/url");
+		g_system_application.delEnv("gui/screen:error/id");
+		g_system_application.delEnv("gui/screen:error/title");
+		g_system_application.delEnv("gui/screen:error/url");
 		if(body["error"].containsKey("id") == true) {
-			g_application.setEnv("gui/screen:error/id", body["error"]["id"].as<const char*>());
+			g_system_application.setEnv("gui/screen:error/id", body["error"]["id"].as<const char*>());
 		}
 		if(body["error"].containsKey("title") == true) {
-			g_application.setEnv("gui/screen:error/title", body["error"]["title"].as<const char*>());
+			g_system_application.setEnv("gui/screen:error/title", body["error"]["title"].as<const char*>());
 		}
 		if(body["error"].containsKey("url") == true) {
-			g_application.setEnv("gui/screen:error/url", body["error"]["url"].as<const char*>());
+			g_system_application.setEnv("gui/screen:error/url", body["error"]["url"].as<const char*>());
 		}
 		screen_name = "error";
-		screen_data = g_application.getEnv("gui/screen:error/id");
+		screen_data = g_system_application.getEnv("gui/screen:error/id");
 		screen_func = gui_screen_error;
 	}
 	if(body.containsKey("idle") == true) {
@@ -60,13 +60,13 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		screen_func = gui_screen_idle;
 	}
 	if(body.containsKey("menu") == true) {
-		g_application.delEnv("gui/screen:menu/title");
-		g_application.delEnv("gui/screen:menu/text");
+		g_system_application.delEnv("gui/screen:menu/title");
+		g_system_application.delEnv("gui/screen:menu/text");
 		if(body["menu"].containsKey("title") == true) {
-			g_application.setEnv("gui/screen:menu/title", body["menu"]["title"].as<const char*>());
+			g_system_application.setEnv("gui/screen:menu/title", body["menu"]["title"].as<const char*>());
 		}
 		if(body["menu"].containsKey("text") == true) {
-			g_application.setEnv("gui/screen:menu/text",  body["menu"]["text"].as<const char*>());
+			g_system_application.setEnv("gui/screen:menu/text",  body["menu"]["text"].as<const char*>());
 		}
 		screen_name = "menu";
 		screen_func = gui_screen_menu;
@@ -76,40 +76,40 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		screen_func = gui_screen_none;
 	}
 	if(body.containsKey("qrcode") == true) {
-		g_application.delEnv("gui/screen:qrcode/textsize-above");
-		g_application.delEnv("gui/screen:qrcode/text-above");
-		g_application.delEnv("gui/screen:qrcode/text-url");
-		g_application.delEnv("gui/screen:qrcode/text-below");
-		g_application.delEnv("gui/screen:qrcode/textsize-below");
+		g_system_application.delEnv("gui/screen:qrcode/textsize-above");
+		g_system_application.delEnv("gui/screen:qrcode/text-above");
+		g_system_application.delEnv("gui/screen:qrcode/text-url");
+		g_system_application.delEnv("gui/screen:qrcode/text-below");
+		g_system_application.delEnv("gui/screen:qrcode/textsize-below");
 		if(body["qrcode"].containsKey("title") == true) {
-			g_application.setEnv("gui/screen:qrcode/text-above", body["qrcode"]["title"].as<const char*>());
-			g_application.setEnv("gui/screen:qrcode/textsize-above", "normal");
+			g_system_application.setEnv("gui/screen:qrcode/text-above", body["qrcode"]["title"].as<const char*>());
+			g_system_application.setEnv("gui/screen:qrcode/textsize-above", "normal");
 		}
 		if(body["qrcode"].containsKey("url") == true) {
-			g_application.setEnv("gui/screen:qrcode/text-url", body["qrcode"]["url"].as<const char*>());
+			g_system_application.setEnv("gui/screen:qrcode/text-url", body["qrcode"]["url"].as<const char*>());
 		}
 		if(body["qrcode"].containsKey("hint") == true) {
-			g_application.setEnv("gui/screen:qrcode/text-below", body["qrcode"]["hint"].as<const char*>());
-			g_application.setEnv("gui/screen:qrcode/textsize-below", "small");
+			g_system_application.setEnv("gui/screen:qrcode/text-below", body["qrcode"]["hint"].as<const char*>());
+			g_system_application.setEnv("gui/screen:qrcode/textsize-below", "small");
 		}
 		screen_name = "qrcode";
 		screen_func = gui_screen_qrcode;
 	}
 	if(body.containsKey("splash") == true) {
-		g_application.delEnv("gui/screen:splash/message");
-		g_application.delEnv("gui/screen:splash/url");
-		g_application.delEnv("gui/screen:splash/id");
+		g_system_application.delEnv("gui/screen:splash/message");
+		g_system_application.delEnv("gui/screen:splash/url");
+		g_system_application.delEnv("gui/screen:splash/id");
 		if(body["splash"].containsKey("message") == true) {
-			g_application.setEnv("gui/screen:splash/message", body["splash"]["message"].as<const char*>());
+			g_system_application.setEnv("gui/screen:splash/message", body["splash"]["message"].as<const char*>());
 		}
 		if(body["splash"].containsKey("url") == true) {
-			g_application.setEnv("gui/screen:splash/url", body["splash"]["url"].as<const char*>());
+			g_system_application.setEnv("gui/screen:splash/url", body["splash"]["url"].as<const char*>());
 		}
 		if(body["splash"].containsKey("id") == true) {
-			g_application.setEnv("gui/screen:splash/id", body["splash"]["id"].as<const char*>());
+			g_system_application.setEnv("gui/screen:splash/id", body["splash"]["id"].as<const char*>());
 		}
 		screen_name = "splash";
-		screen_data = g_application.getEnv("gui/screen:splash/id");
+		screen_data = g_system_application.getEnv("gui/screen:splash/id");
 		screen_func = gui_screen_splash;
 	}
 	if(screen_func != nullptr) {
@@ -141,20 +141,20 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 	}
 	if(body.containsKey("volume") == true) {
 		if(body["volume"].containsKey("level") == true) {
-			g_application.setEnv("gui/overlay:volume/level", body["volume"]["level"].as<const char*>());
+			g_system_application.setEnv("gui/overlay:volume/level", body["volume"]["level"].as<const char*>());
 		}
 		if(body["volume"].containsKey("mute") == true) {
-			g_application.setEnv("gui/overlay:volume/mute", body["volume"]["mute"].as<const char*>());
+			g_system_application.setEnv("gui/overlay:volume/mute", body["volume"]["mute"].as<const char*>());
 		}
 		overlay_name = "volume";
 		overlay_func = gui_overlay_volume;
 	}
 	if(body.containsKey("message") == true) {
 		if(body["message"].containsKey("text") == true) {
-			g_application.setEnv("gui/overlay:message/text", body["message"]["text"].as<const char*>());
+			g_system_application.setEnv("gui/overlay:message/text", body["message"]["text"].as<const char*>());
 		}
 		if(body["message"].containsKey("position-vertical") == true) {
-			g_application.setEnv("gui/overlay:message/position-vertical", body["message"]["position-vertical"].as<const char*>());
+			g_system_application.setEnv("gui/overlay:message/position-vertical", body["message"]["position-vertical"].as<const char*>());
 		}
 		overlay_name = "message";
 		overlay_func = gui_overlay_message;

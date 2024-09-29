@@ -67,7 +67,7 @@ bool Microcontroller::configure(const JsonVariant& configuration) {
 		}
 	}
 	if(error_details.empty() == false) {
-		g_application.processError("panic", "213", "Board error", error_details);
+		g_system_application.processError("panic", "213", "Board error", error_details);
 		return false;
 	}
 	return true;

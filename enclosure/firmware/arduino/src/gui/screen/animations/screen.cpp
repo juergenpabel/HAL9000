@@ -37,16 +37,16 @@ unsigned long gui_screen_animations(unsigned long validity, TFT_eSPI* gui) {
 		animations.clear();
 		return GUI_INVALIDATED;
 	}
-	if(g_application.hasEnv("gui/screen:animations/name") == true) {
+	if(g_system_application.hasEnv("gui/screen:animations/name") == true) {
 		static etl::string<GLOBAL_FILENAME_SIZE>       filename;
 		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
 
 		switch(animations.empty()) {
 			case false:
-				if(g_application.getEnv("gui/screen:animations/loop").compare("false") != 0) {
+				if(g_system_application.getEnv("gui/screen:animations/loop").compare("false") != 0) {
 					for(animations_t::const_iterator iter=animations.begin(); iter!=animations.end(); ++iter) {
 						if(iter->loop == true) {
-							g_application.setEnv("gui/screen:animations/loop", "false");
+							g_system_application.setEnv("gui/screen:animations/loop", "false");
 						}
 					}
 				}
@@ -54,9 +54,9 @@ unsigned long gui_screen_animations(unsigned long validity, TFT_eSPI* gui) {
 			case true:
 				animation_current_frame = 0;
 				filename  = "/system/gui/screen/animations/";
-				filename += g_application.getEnv("gui/screen:animations/name");
+				filename += g_system_application.getEnv("gui/screen:animations/name");
 				filename += ".json";
-				g_application.delEnv("gui/screen:animations/name");
+				g_system_application.delEnv("gui/screen:animations/name");
 				if(gui != &g_gui) {
 					g_device_microcontroller.mutex_enter("gpio");
 				}
@@ -65,13 +65,13 @@ unsigned long gui_screen_animations(unsigned long validity, TFT_eSPI* gui) {
 					g_device_microcontroller.mutex_leave("gpio");
 				}
 				if(animations.empty() == true) {
-					g_application.addErrorContext("gui_screen_animations(): gui_screen_animations_load() returned " \
+					g_system_application.addErrorContext("gui_screen_animations(): gui_screen_animations_load() returned " \
 					                     "empty set for: 'TODO:filename'");
 					return GUI_ERROR;
 				}
-				if(g_application.hasEnv("gui/screen:animations/loop") == true) {
-					if(g_application.getStatus() >= StatusRunning) {
-						g_application.delEnv("gui/screen:animations/loop");
+				if(g_system_application.hasEnv("gui/screen:animations/loop") == true) {
+					if(g_system_application.getRunlevel() >= RunlevelRunning) {
+						g_system_application.delEnv("gui/screen:animations/loop");
 					}
 				}
 				response.clear();
@@ -91,9 +91,9 @@ unsigned long gui_screen_animations(unsigned long validity, TFT_eSPI* gui) {
 	if(animation_current_frame >= animation_current->frames) {
 		animation_current_frame = 0;
 		if(animation_current->loop == true) {
-			if(g_application.hasEnv("gui/screen:animations/loop") == true) {
-				if(g_application.getEnv("gui/screen:animations/loop").compare("false") == 0) {
-					g_application.delEnv("gui/screen:animations/loop");
+			if(g_system_application.hasEnv("gui/screen:animations/loop") == true) {
+				if(g_system_application.getEnv("gui/screen:animations/loop").compare("false") == 0) {
+					g_system_application.delEnv("gui/screen:animations/loop");
 					animation_current->loop = false;
 				}
 			}
@@ -149,12 +149,12 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 	animations.clear();
 	animationsJSON.clear();
 	if(LittleFS.exists(filename.c_str()) == false) {
-		g_application.processError("error", "217", "Animation error", filename);
+		g_system_application.processError("error", "217", "Animation error", filename);
 		return;
 	}
 	file = LittleFS.open(filename.c_str(), "r");
 	if(deserializeJson(animationsJSON, file) != DeserializationError::Ok) {
-		g_application.processError("error", "217", "Animation error", filename);
+		g_system_application.processError("error", "217", "Animation error", filename);
 		file.close();
 		return;
 	}
@@ -195,7 +195,7 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 			}
 		}
 		if(animation.directory.empty() == true || animation.frames == 0) {
-			g_application.processError("error", "217", "Animation data error", filename);
+			g_system_application.processError("error", "217", "Animation data error", filename);
 			return;
 		}
 		animations.push_back(animation);
@@ -204,28 +204,28 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 
 
 unsigned long gui_screen_animations_system_booting(unsigned long validity, TFT_eSPI* gui) {
-	g_application.setEnv("gui/screen:animations/name", "system-booting");
+	g_system_application.setEnv("gui/screen:animations/name", "system-booting");
 	gui_screen_set("animations:system-booting", gui_screen_animations);
 	return millis();
 }
 
 
 unsigned long gui_screen_animations_system_configuring(unsigned long validity, TFT_eSPI* gui) {
-	g_application.setEnv("gui/screen:animations/name", "system-configuring");
+	g_system_application.setEnv("gui/screen:animations/name", "system-configuring");
 	gui_screen_set("animations:system-configuring", gui_screen_animations);
 	return millis();
 }
 
 
 unsigned long gui_screen_animations_system_starting(unsigned long validity, TFT_eSPI* gui) {
-	g_application.setEnv("gui/screen:animations/name", "system-starting");
+	g_system_application.setEnv("gui/screen:animations/name", "system-starting");
 	gui_screen_set("animations:system-starting", gui_screen_animations);
 	return millis();
 }
 
 
 unsigned long gui_screen_animations_system_terminating(unsigned long validity, TFT_eSPI* gui) {
-	g_application.setEnv("gui/screen:animations/name", "system-terminating");
+	g_system_application.setEnv("gui/screen:animations/name", "system-terminating");
 	gui_screen_set("animations:system-terminating", gui_screen_animations);
 	return millis();
 }

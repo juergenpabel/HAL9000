@@ -21,7 +21,7 @@ void gui_update() {
 	}
 	currentScreenValidity = gui_screen_update(prevScreenValidity, gui);
 	if(currentScreenValidity == GUI_ERROR) {
-		g_application.processError("error", "219", "GUI Error", gui_screen_getname());
+		g_system_application.processError("error", "219", "GUI Error", gui_screen_getname());
 		return;
 	}
 	if(prevScreenValidity != currentScreenValidity) {
@@ -30,7 +30,7 @@ void gui_update() {
 	}
 	currentOverlayValidity = gui_overlay_update(prevOverlayValidity, gui);
 	if(currentOverlayValidity == GUI_ERROR) {
-		g_application.processError("error", "219", "GUI Error", gui_overlay_getname());
+		g_system_application.processError("error", "219", "GUI Error", gui_overlay_getname());
 		return;
 	}
 	if(prevOverlayValidity != currentOverlayValidity) {

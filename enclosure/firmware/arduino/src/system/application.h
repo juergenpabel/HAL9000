@@ -1,32 +1,32 @@
-#ifndef __APPLICATION_APPLICATION_H__
-#define __APPLICATION_APPLICATION_H__
+#ifndef __SYSTEM_APPLICATION_H__
+#define __SYSTEM_APPLICATION_H__
 
 #include <etl/string.h>
 #include <etl/map.h>
 #include <etl/list.h>
 #include <ArduinoJson.h>
 
-#include "application/settings.h"
-#include "application/environment.h"
+#include "system/settings.h"
+#include "system/environment.h"
 
 typedef etl::list<etl::string<GLOBAL_VALUE_SIZE>, APPLICATION_ERROR_MAX> ErrorContext;
 
 typedef enum {
-	StatusUnknown      = 0x00,
-	StatusStarting     = 0x01,
-	StatusConfiguring  = 0x02,
-	StatusReady        = 0x03,
-	StatusRunning      = 0x04,
-	StatusRebooting    = 0x05,
-	StatusHalting      = 0x06,
-	StatusPanicing     = 0x07,
-	StatusMAX          = 0x07
-} Status;
+	RunlevelUnknown      = 0x00,
+	RunlevelStarting     = 0x01,
+	RunlevelConfiguring  = 0x02,
+	RunlevelWaiting      = 0x03,
+	RunlevelRunning      = 0x04,
+	RunlevelRestarting   = 0x05,
+	RunlevelHalting      = 0x06,
+	RunlevelPanicing     = 0x07,
+	RunlevelMAX          = 0x07
+} Runlevel;
 
 
 class Application {
 	private:
-		Status        status;
+		Runlevel      runlevel;
 		time_t        time_offset;
 	protected:
 		ErrorContext  error_context;
@@ -40,9 +40,9 @@ class Application {
 		bool saveSettings();
 		bool resetSettings();
 
-		void                                  setStatus(Status status) { if(status > this->status && status <= StatusMAX) { this->status = status; } };
-		Status                                getStatus() { return this->status; };
-		const etl::string<GLOBAL_KEY_SIZE>&   getStatusName();
+		void                                  setRunlevel(Runlevel runlevel) { if(runlevel > this->runlevel && runlevel <= RunlevelMAX) { this->runlevel = runlevel; } };
+		Runlevel                              getRunlevel() { return this->runlevel; };
+		const etl::string<GLOBAL_KEY_SIZE>&   getRunlevelName();
 
 		bool                                  hasEnv(const etl::string<GLOBAL_KEY_SIZE>& key);
 		const etl::string<GLOBAL_VALUE_SIZE>& getEnv(const etl::string<GLOBAL_KEY_SIZE>& key);
@@ -64,9 +64,10 @@ class Application {
 
 	static const etl::string<GLOBAL_VALUE_SIZE> Null;
 	friend class EnvironmentWriter;
-	friend void on_application_runtime(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
-	friend void on_application_environment(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
-	friend void on_application_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+	friend void on_system_runlevel(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+	friend void on_system_features(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+	friend void on_system_environment(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+	friend void on_system_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 };
 
 

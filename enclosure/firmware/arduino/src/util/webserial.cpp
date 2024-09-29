@@ -136,32 +136,32 @@ void WebSerial::update() {
 
 	this->heartbeat();
 	if(this->isAlive() == false) {
-		Status status;
+		Runlevel runlevel;
 
-		status = g_application.getStatus();
-		if(status == StatusRunning) {
+		runlevel = g_system_application.getRunlevel();
+		if(runlevel == RunlevelRunning) {
 			if(gui_screen_get() != gui_screen_error || gui_screen_getname().compare("error:210") != 0) {
-				g_application.processError("critical", "210", "No connection to host", "Serial is closed in WebSerial::update()");
+				g_system_application.processError("critical", "210", "No connection to host", "Serial is closed in WebSerial::update()");
 			}
 		}
 		return;
 	}
 	if(gui_screen_get() == gui_screen_error && gui_screen_getname().compare("error:210") == 0) {
 		this->send("syslog/debug", "connection to host (re-)established");
-		switch(g_application.getStatus()) {
-			case StatusConfiguring:
+		switch(g_system_application.getRunlevel()) {
+			case RunlevelConfiguring:
 				gui_screen_set("animations:system-configuring", gui_screen_animations_system_configuring);
 				break;
-			case StatusRunning:
+			case RunlevelRunning:
 				gui_screen_set("none", gui_screen_none);
 				break;
-			case StatusPanicing:
+			case RunlevelPanicing:
 				gui_screen_set("panic", gui_screen_panic);
 				break;
 			default:
-				g_application.setEnv("gui/screen:error/id", "219");
-				g_application.setEnv("gui/screen:error/level", "error");
-				g_application.setEnv("gui/screen:error/title", "Application error");
+				g_system_application.setEnv("gui/screen:error/id", "219");
+				g_system_application.setEnv("gui/screen:error/level", "error");
+				g_system_application.setEnv("gui/screen:error/title", "Application error");
 				gui_screen_set("error:219", gui_screen_error);
 				break;
 		}

@@ -23,7 +23,7 @@ bool Board::start() {
 		return false;
 	}
 	if(PMU.begin(Wire1, AXP192_SLAVE_ADDRESS, 21, 22) != true) {
-		g_application.processError("panic", "211", "Board error", "m5stack-core2: PMU.begin() failed");
+		g_system_application.processError("panic", "211", "Board error", "m5stack-core2: PMU.begin() failed");
 		return false;
 	}
 	PMU.setSysPowerDownVoltage(2700);
