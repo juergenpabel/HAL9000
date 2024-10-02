@@ -1,6 +1,9 @@
 from io import StringIO as io_StringIO
-from os import getcwd as os_getcwd
-from os.path import exists as os_path_exists
+from os import getcwd as os_getcwd, \
+               readlink as os_readlink
+from os.path import exists as os_path_exists, \
+                    islink as os_path_islink, \
+                    realpath as os_path_realpath
 from math import pi as math_pi, sin as math_sin, cos as math_cos
 from json import dumps as json_dumps, \
                  loads as json_loads, \
@@ -15,9 +18,10 @@ from asyncio import Queue as asyncio_Queue, \
 from segno import make as segno_make
 
 import flet
-import flet.fastapi
-import flet_core.alignment
+import flet.fastapi as flet_fastapi
+import flet_core.alignment as flet_core_alignment
 from fastapi import FastAPI as fastapi_FastAPI
+from fastapi.staticfiles import StaticFiles as fastapi_staticfiles_StaticFiles
 
 from hal9000.frontend import Frontend
 
@@ -27,24 +31,28 @@ class HAL9000(Frontend):
 		super().__init__('flet')
 		self.flet_app = app
 		self.environment = {}
+		self.settings = {}
 		self.command_session_queues = {}
 
 
 	async def configure(self, configuration: configparser_ConfigParser) -> bool:
-		self.flet_app.mount('/', flet.fastapi.app(self.flet, route_url_strategy='path', assets_dir=f'{os_getcwd()}/assets'))
+		assets_dir = f'{os_getcwd()}/assets'
+		if os_path_islink(assets_dir) is True:
+			assets_dir = os_path_realpath(assets_dir)
+		self.flet_app.mount('/assets/', fastapi_staticfiles_StaticFiles(directory=assets_dir, follow_symlink=True), name="assets")
+		self.flet_app.mount('/',        flet_fastapi.app(self.flet, route_url_strategy='path'))
 		return True
 
 
 	async def start(self) -> None:
 		await super().start()
+		self.status = Frontend.FRONTEND_STATUS_OFFLINE
 		self.tasks['command_listener'] = asyncio_create_task(self.task_command_listener())
 
 
 	async def task_command_listener(self) -> None:
 		logging_getLogger('uvicorn').debug(f"[frontend:flet] starting command-listener (event-listeners are started per flet-session)")
 		await asyncio_sleep(0.1)
-		self.runlevel = Frontend.FRONTEND_RUNLEVEL_STARTING
-		self.status = Frontend.FRONTEND_STATUS_OFFLINE
 		try:
 			while self.tasks['command_listener'].cancelled() is False:
 				command = await self.commands.get()
@@ -65,29 +73,39 @@ class HAL9000(Frontend):
 			while page.session_id in self.command_session_queues:
 				logging_getLogger('uvicorn').debug(f"[frontend:flet] received command in session '{page.session_id}': {command}")
 				match command['topic']:
-					case 'application/runtime':
+					case 'system/runlevel':
+						target = command['payload']
+						match target:
+							case 'halt':
+								self.show_animations(display, {'name': 'system-terminating'})
+							case 'restart':
+								self.show_animations(display, {'name': 'system-terminating'})
+							case other:
+								logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported shutdown target '{target}' "
+									                             f"in command 'system/runlevel'")
+					case 'system/features':
 						if 'time' in command['payload']:
 							if 'synced' in command['payload']['time']:
 								page.session.set('idle_clock:synced', command['payload']['time']['synced'])
-						if 'shutdown' in command['payload'] and 'target' in command['payload']['shutdown']:
-							target = command['payload']['shutdown']['target']
-							match target:
-								case 'poweroff':
-									self.show_animations(display, {'name': 'system-terminating'})
-								case 'reboot':
-									self.show_animations(display, {'name': 'system-terminating'})
-								case other:
-									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported shutdown target '{target}' "
-									                                     f"in command 'application/runtime'")
-					case 'application/environment':
+					case 'system/environment':
 						if 'set' in command['payload']:
 							if 'key' in command['payload']['set'] and 'value' in command['payload']['set']:
 								key = command['payload']['set']['key']
 								value = command['payload']['set']['value']
 								self.environment[key] = value
-								logging_getLogger('uvicorn').debug(f"[frontend:flet] application/environment:set('{key}','{value}') => OK")
+								logging_getLogger('uvicorn').debug(f"[frontend:flet] system/environment:set('{key}','{value}') => OK")
 							else:
-								logging_getLogger('uvicorn').warning(f"[frontend:flet] for command 'application/environment' with 'set': " \
+								logging_getLogger('uvicorn').warning(f"[frontend:flet] for command 'system/environment' with 'set': " \
+								                                     f"missing 'key' and/or 'value' items: {command['payload']['set']}")
+					case 'system/settings':
+						if 'set' in command['payload']:
+							if 'key' in command['payload']['set'] and 'value' in command['payload']['set']:
+								key = command['payload']['set']['key']
+								value = command['payload']['set']['value']
+								self.settings[key] = value
+								logging_getLogger('uvicorn').debug(f"[frontend:flet] system/settings:set('{key}','{value}') => OK")
+							else:
+								logging_getLogger('uvicorn').warning(f"[frontend:flet] for command 'system/settings' with 'set': " \
 								                                     f"missing 'key' and/or 'value' items: {command['payload']['set']}")
 					case 'gui/screen':
 						for screen in command['payload'].keys():
@@ -188,7 +206,7 @@ class HAL9000(Frontend):
 						do_loop = True
 						while do_loop is True:
 							for nr in range(0, animation['frames']):
-								display.background_image_src = f'{animation["directory"]}/{nr:02}.jpg'
+								display.background_image_src = f'/assets/{animation["directory"]}/{nr:02}.jpg'
 								display.update()
 								await asyncio_sleep((float(animation['duration'])/(animation['frames']*1000))+0.1)
 							do_loop = bool(animation['loop'])
@@ -231,7 +249,7 @@ class HAL9000(Frontend):
 		display.content.shapes.append(flet.canvas.Text(ref=display.data['idle_clock'],
 		                                               x=int(display.radius), y=int(display.radius),
 		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2),
-		                                               alignment=flet_core.alignment.center))
+		                                               alignment=flet_core_alignment.center))
 		display.content.update()
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'idle', 'origin': 'frontend:flet'}})
 
@@ -239,12 +257,12 @@ class HAL9000(Frontend):
 	def show_animations(self, display: flet.CircleAvatar, data: dict) -> None:
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.data['animations'] = {}
-		if os_path_exists(f'assets/system/gui/screen/animations/{data["name"]}.json') is True:
-			with open(f'assets/system/gui/screen/animations/{data["name"]}.json') as file:
+		if os_path_exists(f'assets/gui/screen/animations/{data["name"]}.json') is True:
+			with open(f'assets/gui/screen/animations/{data["name"]}.json') as file:
 				display.data['animations']['name'] = data['name']
 				display.data['animations']['json'] = json_load(file)
 		else:
-			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'assets/system/gui/screen/animations/{data['name']}.json'")
+			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'assets/gui/screen/animations/{data['name']}.json'")
 		display.content.update()
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': f'animations:{data["name"]}', 'origin': 'frontend:flet'}})
 
@@ -254,11 +272,11 @@ class HAL9000(Frontend):
 		display.content.shapes.append(flet.canvas.Text(text=data['title'],
 		                                               x=int(display.radius), y=int(0.5*display.radius),
 		                                               style=flet.TextStyle(size=int(display.page.scale*18), color='white'),
-		                                               alignment=flet_core.alignment.center))
+		                                               alignment=flet_core_alignment.center))
 		display.content.shapes.append(flet.canvas.Text(text=data['text'],
 		                                               x=int(display.radius), y=int(display.radius),
 		                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'),
-		                                               alignment=flet_core.alignment.center))
+		                                               alignment=flet_core_alignment.center))
 		display.content.update()
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'menu', 'origin': 'frontend:flet'}})
 
@@ -290,7 +308,7 @@ class HAL9000(Frontend):
 		                                               x=display.radius, y=int(0.5*display.radius)-int((data['title-size'] if 'title-size' in data else 18)/2),
 		                                               style=flet.TextStyle(color=data['title-color'] if 'title-color' in data else 'white',
 		                                                                    size=int(display.page.scale*(data['title-size'] if 'title-size' in data else 18))),
-		                                               alignment=flet_core.alignment.center))
+		                                               alignment=flet_core_alignment.center))
 		qrcode = io_StringIO()
 		segno_make(data['url'], version=5, error='m').save(qrcode, kind='txt', border=1)
 		qrcode.seek(0)
@@ -305,7 +323,7 @@ class HAL9000(Frontend):
 		                                               x=int(display.radius), y=int(1.75*display.radius)-int((data['hint-size'] if 'hint-size' in data else 14)/2),
 		                                               style=flet.TextStyle(color=data['hint-color'] if 'hint-color' in data else 'white',
 		                                                                    size=int(display.page.scale*(data['hint-size'] if 'hint-size' in data else 14))),
-		                                               alignment=flet_core.alignment.center))
+		                                               alignment=flet_core_alignment.center))
 		display.content.update()
 
 
@@ -356,7 +374,7 @@ class HAL9000(Frontend):
 		page.data['button_wakeup'] = flet.Ref[flet.TextButton]()
 		display = flet.CircleAvatar(radius=int(page.scale*120), bgcolor='black')
 		display.content = flet.canvas.Canvas(width=display.radius*2, height=display.radius*2)
-		display.background_image_src = '/sequences/init/00.jpg'
+		display.background_image_src = '/assets/sequences/init/00.jpg'
 		display.data = {}
 		display.data['idle_clock'] = flet.Ref[flet.canvas.Text]()
 		display.data['animations'] = []
@@ -383,7 +401,7 @@ class HAL9000(Frontend):
 		                                                                                                        width=page.scale*328, height=page.scale*520, spacing=0),
 		                                                                                              ], height=page.scale*960, spacing=0),
 		                                                                 width=page.scale*328, height=page.scale*960, padding=0,
-		                                                                 image_src="/HAL9000.jpg", image_fit=flet.ImageFit.FILL),
+		                                                                 image_src="/assets/images/HAL9000.jpg", image_fit=flet.ImageFit.FILL),
 		                                                  ], spacing=0),
 		                            flet.Column(controls=[
 		                                                  flet.TextButton("Vol+", on_click=self.on_volume_up),
@@ -397,7 +415,5 @@ class HAL9000(Frontend):
 		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(page, display)))
 		page.session.set('gui_animations_task', asyncio_create_task(self.run_gui_screen_animations(page, display)))
 		page.session.set('idle_clock:synced', 'unknown')
-		if self.runlevel == Frontend.FRONTEND_RUNLEVEL_STARTING:
-			self.runlevel = Frontend.FRONTEND_RUNLEVEL_RUNNING
 		self.status = Frontend.FRONTEND_STATUS_ONLINE
 

@@ -29,14 +29,15 @@ class Action(HAL9000_Action):
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, pending: bool) -> bool:
 		if pending is False:
 			if new_runlevel == HAL9000_Plugin.RUNLEVEL_RUNNING:
-				match self.daemon.plugins['frontend'].screen:
-					case 'animations:system-starting':
-						self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
-						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-					case other:
-						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
-						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 				self.welcome_pending = True
+				if self.daemon.plugins['frontend'].status == 'online':
+					match self.daemon.plugins['frontend'].screen:
+						case 'animations:system-starting':
+							self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
+							self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+						case other:
+							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
+							self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 		return True
 
 
@@ -60,7 +61,16 @@ class Action(HAL9000_Action):
 
 	def on_frontend_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
-			pass
+			if new_status == 'online':
+				self.daemon.queue_signal('frontend', {'settings': {'set': {'key': 'system/error:url/template', 'value': self.daemon.config['help:error-url']}}})
+				if self.welcome_pending is True:
+					match self.daemon.plugins['frontend'].screen:
+						case 'animations:system-starting':
+							self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
+							self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+						case other:
+							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
+							self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 		return True
 
 

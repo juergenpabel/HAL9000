@@ -10,12 +10,13 @@
 #include "system/environment.h"
 
 typedef etl::list<etl::string<GLOBAL_VALUE_SIZE>, APPLICATION_ERROR_MAX> ErrorContext;
+typedef StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2>              Configuration;
 
 typedef enum {
 	RunlevelUnknown      = 0x00,
 	RunlevelStarting     = 0x01,
 	RunlevelConfiguring  = 0x02,
-	RunlevelWaiting      = 0x03,
+	RunlevelReady      = 0x03,
 	RunlevelRunning      = 0x04,
 	RunlevelRestarting   = 0x05,
 	RunlevelHalting      = 0x06,
@@ -30,6 +31,7 @@ class Application {
 		time_t        time_offset;
 	protected:
 		ErrorContext  error_context;
+		Configuration configuration;
 		Environment   environment;
 		Settings      settings;
 		void          setTime(time_t time);
@@ -40,8 +42,9 @@ class Application {
 		bool saveSettings();
 		bool resetSettings();
 
-		void                                  setRunlevel(Runlevel runlevel) { if(runlevel > this->runlevel && runlevel <= RunlevelMAX) { this->runlevel = runlevel; } };
-		Runlevel                              getRunlevel() { return this->runlevel; };
+
+		void                                  setRunlevel(Runlevel runlevel);
+		Runlevel                              getRunlevel();
 		const etl::string<GLOBAL_KEY_SIZE>&   getRunlevelName();
 
 		bool                                  hasEnv(const etl::string<GLOBAL_KEY_SIZE>& key);
@@ -60,7 +63,9 @@ class Application {
 
 	static time_t getTime();
 
-	static void onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+	static void addConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
+	       bool loadConfiguration();
+	       bool applyConfiguration();
 
 	static const etl::string<GLOBAL_VALUE_SIZE> Null;
 	friend class EnvironmentWriter;

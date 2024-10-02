@@ -36,7 +36,7 @@ class HAL9000(Frontend):
 			logging_getLogger('uvicorn').error(f"[frontend:arduino] configured device '{arduino_device}' does not exist")
 			return None
 		if arduino_config in ['littlefs', 'frontend']:
-			logging_getLogger('uvicorn').info(f"[frontend:arduino] using '{arduino_config}' as configuration-source for arduino application")
+			logging_getLogger('uvicorn').info(f"[frontend:arduino] using '{arduino_config}' as configuration-source for arduino")
 		else:
 			logging_getLogger('uvicorn').warning(f"[frontend:arduino] unsupported value for 'configuration' in section 'frontend:arduino': " \
 			                                     f"'{arduino_config}' (falling back to 'littlefs')")
@@ -50,15 +50,15 @@ class HAL9000(Frontend):
 					logging_getLogger('uvicorn').info(f"[frontend:arduino] identified /dev/ttyHAL9000 as '{arduino_name}'")
 				else:
 					logging_getLogger('uvicorn').warning(f"[frontend:arduino] unidentified board on /dev/ttyHAL9000 " \
-					                                     f"(application configuration only loadable from littlefs)")
+					                                     f"(configuration will be loaded from littlefs)")
 				self.serial = serial_Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate,
 				                            bytesize=serial_EIGHTBITS, parity=serial_PARITY_NONE, stopbits=serial_STOPBITS_ONE)
 				logging_getLogger('uvicorn').debug(f"[frontend:arduino] opened '{arduino_device}'")
-				await self.serial_writeline('["application/runtime", {"status":"?"}]')
+				await self.serial_writeline('["system/runlevel", null]')
 				await asyncio_sleep(0.5)
-				arduino_status = await self.serial_await_arduino_status_change('starting')
+				arduino_status = await self.serial_await_runlevel_change('starting')
 				if arduino_status == 'configuring':
-					logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'configuring'")
+					logging_getLogger('uvicorn').debug(f"[frontend:arduino] arduino status is now 'configuring'")
 					if arduino_config == 'frontend' and arduino_name is not None:
 						i2c_bus = configuration.getint(f'arduino:{arduino_name}', 'i2c-bus', fallback=0)
 						i2c_addr = configuration.getint(f'arduino:{arduino_name}', 'i2c-address', fallback=32)
@@ -87,21 +87,16 @@ class HAL9000(Frontend):
 						logging_getLogger('uvicorn').debug(f"[frontend:arduino] '{arduino_device}' is now configured via frontend-configuration")
 					await self.serial_writeline('["", ""]')
 					await asyncio_sleep(0.5)
-					arduino_status = await self.serial_await_arduino_status_change('configuring')
+					arduino_status = await self.serial_await_runlevel_change('configuring')
 				if arduino_status == 'panicing':
-					error = 'no error details provided'
-					if 'error' in response[1]['status']:
-						try:
-							error = json_loads(response[1]['status']['error'])
-						except:
-							pass
-					logging_getLogger('uvicorn').critical(f"[frontend:arduino] application status is now 'panicing': {error}")
+					error = 'no error details provided' #TODO
+					logging_getLogger('uvicorn').critical(f"[frontend:arduino] arduino status is now 'panicing': {error}")
 					self.serial.close()
 					self.serial = None
 					return False
 				while arduino_status != 'running':
-					arduino_status = await self.serial_await_arduino_status_change(arduino_status)
-				logging_getLogger('uvicorn').debug(f"[frontend:arduino] application status is now 'running'")
+					arduino_status = await self.serial_await_runlevel_change(arduino_status)
+				logging_getLogger('uvicorn').debug(f"[frontend:arduino] arduino status is now 'running'")
 			except (configparser_ParsingError, serial_SerialException) as e:
 				logging_getLogger('uvicorn').error(f"[frontend:arduino] {e}")
 				if self.serial is not None:
@@ -161,14 +156,11 @@ class HAL9000(Frontend):
 		self.serial.write(f'{line}\n'.encode('utf-8'))
 
 
-	async def serial_await_arduino_status_change(self, status: str, timeout: float = 1.0) -> str:
+	async def serial_await_runlevel_change(self, runlevel: str, timeout: float = 1.0) -> str:
 		line = None
-		response = ['application/runtime', {'status': {'name': status}}]
-		while response[0] != 'application/runtime' \
-		   or response[1] is None \
-		   or 'status' not in response[1] \
-		   or 'name'   not in response[1]['status'] \
-		   or status       == response[1]['status']['name']:
+		response = ['system/runlevel', runlevel]
+		while response[0] != 'system/runlevel' \
+		   or response[1] == runlevel:
 			line = None
 			while line is None:
 				line = await self.serial_readline(timeout=1.0)
@@ -178,7 +170,7 @@ class HAL9000(Frontend):
 					await self.serial_writeline('["pong", ""]')
 			except Exception as e:
 				logging_getLogger('uvicorn').info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
-		return response[1]['status']['name']
+		return response[1]
 
 
 	async def task_host2device(self) -> None:
@@ -188,14 +180,11 @@ class HAL9000(Frontend):
 				self.serial.open()
 				await asyncio_sleep(1)
 			try:
-				if self.runlevel != Frontend.FRONTEND_RUNLEVEL_RUNNING:
-					self.runlevel = Frontend.FRONTEND_RUNLEVEL_RUNNING
 				while self.serial.is_open is True and self.tasks['host2device'].cancelled() is False:
-					if self.status != Frontend.FRONTEND_STATUS_ONLINE:
-						self.status = Frontend.FRONTEND_STATUS_ONLINE
+					self.status = Frontend.FRONTEND_STATUS_ONLINE
 					command = await self.commands.get()
-					logging_getLogger('uvicorn').debug(f"[frontend:arduino] host2device sends message: {command}")
 					if isinstance(command, dict) and 'topic' in command and 'payload' in command:
+						logging_getLogger('uvicorn').debug(f"[frontend:arduino] host2device sends command: {command}")
 						topic = command['topic']
 						payload = command['payload']
 						if isinstance(payload, str) is True:
@@ -206,7 +195,6 @@ class HAL9000(Frontend):
 			except Exception as e:
 				logging_getLogger('uvicorn').error(f"[frontend:arduino] exception in task_host2device(): {e}")
 			self.status = Frontend.FRONTEND_STATUS_OFFLINE
-			self.commands.put_nowait(None) # to wake up task_host2device()
 		logging_getLogger('uvicorn').error(f"[frontend:arduino] exiting host2device-listener ('arduino' frontend becomes non-functional)")
 		del self.tasks['host2device']
 
@@ -218,8 +206,6 @@ class HAL9000(Frontend):
 				self.serial.open()
 				await asyncio_sleep(1)
 			try:
-				if self.runlevel != Frontend.FRONTEND_RUNLEVEL_RUNNING:
-					self.runlevel = Frontend.FRONTEND_RUNLEVEL_RUNNING
 				while self.serial.is_open is True and self.tasks['device2host'].cancelled() is False:
 					if self.status != Frontend.FRONTEND_STATUS_ONLINE:
 						self.status = Frontend.FRONTEND_STATUS_ONLINE
@@ -252,7 +238,8 @@ class HAL9000(Frontend):
 			except Exception as e:
 				logging_getLogger('uvicorn').error(f"[frontend:arduino] exception in task_device2host(): {e}")
 			self.status = Frontend.FRONTEND_STATUS_OFFLINE
-			self.commands.put_nowait(None) # to wake up task_host2device()
 		logging_getLogger('uvicorn').error(f"[frontend:arduino] exiting device2host-listener ('arduino' frontend becomes non-functional)")
 		del self.tasks['device2host']
+		self.tasks['host2device'].cancel()
+		await self.commands.put(None) # to wake up task_host2device()
 

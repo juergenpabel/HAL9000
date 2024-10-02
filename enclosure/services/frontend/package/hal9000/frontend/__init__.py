@@ -16,12 +16,12 @@ class Frontend:
 
 	def __init__(self, name: str):
 		self.name = name
-		self.runlevel = Frontend.FRONTEND_RUNLEVEL_STARTING
-		self.status = Frontend.FRONTEND_STATUS_UNKNOWN
 		self.commands = asyncio_Queue()
 		self.events = asyncio_Queue()
 		self.config = {}
 		self.tasks = {}
+		self.runlevel = Frontend.FRONTEND_RUNLEVEL_STARTING
+		self.status = Frontend.FRONTEND_STATUS_UNKNOWN
 
 
 	async def configure(self, configuration) -> bool:
@@ -29,7 +29,7 @@ class Frontend:
 
 
 	async def start(self) -> None:
-		pass
+		self.runlevel = Frontend.FRONTEND_RUNLEVEL_RUNNING
 
 
 	def __setattr__(self, name, new_value) -> None:
@@ -37,7 +37,7 @@ class Frontend:
 		if hasattr(self, name) is True:
 			old_value = getattr(self, name)
 		super().__setattr__(name, new_value)
-		if name in ['runlevel', 'status'] and self.runlevel != Frontend.FRONTEND_RUNLEVEL_STARTING:
+		if name in ['runlevel', 'status']:
 			if old_value != new_value:
 				logging_getLogger('uvicorn').debug(f"[frontend:{self.name}] {name} is now '{new_value}'")
 				self.events.put_nowait({'topic': name, 'payload': new_value})

@@ -42,7 +42,7 @@ class Action(HAL9000_Action):
 	def runlevel_error(self) -> dict:
 		return {'id': '200',
 		        'level': 'critical',
-		        'title': "Service 'frontend' unavailable (arduino/flet)"}
+		        'title': "Service 'frontend' unavailable (arduino/flet backends)"}
 
 
 	def send_frontend_command(self, topic: str, body: dict) -> None:
@@ -85,7 +85,7 @@ class Action(HAL9000_Action):
 						datetime_now = datetime_datetime.now()
 						epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
 						synced = 'true' if self.daemon.plugins['brain'].time == 'synchronized' else 'false'
-						self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': synced}})
+						self.send_frontend_command('system/features', {'time': {'epoch': epoch, 'synced': synced}})
 						if self.daemon.plugins['brain'].status == Daemon.BRAIN_STATUS_AWAKE:
 							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'on', 'parameter': {}}}})
 						else:
@@ -127,61 +127,73 @@ class Action(HAL9000_Action):
 				case Action.FRONTEND_STATUS_ONLINE:
 					self.daemon.plugins['frontend'].status = Action.FRONTEND_STATUS_ONLINE
 		if 'error' in signal:
-			error = {'level': 'error', 'id': '000', 'title': 'UNEXPECTED ERROR', 'details': ''}
-			for field in error.keys():
-				if field in signal['error']:
-					error[field] = signal['error'][field]
-			self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'error', 'parameter': error}}})
+			if self.daemon.plugins['frontend'].status == Action.FRONTEND_STATUS_ONLINE:
+				error = {'level': 'error', 'id': '000', 'title': 'UNEXPECTED ERROR', 'details': ''}
+				for field in error.keys():
+					if field in signal['error']:
+						error[field] = signal['error'][field]
+				self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'error', 'parameter': error}}})
 		if 'environment' in signal:
-			if 'set' in signal['environment']:
-				if 'key' in signal['environment']['set'] and 'value' in signal['environment']['set']:
-					key = signal['environment']['set']['key']
-					value = signal['environment']['set']['value']
-					self.send_frontend_command('application/environment', {'set': {'key': key, 'value': value}})
+			if self.daemon.plugins['frontend'].status == Action.FRONTEND_STATUS_ONLINE:
+				if 'set' in signal['environment']:
+					if 'key' in signal['environment']['set'] and 'value' in signal['environment']['set']:
+						key = signal['environment']['set']['key']
+						value = signal['environment']['set']['value']
+						self.send_frontend_command('system/environment', {'set': {'key': key, 'value': value}})
+		if 'settings' in signal:
+			if self.daemon.plugins['frontend'].status == Action.FRONTEND_STATUS_ONLINE:
+				if 'set' in signal['settings']:
+					if 'key' in signal['settings']['set'] and 'value' in signal['settings']['set']:
+						key = signal['settings']['set']['key']
+						value = signal['settings']['set']['value']
+						self.send_frontend_command('system/settings', {'set': {'key': key, 'value': value}})
 		if 'gui' in signal:
-			if 'screen' in signal['gui']:
-				screen = signal['gui']['screen']['name']
-				if 'parameter' in signal['gui']['screen'] and 'name' in signal['gui']['screen']['parameter']:
-					screen += ':' + signal['gui']['screen']['parameter']['name']
-				elif 'parameter' in signal['gui']['screen'] and 'id' in signal['gui']['screen']['parameter']:
-					screen += ':' + signal['gui']['screen']['parameter']['id']
-				status = None
-				if 'origin' in signal['gui']['screen'] and signal['gui']['screen']['origin'].startswith('frontend') == True:
-					status = HAL9000_Plugin_Data.STATUS_CONFIRMED
-				else:
-					self.send_frontend_command('gui/screen', {signal['gui']['screen']['name']: signal['gui']['screen']['parameter']})
-					status = HAL9000_Plugin_Data.STATUS_REQUESTED
-				self.daemon.plugins['frontend'].screen = screen, status
-			if 'overlay' in signal['gui']:
-				status = None
-				if 'origin' in signal['gui']['overlay'] and signal['gui']['overlay']['origin'].startswith('frontend') == True:
-					status = HAL9000_Plugin_Data.STATUS_CONFIRMED
-				else:
-					self.send_frontend_command('gui/overlay', {signal['gui']['overlay']['name']: signal['gui']['overlay']['parameter']})
-					status = HAL9000_Plugin_Data.STATUS_REQUESTED
-				self.daemon.plugins['frontend'].overlay = signal['gui']['overlay']['name'], status
+			if self.daemon.plugins['frontend'].status == Action.FRONTEND_STATUS_ONLINE:
+				if 'screen' in signal['gui']:
+					screen = signal['gui']['screen']['name']
+					if 'parameter' in signal['gui']['screen'] and 'name' in signal['gui']['screen']['parameter']:
+						screen += ':' + signal['gui']['screen']['parameter']['name']
+					elif 'parameter' in signal['gui']['screen'] and 'id' in signal['gui']['screen']['parameter']:
+						screen += ':' + signal['gui']['screen']['parameter']['id']
+					status = None
+					if 'origin' in signal['gui']['screen'] and signal['gui']['screen']['origin'].startswith('frontend') == True:
+						status = HAL9000_Plugin_Data.STATUS_CONFIRMED
+					else:
+						self.send_frontend_command('gui/screen', {signal['gui']['screen']['name']: signal['gui']['screen']['parameter']})
+						status = HAL9000_Plugin_Data.STATUS_REQUESTED
+					self.daemon.plugins['frontend'].screen = screen, status
+				if 'overlay' in signal['gui']:
+					status = None
+					if 'origin' in signal['gui']['overlay'] and signal['gui']['overlay']['origin'].startswith('frontend') == True:
+						status = HAL9000_Plugin_Data.STATUS_CONFIRMED
+					else:
+						self.send_frontend_command('gui/overlay', {signal['gui']['overlay']['name']: signal['gui']['overlay']['parameter']})
+						status = HAL9000_Plugin_Data.STATUS_REQUESTED
+					self.daemon.plugins['frontend'].overlay = signal['gui']['overlay']['name'], status
 
 
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
-			match new_status:
-				case Daemon.BRAIN_STATUS_AWAKE:
-					if old_status == Daemon.BRAIN_STATUS_ASLEEP:
-						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'on', 'parameter': {}}}})
-						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-				case Daemon.BRAIN_STATUS_ASLEEP:
-					if old_status == Daemon.BRAIN_STATUS_AWAKE:
-						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}}}})
-						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+			if self.daemon.plugins['frontend'].status == Action.FRONTEND_STATUS_ONLINE:
+				match new_status:
+					case Daemon.BRAIN_STATUS_AWAKE:
+						if old_status == Daemon.BRAIN_STATUS_ASLEEP:
+							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'on', 'parameter': {}}}})
+							self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+					case Daemon.BRAIN_STATUS_ASLEEP:
+						if old_status == Daemon.BRAIN_STATUS_AWAKE:
+							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'off', 'parameter': {}}}})
+							self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 		return True
 
 
 	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_time: str, new_time: str, pending: bool) -> bool:
 		if pending is False:
-			datetime_now = datetime_datetime.now()
-			epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
-			synced = 'true' if new_time == 'synchronized' else 'false'
-			self.send_frontend_command('application/runtime', {'time': {'epoch': epoch, 'synced': synced}})
+			if self.daemon.plugins['frontend'].status == Action.FRONTEND_STATUS_ONLINE:
+				datetime_now = datetime_datetime.now()
+				epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
+				synced = 'true' if new_time == 'synchronized' else 'false'
+				self.send_frontend_command('system/features', {'time': {'epoch': epoch, 'synced': synced}})
 		return True
 
 
@@ -193,10 +205,11 @@ class Action(HAL9000_Action):
 
 	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, pending: bool) -> bool:
 		if pending is False:
-			if old_status == Kalliope_Action.KALLIOPE_STATUS_WAITING and new_status == Kalliope_Action.KALLIOPE_STATUS_LISTENING:
-				self.daemon.plugins['frontend'].screen = 'animations:hal9000'
-				self.send_frontend_command('gui/screen', {'animations': {'name': 'hal9000'}})
-			if old_status == Kalliope_Action.KALLIOPE_STATUS_SPEAKING and new_status == Kalliope_Action.KALLIOPE_STATUS_WAITING:
-				self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
+			if self.daemon.plugins['frontend'].status == Action.FRONTEND_STATUS_ONLINE:
+				if old_status == Kalliope_Action.KALLIOPE_STATUS_WAITING and new_status == Kalliope_Action.KALLIOPE_STATUS_LISTENING:
+					self.daemon.plugins['frontend'].screen = 'animations:hal9000'
+					self.send_frontend_command('gui/screen', {'animations': {'name': 'hal9000'}})
+				if old_status == Kalliope_Action.KALLIOPE_STATUS_SPEAKING and new_status == Kalliope_Action.KALLIOPE_STATUS_WAITING:
+					self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
 		return True
 

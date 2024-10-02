@@ -65,10 +65,10 @@ void on_device_display(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVa
 		}
 		if(backlight == true) {
 			g_device_board.displayOn();
-			response["backlight"]["status"] = "on";
+			response["backlight"]["power"] = "on";
 		} else {
 			g_device_board.displayOff();
-			response["backlight"]["status"] = "off";
+			response["backlight"]["power"] = "off";
 		}
 		g_util_webserial.send("device/display", response);
 	}

@@ -53,7 +53,7 @@ unsigned long gui_screen_animations(unsigned long validity, TFT_eSPI* gui) {
 				break;
 			case true:
 				animation_current_frame = 0;
-				filename  = "/system/gui/screen/animations/";
+				filename  = "/gui/screen/animations/";
 				filename += g_system_application.getEnv("gui/screen:animations/name");
 				filename += ".json";
 				g_system_application.delEnv("gui/screen:animations/name");

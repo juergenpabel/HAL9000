@@ -19,8 +19,22 @@ static const etl::string<GLOBAL_KEY_SIZE>   ApplicationRunlevelNames[] = { "unkn
 Application::Application() 
             :runlevel(RunlevelStarting)
             ,time_offset(0)
+            ,error_context()
+            ,configuration()
             ,environment()
-            ,settings("/system/application/settings.ini") {
+            ,settings("/system/settings.ini") {
+}
+
+
+void Application::setRunlevel(Runlevel runlevel) {
+	if(runlevel > this->runlevel && runlevel <= RunlevelMAX) {
+		this->runlevel = runlevel;
+	}
+}
+
+
+Runlevel Application::getRunlevel() {
+	return this->runlevel;
 }
 
 
@@ -138,84 +152,83 @@ void Application::delSetting(const etl::string<GLOBAL_KEY_SIZE>& key) {
 }
 
 
-void Application::onConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> configuration;
-	       JsonObject                                          current;
+void Application::addConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
+	JsonObject current;
 
-	switch(g_system_application.getRunlevel()) {
-		case RunlevelConfiguring:
-			if(command.empty() == false) { // non-empty line means configuration instruction
-				if(g_util_webserial.hasCommand(command) == true) {
-					current = configuration.createNestedObject();
-					current["command"] = command;
-					current["data"] = data;
-				}
-			}
-			if(command.empty() == true) { // empty line means end-of-configuration
-				if(configuration.size() > 0) {
-					File file;
+	if(g_system_application.getRunlevel() != RunlevelConfiguring) {
+		static etl::string<GLOBAL_VALUE_SIZE> log_message;
 
-					g_util_webserial.send("syslog/debug", "saving application configuration to (littlefs:)" \
-					                                      "'/system/application/configuration.json'");
-					file = LittleFS.open("/system/application/configuration.json", "w");
-					if(static_cast<bool>(file) == true) {
-						serializeJson(configuration, file);
-						file.close();
-						configuration.clear();
-						g_util_webserial.send("syslog/debug", "saved application configuration to (littlefs:)" \
-						                                      "'/system/application/configuration.json'");
-					} else {
-						g_util_webserial.send("syslog/warn", "failed to open (littlefs:)'/system/application/configuration.json' in " \
-						                                     "write-mode, unable to persist configuration for future application startups");
-					}
-				}
-				g_system_application.setRunlevel(RunlevelWaiting);
-			}
-			break;
-		case RunlevelWaiting:
-			if(configuration.size() == 0) {
-				if(LittleFS.exists("/system/application/configuration.json") == true) {
-					File file;
-
-					file = LittleFS.open("/system/application/configuration.json", "r");
-					if(static_cast<bool>(file) == true) {
-						if(deserializeJson(configuration, file) == DeserializationError::Ok) {
-							g_util_webserial.send("syslog/debug", "system configuration loaded from (littlefs:)" \
-							                                      "'/system/application/configuration.json'");
-						} else {
-							g_system_application.processError("panic", "215", "Application error", "INI syntax error in (littlefs:)" \
-							                                                               "'/system/application/configuration.json'");
-							configuration.clear();
-						}
-						file.close();
-					} else {
-						g_system_application.processError("panic", "212", "Filesystem error", "failed to open *supposedly existing* (littlefs:)" \
-						                                                              "'/system/application/configuration.json' in " \
-						                                                              "read-mode (probably need to reflash littlefs)");
-					}
-				} else {
-					g_system_application.processError("warn", "215", "Application error", "system configuration file not found: " \
-					                                                              "(littlefs:)'/system/application/configuration.json'");
-				}
-			}
-			if(configuration.size() > 0) {
-				g_util_webserial.send("syslog/debug", "activating application configuration...");
-				for(JsonObject item : configuration.as<JsonArray>()) {
-					if(item.containsKey("command") == true && item.containsKey("data") == true) {
-						g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
-					}
-				}
-				configuration.clear();
-				g_util_webserial.send("syslog/debug", "...application configuration activated");
-			}
-			break;
-		default:
-			etl::string<GLOBAL_VALUE_SIZE> log_message;
-
-			log_message  = "Application::onConfiguration() called in unexpected system-runlevel: ";
-			log_message += g_system_application.getRunlevelName();
-			g_util_webserial.send("syslog/warn", log_message);
+		log_message  = "Application::addConfiguration() called in unexpected system-runlevel: ";
+		log_message += g_system_application.getRunlevelName();
+		log_message += " (only valid in 'configuring')";
+		g_util_webserial.send("syslog/warn", log_message);
+		return;
 	}
+	if(command.empty() == true) {
+		g_util_webserial.send("syslog/warn", "imcompatible (old) frontend running on linux, as it sent an empty command for end-of-configuration ," \
+		                                     "this has been deprecated (for backwards-compatibility, runlevel is now set to 'ready'); " \
+		                                     "please upgrade hal9000-frontend (and others?)");
+		g_system_application.setRunlevel(RunlevelReady);
+		return;
+	}
+	if(g_util_webserial.hasCommand(command) == false) {
+		static etl::string<GLOBAL_VALUE_SIZE> log_message;
+
+		log_message  = "Application::addConfiguration() called with unsupported command '";
+		log_message += command;
+		log_message += "', please investigate your hal9000-frontend configuration (frontend.ini)";
+		g_util_webserial.send("syslog/warn", log_message);
+		return;
+	}
+	current = g_system_application.configuration.createNestedObject();
+	current["command"] = command;
+	current["data"] = data;
+}
+
+
+bool Application::loadConfiguration() {
+	File file;
+
+	this->configuration.clear();
+	if(LittleFS.exists("/system/configuration.json") == false) {
+		this->processError("warn", "215", "Application error", "system configuration file not found: '(littlefs:)/system/configuration.json'");
+		return false;
+	}
+	file = LittleFS.open("/system/configuration.json", "r");
+	if(static_cast<bool>(file) == false) {
+		this->processError("panic", "212", "Filesystem error", "failed to open *supposedly existing* '(littlefs:)/system/configuration.json' in " \
+		                                                       "read-mode (probably need to reflash littlefs)");
+		return false;
+	}
+	if(deserializeJson(this->configuration, file) != DeserializationError::Ok) {
+		this->processError("panic", "215", "Application error", "INI syntax error in (littlefs:)" \
+		                                   "'/system/configuration.json'");
+		this->configuration.clear();
+		file.close();
+		return false;
+	}
+	g_util_webserial.send("syslog/debug", "system configuration loaded from (littlefs:)'/system/configuration.json'");
+	return true;
+}
+
+
+bool Application::applyConfiguration() {
+	if(this->configuration.size() == 0) {
+		if(this->loadConfiguration() == false) {
+			return false;
+		}
+	}
+	if(this->configuration.size() > 0) {
+		g_util_webserial.send("syslog/debug", "activating application configuration...");
+		for(JsonObject item : this->configuration.as<JsonArray>()) {
+			if(item.containsKey("command") == true && item.containsKey("data") == true) {
+				g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
+			}
+		}
+		this->configuration.clear();
+		g_util_webserial.send("syslog/debug", "...application configuration activated");
+	}
+	return true;
 }
 
 

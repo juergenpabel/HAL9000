@@ -18,9 +18,9 @@ void on_system_runlevel(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 
 	response.clear();
 	runlevel = g_system_application.getRunlevel();
-	if(payload.isNull() == true) {
+	if(etl::string<GLOBAL_KEY_SIZE>("").compare(payload.as<const char*>()) == 0) {
 		g_util_webserial.send("system/runlevel", g_system_application.getRunlevelName());
-		if(g_system_application.getRunlevel() == RunlevelPanicing) {
+		if(runlevel == RunlevelPanicing) {
 			g_util_webserial.send("syslog/info", "Arduino has panic'ed, dumping environment and settings next:");
 			for(EnvironmentMap::iterator iter=g_system_application.environment.begin(); iter!=g_system_application.environment.end(); ++iter) {
 				response.clear();
@@ -74,15 +74,15 @@ void on_system_runlevel(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 			}
 			break;
 		case RunlevelConfiguring:
-			if(etl::string<GLOBAL_KEY_SIZE>("waiting").compare(payload.as<const char*>()) == 0) {
-				g_system_application.setRunlevel(RunlevelWaiting);
+			if(etl::string<GLOBAL_KEY_SIZE>("ready").compare(payload.as<const char*>()) == 0) {
+				g_system_application.setRunlevel(RunlevelReady);
 			}
 			break;
-		case RunlevelWaiting:
+		case RunlevelReady:
 			if(etl::string<GLOBAL_KEY_SIZE>("running").compare(payload.as<const char*>()) == 0) {
 				g_system_application.setRunlevel(RunlevelRunning);
 			}
-			//no break as 'waiting' => ['restarting'|'halting'] is also permitted
+			//no break as 'ready' => ['restarting'|'halting'] is also permitted
 		case RunlevelRunning:
 			if(etl::string<GLOBAL_KEY_SIZE>("restarting").compare(payload.as<const char*>()) == 0) {
 				g_system_application.setRunlevel(RunlevelRestarting);

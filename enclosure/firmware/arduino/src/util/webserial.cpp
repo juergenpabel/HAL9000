@@ -277,6 +277,33 @@ void WebSerial::handle(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVa
 }
 
 
+bool WebSerial::addCommand(const etl::string<GLOBAL_KEY_SIZE>& command, webserial_command_func handler) {
+	if(command.empty() == true) {
+		return false;
+	}
+	if(this->commands.count(command) != 0) {
+		return false;
+	}
+	this->commands[command] = handler;
+	return true;
+}
+
+
+bool WebSerial::delCommand(const etl::string<GLOBAL_KEY_SIZE>& command, webserial_command_func handler) {
+	if(command.empty() == true) {
+		return false;
+	}
+	if(this->commands.count(command) != 1) {
+		return false;
+	}
+	if(this->commands[command] != handler) {
+		return false;
+	}
+	this->commands.erase(command);
+	return true;
+}
+
+
 bool WebSerial::hasCommand(const etl::string<GLOBAL_KEY_SIZE>& command) {
 	if(this->commands.count(command) == 1) {
 		return true;
@@ -285,14 +312,7 @@ bool WebSerial::hasCommand(const etl::string<GLOBAL_KEY_SIZE>& command) {
 }
 
 
-void WebSerial::setCommand(const etl::string<GLOBAL_KEY_SIZE>& command, webserial_command_func handler) {
-	if(command.compare(Application::Null) == 0) {
-		this->commands.clear();
-		return;
-	}
-	this->commands[command] = handler;
-	if(command.compare("*") == 0 && handler == nullptr) {
-		this->commands.erase("*");
-	}
+void WebSerial::clearCommands() {
+	this->commands.clear();
 }
 
