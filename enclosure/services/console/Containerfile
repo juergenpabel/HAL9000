@@ -17,7 +17,7 @@ RUN ln -s ../assets      ./data/assets
 
 RUN pip install --no-cache-dir -r requirements.txt -r data/requirements.txt
 
-EXPOSE 8080
+EXPOSE 2001
 
 ENV PYTHONPATH=/console/package
 WORKDIR /console/data/
