@@ -76,9 +76,9 @@ class HAL9000(Frontend):
 					case 'system/runlevel':
 						target = command['payload']
 						match target:
-							case 'halt':
+							case 'halting':
 								self.show_animations(display, {'name': 'system-terminating'})
-							case 'restart':
+							case 'restarting':
 								self.show_animations(display, {'name': 'system-terminating'})
 							case other:
 								logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported shutdown target '{target}' "
@@ -206,7 +206,7 @@ class HAL9000(Frontend):
 						do_loop = True
 						while do_loop is True:
 							for nr in range(0, animation['frames']):
-								display.background_image_src = f'/assets/{animation["directory"]}/{nr:02}.jpg'
+								display.background_image_src = f'/assets{animation["directory"]}/{nr:02}.jpg'
 								display.update()
 								await asyncio_sleep((float(animation['duration'])/(animation['frames']*1000))+0.1)
 							do_loop = bool(animation['loop'])
@@ -374,7 +374,7 @@ class HAL9000(Frontend):
 		page.data['button_wakeup'] = flet.Ref[flet.TextButton]()
 		display = flet.CircleAvatar(radius=int(page.scale*120), bgcolor='black')
 		display.content = flet.canvas.Canvas(width=display.radius*2, height=display.radius*2)
-		display.background_image_src = '/assets/sequences/init/00.jpg'
+		display.background_image_src = '/assets/images/display.jpg'
 		display.data = {}
 		display.data['idle_clock'] = flet.Ref[flet.canvas.Text]()
 		display.data['animations'] = []

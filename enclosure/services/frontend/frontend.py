@@ -8,10 +8,11 @@ from logging import getLogger as logging_getLogger, \
                     addLevelName as logging_addLevelName
 from importlib import import_module as importlib_import_module
 from configparser import ConfigParser as configparser_ConfigParser
+from paho.mqtt.client import Client as mqtt_Client, CallbackAPIVersion as mqtt_CallbackAPIVersion
 from asyncio import sleep as asyncio_sleep, create_task as asyncio_create_task
 from fastapi import FastAPI as fastapi_FastAPI
 from uvicorn import run as uvicorn_run
-from paho.mqtt.client import Client as mqtt_Client, CallbackAPIVersion as mqtt_CallbackAPIVersion
+from uvicorn.config import LOGGING_CONFIG as uvicorn_config_LOGGING_CONFIG
 
 from hal9000.frontend import Frontend
 import hal9000.frontend.arduino
@@ -230,6 +231,7 @@ if __name__ == '__main__':
 		sys_exit(1)
 	logging_getLogger().info("[frontend] starting...")
 	try:
+		uvicorn_config_LOGGING_CONFIG["formatters"]["default"]["fmt"] = "%(asctime)s %(levelprefix)s %(message)s"
 		uvicorn_run('frontend:app', host='0.0.0.0', port=9000, log_level='info')
 	except KeyboardInterrupt:
 		logging_getLogger().info("[frontend] exiting due to CTRL-C")
