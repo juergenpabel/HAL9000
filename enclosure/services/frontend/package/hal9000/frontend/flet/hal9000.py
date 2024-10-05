@@ -86,7 +86,7 @@ class HAL9000(Frontend):
 					case 'system/features':
 						if 'time' in command['payload']:
 							if 'synced' in command['payload']['time']:
-								page.session.set('idle_clock:synced', command['payload']['time']['synced'])
+								page.session.set('idle_clock:synced', str(command['payload']['time']['synced']).lower())
 					case 'system/environment':
 						if 'set' in command['payload']:
 							if 'key' in command['payload']['set'] and 'value' in command['payload']['set']:
@@ -179,13 +179,10 @@ class HAL9000(Frontend):
 		while page.session_id in self.command_session_queues:
 			clock = display.data['idle_clock'].current
 			if clock is not None:
-				if page.session.contains_key("idle_clock:synced") is False or page.session.get("idle_clock:synced") == 'unknown':
-					page.session.set("idle_clock:synced", os_path_exists('/run/systemd/timesync/synchronized'))
-				match page.session.get("idle_clock:synced"):
-					case True | 'true':
-						clock.style.color = 'white'
-					case False | 'false':
-						clock.style.color = 'red'
+				if page.session.get("idle_clock:synced") == 'true':
+					clock.style.color = 'white'
+				else:
+					clock.style.color = 'red'
 				now = datetime_datetime.now()
 				if now.second % 2 == 0:
 					clock.text = now.strftime('%H:%M')
