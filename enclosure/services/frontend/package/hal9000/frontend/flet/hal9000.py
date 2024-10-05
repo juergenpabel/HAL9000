@@ -36,11 +36,11 @@ class HAL9000(Frontend):
 
 
 	async def configure(self, configuration: configparser_ConfigParser) -> bool:
-		assets_dir = f'{os_getcwd()}/assets'
-		if os_path_islink(assets_dir) is True:
-			assets_dir = os_path_realpath(assets_dir)
-		self.flet_app.mount('/assets/', fastapi_staticfiles_StaticFiles(directory=assets_dir, follow_symlink=True), name="assets")
-		self.flet_app.mount('/',        flet_fastapi.app(self.flet, route_url_strategy='path'))
+		resources_dir = f'{os_getcwd()}/resources'
+		if os_path_islink(resources_dir) is True:
+			resources_dir = os_path_realpath(resources_dir)
+		self.flet_app.mount('/resources/', fastapi_staticfiles_StaticFiles(directory=resources_dir, follow_symlink=True), name="resources")
+		self.flet_app.mount('/',           flet_fastapi.app(self.flet, route_url_strategy='path'))
 		return True
 
 
@@ -206,7 +206,7 @@ class HAL9000(Frontend):
 						do_loop = True
 						while do_loop is True:
 							for nr in range(0, animation['frames']):
-								display.background_image_src = f'/assets{animation["directory"]}/{nr:02}.jpg'
+								display.background_image_src = f'/resources{animation["directory"]}/{nr:02}.jpg'
 								display.update()
 								await asyncio_sleep((float(animation['duration'])/(animation['frames']*1000))+0.1)
 							do_loop = bool(animation['loop'])
@@ -257,12 +257,12 @@ class HAL9000(Frontend):
 	def show_animations(self, display: flet.CircleAvatar, data: dict) -> None:
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.data['animations'] = {}
-		if os_path_exists(f'assets/gui/screen/animations/{data["name"]}.json') is True:
-			with open(f'assets/gui/screen/animations/{data["name"]}.json') as file:
+		if os_path_exists(f'resources/gui/screen/animations/{data["name"]}.json') is True:
+			with open(f'resources/gui/screen/animations/{data["name"]}.json') as file:
 				display.data['animations']['name'] = data['name']
 				display.data['animations']['json'] = json_load(file)
 		else:
-			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'assets/gui/screen/animations/{data['name']}.json'")
+			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'resources/gui/screen/animations/{data['name']}.json'")
 		display.content.update()
 		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': f'animations:{data["name"]}', 'origin': 'frontend:flet'}})
 
@@ -374,7 +374,7 @@ class HAL9000(Frontend):
 		page.data['button_wakeup'] = flet.Ref[flet.TextButton]()
 		display = flet.CircleAvatar(radius=int(page.scale*120), bgcolor='black')
 		display.content = flet.canvas.Canvas(width=display.radius*2, height=display.radius*2)
-		display.background_image_src = '/assets/images/display.jpg'
+		display.background_image_src = '/resources/images/display.jpg'
 		display.data = {}
 		display.data['idle_clock'] = flet.Ref[flet.canvas.Text]()
 		display.data['animations'] = []
@@ -401,7 +401,7 @@ class HAL9000(Frontend):
 		                                                                                                        width=page.scale*328, height=page.scale*520, spacing=0),
 		                                                                                              ], height=page.scale*960, spacing=0),
 		                                                                 width=page.scale*328, height=page.scale*960, padding=0,
-		                                                                 image_src="/assets/images/HAL9000.jpg", image_fit=flet.ImageFit.FILL),
+		                                                                 image_src="/resources/images/HAL9000.jpg", image_fit=flet.ImageFit.FILL),
 		                                                  ], spacing=0),
 		                            flet.Column(controls=[
 		                                                  flet.TextButton("Vol+", on_click=self.on_volume_up),

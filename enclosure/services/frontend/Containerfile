@@ -11,9 +11,9 @@ WORKDIR /frontend
 COPY ./requirements.txt  ./
 COPY ./frontend.py       ./
 COPY ./package/          ./package/
-COPY ./assets/           ./assets/
+COPY ./resources/        ./resources/
 COPY ./$DATA_DIRECTORY/  ./data/
-RUN ln -s ../assets      ./data/assets
+RUN ln -s ../resources   ./data/resources
 
 RUN pip install --no-cache-dir -r requirements.txt -r data/requirements.txt
 

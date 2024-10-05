@@ -28,24 +28,24 @@ import hal9000.console.screen.misc
 SCREENS = {
 	"start": {"src": None, "tooltip": None, "screen": hal9000.console.screen.misc.ScreenStart()},
 	"kalliope": {
-		"COM": {"src": "/assets/images/COM.jpg", "tooltip": "Kalliope: Synapses",        "screen": hal9000.console.screen.kalliope.ScreenSynapses()},
-		"CNT": {"src": "/assets/images/CNT.jpg", "tooltip": "Kalliope: Configuration",   "screen": hal9000.console.screen.kalliope.ScreenConfiguration()},
-		"MEM": {"src": "/assets/images/MEM.jpg", "tooltip": "Kalliope: Status",          "screen": hal9000.console.screen.kalliope.ScreenStatus()}
+		"COM": {"src": "/resources/images/COM.jpg", "tooltip": "Kalliope: Synapses",        "screen": hal9000.console.screen.kalliope.ScreenSynapses()},
+		"CNT": {"src": "/resources/images/CNT.jpg", "tooltip": "Kalliope: Configuration",   "screen": hal9000.console.screen.kalliope.ScreenConfiguration()},
+		"MEM": {"src": "/resources/images/MEM.jpg", "tooltip": "Kalliope: Status",          "screen": hal9000.console.screen.kalliope.ScreenStatus()}
 	},
 	"enclosure": {
-		"VEH": {"src": "/assets/images/VEH.jpg", "tooltip": "Enclosure: Status",         "screen": hal9000.console.screen.enclosure.ScreenStatus()},
-		"ATM": {"src": "/assets/images/ATM.jpg", "tooltip": "Enclosure: Sensors",        "screen": hal9000.console.screen.enclosure.ScreenSensors()},
-		"GDE": {"src": "/assets/images/GDE.jpg", "tooltip": "Enclosure: Extensions",     "screen": hal9000.console.screen.enclosure.ScreenExtensions()}
+		"VEH": {"src": "/resources/images/VEH.jpg", "tooltip": "Enclosure: Status",         "screen": hal9000.console.screen.enclosure.ScreenStatus()},
+		"ATM": {"src": "/resources/images/ATM.jpg", "tooltip": "Enclosure: Sensors",        "screen": hal9000.console.screen.enclosure.ScreenSensors()},
+		"GDE": {"src": "/resources/images/GDE.jpg", "tooltip": "Enclosure: Extensions",     "screen": hal9000.console.screen.enclosure.ScreenExtensions()}
 	},
 	"system": {
-		"HIB": {"src": "/assets/images/HIB.jpg", "tooltip": "System: Hibernation",       "screen": hal9000.console.screen.system.ScreenHibernation()},
-		"NUC": {"src": "/assets/images/NUC.jpg", "tooltip": "System: Power",             "screen": hal9000.console.screen.system.ScreenPower()},
-		"LIF": {"src": "/assets/images/LIF.jpg", "tooltip": "System: Updates",           "screen": hal9000.console.screen.system.ScreenUpdates()},
+		"HIB": {"src": "/resources/images/HIB.jpg", "tooltip": "System: Hibernation",       "screen": hal9000.console.screen.system.ScreenHibernation()},
+		"NUC": {"src": "/resources/images/NUC.jpg", "tooltip": "System: Power",             "screen": hal9000.console.screen.system.ScreenPower()},
+		"LIF": {"src": "/resources/images/LIF.jpg", "tooltip": "System: Updates",           "screen": hal9000.console.screen.system.ScreenUpdates()},
 	},
 	"misc": {
-		"DMG": {"src": "/assets/images/DMG.jpg", "tooltip": "Miscellaneous: Logs",       "screen": hal9000.console.screen.misc.ScreenLogs()},
-		"FLX": {"src": "/assets/images/FLX.jpg", "tooltip": "Miscellaneous: Statistics", "screen": hal9000.console.screen.misc.ScreenStatistics()},
-		"NAV": {"src": "/assets/images/NAV.jpg", "tooltip": "Miscellaneous: Help",       "screen": hal9000.console.screen.misc.ScreenHelp()}
+		"DMG": {"src": "/resources/images/DMG.jpg", "tooltip": "Miscellaneous: Logs",       "screen": hal9000.console.screen.misc.ScreenLogs()},
+		"FLX": {"src": "/resources/images/FLX.jpg", "tooltip": "Miscellaneous: Statistics", "screen": hal9000.console.screen.misc.ScreenStatistics()},
+		"NAV": {"src": "/resources/images/NAV.jpg", "tooltip": "Miscellaneous: Help",       "screen": hal9000.console.screen.misc.ScreenHelp()}
 	}
 }
 
@@ -56,7 +56,7 @@ def console(page: flet_Page):
 
 	menu_lo = flet_Column(width=150)
 	menu_li = flet_Column(width=150)
-	menu_hal = flet_Column(width=110, controls=[flet.Container(content=flet.Image(src="/assets/images/HAL9000.jpg", fit=flet.ImageFit.FILL),
+	menu_hal = flet_Column(width=110, controls=[flet.Container(content=flet.Image(src="/resources/images/HAL9000.jpg", fit=flet.ImageFit.FILL),
 	                                                           on_click=SCREENS["start"]["screen"].on_show)],
 	                       horizontal_alignment=flet.CrossAxisAlignment.CENTER)
 	menu_ri = flet_Column(width=150)
@@ -82,19 +82,19 @@ def console(page: flet_Page):
 
 
 async def fastapi_lifespan(app: fastapi_FastAPI):
-	assets_dir = f'{os_getcwd()}/assets'
-	if os_path_islink(assets_dir) is True:
-		assets_dir = os_path_realpath(assets_dir)
-	app.mount('/assets/', fastapi_staticfiles_StaticFiles(directory=assets_dir, follow_symlink=True), name="assets")
-	app.mount('/',       flet_fastapi_app(console, route_url_strategy='path'))
+	resources_dir = f'{os_getcwd()}/resources'
+	if os_path_islink(resources_dir) is True:
+		resources_dir = os_path_realpath(resources_dir)
+	app.mount('/resources/', fastapi_staticfiles_StaticFiles(directory=resources_dir, follow_symlink=True), name="resources")
+	app.mount('/',           flet_fastapi_app(console, route_url_strategy='path'))
 	yield
 
 
 app = fastapi_FastAPI(lifespan=fastapi_lifespan)
 if __name__ == '__main__':
 	logging_addLevelName(5, 'TRACE')
-	if os_path_exists('assets') is False:
-		logging_getLogger().critical("[console] missing 'assets' directory (or symlink to directory)")
+	if os_path_exists('resources') is False:
+		logging_getLogger().critical("[console] missing 'resources' directory (or symlink to directory)")
 		sys_exit(1)
 	logging_getLogger().info("[console] starting...")
 	try:

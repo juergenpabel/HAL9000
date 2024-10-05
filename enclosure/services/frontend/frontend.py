@@ -226,8 +226,8 @@ async def fastapi_lifespan(app: fastapi_FastAPI):
 app = fastapi_FastAPI(lifespan=fastapi_lifespan)
 if __name__ == '__main__':
 	logging_addLevelName(Frontend.LOG_LEVEL_TRACE, 'TRACE')
-	if os_path_exists('assets') is False:
-		logging_getLogger().critical("[frontend] missing 'assets' directory (or symlink to directory)")
+	if os_path_exists('resources') is False:
+		logging_getLogger().critical("[frontend] missing 'resources' directory (or symlink to directory)")
 		sys_exit(1)
 	logging_getLogger().info("[frontend] starting...")
 	try:

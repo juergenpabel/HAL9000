@@ -64,8 +64,8 @@ podman build --platform "${BUILD_PLATFORMS}" --build-arg DATA_DIRECTORY="${DATA_
 echo "Building image 'hal9000-console'..."
 cd "${GIT_REPODIR}/enclosure/services/console/"
 git submodule update --recursive "${DATA_DIRECTORY}"
-if [ -L "${DATA_DIRECTORY}/assets" ]; then
-	rm "${DATA_DIRECTORY}/assets"
+if [ -L "${DATA_DIRECTORY}/resources" ]; then
+	rm "${DATA_DIRECTORY}/resources"
 fi
 podman manifest exists "localhost/hal9000-console:latest"
 if [ $? -eq 0 ]; then
@@ -76,8 +76,8 @@ podman build --platform "${BUILD_PLATFORMS}" --build-arg DATA_DIRECTORY="${DATA_
 echo "Building image 'hal9000-frontend'..."
 cd "${GIT_REPODIR}/enclosure/services/frontend/"
 git submodule update --recursive "${DATA_DIRECTORY}"
-if [ -L "${DATA_DIRECTORY}/assets" ]; then
-	rm "${DATA_DIRECTORY}/assets"
+if [ -L "${DATA_DIRECTORY}/resources" ]; then
+	rm "${DATA_DIRECTORY}/resources"
 fi
 podman manifest exists "localhost/hal9000-frontend:latest"
 if [ $? -eq 0 ]; then
