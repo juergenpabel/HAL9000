@@ -1,3 +1,5 @@
+#include <etl/string.h>
+#include <etl/to_string.h>
 #include <TimeLib.h>
 
 #include "gui/screen/screen.h"
@@ -21,13 +23,18 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 	response.clear();
 	screen_name.clear();
 	screen_data.clear();
+	if(body.isNull() == true || body.is<const char*>() == true) {
+		response["screen"] = gui_screen_getname();
+		g_util_webserial.send("gui/screen", response);
+		return;
+	}
 	if(body.containsKey("off") == true) {
-		screen_name = "off";
-		screen_func = gui_screen_off;
+		gui_screen_set("off", gui_screen_off);
+		return;
 	}
 	if(body.containsKey("on") == true) {
-		screen_name = "on";
-		screen_func = gui_screen_on;
+		gui_screen_set("on", gui_screen_on);
+		return;
 	}
 	if(body.containsKey("animations") == true) {
 		g_system_application.delEnv("gui/screen:animations/name");
@@ -135,19 +142,44 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 
 	response.clear();
 	overlay_name.clear();
+	if(body.isNull() == true || body.is<const char*>() == true) {
+		response["overlay"] = gui_overlay_getname();
+		g_util_webserial.send("gui/overlay", response);
+		return;
+	}
 	if(body.containsKey("none") == true) {
 		overlay_name = "none";
 		overlay_func = gui_overlay_none;
 	}
 	if(body.containsKey("volume") == true) {
 		if(body["volume"].containsKey("level") == true) {
-			g_system_application.setEnv("gui/overlay:volume/level", body["volume"]["level"].as<const char*>());
+			if(body["volume"]["level"].is<unsigned char>() == true) {
+				unsigned char volume;
+
+				volume = body["volume"]["level"].as<unsigned char>();
+				if(volume >= 0 && volume <= 100) {
+					etl::string<4> volume_string;
+
+					g_system_application.setEnv("gui/overlay:volume/level", etl::to_string(volume, volume_string));
+					overlay_name = "volume";
+					overlay_func = gui_overlay_volume;
+				}
+			}
 		}
 		if(body["volume"].containsKey("mute") == true) {
-			g_system_application.setEnv("gui/overlay:volume/mute", body["volume"]["mute"].as<const char*>());
+			if(body["volume"]["mute"].is<bool>() == true) {
+				switch(body["volume"]["mute"].as<bool>()) {
+					case true:
+						g_system_application.setEnv("gui/overlay:volume/mute", "true");
+						break;
+					case false:
+						g_system_application.setEnv("gui/overlay:volume/mute", "false");
+						break;
+				}
+				overlay_name = "volume";
+				overlay_func = gui_overlay_volume;
+			}
 		}
-		overlay_name = "volume";
-		overlay_func = gui_overlay_volume;
 	}
 	if(body.containsKey("message") == true) {
 		if(body["message"].containsKey("text") == true) {

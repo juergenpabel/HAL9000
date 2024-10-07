@@ -124,12 +124,12 @@ class FrontendManager:
 			return
 		match topic[25:]: #remove 'hal9000/command/frontend/' prefix
 			case 'runlevel':
-				if payload == '':
+				if payload is None or payload == '':
 					self.frontends[0].events.put_nowait({'topic': 'hal9000/event/frontend/runlevel', 'payload': self.calculate_runlevel()})
 				else:
 					logging_getLogger("uvicorn").warn(f"[frontend] ignoring mqtt command 'runlevel' with payload '{payload}' because 'runlevel' is read-only")
 			case 'status':
-				if payload == '':
+				if payload is None or payload == '':
 					if self.calculate_runlevel() == Frontend.FRONTEND_RUNLEVEL_RUNNING:
 						self.frontends[0].events.put_nowait({'topic': 'hal9000/event/frontend/status', 'payload': self.calculate_status()})
 				else:

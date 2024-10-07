@@ -1,14 +1,19 @@
 from __future__ import annotations
+from enum import Enum as enum_Enum
 from typing import Callable as typing_Callable
 from configparser import ConfigParser as configparser_ConfigParser
 
 from aiomqtt import Message as aiomqtt_Message
 
 
+class CommitPhase(enum_Enum):
+	LOCAL_REQUESTED = 0
+	REMOTE_REQUESTED = 1
+	COMMIT = 2
+
+
 class HAL9000_Plugin_Data(object):
 	STATUS_UNINITIALIZED = '<uninitialized>'
-	STATUS_REQUESTED = '<requested>'
-	STATUS_CONFIRMED = '<confirmed>'
 	SPECIAL_NAMES = ['plugin_id', 'module', 'local_names', 'remote_names', 'callbacks_data', 'callbacks_signal']
 
 	def __init__(self, plugin_id: str, **kwargs) -> None:
@@ -22,7 +27,7 @@ class HAL9000_Plugin_Data(object):
 		for name, value in kwargs.items():
 			if name in self.local_names or name in self.remote_names:
 				super().__setattr__(name, value)
-		self.callbacks_data = { '*': set() }
+		self.callbacks_data = {'*': set()}
 		self.callbacks_signal = set()
 
 
@@ -79,45 +84,56 @@ class HAL9000_Plugin_Data(object):
 
 
 	def __setattr__(self, name: str, new_value) -> None:
-		if isinstance(new_value, tuple):
-			if len(new_value) != 2:
-				raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): valid tuples must be a value as the 1st item and " \
-				                f"either HAL9000_Plugin_Data.STATUS_REQUESTED or HAL9000_Plugin_Data.STATUS_CONFIRMED as the 2nd item")
-			if name not in self.remote_names.keys():
-				raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): '{name}' is not a remote item")
-			match new_value[1]:
-				case HAL9000_Plugin_Data.STATUS_REQUESTED:
-					self.remote_names[name] = getattr(self, name)
-				case HAL9000_Plugin_Data.STATUS_CONFIRMED:
-					self.remote_names[name] = new_value[0]
-			new_value = new_value[0]
 		if name in HAL9000_Plugin_Data.SPECIAL_NAMES:
 			super().__setattr__(name, new_value)
 			return
 		if name not in self.local_names and name not in self.remote_names:
 			raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): '{name}' is not a registered attribute name")
-		old_value = None
+		commit_phase = CommitPhase.LOCAL_REQUESTED
+		if isinstance(new_value, tuple):
+			if len(new_value) != 2:
+				raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): valid tuples must be a value as the 1st item and " \
+				                f"either CommitPhase.REMOTE_REQUESTED or CommitPhase.COMMIT as the 2nd item")
+			if new_value[1] not in CommitPhase:
+				raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): 2nd item of tuple must be of enum CommitPhase")
+			commit_phase = new_value[1]
+			new_value = new_value[0]
+			if name in self.remote_names:
+				self.remote_names[name] = new_value
+		else:
+			if name in self.remote_names:
+				if new_value == self.remote_names[name]:
+					commit_phase = CommitPhase.COMMIT
+				else:
+					commit_phase = CommitPhase.REMOTE_REQUESTED
+		old_value = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
 		if hasattr(self, name) is True:
 			old_value = getattr(self, name)
 		if new_value is None:
 			new_value = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
 		if old_value != new_value:
-			pending = False
-			if name in self.remote_names.keys():
-				if new_value != self.remote_names[name]:
-					pending = True
-			commit_value = True
-			for callback_name in ['*', name]:
-				if callback_name in self.callbacks_data:
-					for callback in self.callbacks_data[callback_name]:
-						result = callback(self, name, old_value, new_value, pending)
-						if pending is False and result is None:
-							raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): a registerd callback " \
-							                f"returned <None> instead of a boolean value (BUG!) => {callback}")
-						commit_value &= result
-			if pending is True:
-				self.remote_names[name] = new_value
-			elif commit_value is True:
+			if commit_phase == CommitPhase.REMOTE_REQUESTED:
+				for callback_name in ['*', name]:
+					if callback_name in self.callbacks_data:
+						for callback in self.callbacks_data[callback_name]:
+							callback(self, name, old_value, new_value, CommitPhase.REMOTE_REQUESTED)
+			if commit_phase == CommitPhase.LOCAL_REQUESTED:
+				commit_value = True
+				for callback_name in ['*', name]:
+					if callback_name in self.callbacks_data:
+						for callback in self.callbacks_data[callback_name]:
+							result = callback(self, name, old_value, new_value, CommitPhase.LOCAL_REQUESTED)
+							if result is None:
+								raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): a registerd callback " \
+								                f"returned <None> instead of a boolean value (BUG!) => {callback}")
+							commit_value &= result
+				if commit_value is True:
+					commit_phase = CommitPhase.COMMIT
+			if commit_phase == CommitPhase.COMMIT:
+				for callback_name in ['*', name]:
+					if callback_name in self.callbacks_data:
+						for callback in self.callbacks_data[callback_name]:
+							callback(self, name, old_value, new_value, CommitPhase.COMMIT)
 				super().__setattr__(name, new_value)
 
 

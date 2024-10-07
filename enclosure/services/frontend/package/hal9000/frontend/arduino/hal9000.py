@@ -85,8 +85,7 @@ class HAL9000(Frontend):
 						await self.serial_writeline('["device/mcp23X17", {"start":true}]')
 						await asyncio_sleep(0.5)
 						logging_getLogger('uvicorn').debug(f"[frontend:arduino] '{arduino_device}' is now configured via frontend-configuration")
-					await self.serial_writeline('["", ""]')
-					await asyncio_sleep(0.5)
+					await self.serial_writeline('["system/runlevel", "ready"]')
 					arduino_status = await self.serial_await_runlevel_change('configuring')
 				if arduino_status == 'panicing':
 					error = 'no error details provided' #TODO

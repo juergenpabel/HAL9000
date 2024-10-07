@@ -1,7 +1,7 @@
 from json import loads as json_loads
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.plugin import HAL9000_Plugin_Data
+from hal9000.brain.plugin import HAL9000_Plugin_Data, CommitPhase
 from hal9000.brain.plugins.enclosure import EnclosureComponent
 
 
@@ -56,8 +56,8 @@ class Control(EnclosureComponent):
 					self.configure_menu(menu_config, menu_entry)
 
 
-	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_screen: str, new_screen: str, pending: bool) -> bool:
-		if pending is False:
+	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_screen: str, new_screen: str, phase: CommitPhase) -> bool:
+		if phase == CommitPhase.COMMIT:
 			if old_screen == 'menu':
 				self.daemon.plugins['frontend'].menu_name = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
 				self.daemon.plugins['frontend'].menu_item = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
@@ -95,10 +95,8 @@ class Control(EnclosureComponent):
 					menu_name = self.daemon.plugins['frontend'].menu_name
 					menu_item = self.daemon.plugins['frontend'].menu_item
 					if 'delta' in signal['control']:
-						self.daemon.schedule_signal(self.config['menu']['timeout'],
-						                            'frontend',
-						                            {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
-						                            'scheduler://enclosure:control/menu:timeout')
+						self.daemon.create_scheduled_signal(self.config['menu']['timeout'], 'frontend',  {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
+						                                    'scheduler://enclosure:control/menu:timeout')
 						position = 0
 						for item in self.config['menu'][menu_name]['items']:
 							if item['item'] == menu_item:
@@ -140,10 +138,8 @@ class Control(EnclosureComponent):
 							                                             'parameter': {'title': menu_title, 'text': menu_text}}}})
 							self.daemon.plugins['frontend'].menu_name = menu_item
 							self.daemon.plugins['frontend'].menu_item = self.config['menu'][menu_item]['items'][0]['item']
-							self.daemon.schedule_signal(self.config['menu']['timeout'],
-							                            'frontend',
-							                            {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
-							                            'scheduler://enclosure:control/menu:timeout')
+							self.daemon.create_scheduled_signal(self.config['menu']['timeout'], 'frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
+							                                    'scheduler://enclosure:control/menu:timeout')
 				case other:
 					self.daemon.logger.error(f"[enclosure/control]: unknown screen '{self.daemon.plugins['frontend'].screen}', " \
 					                         f"returning to screen 'idle'")

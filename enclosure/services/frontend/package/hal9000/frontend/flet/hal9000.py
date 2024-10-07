@@ -108,62 +108,64 @@ class HAL9000(Frontend):
 								logging_getLogger('uvicorn').warning(f"[frontend:flet] for command 'system/settings' with 'set': " \
 								                                     f"missing 'key' and/or 'value' items: {command['payload']['set']}")
 					case 'gui/screen':
-						for screen in command['payload'].keys():
-							match screen:
-								case 'off':
-									self.show_off(display)
-								case 'on':
-									self.show_on(display)
-								case 'none':
-									self.show_none(display)
-								case 'idle':
-									self.show_idle(display)
-								case 'animations':
-									self.show_animations(display, command['payload']['animations'])
-								case 'menu':
-									self.show_menu(display, command['payload']['menu'])
-								case 'qrcode':
-									self.show_qrcode(display, command['payload']['qrcode'])
-								case 'splash':
-									self.show_splash(display, command['payload']['splash'])
-								case 'error':
-									self.show_error(display, command['payload']['error'])
-								case other:
-									self.show_error(display, {'title': "BUG: unsupported screen",
-									                          'detail': screen,
-									                          'id': '922'})
-									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported screen '{screen}' "
-									                                     f"in command 'gui/screen'")
+						if isinstance(command['payload'], dict) is True:
+							for screen in command['payload'].keys():
+								match screen:
+									case 'off':
+										self.show_off(display)
+									case 'on':
+										self.show_on(display)
+									case 'none':
+										self.show_none(display)
+									case 'idle':
+										self.show_idle(display)
+									case 'animations':
+										self.show_animations(display, command['payload']['animations'])
+									case 'menu':
+										self.show_menu(display, command['payload']['menu'])
+									case 'qrcode':
+										self.show_qrcode(display, command['payload']['qrcode'])
+									case 'splash':
+										self.show_splash(display, command['payload']['splash'])
+									case 'error':
+										self.show_error(display, command['payload']['error'])
+									case other:
+										self.show_error(display, {'title': "BUG: unsupported screen",
+										                          'detail': screen,
+										                          'id': '922'})
+										logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported screen '{screen}' "
+										                                     f"in command 'gui/screen'")
 					case 'gui/overlay':
-						for overlay in command['payload'].keys():
-							display.content.shapes = list(filter(lambda shape: shape.data!='overlay', display.content.shapes))
-							match overlay:
-								case 'none':
-									display.content.update()
-									self.events.put_nowait({'topic': 'gui/overlay',
-									                        'payload': {'overlay': 'none', 'origin': 'frontend:flet'}})
-								case 'volume':
-									radius = display.radius
-									for level in range(0, int(command['payload']['volume']['level'])):
-										color = 'white' if command['payload']['volume']['mute'] != 'true' else 'red'
-										dx = math_cos(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
-										dy = math_sin(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
-										x1 = radius+(dx*radius*0.9)
-										y1 = radius+(dy*radius*0.9)
-										x2 = radius+(dx*radius*0.99)
-										y2 = radius+(dy*radius*0.99)
-										display.content.shapes.append(flet.canvas.Line(x1, y1, x2, y2,
-										                                               paint=flet.Paint(color=color),
-										                                               data='overlay'))
-									display.content.update()
-									self.events.put_nowait({'topic': 'gui/overlay',
-									                        'payload': {'overlay': 'volume', 'origin': 'frontend:flet'}})
-								case other:
-									self.show_error(display, {'title': 'BUG: unsupported overlay',
-									                          'detail': overlay,
-									                          'id': '923'})
-									logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported overlay '{overlay}' "
-									                                     f"in command 'gui/overlay'")
+						if isinstance(command['payload'], dict) is True:
+							for overlay in command['payload'].keys():
+								display.content.shapes = list(filter(lambda shape: shape.data!='overlay', display.content.shapes))
+								match overlay:
+									case 'none':
+										display.content.update()
+										self.events.put_nowait({'topic': 'gui/overlay',
+										                        'payload': {'overlay': 'none', 'origin': 'frontend:flet'}})
+									case 'volume':
+										radius = display.radius
+										for level in range(0, int(command['payload']['volume']['level'])):
+											color = 'white' if command['payload']['volume']['mute'] is False else 'red'
+											dx = math_cos(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
+											dy = math_sin(2*math_pi * level/100 * 6/8 + (2*math_pi*3/8));
+											x1 = radius+(dx*radius*0.9)
+											y1 = radius+(dy*radius*0.9)
+											x2 = radius+(dx*radius*0.99)
+											y2 = radius+(dy*radius*0.99)
+											display.content.shapes.append(flet.canvas.Line(x1, y1, x2, y2,
+											                                               paint=flet.Paint(color=color),
+											                                               data='overlay'))
+										display.content.update()
+										self.events.put_nowait({'topic': 'gui/overlay',
+										                        'payload': {'overlay': 'volume', 'origin': 'frontend:flet'}})
+									case other:
+										self.show_error(display, {'title': 'BUG: unsupported overlay',
+										                          'detail': overlay,
+										                          'id': '923'})
+										logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported overlay '{overlay}' "
+										                                     f"in command 'gui/overlay'")
 					case other:
 						self.show_error(display, {'title': 'BUG: Unsupported command',
 						                          'detail': command['topic'],
@@ -213,26 +215,24 @@ class HAL9000(Frontend):
 									del self.environment['gui/screen:animations/loop']
 						display.update()
 					if 'on:next' in animation:
-						if 'webserial' in animation['on:next']:
+						if 'util/webserial:handle' in animation['on:next']:
 							try:
-								topic, payload = json_loads(animation['on:next']['webserial'])
+								topic, payload = json_loads(animation['on:next']['util/webserial:handle'])
 								self.commands.put_nowait({'topic': topic, 'payload': payload})
 							except Exception as e:
-								logging_getLogger('uvicorn').error(f"[frontend:flet] on:next/webserial of gui/screen:animations/{name} " \
-								                                   f"not webserial-compliant: '{animation['on:next']['webserial']}' => {e}")
+								logging_getLogger('uvicorn').error(f"[frontend:flet] on:next['util/webserial:handle'] in gui/screen:animations/{name} " \
+								                                   f"not webserial-compliant: '{animation['on:next']['util/webserial:handle']}' => {e}")
 			await asyncio_sleep(0.1)
 
 
 	def show_off(self, display: flet.CircleAvatar) -> None:
 		display.content.shapes = []
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'off', 'origin': 'frontend:flet'}})
 
 
 	def show_on(self, display: flet.CircleAvatar) -> None:
 		display.content.shapes = []
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'on', 'origin': 'frontend:flet'}})
 
 
 	def show_none(self, display: flet.CircleAvatar) -> None:

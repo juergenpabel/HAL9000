@@ -18,8 +18,8 @@ typedef struct {
 	etl::string<GLOBAL_FILENAME_SIZE> directory;
 	unsigned int                      frames;
 	boolean                           loop;
-	etl::string<GLOBAL_VALUE_SIZE>    onthis_webserial;
-	etl::string<GLOBAL_VALUE_SIZE>    onnext_webserial;
+	etl::string<GLOBAL_VALUE_SIZE>    on_this;
+	etl::string<GLOBAL_VALUE_SIZE>    on_next;
 } animation_t;
 
 typedef etl::list<animation_t, 8>  animations_t;
@@ -99,8 +99,18 @@ unsigned long gui_screen_animations(unsigned long validity, TFT_eSPI* gui) {
 			}
 		}
 		if(animation_current->loop == false) {
-			if(animation_current->onnext_webserial.empty() == false) {
-				g_util_webserial.handle(animation_current->onnext_webserial);
+			if(animation_current->on_next.empty() == false) {
+				if(animation_current->on_next.compare(0, 22, "util/webserial:handle=") == 0) {
+					animation_current->on_next.erase(0, 22);
+					g_util_webserial.handle(animation_current->on_next);
+					animation_current->on_next.clear();
+				}
+				if(animation_current->on_next.compare(0, 25, "gui/overlay:message/text=") == 0) {
+					animation_current->on_next.erase(0, 25);
+					g_system_application.setEnv("gui/overlay:message/text", animation_current->on_next);
+					gui_overlay_set("message", gui_overlay_message);
+					animation_current->on_next.clear();
+				}
 			}
 			animations.pop_front();
 			if(animations.empty() == true) {
@@ -111,9 +121,18 @@ unsigned long gui_screen_animations(unsigned long validity, TFT_eSPI* gui) {
 		}
 	}
 	if(animation_current_frame == 0) {
-		if(animation_current->onthis_webserial.empty() == false) {
-			g_util_webserial.handle(animation_current->onthis_webserial);
-			animation_current->onthis_webserial.clear();
+		if(animation_current->on_this.empty() == false) {
+			if(animation_current->on_this.compare(0, 22, "util/webserial:handle=") == 0) {
+				animation_current->on_this.erase(0, 22);
+				g_util_webserial.handle(animation_current->on_this);
+				animation_current->on_this.clear();
+			}
+			if(animation_current->on_this.compare(0, 25, "gui/overlay:message/text=") == 0) {
+				animation_current->on_this.erase(0, 25);
+				g_system_application.setEnv("gui/overlay:message/text", animation_current->on_this);
+				gui_overlay_set("message", gui_overlay_message);
+				animation_current->on_this.clear();
+			}
 		}
 	}
 	if(gui == &g_gui_buffer) {
@@ -167,8 +186,8 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 		animation.directory.clear();
 		animation.frames = 0;
 		animation.loop = false;
-		animation.onthis_webserial.clear();
-		animation.onnext_webserial.clear();
+		animation.on_this.clear();
+		animation.on_next.clear();
 		if(animationJSON.containsKey("title") == true) {
 			animation.title = animationJSON["title"].as<const char*>();
 		}
@@ -185,13 +204,17 @@ static void gui_screen_animations_load(const etl::string<GLOBAL_FILENAME_SIZE>& 
 			animation.loop = animationJSON["loop"].as<bool>();
 		}
 		if(animationJSON.containsKey("on:this") == true) {
-			if(animationJSON["on:this"].containsKey("webserial") == true) {
-				animation.onthis_webserial = animationJSON["on:this"]["webserial"].as<const char*>();
+			for(JsonPair on_this : animationJSON["on:this"].as<JsonObject>()) {
+				animation.on_this  = on_this.key().c_str();
+				animation.on_this += "=";
+				animation.on_this += on_this.value().as<const char*>();
 			}
 		}
 		if(animationJSON.containsKey("on:next") == true) {
-			if(animationJSON["on:next"].containsKey("webserial") == true) {
-				animation.onnext_webserial = animationJSON["on:next"]["webserial"].as<const char*>();
+			for(JsonPair on_next : animationJSON["on:next"].as<JsonObject>()) {
+				animation.on_next  = on_next.key().c_str();
+				animation.on_next += "=";
+				animation.on_next += on_next.value().as<const char*>();
 			}
 		}
 		if(animation.directory.empty() == true || animation.frames == 0) {

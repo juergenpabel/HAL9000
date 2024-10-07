@@ -21,7 +21,7 @@ class Action(HAL9000_Action):
 		if 'topic' in signal and 'payload' in signal:
 			mqtt_topic = signal['topic']
 			mqtt_payload = signal['payload']
-			if isinstance(mqtt_payload, str) is False:
+			if mqtt_payload is not None and isinstance(mqtt_payload, str) is False:
 				mqtt_payload = json_dumps(mqtt_payload)
 			self.daemon.mqtt_publish_queue.put_nowait({'topic': mqtt_topic, 'payload': mqtt_payload})
 

@@ -17,7 +17,7 @@ class RFID(EnclosureComponent):
 		self.daemon.plugins['enclosure'].rfid = None
 
 
-	def on_enclosure_rfid_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_rfid: str, new_rfid:str, pending: bool) -> bool:
+	def on_enclosure_rfid_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_rfid: str, new_rfid:str, phase: CommitPhase) -> bool:
 		return True # TODO
 
 

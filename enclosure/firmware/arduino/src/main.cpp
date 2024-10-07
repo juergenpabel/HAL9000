@@ -114,7 +114,7 @@ void loop() {
 					configurationTimeout = atol(g_system_application.getSetting("system/runlevel:configuration/timeout").c_str());
 					configurationTimeout += millis();
 				}
-				gui_screen_set("animations:system-configuring", gui_screen_animations_system_configuring);
+				gui_screen_set("animations:system-starting", gui_screen_animations_system_starting);
 				break;
 			case RunlevelReady:
 				g_util_webserial.clearCommands();
@@ -136,7 +136,6 @@ void loop() {
 				g_util_webserial.delCommand("device/board", on_device_board);
 				g_util_webserial.delCommand("device/display", on_device_display);
 				g_util_webserial.delCommand("peripherals/mcp23X17", on_peripherals_mcp23X17);
-				gui_screen_set("animations:system-starting", gui_screen_animations_system_starting);
 				break;
 			case RunlevelRestarting:
 				g_util_webserial.clearCommands();

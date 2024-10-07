@@ -124,8 +124,17 @@ void on_system_features(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 		}
 		if(response.containsKey("error") == false) {
 			if(data["time"].containsKey("synced") == true) {
-				g_system_application.setEnv("system/features:time/synced", data["time"]["synced"].as<const char*>());
-				response["result"] = "OK";
+				if(data["time"]["synced"].is<bool>()) {
+					switch(data["time"]["synced"].as<bool>()) {
+						case true:
+							g_system_application.setEnv("system/features:time/synced", "true");
+							break;
+						case false:
+							g_system_application.setEnv("system/features:time/synced", "false");
+							break;
+					}
+					response["result"] = "OK";
+				}
 			}
 		}
 	}
