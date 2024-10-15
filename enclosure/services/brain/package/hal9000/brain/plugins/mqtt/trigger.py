@@ -5,6 +5,7 @@ from configparser import ConfigParser as configparser_ConfigParser
 from aiomqtt import Message as aiomqtt_Message
 from logging import getLogger as logging_getLogger
 
+from hal9000.brain.daemon import Brain
 from hal9000.brain.plugin import HAL9000_Trigger, HAL9000_Plugin_Data
 
 
@@ -38,6 +39,7 @@ class Trigger(HAL9000_Trigger):
 		signal = None
 		if self.config['signal-json-formatter'] is not None:
 			try:
+				logging_getLogger().log(Brain.LOGLEVEL_TRACE, f"[mqtt] Trigger.handle(): {message.topic} => {message.payload}")
 				payload = message.payload.decode('utf-8', 'surrogateescape')
 				if self.config['payload-regex'] is not None:
 					matches = re_match(self.config['payload-regex'], payload)
@@ -47,7 +49,7 @@ class Trigger(HAL9000_Trigger):
 					for match in self.payload_jsonpath_parser.find(json_loads(f'[{payload}]')):
 						signal = json_loads(self.config['signal-json-formatter'] % {'jsonpath': match.value})
 			except Exception as e:
-				logging_getLogger().error(f"Exception in MQTT.Trigger.handle() => {e}")
+				logging_getLogger().error(f"Exception in MQTT.Trigger.handle(): {type(e)} => {str(e)}")
 			if signal is not None:
 				if isinstance(signal, list) is False:
 					logging_getLogger().error(f"[trigger:mqtt] for message received on topic '{self.config['topic']}': '{signal}' is not " \

@@ -7,7 +7,7 @@ from hal9000.brain.plugins.enclosure import EnclosureComponent
 
 class Control(EnclosureComponent):
 	def __init__(self, **kwargs) -> None:
-		EnclosureComponent.__init__(self, **kwargs)
+		EnclosureComponent.__init__(self, 'trigger:enclosure:control', **kwargs)
 		self.config['handlers'] = {}
 		self.config['menu'] = {}
 		self.config['menu']['menu-main'] = {}

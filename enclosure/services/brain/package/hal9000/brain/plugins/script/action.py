@@ -8,6 +8,7 @@ from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_
 class Action(HAL9000_Action):
 	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'script', action_name, plugin_status, **kwargs)
+		plugin_status.hidden = True
 		self.scripts = {}
 
 

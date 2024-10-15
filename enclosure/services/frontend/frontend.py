@@ -137,6 +137,9 @@ class FrontendManager:
 			case other:
 				try:
 					payload = json_loads(payload)
+					if isinstance(payload, dict) is True:
+						if 'trace' in payload:
+							del payload['trace']
 				except Exception:
 					pass
 				for frontend in self.frontends:
