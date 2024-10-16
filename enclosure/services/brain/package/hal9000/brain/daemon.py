@@ -268,7 +268,6 @@ class Brain(object):
 	def runlevel_inhibitor_starting_plugins(self) -> bool:
 		for name, plugin in self.plugins.items():
 			if name != 'brain' and plugin.runlevel != RUNLEVEL.RUNNING:
-				print(name)
 				return False
 		return True
 
