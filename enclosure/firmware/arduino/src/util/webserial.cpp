@@ -68,7 +68,7 @@ bool WebSerial::isAlive() {
 		if(UTIL_WEBSERIAL_HEARTBEAT_MS == 0) {
 			return true;
 		}
-		if(millis() < (this->millis_heartbeatRX + UTIL_WEBSERIAL_HEARTBEAT_MS + 1000L)) {
+		if(millis() < (this->millis_heartbeatRX + (UTIL_WEBSERIAL_HEARTBEAT_MS/2*3))) {
 			return true;
 		}
 		if(Serial.available() > 0) {
