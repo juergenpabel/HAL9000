@@ -4,7 +4,7 @@
 #include "gui/gui.h"
 
 
-typedef etl::string<GLOBAL_KEY_SIZE>   gui_overlay_name;
+typedef etl::string<GLOBAL_VALUE_SIZE> gui_overlay_name;
 typedef unsigned long                (*gui_overlay_func)(unsigned long validity, TFT_eSPI* gui);
 
 const gui_overlay_name& gui_overlay_getname();
