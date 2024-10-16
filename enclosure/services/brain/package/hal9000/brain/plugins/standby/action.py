@@ -39,7 +39,6 @@ class Action(HAL9000_Action):
 		self.daemon.plugins['standby'].time_sleep = str(self.time_sleep)
 		self.daemon.plugins['standby'].time_wakeup = str(self.time_wakeup)
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
-		self.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
 
 
@@ -72,25 +71,6 @@ class Action(HAL9000_Action):
 							if time_now > self.time_sleep and time_now < self.time_wakeup:
 								next_brain_status = BRAIN_STATUS.ASLEEP
 						self.daemon.queue_signal('brain', {'status': next_brain_status})
-		return True
-
-
-	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
-		if new_status in list(DataInvalid):
-			return True
-		if phase == CommitPhase.COMMIT:
-			if self.daemon.plugins['brain'].runlevel == RUNLEVEL.RUNNING:
-				match new_status:
-					case BRAIN_STATUS.AWAKE:
-						self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'on': {}}})
-						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
-						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-						self.daemon.queue_signal('kalliope', {'status': 'waiting'})
-					case BRAIN_STATUS.ASLEEP:
-						self.daemon.queue_signal('kalliope', {'status': 'sleeping'})
-						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
-						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-						self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'off': {}}})
 		return True
 
 

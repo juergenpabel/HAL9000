@@ -76,6 +76,7 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 			g_system_application.setEnv("gui/screen:menu/text",  body["menu"]["text"].as<const char*>());
 		}
 		screen_name = "menu";
+		screen_data = body["menu"].containsKey("name") ? body["menu"]["name"].as<const char*>() : "unknown/unknown";
 		screen_func = gui_screen_menu;
 	}
 	if(body.containsKey("none") == true) {
@@ -137,11 +138,13 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 
 void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& body) {
 	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
-	static gui_overlay_name overlay_name;
+	static etl::string<GLOBAL_KEY_SIZE> overlay_name;
+	static etl::string<GLOBAL_KEY_SIZE> overlay_data;
 	       gui_overlay_func overlay_func = nullptr;
 
 	response.clear();
 	overlay_name.clear();
+	overlay_data.clear();
 	if(body.isNull() == true || body.is<const char*>() == true) {
 		response["overlay"] = gui_overlay_getname();
 		g_util_webserial.send("gui/overlay", response);
@@ -160,8 +163,10 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 				if(volume >= 0 && volume <= 100) {
 					etl::string<4> volume_string;
 
-					g_system_application.setEnv("gui/overlay:volume/level", etl::to_string(volume, volume_string));
+					etl::to_string(volume, volume_string);
+					g_system_application.setEnv("gui/overlay:volume/level", volume_string);
 					overlay_name = "volume";
+					overlay_data = volume_string;
 					overlay_func = gui_overlay_volume;
 				}
 			}
@@ -177,6 +182,7 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 						break;
 				}
 				overlay_name = "volume";
+				overlay_data = body["volume"]["mute"].as<bool>() ? "mute" : g_system_application.getEnv("gui/overlay:volume/level");
 				overlay_func = gui_overlay_volume;
 			}
 		}

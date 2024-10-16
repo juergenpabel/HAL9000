@@ -200,29 +200,33 @@ class Action(HAL9000_Action):
 		if 'gui' in signal:
 			if self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
 				if 'screen' in signal['gui']:
-					screen = signal['gui']['screen']['name']
+					screen_name = signal['gui']['screen']['name']
+					screen_desc = signal['gui']['screen']['name']
 					if 'parameter' in signal['gui']['screen'] and 'name' in signal['gui']['screen']['parameter']:
-						screen += ':' + signal['gui']['screen']['parameter']['name']
+						screen_desc += ':' + signal['gui']['screen']['parameter']['name']
 					elif 'parameter' in signal['gui']['screen'] and 'id' in signal['gui']['screen']['parameter']:
-						screen += ':' + signal['gui']['screen']['parameter']['id']
+						screen_desc += ':' + signal['gui']['screen']['parameter']['id']
 					if 'origin' in signal['gui']['screen'] and signal['gui']['screen']['origin'].startswith('frontend') == True:
-						self.daemon.plugins['frontend'].screen = screen, CommitPhase.COMMIT
+						self.daemon.plugins['frontend'].screen = screen_name, CommitPhase.COMMIT
 					else:
-						self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen',
-						                                  'payload': {signal['gui']['screen']['name']: signal['gui']['screen']['parameter']}})
-						self.daemon.plugins['frontend'].screen = screen
+						self.daemon.plugins['frontend'].screen = screen_desc
+						if self.daemon.plugins['frontend'].getRemotePendingValue('screen') == screen_desc:
+							self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen',
+							                                  'payload': {screen_name: signal['gui']['screen']['parameter']}})
 				if 'overlay' in signal['gui']:
-					overlay = signal['gui']['overlay']['name']
+					overlay_name = signal['gui']['overlay']['name']
+					overlay_desc = signal['gui']['overlay']['name']
 					if 'parameter' in signal['gui']['overlay'] and 'name' in signal['gui']['overlay']['parameter']:
-						overlay += ':' + signal['gui']['overlay']['parameter']['name']
+						overlay_desc += ':' + signal['gui']['overlay']['parameter']['name']
 					elif 'parameter' in signal['gui']['overlay'] and 'id' in signal['gui']['overlay']['parameter']:
-						overlay += ':' + signal['gui']['overlay']['parameter']['id']
+						overlay_desc += ':' + signal['gui']['overlay']['parameter']['id']
 					if 'origin' in signal['gui']['overlay'] and signal['gui']['overlay']['origin'].startswith('frontend') == True:
-						self.daemon.plugins['frontend'].overlay = overlay, CommitPhase.COMMIT
+						self.daemon.plugins['frontend'].overlay = overlay_name, CommitPhase.COMMIT
 					else:
-						self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/overlay',
-						                                  'payload': {signal['gui']['overlay']['name']: signal['gui']['overlay']['parameter']}})
-						self.daemon.plugins['frontend'].overlay = overlay
+						self.daemon.plugins['frontend'].overlay = overlay_desc
+						if self.daemon.plugins['frontend'].getRemotePendingValue('overlay') == overlay_desc:
+							self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/overlay',
+							                                  'payload': {overlay_name: signal['gui']['overlay']['parameter']}})
 
 
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
@@ -310,9 +314,7 @@ class Action(HAL9000_Action):
 		if phase == CommitPhase.COMMIT:
 			if self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
 				if old_status == KALLIOPE_STATUS.WAITING and new_status == KALLIOPE_STATUS.LISTENING:
-					self.daemon.plugins['frontend'].screen = 'animations:hal9000'
-					self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen',
-					                                  'payload': {'animations': {'name': 'hal9000'}}})
+					self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
 				if old_status == KALLIOPE_STATUS.SPEAKING and new_status == KALLIOPE_STATUS.WAITING:
 					self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
 		return True

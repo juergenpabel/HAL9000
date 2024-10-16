@@ -156,9 +156,13 @@ class HAL9000(Frontend):
 											self.gui_overlay = 'none'
 											display.content.update()
 											self.events.put_nowait({'topic': 'gui/overlay',
-											                        'payload': {'overlay': 'none', 'origin': 'frontend:flet'}})
+											                        'payload': {'overlay': self.gui_overlay,
+											                                    'origin': 'frontend:flet'}})
 										case 'volume':
-											self.gui_overlay = 'volume'
+											if command['payload']['volume']['mute'] is False:
+												self.gui_overlay = f'volume:{int(command["payload"]["volume"]["level"])}'
+											else:
+												self.gui_overlay = 'volume:mute'
 											radius = display.radius
 											for level in range(0, int(command['payload']['volume']['level'])):
 												color = 'white' if command['payload']['volume']['mute'] is False else 'red'
@@ -173,7 +177,8 @@ class HAL9000(Frontend):
 												                                               data='overlay'))
 											display.content.update()
 											self.events.put_nowait({'topic': 'gui/overlay',
-											                        'payload': {'overlay': 'volume', 'origin': 'frontend:flet'}})
+											                        'payload': {'overlay': self.gui_overlay,
+											                        'origin': 'frontend:flet'}})
 										case other:
 											self.show_error(display, {'title': 'BUG: unsupported overlay',
 											                          'detail': overlay,
@@ -262,7 +267,7 @@ class HAL9000(Frontend):
 		self.gui_screen = 'none'
 		display.content.shapes = []
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'none', 'origin': 'frontend:flet'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
 
 
 	def show_idle(self, display: flet.CircleAvatar) -> None:
@@ -273,7 +278,7 @@ class HAL9000(Frontend):
 		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2),
 		                                               alignment=flet_core_alignment.center))
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'idle', 'origin': 'frontend:flet'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
 
 
 	def show_animations(self, display: flet.CircleAvatar, data: dict) -> None:
@@ -287,11 +292,11 @@ class HAL9000(Frontend):
 		else:
 			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'resources/gui/screen/animations/{data['name']}.json'")
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': f'animations:{data["name"]}', 'origin': 'frontend:flet'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
 
 
 	def show_menu(self, display: flet.CircleAvatar, data: dict) -> None:
-		self.gui_screen = f'menu:{data["title"]}/{data["text"]}'
+		self.gui_screen = f'menu:{data["name"]}'
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(text=data['title'],
 		                                               x=int(display.radius), y=int(0.5*display.radius),
@@ -302,13 +307,13 @@ class HAL9000(Frontend):
 		                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'),
 		                                               alignment=flet_core_alignment.center))
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'menu', 'origin': 'frontend:flet'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
 
 
 	def show_qrcode(self, display: flet.CircleAvatar, data: dict) -> None:
 		self.gui_screen = 'qrcode'
 		self.render_qrcode(display, data)
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'qrcode', 'origin': 'frontend:flet'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
 
 
 	def show_splash(self, display: flet.CircleAvatar, data: dict) -> None:
@@ -316,7 +321,7 @@ class HAL9000(Frontend):
 		self.render_qrcode(display, {'title': data['title'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
 		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Splash-database',
 		                           'hint': f"Splash ID: {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'splash', 'origin': 'frontend:flet'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
 
 
 	def show_error(self, display: flet.CircleAvatar, data: dict) -> None:
@@ -324,7 +329,7 @@ class HAL9000(Frontend):
 		self.render_qrcode(display, {'title': data['title'], 'title-size': int(display.page.scale*18), 'bg-color': 'red', 'title-color': 'white',
 		                             'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
 		                             'hint': f"Error {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': 'error', 'origin': 'frontend:flet'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
 
 
 	def render_qrcode(self, display: flet.CircleAvatar, data: dict) -> None:

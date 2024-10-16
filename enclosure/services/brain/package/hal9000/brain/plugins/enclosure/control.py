@@ -26,7 +26,6 @@ class Control(EnclosureComponent):
 			menu_config = configparser_ConfigParser()
 			menu_config.read(files)
 			self.configure_menu(menu_config, 'menu-main')
-		self.daemon.plugins['frontend'].addNameCallback(self.on_frontend_screen_callback, 'screen')
 		self.daemon.plugins['enclosure'].addSignalHandler(self.on_enclosure_signal)
 
 
@@ -56,16 +55,6 @@ class Control(EnclosureComponent):
 					self.configure_menu(menu_config, menu_entry)
 
 
-	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_screen: str, new_screen: str, phase: CommitPhase) -> bool:
-		if new_screen in list(DataInvalid):
-			return True
-		if phase == CommitPhase.COMMIT:
-			if old_screen == 'menu':
-				self.daemon.plugins['frontend'].menu_name = DataInvalid.UNINITIALIZED
-				self.daemon.plugins['frontend'].menu_item = DataInvalid.UNINITIALIZED
-		return True
-
-
 	async def on_enclosure_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
 		if 'control' in signal:
 			match self.daemon.plugins['frontend'].screen.split(':', 1).pop(0):
@@ -77,27 +66,25 @@ class Control(EnclosureComponent):
 						menu_item = self.config['menu']['menu-main']['items'][0]['item']
 						menu_title = self.config['menu'][menu_name]['title']
 						menu_text  = self.config['menu'][menu_name]['items'][0]['text']
-						self.daemon.plugins['frontend'].screen = 'menu'
-						self.daemon.plugins['frontend'].menu_name = menu_name
-						self.daemon.plugins['frontend'].menu_item = menu_item
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu',
-						                                                         'parameter': {'title': menu_title,
+						                                                         'parameter': {'name': f'{menu_name}/{menu_item}',
+						                                                                       'title': menu_title,
 						                                                                       'text': menu_text}}}})
 				case 'animations':
 					pass
 				case 'splash':
 					pass
 				case 'error':
-					if 'select' in signal['control']:
+					if 'select' in signal['control']: # TODO and not critical
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
 				case 'qrcode':
 					if 'select' in signal['control']:
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
 				case 'menu':
-					menu_name = self.daemon.plugins['frontend'].menu_name
-					menu_item = self.daemon.plugins['frontend'].menu_item
+					menu_name, menu_item = self.daemon.plugins['frontend'].screen.split(':', 1).pop(1).split('/', 1)
 					if 'delta' in signal['control']:
-						self.daemon.create_scheduled_signal(self.config['menu']['timeout'], 'frontend',  {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
+						self.daemon.create_scheduled_signal(self.config['menu']['timeout'], 'frontend',
+						                                    {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
 						                                    'scheduler://enclosure:control/menu:timeout')
 						position = 0
 						for item in self.config['menu'][menu_name]['items']:
@@ -108,10 +95,10 @@ class Control(EnclosureComponent):
 						menu_title = self.config['menu'][menu_name]['title']
 						menu_item  = self.config['menu'][menu_name]['items'][position]['item']
 						menu_text  = self.config['menu'][menu_name]['items'][position]['text']
-						self.daemon.queue_signal('frontend',
-						                         {'gui': {'screen': {'name': 'menu', 'parameter': {'title': menu_title, 'text': menu_text}}}})
-						self.daemon.plugins['frontend'].menu_name = menu_name
-						self.daemon.plugins['frontend'].menu_item = menu_item
+						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu',
+						                                                         'parameter': {'name': f'{menu_name}/{menu_item}',
+						                                                                       'title': menu_title,
+						                                                                       'text': menu_text}}}})
 					if 'select' in signal['control']:
 						self.daemon.remove_scheduled_signal('scheduler://enclosure:control/menu:timeout')
 						if menu_item.startswith('item-'):
@@ -135,12 +122,14 @@ class Control(EnclosureComponent):
 						if menu_item.startswith('menu-'):
 							menu_title = self.config['menu'][menu_item]['title']
 							menu_text  = self.config['menu'][menu_item]['items'][0]['text']
-							self.daemon.queue_signal('frontend',
-							                         {'gui': {'screen': {'name': 'menu',
-							                                             'parameter': {'title': menu_title, 'text': menu_text}}}})
-							self.daemon.plugins['frontend'].menu_name = menu_item
-							self.daemon.plugins['frontend'].menu_item = self.config['menu'][menu_item]['items'][0]['item']
-							self.daemon.create_scheduled_signal(self.config['menu']['timeout'], 'frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
+							menu_name  = menu_item
+							menu_item  = self.config['menu'][menu_item]['items'][0]['item']
+							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu',
+							                                                         'parameter': {'name': f'{menu_name}/{menu_item}',
+							                                                                       'title': menu_title,
+							                                                                       'text': menu_text}}}})
+							self.daemon.create_scheduled_signal(self.config['menu']['timeout'], 'frontend',
+							                                    {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
 							                                    'scheduler://enclosure:control/menu:timeout')
 				case other:
 					self.daemon.logger.error(f"[enclosure/control]: unknown screen '{self.daemon.plugins['frontend'].screen}', " \
