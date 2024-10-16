@@ -204,8 +204,8 @@ class Brain(object):
 		self.logger.info(f"[brain] Startup in progress and now in runlevel '{self.plugins['brain'].runlevel}'")
 		self.logger.debug(f"[brain] STATUS in runlevel '{self.plugins['brain'].runlevel}' = { {k: v for k,v in self.plugins.items() if v.hidden is False} }")
 		try:
+			self.plugins['brain'].status = BRAIN_STATUS.AWAKE
 			self.queue_signal('brain', {'time:sync': {}})
-			self.plugins['brain'].status = BRAIN_STATUS.AWAKE, CommitPhase.COMMIT
 			self.logger.info(f"[brain] Waiting for inhibitors for runlevel '{RUNLEVEL.READY}'...")
 			self.logger.debug(f"[brain] Inhibitors for runlevel '{RUNLEVEL.READY}': " \
 			                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.READY].keys()))}...")

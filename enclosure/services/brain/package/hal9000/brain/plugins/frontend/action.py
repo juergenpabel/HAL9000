@@ -35,7 +35,6 @@ class Action(HAL9000_Action):
 		self.daemon.plugins['frontend'].addNameCallback(self.on_frontend_runlevel_callback, 'runlevel')
 		self.daemon.plugins['frontend'].addNameCallback(self.on_frontend_status_callback, 'status')
 		self.daemon.plugins['frontend'].addNameCallback(self.on_frontend_screen_callback, 'screen')
-		self.daemon.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
 		self.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_runlevel_callback, 'runlevel')
@@ -128,7 +127,7 @@ class Action(HAL9000_Action):
 						if self.daemon.plugins['brain'].runlevel == RUNLEVEL.RUNNING:
 							match self.daemon.plugins['brain'].status:
 								case BRAIN_STATUS.AWAKE:
-									if self.display_power is not True:
+									if self.display_power != True:
 										self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen',
 										                                  'payload': {'on': {}}})
 										self.display_power = True
@@ -137,7 +136,7 @@ class Action(HAL9000_Action):
 								case BRAIN_STATUS.ASLEEP:
 									self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
 									self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-									if self.display_power is not False:
+									if self.display_power != False:
 										self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen',
 										                                  'payload': {'off': {}}})
 										self.display_power = False
@@ -229,32 +228,15 @@ class Action(HAL9000_Action):
 							                                  'payload': {overlay_name: signal['gui']['overlay']['parameter']}})
 
 
-	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
-		if new_runlevel in list(DataInvalid):
-			return True
-		if phase == CommitPhase.COMMIT:
-			if old_runlevel == RUNLEVEL.STARTING and new_runlevel == RUNLEVEL.READY:
-				if self.display_power is not True:
-					self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen', 'payload': {'on': {}}})
-					self.display_power = True
-				if self.daemon.plugins['frontend'].screen != 'idle':
-					if self.daemon.plugins['frontend'].getRemotePendingValue('screen') is None:
-						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
-				if self.daemon.plugins['frontend'].overlay != 'none':
-					if self.daemon.plugins['frontend'].getRemotePendingValue('overlay') is None:
-						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-		return True
-
-
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
 		if new_status in list(DataInvalid):
 			return True
 		if phase == CommitPhase.COMMIT:
 			match new_status:
 				case BRAIN_STATUS.AWAKE:
-					if old_status == BRAIN_STATUS.ASLEEP and self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
-						if self.daemon.plugins['brain'].runlevel == RUNLEVEL.RUNNING:
-							if self.display_power is not True:
+					if self.daemon.plugins['brain'].runlevel in [RUNLEVEL.READY, RUNLEVEL.RUNNING]:
+						if self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
+							if self.display_power != True:
 								self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen', 'payload': {'on': {}}})
 								self.display_power = True
 							if self.daemon.plugins['frontend'].screen != 'idle':
@@ -264,15 +246,15 @@ class Action(HAL9000_Action):
 								if self.daemon.plugins['frontend'].getRemotePendingValue('overlay') is None:
 									self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 				case BRAIN_STATUS.ASLEEP:
-					if old_status == BRAIN_STATUS.AWAKE and self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
-						if self.daemon.plugins['brain'].runlevel == RUNLEVEL.RUNNING:
+					if self.daemon.plugins['brain'].runlevel in [RUNLEVEL.READY, RUNLEVEL.RUNNING]:
+						if self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
 							if self.daemon.plugins['frontend'].screen != 'none':
 								if self.daemon.plugins['frontend'].getRemotePendingValue('screen') is None:
 									self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
 							if self.daemon.plugins['frontend'].overlay != 'none':
 								if self.daemon.plugins['frontend'].getRemotePendingValue('overlay') is None:
 									self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-							if self.display_power is not False:
+							if self.display_power != False:
 								self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen', 'payload': {'off': {}}})
 								self.display_power = False
 		return True

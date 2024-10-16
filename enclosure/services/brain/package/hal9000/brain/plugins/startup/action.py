@@ -70,30 +70,23 @@ class Action(HAL9000_Action):
 						self.daemon.remove_scheduled_signal('scheduler://startup/timeout:starting')
 						self.daemon.plugins['startup'].status = STARTUP_STATUS.WAITING_RUNNING
 					case RUNLEVEL.RUNNING:
-						self.daemon.plugins['startup'].status = STARTUP_STATUS.WAITING_WELCOME
+						match self.daemon.plugins['brain'].status:
+							case BRAIN_STATUS.AWAKE:
+								self.daemon.plugins['startup'].status = STARTUP_STATUS.WAITING_WELCOME
+								self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'on': {}}})
+								self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations',
+								                                                         'parameter': {'name': 'hal9000'}}}})
+								self.daemon.create_scheduled_signal(1.5, 'kalliope', {'command': {'name': 'welcome', 'parameter': {}}},
+									                            'scheduler://kalliope/welcome:delay)')
+							case BRAIN_STATUS.ASLEEP:
+								pass
+						self.daemon.plugins['startup'].status = STARTUP_STATUS.FINISHED
+						self.daemon.plugins['startup'].hidden = True
+
+
 						if self.daemon.plugins['frontend'].screen == 'animations:system-starting':
 							self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
 							self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-							#TODO: re-submit or inhibit ?
-						else:
-							datetime_now = datetime_datetime.now()
-							epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
-							synced = True if self.daemon.plugins['brain'].time == 'synchronized' else False
-							self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/system/features',
-							                                  'payload': {'time': {'epoch': epoch, 'synced': synced}}})
-							match self.daemon.plugins['brain'].status:
-								case BRAIN_STATUS.AWAKE:
-									self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'on': {}}})
-									self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
-									self.daemon.create_scheduled_signal(1.5, 'kalliope', {'command': {'name': 'welcome', 'parameter': {}}},
-										                                    'scheduler://kalliope/welcome:delay)')
-								case BRAIN_STATUS.ASLEEP:
-									self.daemon.queue_signal('kalliope', {'status': 'sleeping'})
-									self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
-									self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-									self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'off': {}}})
-							self.daemon.plugins['startup'].status = STARTUP_STATUS.FINISHED
-							self.daemon.plugins['startup'].hidden = True
 		return True
 
 

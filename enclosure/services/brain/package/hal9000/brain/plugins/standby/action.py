@@ -39,6 +39,7 @@ class Action(HAL9000_Action):
 		self.daemon.plugins['standby'].time_sleep = str(self.time_sleep)
 		self.daemon.plugins['standby'].time_wakeup = str(self.time_wakeup)
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
+		self.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
 
 
@@ -50,17 +51,23 @@ class Action(HAL9000_Action):
 		if new_runlevel in list(DataInvalid):
 			return True
 		if phase == CommitPhase.COMMIT:
-			match new_runlevel:
-				case RUNLEVEL.READY:
-					if self.time_sleep is not None:
-						sleep_secs = (self.time_sleep.hour * 3600) + (self.time_sleep.minute * 60)
-						self.daemon.create_scheduled_signal(sleep_secs, 'brain', {'status': BRAIN_STATUS.ASLEEP},
-						                                    'scheduler://brain/time:sleep', 'cron')
-					if self.time_wakeup is not None:
-						wakeup_secs = (self.time_wakeup.hour * 3600) + (self.time_wakeup.minute * 60)
-						self.daemon.create_scheduled_signal(wakeup_secs, 'brain', {'status': BRAIN_STATUS.AWAKE},
-						                                    'scheduler://brain/time:wakeup', 'cron')
-#TODO				case RUNLEVEL.RUNNING: 
+			if new_runlevel == RUNLEVEL.RUNNING:
+				if self.time_sleep is not None:
+					sleep_secs = (self.time_sleep.hour * 3600) + (self.time_sleep.minute * 60)
+					self.daemon.create_scheduled_signal(sleep_secs, 'brain', {'status': BRAIN_STATUS.ASLEEP},
+					                                    'scheduler://brain/time:sleep', 'cron')
+				if self.time_wakeup is not None:
+					wakeup_secs = (self.time_wakeup.hour * 3600) + (self.time_wakeup.minute * 60)
+					self.daemon.create_scheduled_signal(wakeup_secs, 'brain', {'status': BRAIN_STATUS.AWAKE},
+					                                    'scheduler://brain/time:wakeup', 'cron')
+		return True
+
+
+	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
+		if new_status in list(DataInvalid):
+			return True
+		if phase == CommitPhase.LOCAL_REQUESTED:
+			if old_status == BRAIN_STATUS.LAUNCHING:
 					if self.time_sleep is not None and self.time_wakeup is not None:
 						next_brain_status = BRAIN_STATUS.AWAKE
 						time_now = datetime_datetime.now().time()
@@ -70,7 +77,9 @@ class Action(HAL9000_Action):
 						else:
 							if time_now > self.time_sleep and time_now < self.time_wakeup:
 								next_brain_status = BRAIN_STATUS.ASLEEP
-						self.daemon.queue_signal('brain', {'status': next_brain_status})
+						if next_brain_status != new_status:
+							self.daemon.queue_signal('brain', {'status': next_brain_status})
+							return False
 		return True
 
 
