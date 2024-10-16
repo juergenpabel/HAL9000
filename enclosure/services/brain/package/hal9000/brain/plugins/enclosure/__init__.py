@@ -1,6 +1,6 @@
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin_Data
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin_Data, RUNLEVEL
 
 
 class EnclosureComponent:
@@ -36,5 +36,5 @@ class Action(HAL9000_Action):
 
 
 	def runlevel(self) -> str:
-		return HAL9000_Action.RUNLEVEL_RUNNING
+		return RUNLEVEL.RUNNING
 

@@ -3,8 +3,8 @@ from datetime import time as datetime_time, \
                      datetime as datetime_datetime
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.daemon import Brain
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, CommitPhase
+from hal9000.brain.daemon import Brain, BRAIN_STATUS
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, RUNLEVEL, CommitPhase
 
 
 class Action(HAL9000_Action):
@@ -43,45 +43,45 @@ class Action(HAL9000_Action):
 
 
 	def runlevel(self) -> str:
-		return HAL9000_Plugin.RUNLEVEL_RUNNING
+		return RUNLEVEL.RUNNING
 
 
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
 		if phase == CommitPhase.COMMIT:
 			match new_runlevel:
-				case HAL9000_Plugin.RUNLEVEL_READY:
+				case RUNLEVEL.READY:
 					if self.time_sleep is not None:
 						sleep_secs = (self.time_sleep.hour * 3600) + (self.time_sleep.minute * 60)
-						self.daemon.create_scheduled_signal(sleep_secs, 'brain', {'status': Brain.STATUS_ASLEEP},
+						self.daemon.create_scheduled_signal(sleep_secs, 'brain', {'status': BRAIN_STATUS.ASLEEP},
 						                                    'scheduler://brain/time:sleep', 'cron')
 					if self.time_wakeup is not None:
 						wakeup_secs = (self.time_wakeup.hour * 3600) + (self.time_wakeup.minute * 60)
-						self.daemon.create_scheduled_signal(wakeup_secs, 'brain', {'status': Brain.STATUS_AWAKE},
+						self.daemon.create_scheduled_signal(wakeup_secs, 'brain', {'status': BRAIN_STATUS.AWAKE},
 						                                    'scheduler://brain/time:wakeup', 'cron')
-				case HAL9000_Plugin.RUNLEVEL_RUNNING: 
+#TODO				case RUNLEVEL.RUNNING: 
 					if self.time_sleep is not None and self.time_wakeup is not None:
-						next_brain_status = Brain.STATUS_AWAKE
+						next_brain_status = BRAIN_STATUS.AWAKE
 						time_now = datetime_datetime.now().time()
 						if self.time_sleep > self.time_wakeup:
 							if time_now > self.time_sleep or time_now < self.time_wakeup:
-								next_brain_status = Brain.STATUS_ASLEEP
+								next_brain_status = BRAIN_STATUS.ASLEEP
 						else:
 							if time_now > self.time_sleep and time_now < self.time_wakeup:
-								next_brain_status = Brain.STATUS_ASLEEP
+								next_brain_status = BRAIN_STATUS.ASLEEP
 						self.daemon.queue_signal('brain', {'status': next_brain_status})
 		return True
 
 
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
 		if phase == CommitPhase.COMMIT:
-			if self.daemon.plugins['brain'].runlevel == HAL9000_Plugin.RUNLEVEL_RUNNING:
+			if self.daemon.plugins['brain'].runlevel == RUNLEVEL.RUNNING:
 				match new_status:
-					case Brain.STATUS_AWAKE:
+					case BRAIN_STATUS.AWAKE:
 						self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'on': {}}})
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
 						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 						self.daemon.queue_signal('kalliope', {'status': 'waiting'})
-					case Brain.STATUS_ASLEEP:
+					case BRAIN_STATUS.ASLEEP:
 						self.daemon.queue_signal('kalliope', {'status': 'sleeping'})
 						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
 						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
@@ -90,5 +90,18 @@ class Action(HAL9000_Action):
 
 
 	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_time: str, new_time: str, phase: CommitPhase) -> bool:
+		if phase == CommitPhase.COMMIT:
+			if self.daemon.plugins['brain'].runlevel == RUNLEVEL.READY:
+				if new_time == Brain.TIME_SYNCHRONIZED:
+					if self.time_sleep is not None and self.time_wakeup is not None:
+						next_brain_status = BRAIN_STATUS.AWAKE
+						time_now = datetime_datetime.now().time()
+						if self.time_sleep > self.time_wakeup:
+							if time_now > self.time_sleep or time_now < self.time_wakeup:
+								next_brain_status = BRAIN_STATUS.ASLEEP
+						else:
+							if time_now > self.time_sleep and time_now < self.time_wakeup:
+								next_brain_status = BRAIN_STATUS.ASLEEP
+						self.daemon.queue_signal('brain', {'status': next_brain_status})
 		return True
 

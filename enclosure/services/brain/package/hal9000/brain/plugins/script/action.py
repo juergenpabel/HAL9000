@@ -2,7 +2,7 @@ from os import system as os_system
 from os.path import exists as os_path_exists
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, RUNLEVEL
 
 
 class Action(HAL9000_Action):
@@ -27,7 +27,7 @@ class Action(HAL9000_Action):
 
 
 	def runlevel(self) -> str:
-		return HAL9000_Plugin.RUNLEVEL_RUNNING
+		return RUNLEVEL.RUNNING
 
 
 	async def on_script_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:

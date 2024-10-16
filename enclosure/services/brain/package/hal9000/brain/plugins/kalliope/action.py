@@ -1,25 +1,27 @@
 import os
 import json
 import configparser
+from enum import StrEnum as enum_StrEnum
 
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, CommitPhase
-from hal9000.brain.daemon import Brain
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, RUNLEVEL, CommitPhase
+from hal9000.brain.daemon import BRAIN_STATUS
+
+
+class KALLIOPE_STATUS(enum_StrEnum):
+	WAITING   = 'waiting'
+	LISTENING = 'listening'
+	THINKING  = 'thinking'
+	SPEAKING  = 'speaking'
+	SLEEPING  = 'sleeping'
 
 
 class Action(HAL9000_Action):
-
-	KALLIOPE_STATUS_WAITING   = 'waiting'
-	KALLIOPE_STATUS_LISTENING = 'listening'
-	KALLIOPE_STATUS_THINKING  = 'thinking'
-	KALLIOPE_STATUS_SPEAKING  = 'speaking'
-	KALLIOPE_STATUS_SLEEPING  = 'sleeping'
-
 
 	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'kalliope', action_name, plugin_status, **kwargs)
 		self.daemon.plugins['kalliope'].addLocalNames(['audio_in', 'audio_out', 'mute'])
 		self.daemon.plugins['kalliope'].addRemoteNames(['volume'])
-		self.daemon.plugins['kalliope'].runlevel = HAL9000_Action.RUNLEVEL_UNKNOWN, CommitPhase.COMMIT
+		self.daemon.plugins['kalliope'].runlevel = 'unknown', CommitPhase.COMMIT
 
 
 	def configure(self, configuration: configparser.ConfigParser, section_name: str) -> None:
@@ -27,8 +29,8 @@ class Action(HAL9000_Action):
 		self.config['initial-volume'] = configuration.getint(section_name, 'initial-volume', fallback=50)
 		self.config['trigger-mqtt-topic'] = configuration.get(section_name, 'trigger-mqtt-topic', fallback=None)
 		self.config['command-mqtt-topic-prefix'] = configuration.get(section_name, 'command-mqtt-topic-prefix', fallback='hal9000/command/kalliope')
-		self.daemon.add_runlevel_inhibitor(HAL9000_Plugin.RUNLEVEL_READY, 'kalliope:status',  self.runlevel_inhibitor_ready_status)
-		self.daemon.add_runlevel_inhibitor(HAL9000_Plugin.RUNLEVEL_READY, 'kalliope:volume',  self.runlevel_inhibitor_ready_volume)
+		self.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'kalliope:status',  self.runlevel_inhibitor_ready_status)
+		self.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'kalliope:volume',  self.runlevel_inhibitor_ready_volume)
 		self.daemon.plugins['kalliope'].addSignalHandler(self.on_kalliope_signal)
 		self.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_runlevel_callback, 'runlevel')
 		self.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_status_callback, 'status')
@@ -64,33 +66,33 @@ class Action(HAL9000_Action):
 	async def on_kalliope_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
 		if 'runlevel' in signal:
 			match signal['runlevel']:
-				case HAL9000_Plugin.RUNLEVEL_STARTING:
-					if self.daemon.plugins['kalliope'].runlevel in [HAL9000_Plugin.RUNLEVEL_UNKNOWN, HAL9000_Plugin.RUNLEVEL_KILLED]:
-						self.daemon.plugins['kalliope'].runlevel = HAL9000_Plugin.RUNLEVEL_STARTING, CommitPhase.COMMIT
-				case HAL9000_Plugin.RUNLEVEL_READY:
-					if self.daemon.plugins['kalliope'].runlevel in [HAL9000_Plugin.RUNLEVEL_UNKNOWN, HAL9000_Plugin.RUNLEVEL_STARTING]:
-						self.daemon.plugins['kalliope'].runlevel = HAL9000_Plugin.RUNLEVEL_READY
-				case HAL9000_Plugin.RUNLEVEL_RUNNING:
-					if self.daemon.plugins['kalliope'].runlevel in [HAL9000_Plugin.RUNLEVEL_UNKNOWN, HAL9000_Plugin.RUNLEVEL_READY]:
-						self.daemon.plugins['kalliope'].runlevel = HAL9000_Plugin.RUNLEVEL_RUNNING
-				case HAL9000_Plugin.RUNLEVEL_KILLED:
-					self.daemon.plugins['kalliope'].runlevel = HAL9000_Plugin.RUNLEVEL_KILLED, CommitPhase.COMMIT
+				case RUNLEVEL.STARTING:
+					if self.daemon.plugins['kalliope'].runlevel in ['unknown', RUNLEVEL.KILLED]:
+						self.daemon.plugins['kalliope'].runlevel = RUNLEVEL.STARTING, CommitPhase.COMMIT
+				case RUNLEVEL.READY:
+					if self.daemon.plugins['kalliope'].runlevel in ['unknown', RUNLEVEL.STARTING]:
+						self.daemon.plugins['kalliope'].runlevel = RUNLEVEL.READY
+				case RUNLEVEL.RUNNING:
+					if self.daemon.plugins['kalliope'].runlevel in ['unknown', RUNLEVEL.READY]:
+						self.daemon.plugins['kalliope'].runlevel = RUNLEVEL.RUNNING
+				case RUNLEVEL.KILLED:
+					self.daemon.plugins['kalliope'].runlevel = RUNLEVEL.KILLED, CommitPhase.COMMIT
 		if 'status' in signal:
 			match signal['status']:
-				case Action.KALLIOPE_STATUS_WAITING:
-					if self.daemon.plugins['brain'].status == Brain.STATUS_AWAKE:
-						self.daemon.plugins['kalliope'].status = Action.KALLIOPE_STATUS_WAITING
-				case Action.KALLIOPE_STATUS_LISTENING:
-					if self.daemon.plugins['brain'].status == Brain.STATUS_AWAKE:
-						self.daemon.plugins['kalliope'].status = Action.KALLIOPE_STATUS_LISTENING
-				case Action.KALLIOPE_STATUS_THINKING:
-					if self.daemon.plugins['brain'].status == Brain.STATUS_AWAKE:
-						self.daemon.plugins['kalliope'].status = Action.KALLIOPE_STATUS_THINKING
-				case Action.KALLIOPE_STATUS_SPEAKING:
-					if self.daemon.plugins['brain'].status == Brain.STATUS_AWAKE:
-						self.daemon.plugins['kalliope'].status = Action.KALLIOPE_STATUS_SPEAKING
-				case Action.KALLIOPE_STATUS_SLEEPING:
-					self.daemon.plugins['kalliope'].status = Action.KALLIOPE_STATUS_SLEEPING
+				case KALLIOPE_STATUS.WAITING:
+					if self.daemon.plugins['brain'].status == BRAIN_STATUS.AWAKE:
+						self.daemon.plugins['kalliope'].status = KALLIOPE_STATUS.WAITING
+				case KALLIOPE_STATUS.LISTENING:
+					if self.daemon.plugins['brain'].status == BRAIN_STATUS.AWAKE:
+						self.daemon.plugins['kalliope'].status = KALLIOPE_STATUS.LISTENING
+				case KALLIOPE_STATUS.THINKING:
+					if self.daemon.plugins['brain'].status == BRAIN_STATUS.AWAKE:
+						self.daemon.plugins['kalliope'].status = KALLIOPE_STATUS.THINKING
+				case KALLIOPE_STATUS.SPEAKING:
+					if self.daemon.plugins['brain'].status == BRAIN_STATUS.AWAKE:
+						self.daemon.plugins['kalliope'].status = KALLIOPE_STATUS.SPEAKING
+				case KALLIOPE_STATUS.SLEEPING:
+					self.daemon.plugins['kalliope'].status = KALLIOPE_STATUS.SLEEPING
 		if 'command' in signal:
 			if 'name' in signal['command']:
 				command_name = signal['command']['name']
@@ -111,7 +113,7 @@ class Action(HAL9000_Action):
 					case 'true':
 						self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/volume', 'payload': {'level': 0}})
 					case 'false':
-						if self.daemon.plugins['kalliope'].volume != HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
+						if self.daemon.plugins['kalliope'].volume not in[HAL9000_Plugin_Data.STATUS_UNINITIALIZED, 'unknown']:
 							self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/volume',
 							                                  'payload': {'level': int(self.daemon.plugins['kalliope'].volume)}})
 
@@ -119,15 +121,16 @@ class Action(HAL9000_Action):
 	def on_kalliope_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
 		if phase == CommitPhase.COMMIT:
 			match new_runlevel:
-				case HAL9000_Plugin.RUNLEVEL_STARTING:
+				case RUNLEVEL.STARTING:
 					self.daemon.plugins['kalliope'].status = 'unknown', CommitPhase.COMMIT
 					self.daemon.plugins['kalliope'].audio_in = 'unknown', CommitPhase.COMMIT
 					self.daemon.plugins['kalliope'].audio_out = 'unknown', CommitPhase.COMMIT
 					self.daemon.plugins['kalliope'].volume = 'unknown', CommitPhase.COMMIT
 					self.daemon.plugins['kalliope'].mute = 'unknown', CommitPhase.COMMIT
-				case HAL9000_Plugin.RUNLEVEL_READY:
+				case RUNLEVEL.READY:
 					self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/status', 'payload': None})
-				case HAL9000_Plugin.RUNLEVEL_KILLED:
+					self.daemon.queue_signal('kalliope', {'volume': {'level': self.config['initial-volume'], 'mute': False}})
+				case RUNLEVEL.KILLED:
 					self.daemon.plugins['kalliope'].status = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
 					self.daemon.plugins['kalliope'].volume = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
 					self.daemon.plugins['kalliope'].mute = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
@@ -140,28 +143,27 @@ class Action(HAL9000_Action):
 	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
 		match phase:
 			case CommitPhase.LOCAL_REQUESTED:
-				if new_status not in [Action.KALLIOPE_STATUS_SLEEPING, Action.KALLIOPE_STATUS_WAITING, Action.KALLIOPE_STATUS_LISTENING, \
-				                      Action.KALLIOPE_STATUS_THINKING, Action.KALLIOPE_STATUS_SPEAKING]:
+				if new_status not in list(KALLIOPE_STATUS):
 					return False
 			case CommitPhase.COMMIT:
 				match new_status:
-					case Action.KALLIOPE_STATUS_SLEEPING:
+					case KALLIOPE_STATUS.SLEEPING:
 						self.daemon.plugins['kalliope'].audio_in = 'none', CommitPhase.COMMIT
 						self.daemon.plugins['kalliope'].audio_out = 'none', CommitPhase.COMMIT
 						if self.config['trigger-mqtt-topic'] is not None:
 							self.daemon.queue_signal('mqtt', {'topic': self.config['trigger-mqtt-topic'], 'payload': 'pause'})
-					case Action.KALLIOPE_STATUS_WAITING:
+					case KALLIOPE_STATUS.WAITING:
 						self.daemon.plugins['kalliope'].audio_in = 'wake-word-detector', CommitPhase.COMMIT
 						self.daemon.plugins['kalliope'].audio_out = 'none', CommitPhase.COMMIT
 						if self.config['trigger-mqtt-topic'] is not None:
 							self.daemon.queue_signal('mqtt', {'topic': self.config['trigger-mqtt-topic'], 'payload': 'unpause'})
-					case Action.KALLIOPE_STATUS_LISTENING:
+					case KALLIOPE_STATUS.LISTENING:
 						self.daemon.plugins['kalliope'].audio_in = 'speech-to-text', CommitPhase.COMMIT
 						self.daemon.plugins['kalliope'].audio_out = 'none', CommitPhase.COMMIT
-					case Action.KALLIOPE_STATUS_THINKING:
+					case KALLIOPE_STATUS.THINKING:
 						self.daemon.plugins['kalliope'].audio_in = 'none', CommitPhase.COMMIT
 						self.daemon.plugins['kalliope'].audio_out = 'none', CommitPhase.COMMIT
-					case Action.KALLIOPE_STATUS_SPEAKING:
+					case KALLIOPE_STATUS.SPEAKING:
 						self.daemon.plugins['kalliope'].audio_in = 'none', CommitPhase.COMMIT
 						self.daemon.plugins['kalliope'].audio_out = 'text-to-speech', CommitPhase.COMMIT
 		return True
@@ -194,23 +196,25 @@ class Action(HAL9000_Action):
 					case 'true':
 						self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/volume', 'payload': {'level': 0}})
 					case 'false':
-						self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/volume', 'payload': {'level': plugin.volume}})
+						if self.daemon.plugins['kalliope'].volume != 'unknown':
+							self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/volume', 'payload': {'level': plugin.volume}})
 		return True
 
 
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
 		if phase == CommitPhase.COMMIT:
 			match new_runlevel:
-				case HAL9000_Plugin.RUNLEVEL_READY:
+				case RUNLEVEL.READY:
 					self.daemon.queue_signal('kalliope', {'volume': {'level': self.config['initial-volume'], 'mute': False}})
+		return True
 
 
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
 		if phase == CommitPhase.COMMIT:
 			match new_status:
-				case Brain.STATUS_AWAKE:
-					self.daemon.queue_signal('kalliope', {'status': Action.KALLIOPE_STATUS_WAITING})
-				case Brain.STATUS_ASLEEP:
-					self.daemon.queue_signal('kalliope', {'status': Action.KALLIOPE_STATUS_SLEEPING})
+				case BRAIN_STATUS.AWAKE:
+					self.daemon.queue_signal('kalliope', {'status': KALLIOPE_STATUS.WAITING})
+				case BRAIN_STATUS.ASLEEP:
+					self.daemon.queue_signal('kalliope', {'status': KALLIOPE_STATUS.SLEEPING})
 		return True
 

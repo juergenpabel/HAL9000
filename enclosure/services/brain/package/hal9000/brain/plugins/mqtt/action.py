@@ -1,7 +1,7 @@
 from json import dumps as json_dumps
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, RUNLEVEL
 
 
 class Action(HAL9000_Action):
@@ -15,7 +15,7 @@ class Action(HAL9000_Action):
 
 
 	def runlevel(self) -> str:
-		return HAL9000_Plugin.RUNLEVEL_RUNNING
+		return RUNLEVEL.RUNNING
 
 
 	async def on_mqtt_signal(self, plugin: str, signal: dict) -> None:

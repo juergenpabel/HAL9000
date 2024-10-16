@@ -27,13 +27,13 @@ class Volume(EnclosureComponent):
 					volume = int(self.daemon.plugins['kalliope'].volume) + delta
 					volume = min(volume, 100)
 					volume = max(volume, 0)
-					self.daemon.plugins['kalliope'].volume = str(volume)
+					self.daemon.queue_signal('kalliope', {'volume': {'level': volume}})
 					self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'volume', 'parameter': {'level': volume, 'mute': False}}}})
 					self.daemon.create_scheduled_signal(3, 'frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}}, 'scheduler://enclosure:volume/gui/overlay:timeout')
 			if 'mute' in signal['volume']:
 				mute = not(True if self.daemon.plugins['kalliope'].mute == 'true' else False)
 				volume = int(self.daemon.plugins['kalliope'].volume)
-				self.daemon.plugins['kalliope'].mute = str(mute).lower()
+				self.daemon.queue_signal('kalliope', {'volume': {'mute': mute}})
 				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'volume', 'parameter': {'level': volume, 'mute': mute}}}})
 				if mute is False:
 					self.daemon.create_scheduled_signal(1, 'frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}}, 'scheduler://enclosure:volume/gui/overlay:timeout')

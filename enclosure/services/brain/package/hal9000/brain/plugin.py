@@ -1,10 +1,10 @@
 from __future__ import annotations
-from enum import Enum as enum_Enum
+from enum import Enum as enum_Enum, \
+                 StrEnum as enum_StrEnum
 from typing import Callable as typing_Callable
 from configparser import ConfigParser as configparser_ConfigParser
 from logging import getLogger as logging_getLogger
 from aiomqtt import Message as aiomqtt_Message
-
 
 
 class CommitPhase(enum_Enum):
@@ -172,12 +172,14 @@ class HAL9000_Plugin_Data(object):
 		return result
 
 
+class RUNLEVEL(enum_StrEnum):
+	STARTING = "starting"
+	READY    = "ready"
+	RUNNING  = "running"
+	KILLED   = "killed"
+
+
 class HAL9000_Plugin(object):
-	RUNLEVEL_UNKNOWN  = "unknown"
-	RUNLEVEL_STARTING = "starting"
-	RUNLEVEL_READY    = "ready"
-	RUNLEVEL_RUNNING  = "running"
-	RUNLEVEL_KILLED   = "killed"
 
 	def __init__(self, plugin_type: str, plugin_class: str, plugin_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		self.name = f"{plugin_type}:{plugin_class}:{plugin_name if plugin_name != plugin_class else 'default'}"
@@ -196,7 +198,7 @@ class HAL9000_Plugin(object):
 
 
 	def runlevel(self) -> str:
-		return HAL9000_Plugin.RUNLEVEL_UNKNOWN
+		return 'unknown'
 
 
 	def runlevel_error(self) -> dict:
@@ -228,7 +230,7 @@ class HAL9000_Trigger(HAL9000_Plugin):
 
 
 	def runlevel(self) -> str:
-		return HAL9000_Plugin.RUNLEVEL_RUNNING
+		return RUNLEVEL.RUNNING
 
 
 	def handle(self, data: aiomqtt_Message) -> dict:
