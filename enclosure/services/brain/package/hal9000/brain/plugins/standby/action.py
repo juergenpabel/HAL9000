@@ -4,7 +4,7 @@ from datetime import time as datetime_time, \
 from configparser import ConfigParser as configparser_ConfigParser
 
 from hal9000.brain.daemon import Brain, BRAIN_STATUS
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, RUNLEVEL, CommitPhase
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, RUNLEVEL, DataInvalid, CommitPhase
 
 
 class Action(HAL9000_Action):
@@ -47,6 +47,8 @@ class Action(HAL9000_Action):
 
 
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
+		if new_runlevel in list(DataInvalid):
+			return True
 		if phase == CommitPhase.COMMIT:
 			match new_runlevel:
 				case RUNLEVEL.READY:
@@ -73,6 +75,8 @@ class Action(HAL9000_Action):
 
 
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
+		if new_status in list(DataInvalid):
+			return True
 		if phase == CommitPhase.COMMIT:
 			if self.daemon.plugins['brain'].runlevel == RUNLEVEL.RUNNING:
 				match new_status:
@@ -90,6 +94,8 @@ class Action(HAL9000_Action):
 
 
 	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_time: str, new_time: str, phase: CommitPhase) -> bool:
+		if new_time in list(DataInvalid):
+			return True
 		if phase == CommitPhase.COMMIT:
 			if self.daemon.plugins['brain'].runlevel == RUNLEVEL.READY:
 				if new_time == Brain.TIME_SYNCHRONIZED:

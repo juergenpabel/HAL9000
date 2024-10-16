@@ -13,8 +13,12 @@ class CommitPhase(enum_Enum):
 	COMMIT = 2
 
 
+class DataInvalid(enum_StrEnum):
+	UNINITIALIZED = '<uninitialized>'
+	UNKNOWN       = '<unknown>'
+
+
 class HAL9000_Plugin_Data(object):
-	STATUS_UNINITIALIZED = '<uninitialized>'
 	SPECIAL_NAMES = ['daemon', 'plugin_id', 'module', 'hidden', 'local_names', 'remote_names', 'callbacks_data', 'callbacks_signal']
 
 	def __init__(self, plugin_id: str, **kwargs) -> None:
@@ -27,9 +31,9 @@ class HAL9000_Plugin_Data(object):
 		self.local_names = ['runlevel', 'status']
 		self.local_names.extend(kwargs.get('local_names', []))
 		self.remote_names = {}
-		self.remote_names.update({x: HAL9000_Plugin_Data.STATUS_UNINITIALIZED for x in kwargs.get('remote_names', [])})
+		self.remote_names.update({x: DataInvalid.UNINITIALIZED for x in kwargs.get('remote_names', [])})
 		for name in self.local_names + list(self.remote_names.keys()):
-			super().__setattr__(name, kwargs.get(name, HAL9000_Plugin_Data.STATUS_UNINITIALIZED))
+			super().__setattr__(name, kwargs.get(name, DataInvalid.UNINITIALIZED))
 		for name, value in kwargs.items():
 			if name in self.local_names or name in self.remote_names:
 				super().__setattr__(name, value)
@@ -41,14 +45,14 @@ class HAL9000_Plugin_Data(object):
 		for name in local_names:
 			if name not in HAL9000_Plugin_Data.SPECIAL_NAMES:
 				self.local_names.append(name)
-				super().__setattr__(name, HAL9000_Plugin_Data.STATUS_UNINITIALIZED)
+				super().__setattr__(name, DataInvalid.UNINITIALIZED)
 
 
 	def addRemoteNames(self, remote_names: list) -> None:
 		for name in remote_names:
 			if name not in HAL9000_Plugin_Data.SPECIAL_NAMES:
-				self.remote_names[name] = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
-				super().__setattr__(name, HAL9000_Plugin_Data.STATUS_UNINITIALIZED)
+				self.remote_names[name] = DataInvalid.UNINITIALIZED
+				super().__setattr__(name, DataInvalid.UNINITIALIZED)
 
 
 	def delLocalNames(self, local_names: list) -> None:
@@ -114,11 +118,11 @@ class HAL9000_Plugin_Data(object):
 				raise Exception(f"HAL9000_Plugin_Data.__setattr__('{name}', '{new_value}'): 2nd item of tuple must be of enum CommitPhase")
 			commit_phase = new_value[1]
 			new_value = new_value[0]
-		old_value = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
+		old_value = DataInvalid.UNINITIALIZED
 		if hasattr(self, name) is True:
 			old_value = getattr(self, name)
 		if new_value is None:
-			new_value = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
+			new_value = DataInvalid.UNINITIALIZED
 		if old_value != new_value:
 			if commit_phase == CommitPhase.LOCAL_REQUESTED:
 				commit_value = True
@@ -158,7 +162,7 @@ class HAL9000_Plugin_Data(object):
 		result = '{'
 		for name in self.local_names:
 			value = getattr(self, name)
-			if value != HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
+			if value != DataInvalid.UNINITIALIZED:
 				result += f'{name}=\'{value}\', '
 		for name, pending_value in self.remote_names.items():
 			value = getattr(self, name)
@@ -198,7 +202,7 @@ class HAL9000_Plugin(object):
 
 
 	def runlevel(self) -> str:
-		return 'unknown'
+		return DataInvalid.UNKNOWN
 
 
 	def runlevel_error(self) -> dict:

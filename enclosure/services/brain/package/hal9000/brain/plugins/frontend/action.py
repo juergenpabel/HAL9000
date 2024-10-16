@@ -6,7 +6,7 @@ from datetime import datetime as datetime_datetime, \
                      timedelta as datetime_timedelta
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, RUNLEVEL, CommitPhase
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, DataInvalid, RUNLEVEL, CommitPhase
 from hal9000.brain.daemon import BRAIN_STATUS
 from hal9000.brain.plugins.kalliope.action import Action as Kalliope_Action, \
                                                   KALLIOPE_STATUS
@@ -22,14 +22,13 @@ class Action(HAL9000_Action):
 	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'frontend', action_name, plugin_status, **kwargs)
 		self.daemon.plugins['frontend'].addRemoteNames(['screen', 'overlay'])
-		self.daemon.plugins['frontend'].runlevel = 'unknown', CommitPhase.COMMIT
+		self.daemon.plugins['frontend'].runlevel = DataInvalid.UNKNOWN, CommitPhase.COMMIT
 		self.display_power = None
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		HAL9000_Action.configure(self, configuration, section_name)
 		self.config['frontend-command-mqtt-prefix'] = configuration.get(section_name, 'frontend-command-mqtt-prefix', fallback='hal9000/command/frontend')
-		self.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'frontend:status',  self.runlevel_inhibitor_ready_status)
 		self.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'frontend:screen',  self.runlevel_inhibitor_ready_screen)
 		self.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'frontend:overlay', self.runlevel_inhibitor_ready_overlay)
 		self.daemon.plugins['frontend'].addSignalHandler(self.on_frontend_signal)
@@ -54,14 +53,8 @@ class Action(HAL9000_Action):
 		        'title': "Service 'frontend' unavailable (arduino/flet backends)"}
 
 
-	def runlevel_inhibitor_ready_status(self) -> bool:
-		if self.daemon.plugins['frontend'].status not in list(FRONTEND_STATUS):
-			return False
-		return True
-
-
 	def runlevel_inhibitor_ready_screen(self) -> bool:
-		if self.daemon.plugins['frontend'].screen in [HAL9000_Plugin_Data.STATUS_UNINITIALIZED, 'unknown']:
+		if self.daemon.plugins['frontend'].screen in [DataInvalid.UNINITIALIZED, DataInvalid.UNKNOWN]:
 			return False
 		if self.daemon.plugins['frontend'].getRemotePendingValue('screen') is not None:
 			return False
@@ -69,7 +62,7 @@ class Action(HAL9000_Action):
 
 
 	def runlevel_inhibitor_ready_overlay(self) -> bool:
-		if self.daemon.plugins['frontend'].overlay in [HAL9000_Plugin_Data.STATUS_UNINITIALIZED, 'unknown']:
+		if self.daemon.plugins['frontend'].overlay in [DataInvalid.UNINITIALIZED, DataInvalid.UNKNOWN]:
 			return False
 		if self.daemon.plugins['frontend'].getRemotePendingValue('overlay') is not None:
 			return False
@@ -77,10 +70,12 @@ class Action(HAL9000_Action):
 
 
 	def on_frontend_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
+		if new_runlevel in list(DataInvalid):
+			return True
 		match phase:
 			case CommitPhase.LOCAL_REQUESTED:
 				match old_runlevel:
-					case 'unknown':
+					case DataInvalid.UNKNOWN:
 						if new_runlevel not in list(RUNLEVEL):
 							return False
 					case RUNLEVEL.STARTING:
@@ -92,7 +87,7 @@ class Action(HAL9000_Action):
 			case CommitPhase.COMMIT:
 				match new_runlevel:
 					case RUNLEVEL.STARTING:
-						self.daemon.plugins['frontend'].status = 'unknown', CommitPhase.COMMIT
+						self.daemon.plugins['frontend'].status = DataInvalid.UNKNOWN, CommitPhase.COMMIT
 						self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/status', 'payload': None})
 					case RUNLEVEL.READY:
 						if self.daemon.plugins['frontend'].status not in list(FRONTEND_STATUS):
@@ -101,15 +96,15 @@ class Action(HAL9000_Action):
 						if self.daemon.plugins['frontend'].status not in list(FRONTEND_STATUS):
 							self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/status', 'payload': None})
 					case RUNLEVEL.KILLED:
-						self.daemon.plugins['frontend'].status = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
-						self.daemon.plugins['frontend'].screen = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
-						self.daemon.plugins['frontend'].overlay = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
+						self.daemon.plugins['frontend'].status = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
+						self.daemon.plugins['frontend'].screen = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
+						self.daemon.plugins['frontend'].overlay = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
 						self.daemon.process_error('critical', '200', "System offline", f"Service 'frontend' unavailable")
 		return True
 
 
 	def on_frontend_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
-		if new_status == HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
+		if new_status in list(DataInvalid):
 			return True
 		match phase:
 			case CommitPhase.LOCAL_REQUESTED:
@@ -118,12 +113,12 @@ class Action(HAL9000_Action):
 			case CommitPhase.COMMIT:
 				match new_status:
 					case FRONTEND_STATUS.OFFLINE:
-						self.daemon.plugins['frontend'].screen = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
-						self.daemon.plugins['frontend'].overlay = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
+						self.daemon.plugins['frontend'].screen = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
+						self.daemon.plugins['frontend'].overlay = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
 					case FRONTEND_STATUS.ONLINE:
-						self.daemon.plugins['frontend'].screen = 'unknown', CommitPhase.COMMIT
+						self.daemon.plugins['frontend'].screen = DataInvalid.UNKNOWN, CommitPhase.COMMIT
 						self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen', 'payload': None})
-						self.daemon.plugins['frontend'].overlay = 'unknown', CommitPhase.COMMIT
+						self.daemon.plugins['frontend'].overlay = DataInvalid.UNKNOWN, CommitPhase.COMMIT
 						self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/overlay', 'payload': None})
 						datetime_now = datetime_datetime.now()
 						epoch = int(datetime_now.timestamp() + datetime_now.astimezone().tzinfo.utcoffset(None).seconds)
@@ -161,7 +156,7 @@ class Action(HAL9000_Action):
 				case '':
 					self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/runlevel', 'payload': None})
 				case RUNLEVEL.STARTING:
-					if self.daemon.plugins['frontend'].runlevel == 'unknown':
+					if self.daemon.plugins['frontend'].runlevel == DataInvalid.UNKNOWN:
 						self.daemon.plugins['frontend'].runlevel = RUNLEVEL.STARTING
 				case RUNLEVEL.READY:
 					if self.daemon.plugins['frontend'].runlevel == RUNLEVEL.STARTING:
@@ -170,9 +165,9 @@ class Action(HAL9000_Action):
 					self.daemon.plugins['frontend'].runlevel = RUNLEVEL.RUNNING
 				case RUNLEVEL.KILLED:
 					self.daemon.plugins['frontend'].runlevel = RUNLEVEL.KILLED, CommitPhase.COMMIT
-					self.daemon.plugins['frontend'].status = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
-					self.daemon.plugins['frontend'].screen = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
-					self.daemon.plugins['frontend'].overlay = HAL9000_Plugin_Data.STATUS_UNINITIALIZED, CommitPhase.COMMIT
+					self.daemon.plugins['frontend'].status = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
+					self.daemon.plugins['frontend'].screen = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
+					self.daemon.plugins['frontend'].overlay = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
 		if 'status' in signal:
 			match signal['status']:
 				case FRONTEND_STATUS.OFFLINE:
@@ -231,6 +226,8 @@ class Action(HAL9000_Action):
 
 
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
+		if new_runlevel in list(DataInvalid):
+			return True
 		if phase == CommitPhase.COMMIT:
 			if old_runlevel == RUNLEVEL.STARTING and new_runlevel == RUNLEVEL.READY:
 				if self.display_power is not True:
@@ -246,6 +243,8 @@ class Action(HAL9000_Action):
 
 
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
+		if new_status in list(DataInvalid):
+			return True
 		if phase == CommitPhase.COMMIT:
 			match new_status:
 				case BRAIN_STATUS.AWAKE:
@@ -274,6 +273,8 @@ class Action(HAL9000_Action):
 
 
 	def on_brain_time_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_time: str, new_time: str, phase: CommitPhase) -> bool:
+		if new_time in list(DataInvalid):
+			return True
 		if phase == CommitPhase.COMMIT:
 			if self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
 				datetime_now = datetime_datetime.now()
@@ -285,6 +286,8 @@ class Action(HAL9000_Action):
 
 
 	def on_kalliope_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
+		if new_runlevel in list(DataInvalid):
+			return True
 		if phase == CommitPhase.COMMIT:
 			match new_runlevel:
 				case RUNLEVEL.STARTING:
@@ -300,6 +303,8 @@ class Action(HAL9000_Action):
 
 
 	def on_kalliope_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
+		if new_status in list(DataInvalid):
+			return True
 		if phase == CommitPhase.COMMIT:
 			if self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
 				if old_status == KALLIOPE_STATUS.WAITING and new_status == KALLIOPE_STATUS.LISTENING:

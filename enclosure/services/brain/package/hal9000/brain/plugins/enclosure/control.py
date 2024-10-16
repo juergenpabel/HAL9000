@@ -1,7 +1,7 @@
 from json import loads as json_loads
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.plugin import HAL9000_Plugin_Data, CommitPhase
+from hal9000.brain.plugin import HAL9000_Plugin_Data, DataInvalid, CommitPhase
 from hal9000.brain.plugins.enclosure import EnclosureComponent
 
 
@@ -57,10 +57,12 @@ class Control(EnclosureComponent):
 
 
 	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_screen: str, new_screen: str, phase: CommitPhase) -> bool:
+		if new_screen in list(DataInvalid):
+			return True
 		if phase == CommitPhase.COMMIT:
 			if old_screen == 'menu':
-				self.daemon.plugins['frontend'].menu_name = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
-				self.daemon.plugins['frontend'].menu_item = HAL9000_Plugin_Data.STATUS_UNINITIALIZED
+				self.daemon.plugins['frontend'].menu_name = DataInvalid.UNINITIALIZED
+				self.daemon.plugins['frontend'].menu_item = DataInvalid.UNINITIALIZED
 		return True
 
 

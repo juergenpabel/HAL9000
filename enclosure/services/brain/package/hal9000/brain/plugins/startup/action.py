@@ -4,7 +4,7 @@ from datetime import datetime as datetime_datetime
 from configparser import ConfigParser as configparser_ConfigParser
 
 from hal9000.brain.daemon import BRAIN_STATUS
-from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, RUNLEVEL, CommitPhase
+from hal9000.brain.plugin import HAL9000_Action, HAL9000_Plugin, HAL9000_Plugin_Data, RUNLEVEL, DataInvalid, CommitPhase
 
 
 class STARTUP_STATUS(enum_StrEnum):
@@ -26,7 +26,6 @@ class Action(HAL9000_Action):
 		self.config['timeout-starting'] = configuration.getint('startup', 'timeout-starting', fallback=0)
 		self.config['require-synced-time'] = configuration.getboolean('startup', 'require-synced-time', fallback=False)
 		self.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'startup:brain_time',       self.runlevel_inhibitor_ready_brain_time)
-		self.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'startup:frontend_status',  self.runlevel_inhibitor_ready_frontend_status)
 		self.daemon.plugins['startup'].addSignalHandler(self.on_startup_signal)
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
@@ -41,12 +40,6 @@ class Action(HAL9000_Action):
 
 	def runlevel_inhibitor_ready_brain_time(self) -> bool:
 		if self.config['require-synced-time'] is True and self.daemon.plugins['brain'].time != 'synchronized':
-			return False
-		return True
-
-
-	def runlevel_inhibitor_ready_frontend_status(self) -> bool:
-		if self.daemon.plugins['frontend'].status != 'online':
 			return False
 		return True
 
@@ -67,6 +60,8 @@ class Action(HAL9000_Action):
 
 
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
+		if new_runlevel in list(DataInvalid):
+			return True
 		match phase:
 			case CommitPhase.COMMIT:
 				match new_runlevel:
@@ -102,6 +97,8 @@ class Action(HAL9000_Action):
 
 
 	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
+		if new_status in list(DataInvalid):
+			return True
 		match phase:
 			case CommitPhase.COMMIT:
 				if self.daemon.plugins['startup'].status == STARTUP_STATUS.WAITING_WELCOME:
@@ -122,6 +119,8 @@ class Action(HAL9000_Action):
 
 
 	def on_frontend_screen_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_screen: str, new_screen: str, phase: CommitPhase) -> bool:
+		if new_screen in list(DataInvalid):
+			return True
 		match phase:
 			case CommitPhase.LOCAL_REQUESTED:
 				if self.daemon.plugins['brain'].runlevel == RUNLEVEL.READY:

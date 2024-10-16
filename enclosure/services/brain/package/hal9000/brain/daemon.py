@@ -38,7 +38,7 @@ from dbus_fast.auth import AuthExternal, UID_NOT_SPECIFIED
 from dbus_fast.constants import BusType
 
 
-from .plugin import HAL9000_Plugin, HAL9000_Plugin_Data, RUNLEVEL, CommitPhase
+from .plugin import HAL9000_Plugin, HAL9000_Plugin_Data, DataInvalid, RUNLEVEL, CommitPhase
 
 class BRAIN_STATUS(enum_StrEnum):
 	LAUNCHING = 'launching'
@@ -160,14 +160,14 @@ class Brain(object):
 				await asyncio_sleep(0.1)
 			self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/event/brain/runlevel', 'payload': 'starting'})
 			starting_plugins = list(self.triggers.values()) + list(self.actions.values())
-			starting_plugins = list(filter(lambda plugin: plugin.runlevel() == 'unknown', starting_plugins))
+			starting_plugins = list(filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins))
 			self.logger.info(f"[brain] Startup initialized (plugins that need runtime registration):")
-			for plugin in filter(lambda plugin: plugin.runlevel() == 'unknown', starting_plugins):
+			for plugin in filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins):
 				plugin_type, plugin_class, plugin_instance = str(plugin).split(':', 2)
 				self.logger.info(f"[brain]  - Plugin '{plugin_class}' (instance='{plugin_instance}')")
 				self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/{plugin_class}/runlevel', 'payload': None})
 			self.logger.info(f"[brain] Waiting for plugins that need runtime registration...")
-			while len(list(filter(lambda plugin: plugin.runlevel() == 'unknown', starting_plugins))) > 0:
+			while len(list(filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins))) > 0:
 				if self.plugins['brain'].status == BRAIN_STATUS.DYING:
 					self.logger.debug(f"[brain] status changed to 'dying', raising exception while waiting for plugins in runlevel 'starting'")
 					raise Exception(None)
@@ -189,7 +189,7 @@ class Brain(object):
 			self.plugins['brain'].status = BRAIN_STATUS.DYING
 			if e.__cause__ is None:
 				self.logger.error(f"[brain] execution of runlevel 'starting' aborted, remaining plugins that haven't registered at runtime: " \
-				                  f"{list(filter(lambda plugin: plugin.runlevel() == 'unknown', starting_plugins))}")
+				                  f"{list(filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins))}")
 				self.logger.error(f"[brain] execution of runlevel 'starting' aborted, remaining inhibitors that haven't completed at runtime: " \
 				                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.STARTING].keys()))}")
 			else:
@@ -267,7 +267,7 @@ class Brain(object):
 
 
 	def runlevel_inhibitor_ready_time(self) -> bool:
-		if self.plugins['brain'].time == HAL9000_Plugin_Data.STATUS_UNINITIALIZED:
+		if self.plugins['brain'].time in list(DataInvalid):
 			return False
 		return True
 
