@@ -322,6 +322,7 @@ class Brain(object):
 				raise e
 		finally:
 			self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] Brain.task_mqtt_subscriber() exiting")
+			self.plugins['brain'].status = BRAIN_STATUS.DYING
 
 
 	async def task_mqtt_publisher(self, mqtt: aiomqtt_Client) -> None:
@@ -342,6 +343,7 @@ class Brain(object):
 			pass
 		finally:
 			self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] Brain.task_mqtt_publisher() exiting")
+			self.plugins['brain'].status = BRAIN_STATUS.DYING
 
 
 	async def task_mqtt(self) -> None:
@@ -369,8 +371,8 @@ class Brain(object):
 			self.logger.critical(f"[brain] {str(e)}")
 			raise e
 		finally:
-			self.plugins['brain'].status = BRAIN_STATUS.DYING
 			self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] Brain.task_mqtt() exiting")
+			self.plugins['brain'].status = BRAIN_STATUS.DYING
 
 
 	async def task_signal(self) -> None:
@@ -403,6 +405,7 @@ class Brain(object):
 			raise e
 		finally:
 			self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] Brain.task_signal() exiting")
+			self.plugins['brain'].status = BRAIN_STATUS.DYING
 
 
 	async def on_scheduler(self, plugin: str, signal: dict) -> None:
