@@ -16,8 +16,8 @@
 
 void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& body) {
 	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
-	static etl::string<GLOBAL_KEY_SIZE> screen_name;
-	static etl::string<GLOBAL_KEY_SIZE> screen_data;
+	static etl::string<GLOBAL_KEY_SIZE>   screen_name;
+	static etl::string<GLOBAL_VALUE_SIZE> screen_data;
 	       gui_screen_func screen_func = nullptr;
 
 	response.clear();
@@ -138,8 +138,8 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 
 void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& body) {
 	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
-	static etl::string<GLOBAL_KEY_SIZE> overlay_name;
-	static etl::string<GLOBAL_KEY_SIZE> overlay_data;
+	static etl::string<GLOBAL_KEY_SIZE>   overlay_name;
+	static etl::string<GLOBAL_VALUE_SIZE> overlay_data;
 	       gui_overlay_func overlay_func = nullptr;
 
 	response.clear();
