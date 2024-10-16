@@ -11,6 +11,7 @@ class Action(HAL9000_Action):
 
 	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'standby', action_name, plugin_status, **kwargs)
+		self.daemon.plugins['standby'].runlevel = RUNLEVEL.RUNNING
 		self.time_sleep = None
 		self.time_wakeup = None
 

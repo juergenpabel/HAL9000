@@ -18,6 +18,7 @@ class EnclosureComponent:
 class Action(HAL9000_Action):
 	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'enclosure', 'self', plugin_status, **kwargs)
+		self.daemon.plugins['enclosure'].runlevel = RUNLEVEL.RUNNING
 		plugin_status.hidden = True
 		self.components = {}
 

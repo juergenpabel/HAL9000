@@ -249,26 +249,28 @@ class Action(HAL9000_Action):
 			match new_status:
 				case BRAIN_STATUS.AWAKE:
 					if old_status == BRAIN_STATUS.ASLEEP and self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
-						if self.display_power is not True:
-							self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen', 'payload': {'on': {}}})
-							self.display_power = True
-						if self.daemon.plugins['frontend'].screen != 'idle':
-							if self.daemon.plugins['frontend'].getRemotePendingValue('screen') is None:
-								self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
-						if self.daemon.plugins['frontend'].overlay != 'none':
-							if self.daemon.plugins['frontend'].getRemotePendingValue('overlay') is None:
-								self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+						if self.daemon.plugins['brain'].runlevel == RUNLEVEL.RUNNING:
+							if self.display_power is not True:
+								self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen', 'payload': {'on': {}}})
+								self.display_power = True
+							if self.daemon.plugins['frontend'].screen != 'idle':
+								if self.daemon.plugins['frontend'].getRemotePendingValue('screen') is None:
+									self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
+							if self.daemon.plugins['frontend'].overlay != 'none':
+								if self.daemon.plugins['frontend'].getRemotePendingValue('overlay') is None:
+									self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 				case BRAIN_STATUS.ASLEEP:
 					if old_status == BRAIN_STATUS.AWAKE and self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
-						if self.daemon.plugins['frontend'].screen != 'none':
-							if self.daemon.plugins['frontend'].getRemotePendingValue('screen') is None:
-								self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
-						if self.daemon.plugins['frontend'].overlay != 'none':
-							if self.daemon.plugins['frontend'].getRemotePendingValue('overlay') is None:
-								self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-						if self.display_power is not False:
-							self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen', 'payload': {'off': {}}})
-							self.display_power = False
+						if self.daemon.plugins['brain'].runlevel == RUNLEVEL.RUNNING:
+							if self.daemon.plugins['frontend'].screen != 'none':
+								if self.daemon.plugins['frontend'].getRemotePendingValue('screen') is None:
+									self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
+							if self.daemon.plugins['frontend'].overlay != 'none':
+								if self.daemon.plugins['frontend'].getRemotePendingValue('overlay') is None:
+									self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+							if self.display_power is not False:
+								self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen', 'payload': {'off': {}}})
+								self.display_power = False
 		return True
 
 

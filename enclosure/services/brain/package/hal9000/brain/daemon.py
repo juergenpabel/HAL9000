@@ -53,7 +53,7 @@ class Brain(object):
 	TIME_SYNCHRONIZED =   'synchronized'
 
 	def __init__(self) -> None:
-		self.name = f"daemon:brain:default"
+		self.name = 'daemon:brain:default'
 		self.logger = logging_getLogger()
 		self.config = {}
 		self.plugins = {}
@@ -64,7 +64,8 @@ class Brain(object):
 		self.triggers = {}
 		self.callbacks = {'mqtt': {}}
 		self.runlevel_inhibitors = {RUNLEVEL.STARTING: {}, RUNLEVEL.READY: {}, RUNLEVEL.RUNNING: {}}
-		self.add_runlevel_inhibitor(RUNLEVEL.READY,    'brain:time', self.runlevel_inhibitor_ready_time)
+		self.add_runlevel_inhibitor(RUNLEVEL.STARTING, 'plugins:runlevel', self.runlevel_inhibitor_starting_plugins)
+		self.add_runlevel_inhibitor(RUNLEVEL.READY,    'brain:time',       self.runlevel_inhibitor_ready_time)
 		self.signal_queue = asyncio_Queue()
 		self.mqtt_publish_queue = asyncio_Queue()
 		self.scheduler = apscheduler_schedulers_AsyncIOScheduler()
@@ -170,7 +171,7 @@ class Brain(object):
 			while len(list(filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins))) > 0:
 				if self.plugins['brain'].status == BRAIN_STATUS.DYING:
 					self.logger.debug(f"[brain] status changed to 'dying', raising exception while waiting for plugins in runlevel 'starting'")
-					raise Exception(None)
+					raise RuntimeError(BRAIN_STATUS.DYING)
 				await asyncio_sleep(0.1)
 			self.logger.info(f"[brain] ...all plugins completed runtime registration")
 			self.logger.info(f"[brain] Waiting for inhibitors for runlevel '{RUNLEVEL.STARTING}'...")
@@ -180,22 +181,21 @@ class Brain(object):
 				self.evaluate_runlevel_inhibitors(RUNLEVEL.STARTING)
 				if self.plugins['brain'].status == BRAIN_STATUS.DYING:
 					self.logger.debug(f"[brain] status changed to 'dying', raising exception while waiting for inhibitors in runlevel 'starting'")
-					raise Exception(None)
+					raise RuntimeError(BRAIN_STATUS.DYING)
 				await asyncio_sleep(0.1)
 			self.logger.info(f"[brain] ...all inhibitors for runlevel '{RUNLEVEL.STARTING}' have finished")
 			self.plugins['brain'].runlevel = RUNLEVEL.READY, CommitPhase.COMMIT
 			self.logger.debug(f"[brain] STATUS after runlevel 'starting' = { {k: v for k,v in self.plugins.items() if v.hidden is False} }")
 		except Exception as e:
-			self.plugins['brain'].status = BRAIN_STATUS.DYING
-			if e.__cause__ is None:
-				self.logger.error(f"[brain] execution of runlevel 'starting' aborted, remaining plugins that haven't registered at runtime: " \
-				                  f"{list(filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins))}")
-				self.logger.error(f"[brain] execution of runlevel 'starting' aborted, remaining inhibitors that haven't completed at runtime: " \
-				                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.STARTING].keys()))}")
-			else:
-				self.logger.critical(f"[brain] Brain.runlevel_starting(): ({type(e).__name__}) => {str(e)}")
-				from traceback import format_exc as traceback_format_exc
-				self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] {traceback_format_exc()}")
+			self.logger.error(f"[brain] execution of runlevel 'starting' aborted, remaining plugins that haven't registered at runtime: " \
+			                  f"{list(filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins))}")
+			self.logger.error(f"[brain] execution of runlevel 'starting' aborted, remaining inhibitors that haven't completed at runtime: " \
+			                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.STARTING].keys()))}")
+			self.logger.critical(f"[brain] Brain.runlevel_starting(): {type(e).__name__} => {str(e)}")
+			from traceback import format_exc as traceback_format_exc
+			self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] {traceback_format_exc()}")
+			if str(e) != BRAIN_STATUS.DYING:
+				self.plugins['brain'].status = BRAIN_STATUS.DYING
 				return {'main': e}
 		return {}
 
@@ -212,21 +212,20 @@ class Brain(object):
 			while len(self.runlevel_inhibitors[RUNLEVEL.READY]) > 0:
 				if self.plugins['brain'].status == BRAIN_STATUS.DYING:
 					self.logger.debug(f"[brain] status changed to 'dying', raising exception while waiting for inhibitos in runlevel 'ready'")
-					raise Exception(None)
+					raise RuntimeError(BRAIN_STATUS.DYING)
 				self.evaluate_runlevel_inhibitors(RUNLEVEL.READY)
 				await asyncio_sleep(0.1)
 			self.logger.info(f"[brain] ...all runlevel inhibitors for runlevel '{RUNLEVEL.READY}' have finished")
 			self.plugins['brain'].runlevel = RUNLEVEL.RUNNING, CommitPhase.COMMIT
 			self.logger.debug(f"[brain] STATUS after runlevel 'ready' = { {k: v for k,v in self.plugins.items() if v.hidden is False} }")
 		except Exception as e:
-			self.plugins['brain'].status = BRAIN_STATUS.DYING
-			if e.__cause__ is None:
-				self.logger.error(f"[brain] execution of runlevel 'ready' aborted, remaining inhibitors that haven't completed at runtime: " \
-				                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.READY].keys()))}")
-			else:
-				self.logger.critical(f"[brain] Brain.runlevel_ready(): ({type(e).__name__}) => {str(e)}")
-				from traceback import format_exc as traceback_format_exc
-				self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] {traceback_format_exc()}")
+			self.logger.error(f"[brain] execution of runlevel 'ready' aborted, remaining inhibitors that haven't completed at runtime: " \
+			                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.READY].keys()))}")
+			self.logger.critical(f"[brain] Brain.runlevel_ready(): {type(e).__name__} => {str(e)}")
+			from traceback import format_exc as traceback_format_exc
+			self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] {traceback_format_exc()}")
+			if str(e) != BRAIN_STATUS.DYING:
+				self.plugins['brain'].status = BRAIN_STATUS.DYING
 				return {'main': e}
 		return {}
 
@@ -239,11 +238,11 @@ class Brain(object):
 				await asyncio_sleep(0.1)
 			self.logger.debug(f"[brain] STATUS after runlevel '{self.plugins['brain'].runlevel}' = { {k: v for k,v in self.plugins.items() if v.hidden is False} }")
 		except Exception as e:
-			self.plugins['brain'].status = BRAIN_STATUS.DYING
-			if e.__cause__ is not None:
-				self.logger.critical(f"[brain] Brain.runlevel_running(): ({type(e).__name__}) => {str(e)}")
-				from traceback import format_exc as traceback_format_exc
-				self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] {traceback_format_exc()}")
+			self.logger.critical(f"[brain] Brain.runlevel_running(): {type(e).__name__} => {str(e)}")
+			from traceback import format_exc as traceback_format_exc
+			self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] {traceback_format_exc()}")
+			if str(e) != BRAIN_STATUS.DYING:
+				self.plugins['brain'].status = BRAIN_STATUS.DYING
 				return {'main': e}
 		return {}
 
@@ -264,6 +263,14 @@ class Brain(object):
 		for name, callback in self.runlevel_inhibitors[runlevel].copy().items():
 			if callback() is True:
 				del self.runlevel_inhibitors[runlevel][name]
+
+
+	def runlevel_inhibitor_starting_plugins(self) -> bool:
+		for name, plugin in self.plugins.items():
+			if name != 'brain' and plugin.runlevel != RUNLEVEL.RUNNING:
+				print(name)
+				return False
+		return True
 
 
 	def runlevel_inhibitor_ready_time(self) -> bool:
@@ -391,7 +398,7 @@ class Brain(object):
 			self.signal_queue = None
 		except Exception as e:
 			self.plugins['brain'].status = BRAIN_STATUS.DYING
-			self.logger.critical(f"[brain] Brain.task_signal(): ({type(e).__name__}) => {str(e)}")
+			self.logger.critical(f"[brain] Brain.task_signal(): {type(e).__name__} => {str(e)}")
 			from traceback import format_exc as traceback_format_exc
 			self.logger.log(Brain.LOGLEVEL_TRACE, f"[brain] {traceback_format_exc()}")
 			raise e

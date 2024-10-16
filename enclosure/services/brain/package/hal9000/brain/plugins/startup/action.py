@@ -18,6 +18,7 @@ class Action(HAL9000_Action):
 
 	def __init__(self, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Action.__init__(self, 'startup', action_name, plugin_status, **kwargs)
+		self.daemon.plugins['startup'].runlevel = RUNLEVEL.RUNNING
 		self.daemon.plugins['startup'].status = STARTUP_STATUS.WAITING_READY
 
 
