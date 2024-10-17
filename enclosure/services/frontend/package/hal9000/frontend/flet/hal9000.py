@@ -23,7 +23,7 @@ import flet_core.alignment as flet_core_alignment
 from fastapi import FastAPI as fastapi_FastAPI
 from fastapi.staticfiles import StaticFiles as fastapi_staticfiles_StaticFiles
 
-from hal9000.frontend import Frontend
+from hal9000.frontend import Frontend, RUNLEVEL, STATUS
 
 class HAL9000(Frontend):
 
@@ -38,6 +38,7 @@ class HAL9000(Frontend):
 
 
 	async def configure(self, configuration: configparser_ConfigParser) -> bool:
+		await super().configure(configuration)
 		resources_dir = f'{os_getcwd()}/resources'
 		if os_path_islink(resources_dir) is True:
 			resources_dir = os_path_realpath(resources_dir)
@@ -48,7 +49,7 @@ class HAL9000(Frontend):
 
 	async def start(self) -> None:
 		await super().start()
-		self.status = Frontend.FRONTEND_STATUS_OFFLINE
+		self.status = STATUS.OFFLINE
 		self.tasks['command_listener'] = asyncio_create_task(self.task_command_listener())
 
 
@@ -63,7 +64,7 @@ class HAL9000(Frontend):
 		finally:
 			logging_getLogger('uvicorn').debug(f"[frontend:flet] task_command_listener() cancelled")
 			del self.tasks['command_listener']
-			self.runlevel = Frontend.FRONTEND_RUNLEVEL_DEAD
+			self.runlevel = RUNLEVEL.DEAD
 			return # ignore exception (return in finally block)
 
 
@@ -391,7 +392,7 @@ class HAL9000(Frontend):
 			del self.command_session_queues[event.page.session_id]
 			command_session_queue.put_nowait(None)
 			if len(self.command_session_queues) == 0:
-				self.status = Frontend.FRONTEND_STATUS_OFFLINE
+				self.status = STATUS.OFFLINE
 		
 
 	async def flet(self, page: flet.Page) -> None:
@@ -447,5 +448,5 @@ class HAL9000(Frontend):
 		page.session.set('gui_idle_task',asyncio_create_task(self.run_gui_screen_idle(page, display)))
 		page.session.set('gui_animations_task', asyncio_create_task(self.run_gui_screen_animations(page, display)))
 		page.session.set('idle_clock:synced', 'unknown')
-		self.status = Frontend.FRONTEND_STATUS_ONLINE
+		self.status = STATUS.ONLINE
 

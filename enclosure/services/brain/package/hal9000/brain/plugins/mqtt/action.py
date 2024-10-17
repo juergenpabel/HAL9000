@@ -15,10 +15,6 @@ class Action(HAL9000_Action):
 		self.daemon.plugins['mqtt'].addSignalHandler(self.on_mqtt_signal)
 
 
-	def runlevel(self) -> str:
-		return RUNLEVEL.RUNNING
-
-
 	async def on_mqtt_signal(self, plugin: str, signal: dict) -> None:
 		if 'topic' in signal and 'payload' in signal:
 			mqtt_topic = signal['topic']

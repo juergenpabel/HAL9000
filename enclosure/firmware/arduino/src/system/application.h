@@ -16,7 +16,7 @@ typedef enum {
 	RunlevelUnknown      = 0x00,
 	RunlevelStarting     = 0x01,
 	RunlevelConfiguring  = 0x02,
-	RunlevelReady      = 0x03,
+	RunlevelReady        = 0x03,
 	RunlevelRunning      = 0x04,
 	RunlevelRestarting   = 0x05,
 	RunlevelHalting      = 0x06,

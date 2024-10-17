@@ -19,10 +19,10 @@ class DataInvalid(enum_StrEnum):
 
 
 class HAL9000_Plugin_Data(object):
-	SPECIAL_NAMES = ['daemon', 'plugin_id', 'module', 'hidden', 'local_names', 'remote_names', 'callbacks_data', 'callbacks_signal']
+	SPECIAL_NAMES = ['daemon', 'name', 'module', 'hidden', 'local_names', 'remote_names', 'callbacks_data', 'callbacks_signal']
 
-	def __init__(self, plugin_id: str, **kwargs) -> None:
-		self.plugin_id = plugin_id
+	def __init__(self, name: str, **kwargs) -> None:
+		self.name = name
 		self.daemon = kwargs.get('daemon', None)
 		if self.daemon is None:
 			self.daemon = object()
@@ -135,7 +135,7 @@ class HAL9000_Plugin_Data(object):
 								                f"returned <None> instead of a boolean value (BUG!) => {callback}")
 							if result is False:
 								from hal9000.brain.daemon import Brain # late import due to partially initialized module (circular imports)
-								self.daemon.logger.log(Brain.LOGLEVEL_TRACE, f"[{self.plugin_id}] callback '{callback.__self__.name}" \
+								self.daemon.logger.log(Brain.LOGLEVEL_TRACE, f"[{self.name}] callback '{callback.__self__.name}" \
 								                                             f"<{callback.__func__.__name__}>' declined change of " \
 								                                             f"{name} from '{old_value}' to '{new_value}'")
 							commit_value &= result
@@ -201,17 +201,6 @@ class HAL9000_Plugin(object):
 		pass
 
 
-	def runlevel(self) -> str:
-		return DataInvalid.UNKNOWN
-
-
-	def runlevel_error(self) -> dict:
-		return {'id': '911',
-		        'level': 'error',
-		        'title': "BUG: HAL9000_Plugin derived class did not implement runlevel_error()"}
-
-
-
 class HAL9000_Action(HAL9000_Plugin):
 	def __init__(self, action_class: str, action_name: str, plugin_status: HAL9000_Plugin_Data, **kwargs) -> None:
 		HAL9000_Plugin.__init__(self, "action", action_class, action_name, plugin_status, **kwargs)
@@ -231,10 +220,6 @@ class HAL9000_Trigger(HAL9000_Plugin):
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		HAL9000_Plugin.configure(self, configuration, section_name)
 		self.sleepless = configuration.getboolean(section_name, 'sleepless', fallback=False)
-
-
-	def runlevel(self) -> str:
-		return RUNLEVEL.RUNNING
 
 
 	def handle(self, data: aiomqtt_Message) -> dict:

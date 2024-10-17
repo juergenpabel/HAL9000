@@ -93,9 +93,7 @@ void loop() {
 
 	currentRunlevel = g_system_application.getRunlevel();
 	if(currentRunlevel != previousRunlevel) {
-		etl::string<GLOBAL_KEY_SIZE> payloadRunlevel("\"<STATUS>\"");
-
-		g_util_webserial.send("system/runlevel", payloadRunlevel.replace(1, 8, g_system_application.getRunlevelName()), false);
+		g_util_webserial.send("system/runlevel", g_system_application.getRunlevelName());
 		switch(currentRunlevel) {
 			case RunlevelConfiguring:
 				g_util_webserial.clearCommands();

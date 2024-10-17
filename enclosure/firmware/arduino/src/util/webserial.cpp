@@ -68,7 +68,7 @@ bool WebSerial::isAlive() {
 		if(UTIL_WEBSERIAL_HEARTBEAT_MS == 0) {
 			return true;
 		}
-		if(millis() < (this->millis_heartbeatRX + (UTIL_WEBSERIAL_HEARTBEAT_MS/2*3))) {
+		if(millis() < (this->millis_heartbeatRX + (UTIL_WEBSERIAL_HEARTBEAT_MS*2+500L))) {
 			return true;
 		}
 		if(Serial.available() > 0) {
@@ -88,15 +88,17 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVari
 
 
 void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::string<GLOBAL_VALUE_SIZE>& data, bool data_stringify, bool priority) {
-	etl::string<WEBSERIAL_LINE_SIZE> line;
+	static etl::string<WEBSERIAL_LINE_SIZE> line;
+	static etl::string<GLOBAL_VALUE_SIZE>   data_stringified;
 
+	line.clear();
 	line  = "[\"";
 	line += command;
 	line += "\", ";
 	if(data_stringify == true) {
-		etl::string<GLOBAL_VALUE_SIZE> data_stringified;
 		size_t pos = 0;
 
+		data_stringified.clear();
 		data_stringified = data;
 		pos = data_stringified.find('"', pos);
 		while(pos != data_stringified.npos) {

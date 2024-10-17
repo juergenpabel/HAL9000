@@ -27,10 +27,6 @@ class Action(HAL9000_Action):
 		self.daemon.plugins['script'].addSignalHandler(self.on_script_signal)
 
 
-	def runlevel(self) -> str:
-		return RUNLEVEL.RUNNING
-
-
 	async def on_script_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
 		if 'id' in signal:
 			script_id = signal['id']

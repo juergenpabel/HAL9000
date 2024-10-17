@@ -43,10 +43,6 @@ class Action(HAL9000_Action):
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
 
 
-	def runlevel(self) -> str:
-		return RUNLEVEL.RUNNING
-
-
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
 		if new_runlevel in list(DataInvalid):
 			return True

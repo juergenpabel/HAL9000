@@ -40,16 +40,6 @@ class Action(HAL9000_Action):
 		self.mqtt_prefix = self.config['command-mqtt-topic-prefix']
 
 
-	def runlevel(self) -> str:
-		return self.daemon.plugins['kalliope'].runlevel
-
-
-	def runlevel_error(self) -> dict:
-		return {'id': '300',
-		        'level': 'critical',
-		        'title': "Service 'kalliope' unavailable (voice interaction)"}
-
-
 	def runlevel_inhibitor_ready_volume(self) -> bool:
 		if self.daemon.plugins['kalliope'].volume in list(DataInvalid):
 			return False

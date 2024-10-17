@@ -35,7 +35,3 @@ class Action(HAL9000_Action):
 		for identifier in self.components.keys():
 			self.components[identifier].configure(configuration, section_name)
 
-
-	def runlevel(self) -> str:
-		return RUNLEVEL.RUNNING
-

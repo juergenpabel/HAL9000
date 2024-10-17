@@ -20,6 +20,7 @@ class Action(HAL9000_Action):
 		HAL9000_Action.__init__(self, 'startup', action_name, plugin_status, **kwargs)
 		self.daemon.plugins['startup'].runlevel = RUNLEVEL.RUNNING
 		self.daemon.plugins['startup'].status = STARTUP_STATUS.WAITING_READY
+		self.daemon.plugins['startup'].hidden = True
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
@@ -29,14 +30,9 @@ class Action(HAL9000_Action):
 		self.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'startup:brain_time',       self.runlevel_inhibitor_ready_brain_time)
 		self.daemon.plugins['startup'].addSignalHandler(self.on_startup_signal)
 		self.daemon.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
-		self.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
 		self.daemon.plugins['frontend'].addNameCallback(self.on_frontend_screen_callback, 'screen')
 		if self.config['timeout-starting'] > 0:
 			self.daemon.create_scheduled_signal(self.config['timeout-starting'], 'startup', {'timeout': 'starting'}, 'scheduler://startup/timeout:starting')
-
-
-	def runlevel(self) -> str:
-		return RUNLEVEL.RUNNING
 
 
 	def runlevel_inhibitor_ready_brain_time(self) -> bool:
@@ -46,18 +42,17 @@ class Action(HAL9000_Action):
 
 
 	async def on_startup_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
-		if 'timeout' in signal and signal['timeout'] == 'starting':
-			starting_plugins = list(self.daemon.triggers.values()) + list(self.daemon.actions.values())
-			starting_plugins = list(filter(lambda plugin: plugin.runlevel() != RUNLEVEL.RUNNING, starting_plugins))
-			if len(starting_plugins) > 0:
-				self.daemon.logger.critical(f"[startup] Startup failed (plugins that haven't reached runlevel 'running' before startup timeout):")
-				for plugin in starting_plugins:
-					plugin_type, plugin_class, plugin_instance = str(plugin).split(':', 2)
-					error = plugin.runlevel_error()
-					self.daemon.logger.critical(f"[startup] - Plugin '{plugin_class}' (instance='{plugin_instance}')")
-					self.daemon.process_error('critical', error['id'], f"    Plugin '{plugin_class}'", error['title'])
+		if 'welcome' in signal:
+			self.startup_welcome()
+		if 'timeout' in signal:
+			if signal['timeout'] == 'starting' and self.daemon.plugins['brain'].runlevel == RUNLEVEL.STARTING:
+				starting_plugins = list(filter(lambda plugin: plugin.name != 'brain' and plugin.runlevel != RUNLEVEL.RUNNING, self.daemon.plugins.values()))
+				if len(starting_plugins) > 0:
+					self.daemon.logger.critical(f"[startup] Startup failed (plugins that haven't reached runlevel 'running' before startup timeout):")
+					for plugin in starting_plugins:
+						self.daemon.logger.critical(f"[startup] - Plugin '{plugin.name}'")
 				self.daemon.logger.debug(f"[startup] STATUS at startup-timeout = { {k: v for k,v in self.daemon.plugins.items() if v.hidden is False} }")
-				self.daemon.plugins['brain'].status = BRAIN_STATUS.DYING
+				self.daemon.plugins['brain'].status = BRAIN_STATUS.DYING, CommitPhase.COMMIT
 
 
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
@@ -67,48 +62,15 @@ class Action(HAL9000_Action):
 			case CommitPhase.COMMIT:
 				match new_runlevel:
 					case RUNLEVEL.READY:
-						self.daemon.remove_scheduled_signal('scheduler://startup/timeout:starting')
 						self.daemon.plugins['startup'].status = STARTUP_STATUS.WAITING_RUNNING
+						self.daemon.remove_scheduled_signal('scheduler://startup/timeout:starting')
 					case RUNLEVEL.RUNNING:
-						match self.daemon.plugins['brain'].status:
-							case BRAIN_STATUS.AWAKE:
-								self.daemon.plugins['startup'].status = STARTUP_STATUS.WAITING_WELCOME
-								self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'on': {}}})
-								self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations',
-								                                                         'parameter': {'name': 'hal9000'}}}})
-								self.daemon.create_scheduled_signal(1.5, 'kalliope', {'command': {'name': 'welcome', 'parameter': {}}},
-									                            'scheduler://kalliope/welcome:delay)')
-							case BRAIN_STATUS.ASLEEP:
-								pass
-						self.daemon.plugins['startup'].status = STARTUP_STATUS.FINISHED
-						self.daemon.plugins['startup'].hidden = True
-
-
-						if self.daemon.plugins['frontend'].screen == 'animations:system-starting':
-							self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop', 'value': 'false'}}})
-							self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-		return True
-
-
-	def on_brain_status_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_status: str, new_status: str, phase: CommitPhase) -> bool:
-		if new_status in list(DataInvalid):
-			return True
-		match phase:
-			case CommitPhase.COMMIT:
-				if self.daemon.plugins['startup'].status == STARTUP_STATUS.WAITING_WELCOME:
-					match new_status:
-						case BRAIN_STATUS.AWAKE:
-							self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'on': {}}})
-							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
-							self.daemon.create_scheduled_signal(1.5, 'kalliope', {'command': {'name': 'welcome', 'parameter': {}}},
-								                                    'scheduler://kalliope/welcome:delay)')
-						case BRAIN_STATUS.ASLEEP:
-							self.daemon.queue_signal('kalliope', {'status': 'sleeping'})
-							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
-							self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-							self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'off': {}}})
-					self.daemon.plugins['startup'].status = STARTUP_STATUS.FINISHED
-					self.daemon.plugins['startup'].hidden = True
+						self.daemon.plugins['startup'].status = STARTUP_STATUS.WAITING_WELCOME
+						if self.daemon.plugins['frontend'].screen.split(':', 1).pop(0) != 'animations':
+							self.daemon.queue_signal('startup', {'welcome': {}})
+						else:
+							self.daemon.queue_signal('frontend', {'environment': {'set': {'key': 'gui/screen:animations/loop',
+							                                                              'value': 'false'}}})
 		return True
 
 
@@ -117,8 +79,34 @@ class Action(HAL9000_Action):
 			return True
 		match phase:
 			case CommitPhase.LOCAL_REQUESTED:
-				if self.daemon.plugins['brain'].runlevel == RUNLEVEL.READY:
-					if new_screen == 'idle':
+				if new_screen == 'idle':
+					if self.daemon.plugins['brain'].runlevel == RUNLEVEL.READY:
 						return False
+			case CommitPhase.COMMIT:
+				match new_screen:
+					case 'none':
+						if self.daemon.plugins['startup'].status == STARTUP_STATUS.WAITING_WELCOME:
+							self.daemon.queue_signal('startup', {'welcome': {}})
+					case other:
+						if self.daemon.plugins['startup'].status == STARTUP_STATUS.WAITING_WELCOME:
+							self.daemon.logger.warn(f"[startup] an unexpected screen '{new_screen}' is to be set, cancelling startup/welcome")
+							self.daemon.plugins['startup'].status = STARTUP_STATUS.FINISHED
 		return True
 
+
+	def startup_welcome(self) -> None:
+		match self.daemon.plugins['brain'].status:
+			case BRAIN_STATUS.AWAKE:
+				self.daemon.logger.info(f"[startup] now running welcome message")
+				self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'on': {}}})
+				self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
+				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+				self.daemon.create_scheduled_signal(1.5, 'kalliope', {'command': {'name': 'welcome', 'parameter': {}}},
+					                                    'scheduler://kalliope/welcome:delay)')
+			case BRAIN_STATUS.ASLEEP:
+				self.daemon.logger.info(f"[startup] skipping welcome message (system is currently in sleep mode)")
+				self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
+				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+				self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'off': {}}})
+				self.daemon.queue_signal('kalliope', {'status': 'sleeping'})
+		self.daemon.plugins['startup'].status = STARTUP_STATUS.FINISHED

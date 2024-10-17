@@ -37,8 +37,8 @@ from dbus_fast.aio import MessageBus
 from dbus_fast.auth import AuthExternal, UID_NOT_SPECIFIED
 from dbus_fast.constants import BusType
 
-
 from .plugin import HAL9000_Plugin, HAL9000_Plugin_Data, DataInvalid, RUNLEVEL, CommitPhase
+
 
 class BRAIN_STATUS(enum_StrEnum):
 	LAUNCHING = 'launching'
@@ -143,16 +143,15 @@ class Brain(object):
 
 
 	async def runlevel_starting(self) -> dict:
-		self.logger.info(f"[brain] Startup in progress and now in runlevel '{self.plugins['brain'].runlevel}'")
+		self.logger.info(f"[brain] Startup: {RUNLEVEL.STARTING}")
 		self.logger.debug(f"[brain] STATUS at runlevel '{self.plugins['brain'].runlevel}' = { {k: v for k,v in self.plugins.items() if v.hidden is False} }")
 		self.plugins['brain'].addSignalHandler(self.on_brain_signal)
 		self.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
 		self.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
 		self.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
 		self.plugins['brain'].addNameCallback(self.on_plugin_callback, '*')
-		for plugin in list(self.triggers.values()) + list(self.actions.values()):
-			plugin_name = str(plugin).split(':').pop(1)
-			self.plugins[plugin_name].addNameCallback(self.on_plugin_callback, '*')
+		for plugin in self.plugins.values():
+			plugin.addNameCallback(self.on_plugin_callback, '*')
 		try:
 			self.scheduler.start()
 			self.tasks['signals'] = asyncio_create_task(self.task_signal())
@@ -160,36 +159,32 @@ class Brain(object):
 			while 'mqtt:publisher' not in self.tasks and 'mqtt:subscriber' not in self.tasks:
 				await asyncio_sleep(0.1)
 			self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/event/brain/runlevel', 'payload': 'starting'})
-			starting_plugins = list(self.triggers.values()) + list(self.actions.values())
-			starting_plugins = list(filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins))
-			self.logger.info(f"[brain] Startup initialized (plugins that need runtime registration):")
-			for plugin in filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins):
-				plugin_type, plugin_class, plugin_instance = str(plugin).split(':', 2)
-				self.logger.info(f"[brain]  - Plugin '{plugin_class}' (instance='{plugin_instance}')")
-				self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/{plugin_class}/runlevel', 'payload': None})
-			self.logger.info(f"[brain] Waiting for plugins that need runtime registration...")
-			while len(list(filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins))) > 0:
+			self.logger.info(f"[brain] Connected to MQTT, now requesting runlevel announcements from these services:")
+			for name, plugin in dict(filter(lambda item: item[1].runlevel == DataInvalid.UNKNOWN, self.plugins.items())).items():
+				self.logger.info(f"[brain] - Service '{name}'")
+				self.mqtt_publish_queue.put_nowait({'topic': f'hal9000/command/{name}/runlevel', 'payload': None})
+			self.logger.info(f"[brain] Waiting for these services to announce their runlevel...")
+			while len(list(filter(lambda plugin: plugin.runlevel == DataInvalid.UNKNOWN, self.plugins.values()))) > 0:
 				if self.plugins['brain'].status == BRAIN_STATUS.DYING:
 					self.logger.debug(f"[brain] status changed to 'dying', raising exception while waiting for plugins in runlevel 'starting'")
 					raise RuntimeError(BRAIN_STATUS.DYING)
 				await asyncio_sleep(0.1)
-			self.logger.info(f"[brain] ...all plugins completed runtime registration")
-			self.logger.info(f"[brain] Waiting for inhibitors for runlevel '{RUNLEVEL.STARTING}'...")
-			self.logger.debug(f"[brain] Inhibitors for runlevel '{RUNLEVEL.STARTING}': " \
+			self.logger.info(f"[brain] ...all services announced their runlevel")
+			self.logger.debug(f"[brain] Inhibitors in runlevel '{RUNLEVEL.STARTING}': " \
 			                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.STARTING].keys()))}...")
+			self.logger.info(f"[brain] Waiting for runlevel inhibitors to finish...")
 			while len(self.runlevel_inhibitors[RUNLEVEL.STARTING]) > 0:
 				self.evaluate_runlevel_inhibitors(RUNLEVEL.STARTING)
 				if self.plugins['brain'].status == BRAIN_STATUS.DYING:
 					self.logger.debug(f"[brain] status changed to 'dying', raising exception while waiting for inhibitors in runlevel 'starting'")
 					raise RuntimeError(BRAIN_STATUS.DYING)
 				await asyncio_sleep(0.1)
-			self.logger.info(f"[brain] ...all inhibitors for runlevel '{RUNLEVEL.STARTING}' have finished")
-			self.plugins['brain'].runlevel = RUNLEVEL.READY, CommitPhase.COMMIT
+			self.logger.info(f"[brain] ...all inhibitors in runlevel '{RUNLEVEL.STARTING}' have finished")
 			self.logger.debug(f"[brain] STATUS after runlevel 'starting' = { {k: v for k,v in self.plugins.items() if v.hidden is False} }")
 		except Exception as e:
-			self.logger.error(f"[brain] execution of runlevel 'starting' aborted, remaining plugins that haven't registered at runtime: " \
-			                  f"{list(filter(lambda plugin: plugin.runlevel() == DataInvalid.UNKNOWN, starting_plugins))}")
-			self.logger.error(f"[brain] execution of runlevel 'starting' aborted, remaining inhibitors that haven't completed at runtime: " \
+			self.logger.debug(f"[brain] execution of runlevel 'starting' aborted, services that haven't announced their runlevel: " \
+			                  f"{', '.join(list(dict(filter(lambda item: item[1].runlevel == DataInvalid.UNKNOWN, self.plugins.items())).keys()))}")
+			self.logger.debug(f"[brain] execution of runlevel 'starting' aborted, remaining inhibitors that haven't finished: " \
 			                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.STARTING].keys()))}")
 			self.logger.critical(f"[brain] Brain.runlevel_starting(): {type(e).__name__} => {str(e)}")
 			from traceback import format_exc as traceback_format_exc
@@ -197,29 +192,29 @@ class Brain(object):
 			if str(e) != BRAIN_STATUS.DYING:
 				self.plugins['brain'].status = BRAIN_STATUS.DYING
 				return {'main': e}
+		self.plugins['brain'].runlevel = RUNLEVEL.READY, CommitPhase.COMMIT
 		return {}
 
 			
 	async def runlevel_ready(self) -> dict:
-		self.logger.info(f"[brain] Startup in progress and now in runlevel '{self.plugins['brain'].runlevel}'")
+		self.logger.info(f"[brain] Startup: {RUNLEVEL.READY}")
 		self.logger.debug(f"[brain] STATUS in runlevel '{self.plugins['brain'].runlevel}' = { {k: v for k,v in self.plugins.items() if v.hidden is False} }")
 		try:
 			self.plugins['brain'].status = BRAIN_STATUS.AWAKE
 			self.queue_signal('brain', {'time:sync': {}})
-			self.logger.info(f"[brain] Waiting for inhibitors for runlevel '{RUNLEVEL.READY}'...")
-			self.logger.debug(f"[brain] Inhibitors for runlevel '{RUNLEVEL.READY}': " \
+			self.logger.debug(f"[brain] Inhibitors in runlevel '{RUNLEVEL.READY}': " \
 			                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.READY].keys()))}...")
+			self.logger.info(f"[brain] Waiting for runlevel inhibitors to finish...")
 			while len(self.runlevel_inhibitors[RUNLEVEL.READY]) > 0:
 				if self.plugins['brain'].status == BRAIN_STATUS.DYING:
 					self.logger.debug(f"[brain] status changed to 'dying', raising exception while waiting for inhibitos in runlevel 'ready'")
 					raise RuntimeError(BRAIN_STATUS.DYING)
 				self.evaluate_runlevel_inhibitors(RUNLEVEL.READY)
 				await asyncio_sleep(0.1)
-			self.logger.info(f"[brain] ...all runlevel inhibitors for runlevel '{RUNLEVEL.READY}' have finished")
-			self.plugins['brain'].runlevel = RUNLEVEL.RUNNING, CommitPhase.COMMIT
+			self.logger.info(f"[brain] ...all inhibitors in runlevel '{RUNLEVEL.READY}' have finished")
 			self.logger.debug(f"[brain] STATUS after runlevel 'ready' = { {k: v for k,v in self.plugins.items() if v.hidden is False} }")
 		except Exception as e:
-			self.logger.error(f"[brain] execution of runlevel 'ready' aborted, remaining inhibitors that haven't completed at runtime: " \
+			self.logger.debug(f"[brain] execution of runlevel 'ready' aborted, remaining inhibitors that haven't completed at runtime: " \
 			                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.READY].keys()))}")
 			self.logger.critical(f"[brain] Brain.runlevel_ready(): {type(e).__name__} => {str(e)}")
 			from traceback import format_exc as traceback_format_exc
@@ -227,11 +222,12 @@ class Brain(object):
 			if str(e) != BRAIN_STATUS.DYING:
 				self.plugins['brain'].status = BRAIN_STATUS.DYING
 				return {'main': e}
+		self.plugins['brain'].runlevel = RUNLEVEL.RUNNING, CommitPhase.COMMIT
 		return {}
 
 
 	async def runlevel_running(self) -> dict:
-		self.logger.info(f"[brain] Startup completed and now in runlevel '{self.plugins['brain'].runlevel}'")
+		self.logger.info(f"[brain] Startup: {RUNLEVEL.RUNNING}")
 		self.logger.debug(f"[brain] STATUS in runlevel '{self.plugins['brain'].runlevel}' = { {k: v for k,v in self.plugins.items() if v.hidden is False} }")
 		try:
 			while self.plugins['brain'].runlevel == RUNLEVEL.RUNNING and self.plugins['brain'].status != BRAIN_STATUS.DYING:
@@ -244,6 +240,7 @@ class Brain(object):
 			if str(e) != BRAIN_STATUS.DYING:
 				self.plugins['brain'].status = BRAIN_STATUS.DYING
 				return {'main': e}
+		self.plugins['brain'].runlevel = RUNLEVEL.KILLED, CommitPhase.COMMIT
 		return {}
 
 
@@ -262,6 +259,7 @@ class Brain(object):
 	def evaluate_runlevel_inhibitors(self, runlevel: str) -> None:
 		for name, callback in self.runlevel_inhibitors[runlevel].copy().items():
 			if callback() is True:
+				self.logger.debug(f"[brain] Inhibitor '{name}' has finished")
 				del self.runlevel_inhibitors[runlevel][name]
 
 
@@ -420,11 +418,20 @@ class Brain(object):
 
 
 	def on_plugin_callback(self, plugin: HAL9000_Plugin_Data, key: str, old_value, new_value, phase: CommitPhase) -> bool:
+		log_function = logging_getLogger().info
+		match self.plugins['brain'].runlevel:
+			case RUNLEVEL.STARTING:
+				log_function = logging_getLogger().debug
+			case RUNLEVEL.READY:
+				log_function = logging_getLogger().debug
+			case RUNLEVEL.RUNNING:
+				if plugin.hidden is True:
+					log_function = logging_getLogger().debug
 		match phase:
 			case CommitPhase.REMOTE_REQUESTED:
-				logging_getLogger().info(f"[brain] Plugin '{plugin.plugin_id}': {key} is requested to change from '{old_value}' to '{new_value}'")
+				log_function(f"[brain] Plugin '{plugin.name}': {key} is requested to change from '{old_value}' to '{new_value}'")
 			case CommitPhase.COMMIT:
-				logging_getLogger().info(f"[brain] Plugin '{plugin.plugin_id}': {key} changes from '{old_value}' to '{new_value}'")
+				log_function(f"[brain] Plugin '{plugin.name}': {key} changes from '{old_value}' to '{new_value}'")
 		return True
 
 

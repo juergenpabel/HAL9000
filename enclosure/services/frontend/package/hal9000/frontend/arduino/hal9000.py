@@ -13,7 +13,7 @@ from usb import busses as usb_busses
 from fastapi import FastAPI as fastapi_FastAPI
 
 import logging
-from hal9000.frontend import Frontend
+from hal9000.frontend import Frontend, RUNLEVEL, STATUS
 
 
 class HAL9000(Frontend):
@@ -54,10 +54,8 @@ class HAL9000(Frontend):
 				self.serial = serial_Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate,
 				                            bytesize=serial_EIGHTBITS, parity=serial_PARITY_NONE, stopbits=serial_STOPBITS_ONE)
 				logging_getLogger('uvicorn').debug(f"[frontend:arduino] opened '{arduino_device}'")
-				await self.serial_writeline('["system/runlevel", null]')
-				await asyncio_sleep(0.5)
-				arduino_status = await self.serial_await_runlevel_change('starting')
-				if arduino_status == 'configuring':
+				arduino_runlevel = await self.serial_await_runlevel_change('starting')
+				if arduino_runlevel == 'configuring':
 					logging_getLogger('uvicorn').debug(f"[frontend:arduino] arduino status is now 'configuring'")
 					if arduino_config == 'frontend' and arduino_name is not None:
 						i2c_bus = configuration.getint(f'arduino:{arduino_name}', 'i2c-bus', fallback=0)
@@ -86,15 +84,15 @@ class HAL9000(Frontend):
 						await asyncio_sleep(0.5)
 						logging_getLogger('uvicorn').debug(f"[frontend:arduino] '{arduino_device}' is now configured via frontend-configuration")
 					await self.serial_writeline('["system/runlevel", "ready"]')
-					arduino_status = await self.serial_await_runlevel_change('configuring')
-				if arduino_status == 'panicing':
+					arduino_runlevel = await self.serial_await_runlevel_change('configuring')
+				if arduino_runlevel == 'panicing':
 					error = 'no error details provided' #TODO
 					logging_getLogger('uvicorn').critical(f"[frontend:arduino] arduino status is now 'panicing': {error}")
 					self.serial.close()
 					self.serial = None
 					return False
-				while arduino_status != 'running':
-					arduino_status = await self.serial_await_runlevel_change(arduino_status)
+				while arduino_runlevel != 'running':
+					arduino_runlevel = await self.serial_await_runlevel_change(arduino_runlevel)
 				logging_getLogger('uvicorn').debug(f"[frontend:arduino] arduino status is now 'running'")
 			except (configparser_ParsingError, serial_SerialException) as e:
 				logging_getLogger('uvicorn').error(f"[frontend:arduino] {e}")
@@ -156,6 +154,7 @@ class HAL9000(Frontend):
 
 
 	async def serial_await_runlevel_change(self, runlevel: str, timeout: float = 1.0) -> str:
+		await self.serial_writeline('["system/runlevel", ""]')
 		line = None
 		response = ['system/runlevel', runlevel]
 		while response[0] != 'system/runlevel' \
@@ -180,7 +179,7 @@ class HAL9000(Frontend):
 				await asyncio_sleep(1)
 			try:
 				while self.serial.is_open is True and self.tasks['host2device'].cancelled() is False:
-					self.status = Frontend.FRONTEND_STATUS_ONLINE
+					self.status = STATUS.ONLINE
 					command = await self.commands.get()
 					if isinstance(command, dict) and 'topic' in command and 'payload' in command:
 						logging_getLogger('uvicorn').debug(f"[frontend:arduino] host2device sends command: {command}")
@@ -193,7 +192,7 @@ class HAL9000(Frontend):
 				logging_getLogger('uvicorn').warning(f"[frontend:arduino] serial device '{self.serial.port}' (unexpectedly) closed")
 			except Exception as e:
 				logging_getLogger('uvicorn').error(f"[frontend:arduino] exception in task_host2device(): {e}")
-			self.status = Frontend.FRONTEND_STATUS_OFFLINE
+			self.status = STATUS.OFFLINE
 		logging_getLogger('uvicorn').error(f"[frontend:arduino] exiting host2device-listener ('arduino' frontend becomes non-functional)")
 		del self.tasks['host2device']
 
@@ -206,8 +205,8 @@ class HAL9000(Frontend):
 				await asyncio_sleep(1)
 			try:
 				while self.serial.is_open is True and self.tasks['device2host'].cancelled() is False:
-					if self.status != Frontend.FRONTEND_STATUS_ONLINE:
-						self.status = Frontend.FRONTEND_STATUS_ONLINE
+					if self.status != STATUS.ONLINE:
+						self.status = STATUS.ONLINE
 						self.commands.put_nowait(None) # to wake up task_host2device()
 					line = await self.serial_readline()
 					try:
@@ -236,7 +235,7 @@ class HAL9000(Frontend):
 				logging_getLogger('uvicorn').warning(f"[frontend:arduino] serial device '{self.serial.port}' (unexpectedly) closed")
 			except Exception as e:
 				logging_getLogger('uvicorn').error(f"[frontend:arduino] exception in task_device2host(): {e}")
-			self.status = Frontend.FRONTEND_STATUS_OFFLINE
+			self.status = STATUS.OFFLINE
 		logging_getLogger('uvicorn').error(f"[frontend:arduino] exiting device2host-listener ('arduino' frontend becomes non-functional)")
 		del self.tasks['device2host']
 		self.tasks['host2device'].cancel()

@@ -42,16 +42,6 @@ class Action(HAL9000_Action):
 		self.mqtt_prefix = self.config['frontend-command-mqtt-prefix']
 
 
-	def runlevel(self) -> str:
-		return self.daemon.plugins['frontend'].runlevel
-
-
-	def runlevel_error(self) -> dict:
-		return {'id': '200',
-		        'level': 'critical',
-		        'title': "Service 'frontend' unavailable (arduino/flet backends)"}
-
-
 	def runlevel_inhibitor_ready_screen(self) -> bool:
 		if self.daemon.plugins['frontend'].screen in [DataInvalid.UNINITIALIZED, DataInvalid.UNKNOWN]:
 			return False

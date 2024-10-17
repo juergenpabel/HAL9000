@@ -1,18 +1,24 @@
+from enum import StrEnum as enum_StrEnum
 from asyncio import Queue as asyncio_Queue
 from logging import getLogger as logging_getLogger
 
 
+class RUNLEVEL(enum_StrEnum):
+	STARTING = 'starting'
+	READY    = 'ready'
+	RUNNING  = 'running'
+	DEAD     = 'dead'
+
+
+class STATUS(enum_StrEnum):
+	ONLINE   = 'online'
+	OFFLINE  = 'offline'
+
+
 class Frontend:
 	LOG_LEVEL_TRACE = 5
+	STATUS_UNKNOWN  = 'unknown'
 
-	FRONTEND_RUNLEVEL_STARTING = 'starting'
-	FRONTEND_RUNLEVEL_READY    = 'ready'
-	FRONTEND_RUNLEVEL_RUNNING  = 'running'
-	FRONTEND_RUNLEVEL_DEAD     = 'dead'
-
-	FRONTEND_STATUS_UNKNOWN  = 'unknown'
-	FRONTEND_STATUS_ONLINE   = 'online'
-	FRONTEND_STATUS_OFFLINE  = 'offline'
 
 	def __init__(self, name: str):
 		self.name = name
@@ -20,16 +26,17 @@ class Frontend:
 		self.events = asyncio_Queue()
 		self.config = {}
 		self.tasks = {}
-		self.runlevel = Frontend.FRONTEND_RUNLEVEL_STARTING
-		self.status = Frontend.FRONTEND_STATUS_UNKNOWN
+		self.runlevel = RUNLEVEL.STARTING
+		self.status = Frontend.STATUS_UNKNOWN
 
 
 	async def configure(self, configuration) -> bool:
+		self.runlevel = RUNLEVEL.READY
 		return True
 
 
 	async def start(self) -> None:
-		self.runlevel = Frontend.FRONTEND_RUNLEVEL_RUNNING
+		self.runlevel = RUNLEVEL.RUNNING
 
 
 	def __setattr__(self, name, new_value) -> None:
