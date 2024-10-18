@@ -23,7 +23,7 @@ class Action(HAL9000_Action):
 		HAL9000_Action.__init__(self, 'frontend', action_name, plugin_status, **kwargs)
 		self.daemon.plugins['frontend'].addRemoteNames(['screen', 'overlay'])
 		self.daemon.plugins['frontend'].runlevel = DataInvalid.UNKNOWN, CommitPhase.COMMIT
-		self.display_power = None
+		self.display_backlight = None
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
@@ -117,19 +117,19 @@ class Action(HAL9000_Action):
 						if self.daemon.plugins['brain'].runlevel == RUNLEVEL.RUNNING:
 							match self.daemon.plugins['brain'].status:
 								case BRAIN_STATUS.AWAKE:
-									if self.display_power != True:
-										self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen',
-										                                  'payload': {'on': {}}})
-										self.display_power = True
+									if self.display_backlight != True:
+										self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/system/features',
+										                                  'payload': {'display': {'backlight': True}}})
+										self.display_backlight = True
 									self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
 									self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 								case BRAIN_STATUS.ASLEEP:
 									self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
 									self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-									if self.display_power != False:
-										self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen',
-										                                  'payload': {'off': {}}})
-										self.display_power = False
+									if self.display_backlight != False:
+										self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/system/features',
+										                                  'payload': {'display': {'backlight': False}}})
+										self.display_backlight = False
 		return True
 
 
@@ -186,6 +186,10 @@ class Action(HAL9000_Action):
 						value = signal['settings']['set']['value']
 						self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/system/settings',
 						                                  'payload': {'set': {'key': key, 'value': value}}})
+		if 'features' in signal:
+			if self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
+				self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/system/features',
+				                                  'payload': signal['features']})
 		if 'gui' in signal:
 			if self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
 				if 'screen' in signal['gui']:
@@ -226,9 +230,10 @@ class Action(HAL9000_Action):
 				case BRAIN_STATUS.AWAKE:
 					if self.daemon.plugins['brain'].runlevel in [RUNLEVEL.READY, RUNLEVEL.RUNNING]:
 						if self.daemon.plugins['frontend'].status == FRONTEND_STATUS.ONLINE:
-							if self.display_power != True:
-								self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen', 'payload': {'on': {}}})
-								self.display_power = True
+							if self.display_backlight != True:
+								self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/system/features',
+								                                  'payload': {'display': {'backlight': True}}})
+								self.display_backlight = True
 							if self.daemon.plugins['frontend'].screen != 'idle':
 								if self.daemon.plugins['frontend'].getRemotePendingValue('screen') is None:
 									self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
@@ -244,9 +249,10 @@ class Action(HAL9000_Action):
 							if self.daemon.plugins['frontend'].overlay != 'none':
 								if self.daemon.plugins['frontend'].getRemotePendingValue('overlay') is None:
 									self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-							if self.display_power != False:
-								self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/gui/screen', 'payload': {'off': {}}})
-								self.display_power = False
+							if self.display_backlight != False:
+								self.daemon.queue_signal('mqtt', {'topic': f'{self.mqtt_prefix}/system/features',
+								                                  'payload': {'display': {'backlight': False}}})
+								self.display_backlight = False
 		return True
 
 

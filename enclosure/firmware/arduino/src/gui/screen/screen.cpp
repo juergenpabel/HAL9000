@@ -3,8 +3,8 @@
 #include "globals.h"
 
 
-static gui_screen_func  g_screen_func = gui_screen_on;
-static gui_screen_name  g_screen_name = "on";
+static gui_screen_func  g_screen_func = gui_screen_none;
+static gui_screen_name  g_screen_name = "none";
 static bool             g_screen_refresh = false;
 
 
@@ -49,26 +49,6 @@ unsigned long gui_screen_update(unsigned long validity, TFT_eSPI* gui) {
 		validity = GUI_INVALIDATED;
 	}
 	return g_screen_func(validity, gui);
-}
-
-
-unsigned long gui_screen_off(unsigned long validity, TFT_eSPI* gui) {
-	if(validity == GUI_INVALIDATED) {
-		gui->fillScreen(TFT_BLACK);
-		g_device_board.displayOff();
-		validity = millis();
-	}
-	return validity;
-}
-
-
-unsigned long gui_screen_on(unsigned long validity, TFT_eSPI* gui) {
-	if(validity == GUI_INVALIDATED) {
-		gui->fillScreen(TFT_BLACK);
-		g_device_board.displayOn();
-		validity = millis();
-	}
-	return validity;
 }
 
 

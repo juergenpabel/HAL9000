@@ -28,14 +28,6 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 		g_util_webserial.send("gui/screen", response);
 		return;
 	}
-	if(body.containsKey("off") == true) {
-		gui_screen_set("off", gui_screen_off);
-		return;
-	}
-	if(body.containsKey("on") == true) {
-		gui_screen_set("on", gui_screen_on);
-		return;
-	}
 	if(body.containsKey("animations") == true) {
 		g_system_application.delEnv("gui/screen:animations/name");
 		if(body["animations"].containsKey("name") == true) {

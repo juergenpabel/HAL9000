@@ -13,7 +13,5 @@ gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_fu
 void          gui_screen_set_refresh();
 unsigned long gui_screen_update(unsigned long validity, TFT_eSPI* gui);
 
-unsigned long gui_screen_off(unsigned long validity, TFT_eSPI* gui);
-unsigned long gui_screen_on(unsigned long validity, TFT_eSPI* gui);
 unsigned long gui_screen_none(unsigned long validity, TFT_eSPI* gui);
 

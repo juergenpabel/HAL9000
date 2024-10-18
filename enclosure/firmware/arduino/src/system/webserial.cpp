@@ -103,6 +103,35 @@ void on_system_features(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 	static StaticJsonDocument<WEBSERIAL_LINE_SIZE*2> response;
 
 	response.clear();
+	if(data.containsKey("display") == true) {
+		if(data["display"].containsKey("backlight") == true) {
+			if(data["display"]["backlight"].is<bool>() == true) {
+				bool backlight;
+
+				backlight = data["display"]["backlight"].as<bool>();
+				switch(backlight) {
+					case true:
+						g_device_board.displayOn();
+						break;
+					case false:
+						g_device_board.displayOff();
+						break;
+				}
+				response["display"] = JsonObject();
+				response["display"]["backlight"] = backlight;
+				response["result"] = "OK";
+			}
+		}
+		if(response.containsKey("result") == false) {
+			response["result"] = "error";
+			response["error"]["id"] = "216";
+			response["error"]["level"] = "warn";
+			response["error"]["title"] = "Invalid request";
+			response["error"]["details"] = "request for topic 'system/features' with operation 'display' has missing/invalid value for parameter 'backlight')";
+			response["error"]["data"] = JsonObject();
+			response["error"]["data"]["display"] = data["display"];
+		}
+	}
 	if(data.containsKey("time") == true) {
 		response["time"] = JsonObject();
 		if(data["time"].containsKey("epoch") == true) {
@@ -117,7 +146,7 @@ void on_system_features(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 				response["error"]["id"] = "216";
 				response["error"]["level"] = "warn";
 				response["error"]["title"] = "Invalid request";
-				response["error"]["details"] = "request for topic 'system/runlevel' with operation 'time' has invalid value for parameter 'epoch')";
+				response["error"]["details"] = "request for topic 'system/features' with operation 'time' has invalid value for parameter 'epoch')";
 				response["error"]["data"] = JsonObject();
 				response["error"]["data"]["epoch"] = timestamp;
 			}

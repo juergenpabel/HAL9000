@@ -98,7 +98,7 @@ class Action(HAL9000_Action):
 		match self.daemon.plugins['brain'].status:
 			case BRAIN_STATUS.AWAKE:
 				self.daemon.logger.info(f"[startup] now running welcome message")
-				self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'on': {}}})
+				self.daemon.queue_signal('frontend', {'features': {'display': {'backlight': True}}})
 				self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
 				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 				self.daemon.create_scheduled_signal(1.5, 'kalliope', {'command': {'name': 'welcome', 'parameter': {}}},
@@ -107,6 +107,6 @@ class Action(HAL9000_Action):
 				self.daemon.logger.info(f"[startup] skipping welcome message (system is currently in sleep mode)")
 				self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
 				self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-				self.daemon.queue_signal('mqtt', {'topic': 'hal9000/command/frontend/gui/screen', 'payload': {'off': {}}})
+				self.daemon.queue_signal('frontend', {'features': {'display': {'backlight': False}}})
 				self.daemon.queue_signal('kalliope', {'status': 'sleeping'})
 		self.daemon.plugins['startup'].status = STARTUP_STATUS.FINISHED

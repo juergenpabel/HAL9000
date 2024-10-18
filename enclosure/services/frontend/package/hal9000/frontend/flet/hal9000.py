@@ -32,6 +32,9 @@ class HAL9000(Frontend):
 		self.flet_app = app
 		self.environment = {}
 		self.settings = {}
+		self.display_backlight = True
+		self.display_hidden_gui = ''
+		self.display_hidden_shapes = []
 		self.gui_screen = 'none'
 		self.gui_overlay = 'none'
 		self.command_session_queues = {}
@@ -90,6 +93,13 @@ class HAL9000(Frontend):
 						if 'time' in command['payload']:
 							if 'synced' in command['payload']['time']:
 								page.session.set('idle_clock:synced', str(command['payload']['time']['synced']).lower())
+						if 'display' in command['payload']:
+							if 'backlight' in command['payload']['display']:
+								match bool(command['payload']['display']['backlight']):
+									case True:
+										self.display_on(display)
+									case False:
+										self.display_off(display)
 					case 'system/environment':
 						if 'set' in command['payload']:
 							if 'key' in command['payload']['set'] and 'value' in command['payload']['set']:
@@ -117,32 +127,27 @@ class HAL9000(Frontend):
 								                        'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
 						if isinstance(command['payload'], dict) is True:
 							for screen in command['payload'].keys():
-								if self.gui_screen != 'off' or screen == 'on':
-									match screen:
-										case 'off':
-											self.show_off(display)
-										case 'on':
-											self.show_on(display)
-										case 'none':
-											self.show_none(display)
-										case 'idle':
-											self.show_idle(display)
-										case 'animations':
-											self.show_animations(display, command['payload']['animations'])
-										case 'menu':
-											self.show_menu(display, command['payload']['menu'])
-										case 'qrcode':
-											self.show_qrcode(display, command['payload']['qrcode'])
-										case 'splash':
-											self.show_splash(display, command['payload']['splash'])
-										case 'error':
-											self.show_error(display, command['payload']['error'])
-										case other:
-											self.show_error(display, {'title': "BUG: unsupported screen",
-											                          'detail': screen,
-											                          'id': '922'})
-											logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported screen "
-											                                     f"'{screen}' in command 'gui/screen'")
+								match screen:
+									case 'none':
+										self.show_none(display)
+									case 'idle':
+										self.show_idle(display)
+									case 'animations':
+										self.show_animations(display, command['payload']['animations'])
+									case 'menu':
+										self.show_menu(display, command['payload']['menu'])
+									case 'qrcode':
+										self.show_qrcode(display, command['payload']['qrcode'])
+									case 'splash':
+										self.show_splash(display, command['payload']['splash'])
+									case 'error':
+										self.show_error(display, command['payload']['error'])
+									case other:
+										self.show_error(display, {'title': "BUG: unsupported screen",
+										                          'detail': screen,
+										                          'id': '922'})
+										logging_getLogger('uvicorn').warning(f"[frontend:flet] unsupported screen "
+										                                     f"'{screen}' in command 'gui/screen'")
 					case 'gui/overlay':
 						if isinstance(command['payload'], str) is True:
 							if command['payload'] == '':
@@ -199,138 +204,165 @@ class HAL9000(Frontend):
 
 	async def run_gui_screen_idle(self, page: flet.page, display: flet.CircleAvatar) -> None:
 		while page.session_id in self.command_session_queues:
-			if self.gui_screen == 'idle':
-				clock = display.data['idle_clock'].current
-				if clock is not None:
-					if page.session.get("idle_clock:synced") == 'true':
-						clock.style.color = 'white'
-					else:
-						clock.style.color = 'red'
-					now = datetime_datetime.now()
-					if now.second % 2 == 0:
-						clock.text = now.strftime('%H:%M')
-					else:
-						clock.text = now.strftime('%H %M')
-					display.content.update()
-				await asyncio_sleep(0.9)
+			if self.display_backlight is True:
+				if self.gui_screen == 'idle':
+					clock = display.data['idle_clock'].current
+					if clock is not None:
+						if page.session.get("idle_clock:synced") == 'true':
+							clock.style.color = 'white'
+						else:
+							clock.style.color = 'red'
+						now = datetime_datetime.now()
+						if now.second % 2 == 0:
+							clock.text = now.strftime('%H:%M')
+						else:
+							clock.text = now.strftime('%H %M')
+						display.content.update()
+					await asyncio_sleep(0.9)
 			await asyncio_sleep(0.1)
 
 
 	async def run_gui_screen_animations(self, page: flet.page, display: flet.CircleAvatar) -> None:
 		while page.session_id in self.command_session_queues:
-			if self.gui_screen.startswith('animations:') is True:
-				if 'name' in display.data['animations'] and 'json' in display.data['animations']:
-					name = display.data['animations']['name']
-					if len(display.data['animations']['json']) > 0:
-						animation = display.data['animations']['json'].pop(0)
-						if 'directory' in animation and 'frames' in animation and 'duration' in animation and 'loop' in animation:
-							display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-							do_loop = True
-							while do_loop is True and self.gui_screen.startswith('animations:'):
-								for nr in range(0, animation['frames']):
-									display.background_image_src = f'/resources{animation["directory"]}/{nr:02}.jpg'
-									display.update()
-									await asyncio_sleep((float(animation['duration'])/(animation['frames']*1000))+0.1)
-								do_loop = bool(animation['loop'])
-								if do_loop is True:
-									do_loop = json_loads(self.environment.get('gui/screen:animations/loop', 'true'))
-									if do_loop is False:
-										del self.environment['gui/screen:animations/loop']
-							display.background_image_src = '/resources/images/display.jpg'
-							display.update()
-						if 'on:next' in animation:
-							if 'util/webserial:handle' in animation['on:next']:
-								try:
-									topic, payload = json_loads(animation['on:next']['util/webserial:handle'])
-									self.commands.put_nowait({'topic': topic, 'payload': payload})
-								except Exception as e:
-									logging_getLogger('uvicorn').error(f"[frontend:flet] on:next['util/webserial:handle'] in " \
-									                                   f"gui/screen:animations/{name} not webserial-compliant: " \
-									                                   f"'{animation['on:next']['util/webserial:handle']}' => {e}")
+			if self.display_backlight is True:
+				if self.gui_screen.startswith('animations:') is True:
+					if 'name' in display.data['animations'] and 'json' in display.data['animations']:
+						name = display.data['animations']['name']
+						if len(display.data['animations']['json']) > 0:
+							animation = display.data['animations']['json'].pop(0)
+							if 'directory' in animation and 'frames' in animation and 'duration' in animation and 'loop' in animation:
+								display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
+								do_loop = True
+								while do_loop is True and self.gui_screen.startswith('animations:'):
+									for nr in range(0, animation['frames']):
+										display.background_image_src = f'/resources{animation["directory"]}/{nr:02}.jpg'
+										display.update()
+										await asyncio_sleep((float(animation['duration'])/(animation['frames']*1000))+0.1)
+									do_loop = bool(animation['loop'])
+									if do_loop is True:
+										do_loop = json_loads(self.environment.get('gui/screen:animations/loop', 'true'))
+										if do_loop is False:
+											del self.environment['gui/screen:animations/loop']
+								display.background_image_src = '/resources/images/display.jpg'
+								display.update()
+							if 'on:next' in animation:
+								if 'util/webserial:handle' in animation['on:next']:
+									try:
+										topic, payload = json_loads(animation['on:next']['util/webserial:handle'])
+										self.commands.put_nowait({'topic': topic, 'payload': payload})
+									except Exception as e:
+										logging_getLogger('uvicorn').error(f"[frontend:flet] on:next['util/webserial:handle'] in " \
+										                                   f"gui/screen:animations/{name} not webserial-compliant: " \
+										                                   f"'{animation['on:next']['util/webserial:handle']}' => {e}")
 			await asyncio_sleep(0.1)
 
 
-	def show_off(self, display: flet.CircleAvatar) -> None:
-		self.gui_screen = 'none'
-		self.gui_overlay = 'none'
+	def display_off(self, display: flet.CircleAvatar) -> None:
+		self.display_backlight = False
+		self.display_hidden_gui = f'{self.gui_screen}+{self.gui_overlay}'
+		self.display_hidden_shapes = display.content.shapes
 		display.content.shapes = []
 		display.content.update()
 
 
-	def show_on(self, display: flet.CircleAvatar) -> None:
-		self.gui_screen = 'none'
-		self.gui_overlay = 'none'
-		display.content.shapes = []
-		display.content.update()
+	def display_on(self, display: flet.CircleAvatar) -> None:
+		if self.display_hidden_gui == f'{self.gui_screen}+{self.gui_overlay}':
+			display.content.shapes = self.display_hidden_shapes
+			display.content.update()
+			self.display_hidden_shapes = []
+		else:
+			self.show_idle(display)
+		self.display_backlight = True
 
 
 	def show_none(self, display: flet.CircleAvatar) -> None:
 		self.gui_screen = 'none'
 		display.content.shapes = []
 		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen,
+		                                                           'display': {'backlight': self.display_backlight},
+		                                                           'origin': 'frontend:flet'}})
 
 
 	def show_idle(self, display: flet.CircleAvatar) -> None:
 		self.gui_screen = 'idle'
-		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-		display.content.shapes.append(flet.canvas.Text(ref=display.data['idle_clock'],
-		                                               x=int(display.radius), y=int(display.radius),
-		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2),
-		                                               alignment=flet_core_alignment.center))
-		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
+		if self.display_backlight is True:
+			display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
+			display.content.shapes.append(flet.canvas.Text(ref=display.data['idle_clock'],
+			                                               x=int(display.radius), y=int(display.radius),
+			                                               style=flet.TextStyle(size=int(display.page.scale*22)+2),
+			                                               alignment=flet_core_alignment.center))
+			display.content.update()
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen,
+		                                                           'display': {'backlight': self.display_backlight},
+		                                                           'origin': 'frontend:flet'}})
 
 
 	def show_animations(self, display: flet.CircleAvatar, data: dict) -> None:
 		self.gui_screen = f'animations:{data["name"]}'
-		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-		display.data['animations'] = {}
-		if os_path_exists(f'resources/gui/screen/animations/{data["name"]}.json') is True:
-			with open(f'resources/gui/screen/animations/{data["name"]}.json') as file:
-				display.data['animations']['name'] = data['name']
-				display.data['animations']['json'] = json_load(file)
-		else:
-			logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'resources/gui/screen/animations/{data['name']}.json'")
-		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
+		if self.display_backlight is True:
+			display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
+			display.data['animations'] = {}
+			if os_path_exists(f'resources/gui/screen/animations/{data["name"]}.json') is True:
+				with open(f'resources/gui/screen/animations/{data["name"]}.json') as file:
+					display.data['animations']['name'] = data['name']
+					display.data['animations']['json'] = json_load(file)
+			else:
+				logging_getLogger('uvicorn').error(f"[frontend:flet] file not found: 'resources/gui/screen/animations/{data['name']}.json'")
+			display.content.update()
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen,
+		                                                           'display': {'backlight': self.display_backlight},
+		                                                           'origin': 'frontend:flet'}})
 
 
 	def show_menu(self, display: flet.CircleAvatar, data: dict) -> None:
 		self.gui_screen = f'menu:{data["name"]}'
-		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-		display.content.shapes.append(flet.canvas.Text(text=data['title'],
-		                                               x=int(display.radius), y=int(0.5*display.radius),
-		                                               style=flet.TextStyle(size=int(display.page.scale*18), color='white'),
-		                                               alignment=flet_core_alignment.center))
-		display.content.shapes.append(flet.canvas.Text(text=data['text'],
-		                                               x=int(display.radius), y=int(display.radius),
-		                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'),
-		                                               alignment=flet_core_alignment.center))
-		display.content.update()
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
+		if self.display_backlight is True:
+			display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
+			display.content.shapes.append(flet.canvas.Text(text=data['title'],
+			                                               x=int(display.radius), y=int(0.5*display.radius),
+			                                               style=flet.TextStyle(size=int(display.page.scale*18), color='white'),
+			                                               alignment=flet_core_alignment.center))
+			display.content.shapes.append(flet.canvas.Text(text=data['text'],
+			                                               x=int(display.radius), y=int(display.radius),
+			                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'),
+			                                               alignment=flet_core_alignment.center))
+			display.content.update()
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen,
+		                                                           'display': {'backlight': self.display_backlight},
+		                                                           'origin': 'frontend:flet'}})
 
 
 	def show_qrcode(self, display: flet.CircleAvatar, data: dict) -> None:
 		self.gui_screen = 'qrcode'
-		self.render_qrcode(display, data)
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
+		if self.display_backlight is True:
+			self.render_qrcode(display, data)
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen,
+		                                                           'display': {'backlight': self.display_backlight},
+		                                                           'origin': 'frontend:flet'}})
 
 
 	def show_splash(self, display: flet.CircleAvatar, data: dict) -> None:
 		self.gui_screen = 'splash'
-		self.render_qrcode(display, {'title': data['title'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
-		                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Splash-database',
-		                           'hint': f"Splash ID: {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
+		if self.display_backlight is True:
+			self.render_qrcode(display, {'title': data['title'], 'title-size': int(display.page.scale*18), 'bg-color': 'blue', 'title-color': 'white',
+			                           'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Splash-database',
+			                           'hint': f"Splash ID: {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen,
+		                                                           'display': {'backlight': self.display_backlight},
+		                                                           'origin': 'frontend:flet'}})
 
 
 	def show_error(self, display: flet.CircleAvatar, data: dict) -> None:
 		self.gui_screen = f'error:{data["id"]}'
+		if self.display_backlight is True:
+			self.display_on(display) # this is a hack vs. how arduino handles display with backlight turned off
 		self.render_qrcode(display, {'title': data['title'], 'title-size': int(display.page.scale*18), 'bg-color': 'red', 'title-color': 'white',
 		                             'url': data['url'] if 'url' in data else 'https://github.com/juergenpabel/HAL9000/wiki/Error-database',
 		                             'hint': f"Error {data['id']}", 'hint-size': int(display.page.scale*24), 'hint-color': 'white'})
-		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen, 'origin': 'frontend:flet'}})
+		self.events.put_nowait({'topic': 'gui/screen', 'payload': {'screen': self.gui_screen,
+		                                                           'display': {'backlight': self.display_backlight},
+		                                                           'origin': 'frontend:flet'}})
 
 
 	def render_qrcode(self, display: flet.CircleAvatar, data: dict) -> None:
