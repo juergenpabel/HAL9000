@@ -81,6 +81,9 @@ bool WebSerial::isAlive() {
 		if(this->wasAlive() == true && now < (this->millis_heartbeatRX + (UTIL_WEBSERIAL_HEARTBEAT_MS*2+500L))) {
 			return true;
 		}
+		if(g_system_application.getRunlevel() > RunlevelRunning) {
+			return true;
+		}
 		if(Serial.available() > 0) {
 			return true;
 		}
