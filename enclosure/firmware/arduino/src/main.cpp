@@ -26,8 +26,6 @@ void setup() {
 
 	if(g_device_board.start() == false) { //TODO: what to do??
 		g_system_application.setRunlevel(RunlevelPanicing); //TODO: what to do??
-		gui_screen_set("none", gui_screen_none); //TODO: what to do??
-		gui_overlay_set("none", gui_overlay_none); //TODO: what to do??
 		return;
 	}
 	g_gui.begin();
@@ -82,12 +80,11 @@ void setup() {
 		return;
 	}
 	g_util_webserial.addCommand("system/runlevel", on_system_runlevel);
-	gui_screen_set("animations:system-booting", gui_screen_animations_system_booting);
+	gui_screen_set("animations:system-booting", gui_screen_animations);
 }
 
 
 void loop() {
-	static unsigned long configurationTimeout = 0;
 	static Runlevel      previousRunlevel = RunlevelStarting;
 	       Runlevel      currentRunlevel = RunlevelUnknown;
 
@@ -108,11 +105,7 @@ void loop() {
 				g_util_webserial.addCommand("gui/screen", nullptr);
 				g_util_webserial.addCommand("gui/overlay", nullptr);
 				g_util_webserial.addCommand("*", Application::addConfiguration);
-				if(g_system_application.hasSetting("system/runlevel:configuration/timeout") == true) {
-					configurationTimeout = atol(g_system_application.getSetting("system/runlevel:configuration/timeout").c_str());
-					configurationTimeout += millis();
-				}
-				gui_screen_set("animations:system-starting", gui_screen_animations_system_starting);
+				gui_screen_set("animations:system-starting", gui_screen_animations);
 				break;
 			case RunlevelReady:
 				g_util_webserial.clearCommands();
@@ -139,13 +132,13 @@ void loop() {
 				g_util_webserial.clearCommands();
 				g_util_webserial.addCommand("system/runlevel", on_system_runlevel);
 				g_util_webserial.addCommand("system/environment", on_system_environment);
-				gui_screen_set("animations:system-terminating", gui_screen_animations_system_terminating); //animation triggers reset after last frame
+				gui_screen_set("animations:system-terminating", gui_screen_animations); //animation triggers reset after last frame
 				break;
 			case RunlevelHalting:
 				g_util_webserial.clearCommands();
 				g_util_webserial.addCommand("system/runlevel", on_system_runlevel);
 				g_util_webserial.addCommand("system/environment", on_system_environment);
-				gui_screen_set("animations:system-terminating", gui_screen_animations_system_terminating); //animation triggers halt after last frame
+				gui_screen_set("animations:system-terminating", gui_screen_animations); //animation triggers halt after last frame
 				break;
 			case RunlevelPanicing:
 				g_util_webserial.clearCommands();
@@ -155,12 +148,6 @@ void loop() {
 				g_system_application.processError("panic", "219", "Application error", "Unknown system runlevel (BUG!), panicing");
 		}
 		previousRunlevel = currentRunlevel;
-	}
-	if(currentRunlevel == RunlevelConfiguring) {
-		if(configurationTimeout > 0 && millis() > configurationTimeout) {
-			g_system_application.processError("critical", "210", "No connection to host", "failed to establish communications with service 'frontend' (via USB)");
-			configurationTimeout = 0;
-		}
 	}
 	if(currentRunlevel == RunlevelRunning) {
 		g_peripherals_mcp23X17.check(false);

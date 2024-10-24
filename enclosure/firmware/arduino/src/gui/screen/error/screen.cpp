@@ -11,18 +11,19 @@
 
 
 unsigned long gui_screen_error(unsigned long validity, TFT_eSPI* gui) {
-	etl::string<GLOBAL_VALUE_SIZE> error_title;
-	etl::string<GLOBAL_VALUE_SIZE> error_url;
-	etl::string<GLOBAL_VALUE_SIZE> error_id;
+	static etl::string<GLOBAL_VALUE_SIZE> error_id;
+	static etl::string<GLOBAL_VALUE_SIZE> error_title;
+	static etl::string<GLOBAL_VALUE_SIZE> error_url;
 
+	error_id.clear();
+	error_title.clear();
+	error_url.clear();
 	if(validity == GUI_INVALIDATED) {
-		unsigned long currentDraw = GUI_INVALIDATED;
-
-		if(gui_overlay_get() != gui_overlay_none) {
-			gui_overlay_set("none", gui_overlay_none);
-		}
 		if(g_system_application.hasEnv("gui/screen:error/id") == true) {
 			error_id = g_system_application.getEnv("gui/screen:error/id");
+		}
+		if(g_system_application.hasEnv("gui/screen:error/title") == true) {
+			error_title = g_system_application.getEnv("gui/screen:error/title");
 		}
 		if(g_system_application.hasEnv("gui/screen:error/url") == true) {
 			error_url = g_system_application.getEnv("gui/screen:error/url");
@@ -37,9 +38,6 @@ unsigned long gui_screen_error(unsigned long validity, TFT_eSPI* gui) {
 				}
 			}
 		}
-		if(g_system_application.hasEnv("gui/screen:error/title") == true) {
-			error_title = g_system_application.getEnv("gui/screen:error/title");
-		}
 		g_system_application.setEnv("gui/screen:qrcode/color-screen",   "red");
 		g_system_application.setEnv("gui/screen:qrcode/color-text",     "white");
 		g_system_application.setEnv("gui/screen:qrcode/textsize-above", "small");
@@ -47,7 +45,7 @@ unsigned long gui_screen_error(unsigned long validity, TFT_eSPI* gui) {
 		g_system_application.setEnv("gui/screen:qrcode/text-above", error_title);
 		g_system_application.setEnv("gui/screen:qrcode/text-url",   error_url);
 		g_system_application.setEnv("gui/screen:qrcode/text-below", error_id.insert(0, "Error: "));
-		currentDraw = gui_screen_qrcode(validity, gui);
+		validity = gui_screen_qrcode(validity, gui);
 		g_system_application.delEnv("gui/screen:qrcode/text-below");
 		g_system_application.delEnv("gui/screen:qrcode/text-url");
 		g_system_application.delEnv("gui/screen:qrcode/text-above");
@@ -55,7 +53,6 @@ unsigned long gui_screen_error(unsigned long validity, TFT_eSPI* gui) {
 		g_system_application.delEnv("gui/screen:qrcode/textsize-above");
 		g_system_application.delEnv("gui/screen:qrcode/color-text");
 		g_system_application.delEnv("gui/screen:qrcode/color-screen");
-		return currentDraw;
 	}
 	return validity;
 }

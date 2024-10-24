@@ -1,23 +1,23 @@
 from json import loads as json_loads
 from configparser import ConfigParser as configparser_ConfigParser
 
-from hal9000.brain.plugin import HAL9000_Plugin_Data, DataInvalid, CommitPhase
+from hal9000.brain.plugin import HAL9000_Plugin, DataInvalid, CommitPhase
 from hal9000.brain.plugins.enclosure import EnclosureComponent
 
 
 class Control(EnclosureComponent):
 	def __init__(self, **kwargs) -> None:
-		EnclosureComponent.__init__(self, 'trigger:enclosure:control', **kwargs)
+		super().__init__('trigger:enclosure:control', **kwargs)
+		self.daemon.plugins['frontend'].addLocalNames(['menu_item', 'menu_name'])
+
+
+	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
+		super().configure(configuration, section_name)
 		self.config['handlers'] = {}
 		self.config['menu'] = {}
 		self.config['menu']['menu-main'] = {}
 		self.config['menu']['menu-main']['title'] = ''
 		self.config['menu']['menu-main']['items'] = []
-		self.daemon.plugins['frontend'].addLocalNames(['menu_item', 'menu_name'])
-
-
-	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
-		EnclosureComponent.configure(self, configuration, section_name)
 		self.config['menu']['timeout'] = configuration.getint('enclosure:control', 'timeout', fallback=15)
 		menu_files = configuration.getlist('enclosure:control', 'menu-files', fallback=[])
 		item_files = configuration.getlist('enclosure:control', 'item-files', fallback=[])
@@ -55,7 +55,7 @@ class Control(EnclosureComponent):
 					self.configure_menu(menu_config, menu_entry)
 
 
-	async def on_enclosure_signal(self, plugin: HAL9000_Plugin_Data, signal: dict) -> None:
+	async def on_enclosure_signal(self, plugin: HAL9000_Plugin, signal: dict) -> None:
 		if 'control' in signal:
 			match self.daemon.plugins['frontend'].screen.split(':', 1).pop(0):
 				case 'none':
@@ -66,9 +66,9 @@ class Control(EnclosureComponent):
 						menu_item = self.config['menu']['menu-main']['items'][0]['item']
 						menu_title = self.config['menu'][menu_name]['title']
 						menu_text  = self.config['menu'][menu_name]['items'][0]['text']
-						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu',
-						                                                         'parameter': {'name': f'{menu_name}/{menu_item}',
-						                                                                       'title': menu_title,
+						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu', \
+						                                                         'parameter': {'name': f'{menu_name}/{menu_item}', \
+						                                                                       'title': menu_title, \
 						                                                                       'text': menu_text}}}})
 				case 'animations':
 					pass
@@ -83,8 +83,8 @@ class Control(EnclosureComponent):
 				case 'menu':
 					menu_name, menu_item = self.daemon.plugins['frontend'].screen.split(':', 1).pop(1).split('/', 1)
 					if 'delta' in signal['control']:
-						self.daemon.create_scheduled_signal(self.config['menu']['timeout'], 'frontend',
-						                                    {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
+						self.daemon.create_scheduled_signal(self.config['menu']['timeout'], 'frontend', \
+						                                    {'gui': {'screen': {'name': 'idle', 'parameter': {}}}}, \
 						                                    'scheduler://enclosure:control/menu:timeout')
 						position = 0
 						for item in self.config['menu'][menu_name]['items']:
@@ -95,9 +95,9 @@ class Control(EnclosureComponent):
 						menu_title = self.config['menu'][menu_name]['title']
 						menu_item  = self.config['menu'][menu_name]['items'][position]['item']
 						menu_text  = self.config['menu'][menu_name]['items'][position]['text']
-						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu',
-						                                                         'parameter': {'name': f'{menu_name}/{menu_item}',
-						                                                                       'title': menu_title,
+						self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu', \
+						                                                         'parameter': {'name': f'{menu_name}/{menu_item}', \
+						                                                                       'title': menu_title, \
 						                                                                       'text': menu_text}}}})
 					if 'select' in signal['control']:
 						self.daemon.remove_scheduled_signal('scheduler://enclosure:control/menu:timeout')
@@ -124,12 +124,12 @@ class Control(EnclosureComponent):
 							menu_text  = self.config['menu'][menu_item]['items'][0]['text']
 							menu_name  = menu_item
 							menu_item  = self.config['menu'][menu_item]['items'][0]['item']
-							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu',
-							                                                         'parameter': {'name': f'{menu_name}/{menu_item}',
-							                                                                       'title': menu_title,
+							self.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'menu', \
+							                                                         'parameter': {'name': f'{menu_name}/{menu_item}', \
+							                                                                       'title': menu_title, \
 							                                                                       'text': menu_text}}}})
-							self.daemon.create_scheduled_signal(self.config['menu']['timeout'], 'frontend',
-							                                    {'gui': {'screen': {'name': 'idle', 'parameter': {}}}},
+							self.daemon.create_scheduled_signal(self.config['menu']['timeout'], 'frontend', \
+							                                    {'gui': {'screen': {'name': 'idle', 'parameter': {}}}}, \
 							                                    'scheduler://enclosure:control/menu:timeout')
 				case other:
 					self.daemon.logger.error(f"[enclosure/control]: unknown screen '{self.daemon.plugins['frontend'].screen}', " \

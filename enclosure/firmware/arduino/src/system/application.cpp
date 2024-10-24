@@ -271,29 +271,30 @@ void Application::processError(const etl::string<GLOBAL_KEY_SIZE>& error_level, 
 	log_payload += error_details;
 	g_util_webserial.send(log_topic, log_payload);
 
-	if(error_id.compare("210") != 0) {
-		webserial_body.clear();
-		webserial_body["error"] = JsonObject();
-		webserial_body["error"]["id"] = error_id;
-		webserial_body["error"]["level"] = error_level;
-		webserial_body["error"]["title"] = error_title;
-		webserial_body["error"]["details"] = error_details;
-		if(this->error_context.empty() == false) {
-			for(ErrorContext::const_reverse_iterator iter=this->error_context.rbegin(); iter!=this->error_context.rend(); ++iter) {
-				webserial_body["error"]["details"].as<String>().concat(" => ");
-				webserial_body["error"]["details"].as<String>().concat(iter->c_str());
-			}
-			this->error_context.clear();
+	webserial_body.clear();
+	webserial_body["error"] = JsonObject();
+	webserial_body["error"]["level"] = error_level;
+	webserial_body["error"]["id"] = error_id;
+	webserial_body["error"]["title"] = error_title;
+	webserial_body["error"]["details"] = error_details;
+	if(this->error_context.empty() == false) {
+		for(ErrorContext::const_reverse_iterator iter=this->error_context.rbegin(); iter!=this->error_context.rend(); ++iter) {
+			webserial_body["error"]["details"].as<String>().concat(" => ");
+			webserial_body["error"]["details"].as<String>().concat(iter->c_str());
 		}
-		webserial_body["error"]["url"] = error_url;
-		g_util_webserial.send("system/error", webserial_body);
+		this->error_context.clear();
 	}
+	webserial_body["error"]["url"] = error_url;
+	g_util_webserial.send("system/error", webserial_body);
+
 	this->setEnv("gui/screen:error/id", error_id);
 	this->setEnv("gui/screen:error/title", error_title);
 	this->setEnv("gui/screen:error/url", error_url);
 	screen_error_name  = "error:";
 	screen_error_name += error_id;
 	gui_screen_set(screen_error_name, gui_screen_error);
+//TODO:send screen response
 	gui_overlay_set("none", gui_overlay_none);
+//TODO:send overlay response
 }
 

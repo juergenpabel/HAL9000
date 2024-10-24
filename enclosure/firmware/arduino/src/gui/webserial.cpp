@@ -15,15 +15,16 @@
 
 
 void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& body) {
-	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
 	static etl::string<GLOBAL_VALUE_SIZE>          screen_name;
 	static etl::string<GLOBAL_VALUE_SIZE>          screen_data;
 	       gui_screen_func                         screen_func = nullptr;
 
-	response.clear();
 	screen_name.clear();
 	screen_data.clear();
 	if(body.isNull() == true || body.is<const char*>() == true) {
+		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
+
+		response.clear();
 		response["screen"] = gui_screen_getname();
 		g_util_webserial.send("gui/screen", response);
 		return;
@@ -117,11 +118,7 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 			screen_name += ":";
 			screen_name += screen_data;
 		}
-		if(gui_screen_set(screen_name, screen_func) != nullptr) {
-			response["result"] = "OK";
-			response["screen"] = screen_name;
-			g_util_webserial.send("gui/screen", response);
-		}
+		gui_screen_set(screen_name, screen_func);
 	} else {
 		g_util_webserial.send("syslog/warn", body);
 	}
@@ -129,15 +126,16 @@ void on_gui_screen(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVarian
 
 
 void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& body) {
-	static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
 	static etl::string<GLOBAL_VALUE_SIZE>          overlay_name;
 	static etl::string<GLOBAL_VALUE_SIZE>          overlay_data;
 	       gui_overlay_func                        overlay_func = nullptr;
 
-	response.clear();
 	overlay_name.clear();
 	overlay_data.clear();
 	if(body.isNull() == true || body.is<const char*>() == true) {
+		static StaticJsonDocument<GLOBAL_VALUE_SIZE*2> response;
+
+		response.clear();
 		response["overlay"] = gui_overlay_getname();
 		g_util_webserial.send("gui/overlay", response);
 		return;
@@ -190,10 +188,11 @@ void on_gui_overlay(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVaria
 		overlay_func = gui_overlay_message;
 	}
 	if(overlay_func != nullptr) {
+		if(overlay_data.empty() == false) {
+			overlay_name += ":";
+			overlay_name += overlay_data;
+		}
 		gui_overlay_set(overlay_name, overlay_func);
-		response["result"] = "OK";
-		response["overlay"] = overlay_name;
-		g_util_webserial.send("gui/overlay", response);
 	} else {
 		g_util_webserial.send("syslog/warn", body);
 	}

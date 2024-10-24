@@ -123,7 +123,7 @@ class FrontendManager:
 			if payload == 'killed':
 				logging_getLogger("uvicorn").warning(f"[frontend] received mqtt message that service 'brain' has disconnected, showing error screen")
 				for frontend in self.frontends:
-					frontend.commands.put_nowait({'topic': 'gui/screen', 'payload': {'on': {}}})
+					frontend.commands.put_nowait({'topic': 'system/features', 'payload': {'display': {'backlight': True}}})
 					frontend.commands.put_nowait({'topic': 'gui/screen', 'payload': {'error': {'id': '100', 'title': "System offline"}}})
 			return
 		match topic[25:]: #remove 'hal9000/command/frontend/' prefix

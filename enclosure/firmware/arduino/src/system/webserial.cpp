@@ -45,7 +45,7 @@ void on_system_runlevel(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 		}
 		if(etl::string<GLOBAL_KEY_SIZE>("kill").compare(payload.as<const char*>()) == 0) {
 			if(gui_screen_getname().compare("animations:system-terminating") == 0) {
-				g_system_application.setEnv("gui/screen:animations/loop", "false");
+				g_system_application.setEnv("gui/screen:animations/loop", "system-terminating");
 				while(gui_screen_get() != gui_screen_none) {
 					gui_update();
 					delay(10);

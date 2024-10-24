@@ -34,12 +34,13 @@ class WebSerial {
 		WebSerialCommandMap  commands;
 		WebSerialRecvQueue   queue_recv;
 		WebSerialSendQueue   queue_send;
+		unsigned long        millis_begin;
 		unsigned long        millis_heartbeatRX;
 		unsigned long        millis_heartbeatTX;
-
+	protected:
 		void heartbeat();
 		bool isAlive();
-	protected:
+		bool wasAlive();
 		void handle(const etl::string<WEBSERIAL_LINE_SIZE>& line);
 		void handle(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 	public:
@@ -56,6 +57,7 @@ class WebSerial {
 		void clearCommands();
 
 	friend class Application;
+	friend void gui_update();
 	friend unsigned long gui_screen_animations(unsigned long validity, TFT_eSPI* gui);
 };
 

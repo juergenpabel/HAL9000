@@ -22,6 +22,7 @@ class Frontend:
 
 	def __init__(self, name: str):
 		self.name = name
+		self.logger = logging_getLogger('uvicorn')
 		self.commands = asyncio_Queue()
 		self.events = asyncio_Queue()
 		self.config = {}
@@ -46,6 +47,6 @@ class Frontend:
 		super().__setattr__(name, new_value)
 		if name in ['runlevel', 'status']:
 			if old_value != new_value:
-				logging_getLogger('uvicorn').debug(f"[frontend:{self.name}] {name} is now '{new_value}'")
+				self.logger.debug(f"[frontend:{self.name}] {name} is now '{new_value}'")
 				self.events.put_nowait({'topic': name, 'payload': new_value})
 

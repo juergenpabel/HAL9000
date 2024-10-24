@@ -12,8 +12,8 @@
 
 template<const size_t VSize>
 WebSerialQueue<VSize>::WebSerialQueue(const etl::string<GLOBAL_KEY_SIZE> name)
-               : etl::queue_lockable<etl::string<WEBSERIAL_LINE_SIZE>, VSize, etl::memory_model::MEMORY_MODEL_SMALL>()
-               , mutex_name(name) {
+                      : etl::queue_lockable<etl::string<WEBSERIAL_LINE_SIZE>, VSize, etl::memory_model::MEMORY_MODEL_SMALL>()
+                      , mutex_name(name) {
 	g_device_microcontroller.mutex_create(this->mutex_name);
 }
 
@@ -34,6 +34,7 @@ WebSerial::WebSerial()
           : commands()
           , queue_recv("webserial_recv")
           , queue_send("webserial_send")
+          , millis_begin(0)
           , millis_heartbeatRX(0)
           , millis_heartbeatTX(0) {
 }
@@ -42,8 +43,9 @@ WebSerial::WebSerial()
 void WebSerial::begin() {
 	Serial.begin(115200);
 	if(UTIL_WEBSERIAL_HEARTBEAT_MS > 0) {
-		this->millis_heartbeatRX = millis();
-		this->millis_heartbeatTX = millis();
+		this->millis_begin = millis();
+		this->millis_heartbeatRX = this->millis_begin;
+		this->millis_heartbeatTX = this->millis_begin;
 	}
 }
 
@@ -63,12 +65,20 @@ void WebSerial::heartbeat() {
 }
 
 
+bool WebSerial::wasAlive() {
+	return (this->millis_heartbeatRX > this->millis_begin);
+}
+
+
 bool WebSerial::isAlive() {
+	unsigned long now;
+
+	now = millis();
 	if(static_cast<bool>(Serial) == true) {
 		if(UTIL_WEBSERIAL_HEARTBEAT_MS == 0) {
 			return true;
 		}
-		if(millis() < (this->millis_heartbeatRX + (UTIL_WEBSERIAL_HEARTBEAT_MS*2+500L))) {
+		if(this->wasAlive() == true && now < (this->millis_heartbeatRX + (UTIL_WEBSERIAL_HEARTBEAT_MS*2+500L))) {
 			return true;
 		}
 		if(Serial.available() > 0) {
@@ -119,7 +129,7 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 		Serial.write('\n');
 		Serial.flush();
 	} else {
-		if(this->queue_send.push(line) != true) {
+		if(this->queue_send.push(line) == false) {
 			Serial.write("[\"syslog/warn\", \"send queue full in Webserial::send(), sending out-of-order:\"]\n");
 			Serial.write(line.c_str());
 			Serial.write('\n');
@@ -130,42 +140,37 @@ void WebSerial::send(const etl::string<GLOBAL_KEY_SIZE>& command, const etl::str
 
 
 void WebSerial::update() {
-	static char   receive_buffer[WEBSERIAL_LINE_SIZE] = {0};
-	static size_t receive_buffer_pos = 0;
-	       size_t serial_available = 0;
+	static unsigned long millis_connection_timeout = 0;
+	static char          receive_buffer[WEBSERIAL_LINE_SIZE] = {0};
+	static size_t        receive_buffer_pos = 0;
+	       size_t        serial_available = 0;
 	       etl::string<WEBSERIAL_LINE_SIZE> webserial_recv_line;
 	       etl::string<WEBSERIAL_LINE_SIZE> webserial_send_line;
 
-	this->heartbeat();
-	if(this->isAlive() == false) {
-		Runlevel runlevel;
-
-		runlevel = g_system_application.getRunlevel();
-		if(runlevel == RunlevelRunning) {
-			if(gui_screen_get() != gui_screen_error || gui_screen_getname().compare("error:210") != 0) {
-				g_system_application.processError("critical", "210", "No connection to host", "Serial is closed in WebSerial::update()");
-			}
-		}
-		return;
-	}
-	if(gui_screen_get() == gui_screen_error && gui_screen_getname().compare("error:210") == 0) {
-		this->send("syslog/debug", "connection to host (re-)established");
-		switch(g_system_application.getRunlevel()) {
-			case RunlevelConfiguring:
-				gui_screen_set("animations:system-configuring", gui_screen_animations_system_configuring);
+	if(g_system_application.getRunlevel() != RunlevelPanicing) {
+		this->heartbeat();
+		switch(this->isAlive()) {
+			case true:
+				if(gui_screen_get() == gui_screen_error && gui_screen_getname().compare("error:200") == 0) {
+					gui_screen_set("none", gui_screen_none);
+				}
 				break;
-			case RunlevelRunning:
-				gui_screen_set("none", gui_screen_none);
-				break;
-			case RunlevelPanicing:
-				gui_screen_set("panic", gui_screen_panic);
-				break;
-			default:
-				g_system_application.setEnv("gui/screen:error/id", "219");
-				g_system_application.setEnv("gui/screen:error/level", "error");
-				g_system_application.setEnv("gui/screen:error/title", "Application error");
-				gui_screen_set("error:219", gui_screen_error);
-				break;
+			case false:
+				if(this->wasAlive() == false) {
+					if(millis_connection_timeout == 0) {
+						millis_connection_timeout = this->millis_begin;
+						if(g_system_application.hasSetting("system/webserial:connection/timeout") == true) {
+							millis_connection_timeout += atol(g_system_application.getSetting("system/webserial:connection/timeout").c_str());
+						} else {
+							millis_connection_timeout += UTIL_WEBSERIAL_CONNECTION_TIMEOUT_MS;
+						}
+					}
+					if(millis_connection_timeout > this->millis_begin && millis() > millis_connection_timeout) {
+						g_system_application.processError("critical", "200", "No connection to host", "Service 'frontend' didn't connect (USB)");
+						millis_connection_timeout = this->millis_begin;
+					}
+				}
+				return;
 		}
 	}
 	while(this->queue_send.size() > 0) {
@@ -176,7 +181,7 @@ void WebSerial::update() {
 		}
 	}
 	while(this->queue_recv.size() > 0) {
-		if(this->queue_send.pop(webserial_recv_line) == true) {
+		if(this->queue_recv.pop(webserial_recv_line) == true) {
 			this->handle(webserial_recv_line);
 			while(this->queue_send.size() > 0) {
 				if(this->queue_send.pop(webserial_send_line) == true) {
