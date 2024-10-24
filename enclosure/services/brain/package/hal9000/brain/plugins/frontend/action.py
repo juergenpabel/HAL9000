@@ -252,13 +252,8 @@ class Action(HAL9000_Action):
 			match new_runlevel:
 				case RUNLEVEL.STARTING:
 					if old_runlevel == RUNLEVEL.KILLED:
-						match self.module.daemon.plugins['brain'].status:
-							case BRAIN_STATUS.AWAKE:
-								self.module.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
-								self.module.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
-							case BRAIN_STATUS.ASLEEP:
-								self.module.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
-								self.module.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+						self.module.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
+						self.module.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 		return True
 
 

@@ -498,7 +498,7 @@ class Daemon(object):
 				fi = stack.pop(stack_offset)
 				caller = fi.function
 				if 'self' in fi.frame.f_locals:
-					caller = f"{fi.frame.f_locals['self'].id}<{fi.function}>"
+					caller = f"{fi.frame.f_locals['self'].module.id}<{fi.function}>"
 				signal['trace'] = caller
 				if trace_notice != '':
 					signal['trace'] += f' ({trace_notice})'

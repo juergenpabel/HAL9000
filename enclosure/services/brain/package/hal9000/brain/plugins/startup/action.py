@@ -48,7 +48,7 @@ class Action(HAL9000_Action):
 		if 'timeout' in signal:
 			if signal['timeout'] == 'starting' and self.module.daemon.plugins['brain'].runlevel == RUNLEVEL.STARTING:
 				starting_plugins = list(filter(lambda plugin: plugin.runlevel != RUNLEVEL.RUNNING, self.module.daemon.plugins.values()))
-				starting_plugins = list(filter(lambda plugin: plugin.id != 'action:brain:default', starting_plugins))
+				starting_plugins = list(filter(lambda plugin: plugin.module.id != 'action:brain:default', starting_plugins))
 				if len(starting_plugins) > 0:
 					self.module.daemon.logger.critical(f"[startup] Startup failed (plugins that haven't reached runlevel '{RUNLEVEL.RUNNING}' " \
 					                                   f"before startup timeout):")
@@ -103,15 +103,15 @@ class Action(HAL9000_Action):
 		match self.module.daemon.plugins['brain'].status:
 			case BRAIN_STATUS.AWAKE:
 				self.module.daemon.logger.info(f"[startup] Now presenting welcome message")
-				self.module.daemon.queue_signal('frontend', {'features': {'display': {'backlight': True}}})
 				self.module.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
 				self.module.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
+				self.module.daemon.queue_signal('frontend', {'features': {'display': {'backlight': True}}})
 				self.module.daemon.create_scheduled_signal(1.5, 'kalliope', {'command': {'name': 'welcome'}}, 'scheduler://kalliope/welcome:delay)')
 			case BRAIN_STATUS.ASLEEP:
 				self.module.daemon.logger.info(f"[startup] skipping welcome message (system is currently in sleep mode)")
-				self.module.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'none', 'parameter': {}}}})
-				self.module.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 				self.module.daemon.queue_signal('frontend', {'features': {'display': {'backlight': False}}})
+				self.module.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'idle', 'parameter': {}}}})
+				self.module.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'none', 'parameter': {}}}})
 				self.module.daemon.queue_signal('kalliope', {'status': 'sleeping'})
 		self.module.daemon.plugins['startup'].status = STATUS.FINISHED
 
