@@ -32,8 +32,10 @@ class SPECIAL_NAMES(enum_StrEnum):
 	CALLBACKS_NAME = 'callbacks_name'
 	CALLBACKS_SIGNAL = 'callbacks_signal'
 
+
 class HAL9000_Plugin_Module(object):
 	pass
+
 
 class HAL9000_Plugin(object):
 
@@ -178,22 +180,19 @@ class HAL9000_Plugin(object):
 
 
 	def __repr__(self) -> str:
-		result = '{'
+		result = []
 		for name in self.module.locals:
 			value = getattr(self, name)
 			if value != DataInvalid.UNINITIALIZED:
-				result += f'{name}=\'{value}\', '
+				result.append(f"{name}='{value}'")
 		for name, pending_value in self.module.remotes.items():
 			value = getattr(self, name)
 			if value == pending_value:
 				if value != DataInvalid.UNINITIALIZED:
-					result += f'{name}=\'{value}\', '
+					result.append(f"{name}='{value}'")
 			else:
-				result += f'{name}=\'{value}\' (pending \'{pending_value}\'), '
-		if len(result) > 2:
-			result = result[:-2]
-		result += '}'
-		return result
+				result.append(f"{name}='{value}' (pending '{pending_value}')")
+		return f"{self.module.id}={{{', '.join(result)}}}"
 
 
 class HAL9000_Action(HAL9000_Plugin):

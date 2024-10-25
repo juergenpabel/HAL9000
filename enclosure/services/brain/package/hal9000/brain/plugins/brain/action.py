@@ -32,9 +32,6 @@ class Action(HAL9000_Action):
 		self.module.daemon.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
 		self.module.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
 		self.module.daemon.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
-		self.module.daemon.plugins['brain'].addNameCallback(self.on_plugin_callback, '*')
-		for plugin in self.module.daemon.plugins.values(): 
-			plugin.addNameCallback(self.on_plugin_callback, '*')
 		self.module.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'brain:ready:time', self.runlevel_inhibitor_ready_time)
 
 
@@ -119,23 +116,4 @@ class Action(HAL9000_Action):
 					case Action.TIME_SYNCHRONIZED:
 						self.module.daemon.create_scheduled_signal(3600, 'brain', {'time:sync': {}}, 'scheduler://brain/time:sync', 'interval')
 		return True
-
-
-	def on_plugin_callback(self, plugin: HAL9000_Plugin, key: str, old_value, new_value, phase: CommitPhase) -> bool:
-		log_function = logging_getLogger().info
-		match self.module.daemon.plugins['brain'].runlevel:
-			case RUNLEVEL.STARTING:
-				log_function = logging_getLogger().debug
-			case RUNLEVEL.READY:
-				log_function = logging_getLogger().debug
-			case RUNLEVEL.RUNNING:
-				if plugin.module.hidden is True:
-					log_function = logging_getLogger().debug
-		match phase:
-			case CommitPhase.REMOTE_REQUESTED:
-				log_function(f"[brain] Plugin '{plugin.module.id}': {key} is requested to change from '{old_value}' to '{new_value}'")
-			case CommitPhase.COMMIT:
-				log_function(f"[brain] Plugin '{plugin.module.id}': {key} changes from '{old_value}' to '{new_value}'")
-		return True
-
 
