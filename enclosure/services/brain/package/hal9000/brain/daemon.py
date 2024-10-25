@@ -291,10 +291,17 @@ class Daemon(object):
 				payload = message.payload.decode('utf-8', 'surrogateescape')
 				self.logger.debug(f"[daemon] MQTT received: {topic} => {str(chr(0x27))+str(chr(0x27)) if payload == '' else payload}")
 				match topic:
+					case 'hal9000/command/brain/runlevel':
+						match payload:
+							case None | '':
+								await self.plugins['mqtt'].signal({'topic': 'hal9000/event/brain/runlevel', 'payload': self.plugins['brain'].runlevel})
 					case 'hal9000/command/brain/status':
-						if self.plugins['brain'].status in [STATUS.AWAKE, STATUS.ASLEEP]:
-							if payload in [STATUS.AWAKE, STATUS.ASLEEP, STATUS.DYING]:
-								self.plugins['brain'].status = payload
+						match payload:
+							case None | '':
+								await self.plugins['mqtt'].signal({'topic': 'hal9000/event/brain/status', 'payload': self.plugins['brain'].status})
+							case STATUS.AWAKE | STATUS.ASLEEP | STATUS.DYING:
+								if self.plugins['brain'].status in [STATUS.AWAKE, STATUS.ASLEEP]:
+									self.plugins['brain'].status = payload
 					case other:
 						signals = {}
 						if topic in self.callbacks['mqtt']:
@@ -360,6 +367,7 @@ class Daemon(object):
 			                          will=aiomqtt_Will('hal9000/event/brain/runlevel', RUNLEVEL.KILLED), \
 			                          identifier='hal9000-brain') as mqtt:
 				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
+				await mqtt.subscribe('hal9000/command/brain/runlevel')
 				await mqtt.subscribe('hal9000/command/brain/status')
 				for mqtt_topic, trigger in self.callbacks['mqtt'].items():
 					await mqtt.subscribe(mqtt_topic)
