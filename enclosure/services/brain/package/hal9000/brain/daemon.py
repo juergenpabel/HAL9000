@@ -110,8 +110,9 @@ class Daemon(object):
 		for plugin in self.plugins.values():
 			plugin.addNameCallback(self.on_plugin_callback, '*')
 		self.logger.debug(f"[daemon] reading daemon specific settings....")
-		self.config['mqtt:server'] = str(os_getenv('MQTT_SERVER', default=self.configuration.getstring('mqtt', 'server', fallback='127.0.0.1')))
-		self.config['mqtt:port']   = int(os_getenv('MQTT_PORT', default=self.configuration.getint('mqtt', 'port', fallback=1883)))
+		self.config['mqtt:server']    = str(os_getenv('MQTT_SERVER', default=self.configuration.getstring('mqtt', 'server', fallback='127.0.0.1')))
+		self.config['mqtt:port']      = int(os_getenv('MQTT_PORT', default=self.configuration.getint('mqtt', 'port', fallback=1883)))
+		self.config['mqtt:keepalive'] = int(os_getenv('MQTT_PORT', default=self.configuration.getint('mqtt', 'keepalive', fallback=0)))
 		self.config['help:error-url']  = self.configuration.getstring('help', 'error-url',  fallback='https://github.com/juergenpabel/HAL9000/wiki/Error-database')
 		self.config['help:splash-url'] = self.configuration.getstring('help', 'splash-url', fallback='https://github.com/juergenpabel/HAL9000/wiki/Splashs')
 		self.add_runlevel_inhibitor(RUNLEVEL.STARTING, 'plugins:runlevel', self.runlevel_inhibitor_starting_plugins)
@@ -365,7 +366,7 @@ class Daemon(object):
 			self.logger.info(f"[daemon] MQTT.connect(host='{self.config['mqtt:server']}', port={self.config['mqtt:port']}) for plugin 'brain'")
 			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'], \
 			                          will=aiomqtt_Will('hal9000/event/brain/runlevel', RUNLEVEL.KILLED), \
-			                          keepalive=0, identifier='hal9000-brain') as mqtt:
+			                          keepalive=self.config['mqtt:keepalive'], identifier='hal9000-brain') as mqtt:
 				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
 				await mqtt.subscribe('hal9000/command/brain/runlevel')
 				await mqtt.subscribe('hal9000/command/brain/status')
