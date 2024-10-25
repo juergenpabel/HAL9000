@@ -39,18 +39,20 @@ unsigned long gui_screen_animations(unsigned long validity, TFT_eSPI* gui) {
 		g_animations_data.clear();
 		return GUI_INVALIDATED;
 	}
-	if(g_animations_data.empty() == true) {
-		if(g_system_application.hasEnv("gui/screen:animations/name") == false) {
-			static etl::string<GLOBAL_VALUE_SIZE> animation;
+	if(validity == GUI_INVALIDATED) {
+		if(g_animations_data.empty() == true) {
+			if(g_system_application.hasEnv("gui/screen:animations/name") == false) {
+				static etl::string<GLOBAL_VALUE_SIZE> animation;
 
-			animation = gui_screen_getname();
-			if(animation.compare(0, 11, "animations:") == 0) {
-				animation = animation.substr(11, animation.npos);
-				g_system_application.setEnv("gui/screen:animations/name", animation);
+				animation = gui_screen_getname();
+				if(animation.compare(0, 11, "animations:") == 0) {
+					animation = animation.substr(11, animation.npos);
+					g_system_application.setEnv("gui/screen:animations/name", animation);
+				}
 			}
-		}
-		if(g_animations_name.empty() == false) {
-			webserial_delayed_response = true;
+			if(g_animations_name.empty() == false) {
+				webserial_delayed_response = true;
+			}
 		}
 	}
 	if(g_system_application.hasEnv("gui/screen:animations/name") == true) {
