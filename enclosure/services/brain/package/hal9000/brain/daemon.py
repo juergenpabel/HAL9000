@@ -365,7 +365,7 @@ class Daemon(object):
 			self.logger.info(f"[daemon] MQTT.connect(host='{self.config['mqtt:server']}', port={self.config['mqtt:port']}) for plugin 'brain'")
 			async with aiomqtt_Client(self.config['mqtt:server'], self.config['mqtt:port'], \
 			                          will=aiomqtt_Will('hal9000/event/brain/runlevel', RUNLEVEL.KILLED), \
-			                          identifier='hal9000-brain') as mqtt:
+			                          keepalive=0, identifier='hal9000-brain') as mqtt:
 				self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt() MQTT.subscribe('hal9000/command/brain/status') for plugin 'brain'")
 				await mqtt.subscribe('hal9000/command/brain/runlevel')
 				await mqtt.subscribe('hal9000/command/brain/status')
