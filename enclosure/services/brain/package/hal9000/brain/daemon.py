@@ -163,9 +163,10 @@ class Daemon(object):
 					raise RuntimeError(STATUS.DYING)
 				await asyncio_sleep(0.1)
 			self.logger.info(f"[daemon] ...all services announced their runlevel")
-			self.logger.debug(f"[daemon] Inhibitors in runlevel '{RUNLEVEL.STARTING}': " \
-			                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.STARTING].keys()))}...")
-			self.logger.info(f"[daemon] Waiting for inhibitors in runlevel '{RUNLEVEL.STARTING}' to finish...")
+			self.logger.info(f"[daemon] Inhibitors in runlevel '{RUNLEVEL.STARTING}':")
+			for name in self.runlevel_inhibitors[RUNLEVEL.STARTING].keys():
+				self.logger.info(f"[daemon] - Inhibitor '{name}'")
+			self.logger.info(f"[daemon] Waiting for these inhibitors to finish...")
 			while len(self.runlevel_inhibitors[RUNLEVEL.STARTING]) > 0:
 				self.evaluate_runlevel_inhibitors(RUNLEVEL.STARTING)
 				if self.plugins['brain'].status == STATUS.DYING:
@@ -196,9 +197,10 @@ class Daemon(object):
 		try:
 			self.plugins['brain'].status = STATUS.AWAKE
 			self.queue_signal('brain', {'time:sync': {}})
-			self.logger.debug(f"[daemon] Inhibitors in runlevel '{RUNLEVEL.READY}': " \
-			                  f"{', '.join(list(self.runlevel_inhibitors[RUNLEVEL.READY].keys()))}...")
-			self.logger.info(f"[daemon] Waiting for inhibitors in runlevel '{RUNLEVEL.READY}' to finish...")
+			self.logger.info(f"[daemon] Inhibitors in runlevel '{RUNLEVEL.READY}':")
+			for name in self.runlevel_inhibitors[RUNLEVEL.READY].keys():
+				self.logger.info(f"[daemon] - Inhibitor '{name}'")
+			self.logger.info(f"[daemon] Waiting for these inhibitors to finish...")
 			while len(self.runlevel_inhibitors[RUNLEVEL.READY]) > 0:
 				if self.plugins['brain'].status == STATUS.DYING:
 					self.logger.debug(f"[daemon] status changed to 'dying', raising exception while waiting for inhibitos in runlevel 'ready'")

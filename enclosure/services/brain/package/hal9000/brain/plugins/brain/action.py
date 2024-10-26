@@ -32,7 +32,7 @@ class Action(HAL9000_Action):
 		self.module.daemon.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
 		self.module.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
 		self.module.daemon.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
-		self.module.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'brain:ready:time', self.runlevel_inhibitor_ready_time)
+		self.module.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'brain:time', self.runlevel_inhibitor_ready_time)
 
 
 	def runlevel_inhibitor_ready_time(self) -> bool:

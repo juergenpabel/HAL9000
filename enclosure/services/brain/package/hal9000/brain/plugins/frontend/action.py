@@ -27,8 +27,7 @@ class Action(HAL9000_Action):
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		super().configure(configuration, section_name)
 		self.module.config['frontend-command-mqtt-prefix'] = configuration.get(section_name, 'frontend-command-mqtt-prefix', fallback='hal9000/command/frontend')
-		self.module.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'frontend:screen',  self.runlevel_inhibitor_ready_screen)
-		self.module.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'frontend:overlay', self.runlevel_inhibitor_ready_overlay)
+		self.module.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'frontend:status',  self.runlevel_inhibitor_ready_status)
 		self.module.daemon.plugins['frontend'].addSignalHandler(self.on_frontend_signal)
 		self.module.daemon.plugins['frontend'].addNameCallback(self.on_frontend_runlevel_callback, 'runlevel')
 		self.module.daemon.plugins['frontend'].addNameCallback(self.on_frontend_status_callback, 'status')
@@ -40,18 +39,8 @@ class Action(HAL9000_Action):
 		self.module.mqtt_prefix = self.module.config['frontend-command-mqtt-prefix']
 
 
-	def runlevel_inhibitor_ready_screen(self) -> bool:
-		if self.module.daemon.plugins['frontend'].screen in [DataInvalid.UNINITIALIZED, DataInvalid.UNKNOWN]:
-			return False
-		if self.module.daemon.plugins['frontend'].getRemotePendingValue('screen') is not None:
-			return False
-		return True
-
-
-	def runlevel_inhibitor_ready_overlay(self) -> bool:
-		if self.module.daemon.plugins['frontend'].overlay in [DataInvalid.UNINITIALIZED, DataInvalid.UNKNOWN]:
-			return False
-		if self.module.daemon.plugins['frontend'].getRemotePendingValue('overlay') is not None:
+	def runlevel_inhibitor_ready_status(self) -> bool:
+		if self.module.daemon.plugins['frontend'].status != STATUS.ONLINE:
 			return False
 		return True
 

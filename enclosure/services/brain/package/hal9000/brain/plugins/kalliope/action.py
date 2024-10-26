@@ -27,7 +27,7 @@ class Action(HAL9000_Action):
 		self.module.config['initial-volume'] = configuration.getint(section_name, 'initial-volume', fallback=50)
 		self.module.config['trigger-mqtt-topic'] = configuration.get(section_name, 'trigger-mqtt-topic', fallback=None)
 		self.module.config['command-mqtt-topic-prefix'] = configuration.get(section_name, 'command-mqtt-topic-prefix', fallback='hal9000/command/kalliope')
-		self.module.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'kalliope:volume',  self.runlevel_inhibitor_ready_volume)
+		self.module.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'kalliope:status',  self.runlevel_inhibitor_ready_status)
 		self.module.daemon.plugins['kalliope'].addSignalHandler(self.on_kalliope_signal)
 		self.module.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_runlevel_callback, 'runlevel')
 		self.module.daemon.plugins['kalliope'].addNameCallback(self.on_kalliope_status_callback, 'status')
@@ -38,8 +38,8 @@ class Action(HAL9000_Action):
 		self.module.mqtt_prefix = self.module.config['command-mqtt-topic-prefix']
 
 
-	def runlevel_inhibitor_ready_volume(self) -> bool:
-		if self.module.daemon.plugins['kalliope'].volume in list(DataInvalid):
+	def runlevel_inhibitor_ready_status(self) -> bool:
+		if self.module.daemon.plugins['kalliope'].status not in list(STATUS):
 			return False
 		return True
 
