@@ -63,11 +63,9 @@ unsigned long gui_screen_animations(unsigned long validity, TFT_eSPI* gui) {
 		animation = g_system_application.getEnv("gui/screen:animations/name");
 		switch(g_animations_data.empty()) {
 			case false:
-				if(g_system_application.hasEnv("gui/screen:animations/loop") == false) {
-					for(etl::list<animation_t, 8>::iterator iter=g_animations_data.begin(); iter!=g_animations_data.end(); ++iter) {
-						if(iter->loop == true) {
-							iter->loop = false;
-						}
+				for(etl::list<animation_t, 8>::iterator iter=g_animations_data.begin(); iter!=g_animations_data.end(); ++iter) {
+					if(iter->loop == true) {
+						iter->loop = false;
 					}
 				}
 				break;

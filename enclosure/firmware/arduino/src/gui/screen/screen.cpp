@@ -29,10 +29,11 @@ gui_screen_func gui_screen_set(const gui_screen_name& screen_name, gui_screen_fu
 		g_screen_func = screen_func;
 		gui_screen_set_refresh();
 		if(screen_func == gui_screen_animations) {
-			if(previous_screen_func != gui_screen_animations) {
-				gui_screen_animations(GUI_RELOAD, nullptr); // clear out any remaining animations from queue
-			} else {
+			if(previous_screen_func == gui_screen_animations) {
+				g_system_application.setEnv("gui/screen:animations/name", screen_name.substr(11, screen_name.npos));
 				webserial_event_delayed = true;
+			} else {
+				gui_screen_animations(GUI_RELOAD, nullptr); // clear out any remaining animations from queue
 			}
 		}
 		if(webserial_event_delayed == false) {
