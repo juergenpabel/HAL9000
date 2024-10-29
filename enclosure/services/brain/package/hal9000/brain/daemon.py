@@ -12,7 +12,8 @@ from datetime import datetime as datetime_datetime, \
 from json import dumps as json_dumps
 from logging import getLogger as logging_getLogger, \
                     getLevelName as logging_getLevelName, \
-                    addLevelName as logging_addLevelName
+                    addLevelName as logging_addLevelName, \
+                    getLevelNamesMapping as logging_getLevelNamesMapping
 from logging.config import fileConfig as logging_config_fileConfig
 from configparser import ConfigParser as configparser_ConfigParser
 from importlib import import_module as importlib_import_module
@@ -53,7 +54,7 @@ class Daemon(object):
 		self.signal_queue = asyncio_Queue()
 		self.mqtt_publish_queue = asyncio_Queue()
 		self.scheduler = apscheduler_schedulers_AsyncIOScheduler()
-		self.runlevel_inhibitors = {RUNLEVEL.STARTING: {}, RUNLEVEL.READY: {}, RUNLEVEL.RUNNING: {}}
+		self.runlevel_inhibitors = {RUNLEVEL.STARTING: {}, RUNLEVEL.SYNCING: {}, RUNLEVEL.PREPARING: {}, RUNLEVEL.RUNNING: {}}
 
 
 	def configure(self, filename: str) -> None:
@@ -85,6 +86,8 @@ class Daemon(object):
 							Trigger = getattr(module, 'Trigger')
 							if Trigger is not None:
 								triggers[plugin_name] = Trigger(plugin_name, daemon=self, hidden=plugin_hidden)
+		for plugin in self.plugins.values():
+			plugin.addNameCallback(self.on_plugin_callback, '*')
 		self.logger.debug(f"[daemon] configuring plugins....")
 		for section_name in self.configuration.sections():
 			plugin_path = self.configuration.getstring(section_name, 'plugin', fallback=None)
@@ -107,16 +110,14 @@ class Daemon(object):
 							self.callbacks['mqtt'][mqtt_topic] = []
 						self.callbacks['mqtt'][mqtt_topic].append(trigger)
 		self.logger.debug(f"[daemon] setting up callback for value changes on all plugins....")
-		for plugin in self.plugins.values():
-			plugin.addNameCallback(self.on_plugin_callback, '*')
 		self.logger.debug(f"[daemon] reading daemon specific settings....")
 		self.config['mqtt:server']    = str(os_getenv('MQTT_SERVER', default=self.configuration.getstring('mqtt', 'server', fallback='127.0.0.1')))
 		self.config['mqtt:port']      = int(os_getenv('MQTT_PORT', default=self.configuration.getint('mqtt', 'port', fallback=1883)))
 		self.config['mqtt:keepalive'] = int(os_getenv('MQTT_PORT', default=self.configuration.getint('mqtt', 'keepalive', fallback=0)))
 		self.config['help:error-url']  = self.configuration.getstring('help', 'error-url',  fallback='https://github.com/juergenpabel/HAL9000/wiki/Error-database')
 		self.config['help:splash-url'] = self.configuration.getstring('help', 'splash-url', fallback='https://github.com/juergenpabel/HAL9000/wiki/Splashs')
-		self.add_runlevel_inhibitor(RUNLEVEL.STARTING, 'plugins:runlevel', self.runlevel_inhibitor_starting_plugins)
-		self.logger.debug(f"[daemon] Daemon configuration completed")
+		self.add_runlevel_inhibitor(RUNLEVEL.STARTING, 'daemon: *.runlevel!=unknown', self.runlevel_inhibitor_starting_plugins)
+		self.logger.debug(f"[daemon] daemon configuration completed")
 
 
 	async def loop(self) -> dict:
@@ -126,10 +127,11 @@ class Daemon(object):
 		signal_signal(signal_SIGINT, self.on_posix_signal)
 		results = await self.runlevel_starting()
 		if len(results) == 0 and self.plugins['brain'].status != STATUS.DYING:
-			results = await self.runlevel_ready()
+			results = await self.runlevel_syncing()
+		if len(results) == 0 and self.plugins['brain'].status != STATUS.DYING:
+			results = await self.runlevel_preparing()
 		if len(results) == 0 and self.plugins['brain'].status != STATUS.DYING:
 			results = await self.runlevel_running()
-		self.logger.info(f"[daemon] Runlevel: {RUNLEVEL.KILLED}")
 		self.logger.debug(f"[daemon] gathering tasks and exiting...")
 		for name, task in self.tasks.copy().items():
 			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.loop() cancelling and gathering task '{name}'...")
@@ -141,7 +143,8 @@ class Daemon(object):
 
 	async def runlevel_starting(self) -> dict:
 		self.logger.info(f"[daemon] Runlevel: {RUNLEVEL.STARTING}")
-		self.logger.debug(f"[daemon] STATUS at runlevel '{self.plugins['brain'].runlevel}' = {self}")
+		self.plugins['brain'].runlevel = RUNLEVEL.STARTING, CommitPhase.COMMIT
+		self.logger.debug(f"[daemon] STATUS in runlevel '{self.plugins['brain'].runlevel}' = {self}")
 		try:
 			self.scheduler.start()
 			self.tasks['signals'] = asyncio_create_task(self.task_signal())
@@ -168,7 +171,7 @@ class Daemon(object):
 				self.logger.info(f"[daemon] - Inhibitor '{name}'")
 			self.logger.info(f"[daemon] Waiting for these inhibitors to finish...")
 			while len(self.runlevel_inhibitors[RUNLEVEL.STARTING]) > 0:
-				self.evaluate_runlevel_inhibitors(RUNLEVEL.STARTING)
+				await self.evaluate_runlevel_inhibitors(RUNLEVEL.STARTING)
 				if self.plugins['brain'].status == STATUS.DYING:
 					self.logger.debug(f"[daemon] status changed to 'dying', raising exception while waiting for inhibitors in runlevel 'starting'")
 					raise RuntimeError(STATUS.DYING)
@@ -187,45 +190,78 @@ class Daemon(object):
 			if str(e) != STATUS.DYING:
 				self.plugins['brain'].status = STATUS.DYING, CommitPhase.COMMIT
 				return {'main': e}
-		self.plugins['brain'].runlevel = RUNLEVEL.READY, CommitPhase.COMMIT
 		return {}
 
-			
-	async def runlevel_ready(self) -> dict:
-		self.logger.info(f"[daemon] Runlevel: {RUNLEVEL.READY}")
+
+	async def runlevel_syncing(self) -> dict:
+		self.logger.info(f"[daemon] Runlevel: {RUNLEVEL.SYNCING}")
+		self.plugins['brain'].runlevel = RUNLEVEL.SYNCING, CommitPhase.COMMIT
 		self.logger.debug(f"[daemon] STATUS in runlevel '{self.plugins['brain'].runlevel}' = {self}")
 		try:
 			self.plugins['brain'].status = STATUS.AWAKE
-			self.queue_signal('brain', {'time:sync': {}})
-			self.logger.info(f"[daemon] Inhibitors in runlevel '{RUNLEVEL.READY}':")
-			for name in self.runlevel_inhibitors[RUNLEVEL.READY].keys():
+			self.queue_signal('brain', {'time': None})
+			self.logger.info(f"[daemon] Inhibitors in runlevel '{RUNLEVEL.SYNCING}':")
+			for name in self.runlevel_inhibitors[RUNLEVEL.SYNCING].keys():
 				self.logger.info(f"[daemon] - Inhibitor '{name}'")
 			self.logger.info(f"[daemon] Waiting for these inhibitors to finish...")
-			while len(self.runlevel_inhibitors[RUNLEVEL.READY]) > 0:
+			while len(self.runlevel_inhibitors[RUNLEVEL.SYNCING]) > 0:
 				if self.plugins['brain'].status == STATUS.DYING:
-					self.logger.debug(f"[daemon] status changed to 'dying', raising exception while waiting for inhibitos in runlevel 'ready'")
+					self.logger.debug(f"[daemon] status changed to 'dying', raising exception while waiting for inhibitors " \
+					                  f"in runlevel '{RUNLEVEL.SYNCING}'")
 					raise RuntimeError(STATUS.DYING)
-				self.evaluate_runlevel_inhibitors(RUNLEVEL.READY)
+				await self.evaluate_runlevel_inhibitors(RUNLEVEL.SYNCING)
 				await asyncio_sleep(0.1)
-			self.logger.info(f"[daemon] ...all inhibitors in runlevel '{RUNLEVEL.READY}' have finished")
-			self.logger.debug(f"[daemon] STATUS after runlevel 'ready' = {self}")
+			self.logger.info(f"[daemon] ...all inhibitors in runlevel '{RUNLEVEL.SYNCING}' have finished")
+			self.logger.debug(f"[daemon] STATUS after runlevel '{RUNLEVEL.SYNCING}' = {self}")
 		except Exception as e:
-			self.logger.info(f"[daemon] Execution of runlevel '{RUNLEVEL.READY}' aborted, remaining inhibitors that haven't finished: ")
-			for name in list(self.runlevel_inhibitors[RUNLEVEL.READY].keys()):
+			self.logger.info(f"[daemon] Execution of runlevel '{RUNLEVEL.SYNCING}' aborted, remaining inhibitors that haven't finished: ")
+			for name in list(self.runlevel_inhibitors[RUNLEVEL.SYNCING].keys()):
 				self.logger.info(f"[daemon] - Inhibitor '{name}'")
-			self.logger.critical(f"[daemon] Daemon.runlevel_ready(): {type(e).__name__} => {str(e)}")
+			self.logger.critical(f"[daemon] Daemon.runlevel_syncing(): {type(e).__name__} => {str(e)}")
 			from traceback import format_exc as traceback_format_exc
 			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] {traceback_format_exc()}")
 			if str(e) == STATUS.DYING:
 				e = None
 			self.plugins['brain'].status = STATUS.DYING, CommitPhase.COMMIT
 			return {'main': e}
-		self.plugins['brain'].runlevel = RUNLEVEL.RUNNING, CommitPhase.COMMIT
+		return {}
+
+
+	async def runlevel_preparing(self) -> dict:
+		self.logger.info(f"[daemon] Runlevel: {RUNLEVEL.PREPARING}")
+		self.plugins['brain'].runlevel = RUNLEVEL.PREPARING, CommitPhase.COMMIT
+		self.logger.debug(f"[daemon] STATUS in runlevel '{self.plugins['brain'].runlevel}' = {self}")
+		try:
+			self.logger.info(f"[daemon] Inhibitors in runlevel '{RUNLEVEL.PREPARING}':")
+			for name in self.runlevel_inhibitors[RUNLEVEL.PREPARING].keys():
+				self.logger.info(f"[daemon] - Inhibitor '{name}'")
+			self.logger.info(f"[daemon] Waiting for these inhibitors to finish...")
+			while len(self.runlevel_inhibitors[RUNLEVEL.PREPARING]) > 0:
+				if self.plugins['brain'].status == STATUS.DYING:
+					self.logger.debug(f"[daemon] status changed to 'dying', raising exception while waiting for inhibitors " \
+					                  f"in runlevel '{RUNLEVEL.PREPARING}'")
+					raise RuntimeError(STATUS.DYING)
+				await self.evaluate_runlevel_inhibitors(RUNLEVEL.PREPARING)
+				await asyncio_sleep(0.1)
+			self.logger.info(f"[daemon] ...all inhibitors in runlevel '{RUNLEVEL.PREPARING}' have finished")
+			self.logger.debug(f"[daemon] STATUS after runlevel '{RUNLEVEL.PREPARING}' = {self}")
+		except Exception as e:
+			self.logger.info(f"[daemon] Execution of runlevel '{RUNLEVEL.PREPARING}' aborted, remaining inhibitors that haven't finished: ")
+			for name in list(self.runlevel_inhibitors[RUNLEVEL.PREPARING].keys()):
+				self.logger.info(f"[daemon] - Inhibitor '{name}'")
+			self.logger.critical(f"[daemon] Daemon.runlevel_preparing(): {type(e).__name__} => {str(e)}")
+			from traceback import format_exc as traceback_format_exc
+			self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] {traceback_format_exc()}")
+			if str(e) == STATUS.DYING:
+				e = None
+			self.plugins['brain'].status = STATUS.DYING, CommitPhase.COMMIT
+			return {'main': e}
 		return {}
 
 
 	async def runlevel_running(self) -> dict:
 		self.logger.info(f"[daemon] Runlevel: {RUNLEVEL.RUNNING}")
+		self.plugins['brain'].runlevel = RUNLEVEL.RUNNING, CommitPhase.COMMIT
 		self.logger.debug(f"[daemon] STATUS in runlevel '{self.plugins['brain'].runlevel}' = {self}")
 		try:
 			while self.plugins['brain'].runlevel == RUNLEVEL.RUNNING and self.plugins['brain'].status != STATUS.DYING:
@@ -254,14 +290,14 @@ class Daemon(object):
 				del self.runlevel_inhibitors[runlevel][name]
 
 
-	def evaluate_runlevel_inhibitors(self, runlevel: str) -> None:
+	async def evaluate_runlevel_inhibitors(self, runlevel: str) -> None:
 		for name, callback in self.runlevel_inhibitors[runlevel].copy().items():
-			if callback() is True:
-				self.logger.debug(f"[daemon] Inhibitor '{name}' has finished")
+			if await callback() is True:
+				self.logger.info(f"[daemon] - Inhibitor '{name}' has finished")
 				del self.runlevel_inhibitors[runlevel][name]
 
 
-	def runlevel_inhibitor_starting_plugins(self) -> bool:
+	async def runlevel_inhibitor_starting_plugins(self) -> bool:
 		for name, plugin in self.plugins.items():
 			if name != 'brain' and plugin.runlevel != RUNLEVEL.RUNNING:
 				return False
@@ -273,7 +309,9 @@ class Daemon(object):
 		match self.plugins['brain'].runlevel:
 			case RUNLEVEL.STARTING:
 				log_function = logging_getLogger().debug
-			case RUNLEVEL.READY:
+			case RUNLEVEL.SYNCING:
+				log_function = logging_getLogger().debug
+			case RUNLEVEL.PREPARING:
 				log_function = logging_getLogger().debug
 			case RUNLEVEL.RUNNING:
 				if plugin.module.hidden is True or (plugin.module.id == 'action:brain:default' and key == 'runlevel' and new_value == RUNLEVEL.RUNNING):
@@ -297,11 +335,13 @@ class Daemon(object):
 					case 'hal9000/command/brain/runlevel':
 						match payload:
 							case None | '':
-								await self.plugins['mqtt'].signal({'topic': 'hal9000/event/brain/runlevel', 'payload': self.plugins['brain'].runlevel})
+								self.queue_signal('mqtt', {'topic': 'hal9000/event/brain/runlevel', \
+								                           'payload': self.plugins['brain'].runlevel})
 					case 'hal9000/command/brain/status':
 						match payload:
 							case None | '':
-								await self.plugins['mqtt'].signal({'topic': 'hal9000/event/brain/status', 'payload': self.plugins['brain'].status})
+								self.queue_signal('mqtt', {'topic': 'hal9000/event/brain/status', \
+								                           'payload': self.plugins['brain'].status})
 							case STATUS.AWAKE | STATUS.ASLEEP | STATUS.DYING:
 								if self.plugins['brain'].status in [STATUS.AWAKE, STATUS.ASLEEP]:
 									self.plugins['brain'].status = payload
@@ -311,13 +351,13 @@ class Daemon(object):
 							triggers = self.callbacks['mqtt'][topic]
 							if self.plugins['brain'].status == STATUS.ASLEEP:
 								triggers = [trigger for trigger in triggers if trigger.module.sleepless is True]
-							self.logger.debug(f"[daemon] TRIGGERS: {','.join(str(x) for x in triggers)}")
+							self.logger.debug(f"[daemon] TRIGGERS: {','.join(x.module.id for x in triggers)}")
 							self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt_subscriber() STATUS before triggers = " \
 							                                       f"{self.plugins}")
 							for trigger in triggers:
 								signal = trigger.handle(message)
 								if signal is not None and len(signal) > 0:
-									signals[str(trigger)] = signal
+									signals[trigger.module.id] = signal
 						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt_subscriber() SIGNALS generated by TRIGGERS: {signals}")
 						for trigger_id, signal in signals.items():
 							plugin_name = signal[0]
@@ -328,7 +368,7 @@ class Daemon(object):
 							else:
 								self.logger.debug(f"[daemon] SIGNAL for plugin '{plugin_name}' " \
 								                  f"generated by trigger '{trigger_id}': '{signal}'")
-								await self.plugins[plugin_name].signal(signal)
+								self.queue_signal(plugin_name, signal)
 						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_mqtt_subscriber() STATUS after signals   = {self.plugins}")
 		except asyncio_CancelledError as e:
 			pass
@@ -403,10 +443,16 @@ class Daemon(object):
 						signal = data['signal']
 						self.logger.log(Daemon.LOGLEVEL_TRACE, f"[daemon] Daemon.task_signal() SIGNAL for plugin '{plugin}': '{signal}'")
 						if plugin == '*':
-							for plugin in self.plugins.values():
-								await plugin.signal(signal)
+							for plugin in self.plugins.keys():
+								try:
+									await self.plugins[plugin].signal(signal)
+								except Exception as e:
+									self.logger.error(f"[daemon] SIGNAL '{signal}' for plugin '{plugin}' raised an exception: {str(e)}")
 						elif plugin in self.plugins:
-							await self.plugins[plugin].signal(signal)
+							try:
+								await self.plugins[plugin].signal(signal)
+							except Exception as e:
+								self.logger.error(f"[daemon] SIGNAL '{signal}' for plugin '{plugin}' raised an exception: {str(e)}")
 						else:
 							self.logger.warning(f"[daemon] Ignoring SIGNAL for unknown plugin '{plugin}' - ignoring it (=> BUG)")
 					else:
@@ -437,7 +483,7 @@ class Daemon(object):
 
 
 	def process_error(self, level: str, id: str, title: str, details: str = '<no details>') -> None:
-		self.logger.log(getattr(logging, level.upper()), f"[daemon] ERROR #{id}: {title} => {details}")
+		self.logger.log(logging_getLevelNamesMapping().get(level.upper(), 'ERROR'), f"[daemon] ERROR #{id}: {title} => {details}")
 		if self.plugins['brain'].runlevel == RUNLEVEL.RUNNING and self.plugins['brain'].status == STATUS.AWAKE:
 			url = self.substitute_vars(self.config['help:error-url'], {'error_id': id})
 			self.queue_signal('*', {'error': {'id': id, 'url': url, 'title': title, 'details': details}})

@@ -47,16 +47,16 @@ class Action(HAL9000_Action):
 			return True
 		if phase == CommitPhase.COMMIT:
 			match new_runlevel:
-				case RUNLEVEL.READY:
+				case RUNLEVEL.SYNCING:
 					self.module.hidden = False
 				case RUNLEVEL.RUNNING:
 					if self.time_sleep != DataInvalid.UNINITIALIZED:
 						sleep_secs = (self.time_sleep.hour * 3600) + (self.time_sleep.minute * 60)
-						self.module.daemon.create_scheduled_signal(sleep_secs, 'brain', {'status': BRAIN_STATUS.ASLEEP}, \
+						self.module.daemon.create_scheduled_signal(sleep_secs, 'brain', {'status': str(BRAIN_STATUS.ASLEEP)}, \
 						                                           'scheduler://brain/time:sleep', 'cron')
 					if self.time_wakeup != DataInvalid.UNINITIALIZED:
 						wakeup_secs = (self.time_wakeup.hour * 3600) + (self.time_wakeup.minute * 60)
-						self.module.daemon.create_scheduled_signal(wakeup_secs, 'brain', {'status': BRAIN_STATUS.AWAKE}, \
+						self.module.daemon.create_scheduled_signal(wakeup_secs, 'brain', {'status': str(BRAIN_STATUS.AWAKE)}, \
 						                                           'scheduler://brain/time:wakeup', 'cron')
 		return True
 
@@ -65,19 +65,19 @@ class Action(HAL9000_Action):
 		if new_status in list(DataInvalid):
 			return True
 		if phase == CommitPhase.LOCAL_REQUESTED:
-			if old_status == BRAIN_STATUS.LAUNCHING:
-					if self.time_sleep != DataInvalid.UNINITIALIZED and self.time_wakeup != DataInvalid.UNINITIALIZED:
-						next_brain_status = BRAIN_STATUS.AWAKE
-						time_now = datetime_datetime.now().time()
-						if self.time_sleep > self.time_wakeup:
-							if time_now > self.time_sleep or time_now < self.time_wakeup:
-								next_brain_status = BRAIN_STATUS.ASLEEP
-						else:
-							if time_now > self.time_sleep and time_now < self.time_wakeup:
-								next_brain_status = BRAIN_STATUS.ASLEEP
-						if next_brain_status != new_status:
-							self.module.daemon.queue_signal('brain', {'status': next_brain_status})
-							return False
+			if old_status == BRAIN_STATUS.LAUNCHING and new_status != BRAIN_STATUS.DYING:
+				if self.time_sleep not in list(DataInvalid) and self.time_wakeup not in list(DataInvalid):
+					next_brain_status = BRAIN_STATUS.AWAKE
+					time_now = datetime_datetime.now().time()
+					if self.time_sleep > self.time_wakeup:
+						if time_now > self.time_sleep or time_now < self.time_wakeup:
+							next_brain_status = BRAIN_STATUS.ASLEEP
+					else:
+						if time_now > self.time_sleep and time_now < self.time_wakeup:
+							next_brain_status = BRAIN_STATUS.ASLEEP
+					if next_brain_status != new_status:
+						self.module.daemon.queue_signal('brain', {'status': next_brain_status})
+						return False
 		return True
 
 
@@ -85,7 +85,7 @@ class Action(HAL9000_Action):
 		if new_time in list(DataInvalid):
 			return True
 		if phase == CommitPhase.COMMIT:
-			if self.module.daemon.plugins['brain'].runlevel == RUNLEVEL.READY:
+			if self.module.daemon.plugins['brain'].runlevel == RUNLEVEL.SYNCING:
 				if new_time == Brain.TIME_SYNCHRONIZED:
 					if self.time_sleep != DataInvalid.UNINITIALIZED and self.time_wakeup != DataInvalid.UNINITIALIZED:
 						next_brain_status = BRAIN_STATUS.AWAKE
@@ -96,6 +96,6 @@ class Action(HAL9000_Action):
 						else:
 							if time_now > self.time_sleep and time_now < self.time_wakeup:
 								next_brain_status = BRAIN_STATUS.ASLEEP
-						self.module.daemon.queue_signal('brain', {'status': next_brain_status})
+						self.module.daemon.queue_signal('brain', {'status': str(next_brain_status)})
 		return True
 

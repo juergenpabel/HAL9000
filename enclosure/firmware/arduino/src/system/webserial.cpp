@@ -103,6 +103,19 @@ void on_system_features(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 	static StaticJsonDocument<WEBSERIAL_LINE_SIZE*2> response;
 
 	response.clear();
+	if(data.isNull() == true || data.is<const char*>() == true) {
+		response["display"] = JsonObject();
+		response["display"]["backlight"] = g_device_board.isDisplay(true);
+		if(g_system_application.hasEnv("system/features:time/synced") == true) {
+			response["time"] = JsonObject();
+			if(g_system_application.getEnv("system/features:time/synced").compare("true") == 0) {
+				response["time"]["synced"] = true;
+			} else {
+				response["time"]["synced"] = false;
+			}
+		}
+		response["result"] = "OK";
+	}
 	if(data.containsKey("display") == true) {
 		if(data["display"].containsKey("backlight") == true) {
 			if(data["display"]["backlight"].is<bool>() == true) {

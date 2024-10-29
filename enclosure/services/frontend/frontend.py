@@ -71,8 +71,8 @@ class FrontendManager:
 			frontends_runlevel.append(frontend.runlevel)
 		if RUNLEVEL.RUNNING in frontends_runlevel:
 			return RUNLEVEL.RUNNING
-		elif RUNLEVEL.READY in frontends_runlevel:
-			return RUNLEVEL.READY
+		elif RUNLEVEL.SYNCING in frontends_runlevel:
+			return RUNLEVEL.SYNCING
 		return RUNLEVEL.STARTING
 
 
@@ -120,11 +120,13 @@ class FrontendManager:
 		payload = message.payload.decode('utf-8', 'surrogateescape')
 		logging_getLogger('uvicorn').log(Frontend.LOG_LEVEL_TRACE, f"[frontend] received MQTT message: {topic} => {payload}")
 		if topic == 'hal9000/event/brain/runlevel':
-			if payload == 'killed':
-				logging_getLogger("uvicorn").warning(f"[frontend] received mqtt message that service 'brain' has disconnected, showing error screen")
-				for frontend in self.frontends:
-					frontend.commands.put_nowait({'topic': 'system/features', 'payload': {'display': {'backlight': True}}})
-					frontend.commands.put_nowait({'topic': 'gui/screen', 'payload': {'error': {'id': '100', 'title': "System offline"}}})
+			match payload:
+				case 'killed':
+					logging_getLogger("uvicorn").info(f"[frontend] received mqtt message that service 'brain' has died, showing error screen")
+					for frontend in self.frontends:
+						frontend.commands.put_nowait({'topic': 'gui/screen', 'payload': {'error': {'id': '100', 'title': "System offline"}}})
+				case 'running':
+					logging_getLogger("uvicorn").info(f"[frontend] received mqtt message that service 'brain' is running again")
 			return
 		match topic[25:]: #remove 'hal9000/command/frontend/' prefix
 			case 'runlevel':
@@ -172,8 +174,8 @@ class FrontendManager:
 										calculated_runlevel = self.calculate_runlevel()
 										if calculated_runlevel != current_runlevel:
 											logging_getLogger("uvicorn").info(f"[frontend] runlevel is now '{calculated_runlevel}'")
-											if calculated_runlevel == RUNLEVEL.RUNNING: #publish intermediate 'ready' runlevel
-												self.mqtt_client.publish('hal9000/event/frontend/runlevel', RUNLEVEL.READY)
+											if calculated_runlevel == RUNLEVEL.RUNNING: #publish intermediate 'syncing' runlevel
+												self.mqtt_client.publish('hal9000/event/frontend/runlevel', RUNLEVEL.SYNCING)
 											topic = 'hal9000/event/frontend/runlevel'
 											payload = calculated_runlevel
 											current_runlevel = calculated_runlevel

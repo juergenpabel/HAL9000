@@ -7,6 +7,8 @@
 
 
 class Board : public AbstractBoard {
+	private:
+		bool displayStatus;
 	public:
 		Board();
 		virtual bool start();
@@ -14,6 +16,7 @@ class Board : public AbstractBoard {
 		virtual void reset();
 		virtual void halt();
 
+		virtual bool isDisplay(bool status);
 		virtual void displayOn();
                 virtual void displayOff();
 };

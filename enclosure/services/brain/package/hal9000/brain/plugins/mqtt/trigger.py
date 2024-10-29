@@ -1,5 +1,6 @@
 from re import match as re_match
-from json import loads as json_loads
+from json import loads as json_loads, \
+                 dumps as json_dumps
 from jsonpath_ng.ext import parse as jsonpath_ng_ext_parse
 from configparser import ConfigParser as configparser_ConfigParser
 from aiomqtt import Message as aiomqtt_Message
@@ -11,7 +12,7 @@ from hal9000.brain.plugin import HAL9000_Trigger, RUNLEVEL, CommitPhase
 class Trigger(HAL9000_Trigger):
 
 	def __init__(self, trigger_name: str, **kwargs) -> None:
-		super().__init__(trigger_name, **kwargs)
+		super().__init__('mqtt', trigger_name, **kwargs)
 		self.module.payload_jsonpath_parser = None
 		self.runlevel = RUNLEVEL.RUNNING, CommitPhase.COMMIT
 
@@ -46,8 +47,12 @@ class Trigger(HAL9000_Trigger):
 					if matches is not None:
 						signal = json_loads(self.module.config['signal-json-formatter'] % matches.groupdict())
 				if self.module.config['payload-jsonpath'] is not None:
+					self.module.daemon.logger.log(Daemon.LOGLEVEL_TRACE, f"[mqtt] Trigger.handle(): payload-jsonpath (from brain.ini) = " \
+					                                                     f"'{self.module.config['payload-jsonpath']}'")
 					for match in self.module.payload_jsonpath_parser.find(json_loads(f'[{payload}]')):
-						signal = json_loads(self.module.config['signal-json-formatter'] % {'jsonpath': match.value})
+						signal_json = self.module.config['signal-json-formatter'] % {'jsonpath': json_dumps(match.value)}
+						self.module.daemon.logger.log(Daemon.LOGLEVEL_TRACE, f"[mqtt] Trigger.handle(): generated signal json = {signal_json}")
+						signal = json_loads(signal_json)
 			except Exception as e:
 				self.module.daemon.logger.error(f"Exception in MQTT.Trigger.handle(): {type(e)} => {str(e)}")
 			if signal is not None:

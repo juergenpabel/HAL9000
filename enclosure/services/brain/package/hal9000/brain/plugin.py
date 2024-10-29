@@ -8,10 +8,11 @@ from aiomqtt import Message as aiomqtt_Message
 
 
 class RUNLEVEL(enum_StrEnum):
-	STARTING = "starting"
-	READY    = "ready"
-	RUNNING  = "running"
-	KILLED   = "killed"
+	STARTING  = "starting"
+	SYNCING   = "syncing"
+	PREPARING = "preparing"
+	RUNNING   = "running"
+	KILLED    = "killed"
 
 
 class CommitPhase(enum_Enum):
@@ -156,9 +157,11 @@ class HAL9000_Plugin(object):
 								                f"returned <None> instead of a boolean value (BUG!) => {callback}")
 							if result is False:
 								from hal9000.brain.daemon import Daemon # late import due to partially initialized module (circular imports)
-								self.module.daemon.logger.log(Daemon.LOGLEVEL_TRACE, f"[{self.module.id}] callback '{callback.__self__.module.id}" \
-								                                              f"<{callback.__func__.__name__}>' declined change of " \
-								                                              f"{name} from '{old_value}' to '{new_value}'")
+								log_func = self.module.daemon.logger.debug
+								if self.module.daemon.plugins['brain'].runlevel == RUNLEVEL.RUNNING:
+									log_func = self.module.daemon.logger.info
+								log_func(f"[{self.module.id}] callback '{callback.__self__.module.id}<{callback.__func__.__name__}>' " \
+								         f"declined change of {name} from '{old_value}' to '{new_value}'")
 							commit_value &= result
 				if commit_value is True:
 					commit_phase = CommitPhase.COMMIT if name not in self.module.remotes else CommitPhase.REMOTE_REQUESTED
@@ -197,8 +200,8 @@ class HAL9000_Plugin(object):
 
 class HAL9000_Action(HAL9000_Plugin):
 
-	def __init__(self, action_name: str, **kwargs) -> None:
-		super().__init__(f'action:{action_name}:default', **kwargs)
+	def __init__(self, action_class, action_name: str = 'default', **kwargs) -> None:
+		super().__init__(f'action:{action_class}:{action_name}', **kwargs)
 		self.module.hidden = False
 
 
@@ -210,8 +213,8 @@ class HAL9000_Action(HAL9000_Plugin):
 
 class HAL9000_Trigger(HAL9000_Plugin):
 
-	def __init__(self, trigger_name: str, **kwargs) -> None:
-		super().__init__(f'trigger:mqtt:{trigger_name}', **kwargs) # TODO: non-mqtt trigger classes
+	def __init__(self, trigger_class: str, trigger_name: str, **kwargs) -> None:
+		super().__init__(f'trigger:{trigger_class}:{trigger_name}', **kwargs)
 		self.module.hidden = True
 
 

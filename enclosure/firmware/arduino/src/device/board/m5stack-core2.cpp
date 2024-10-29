@@ -64,6 +64,11 @@ void Board::halt() {
 }
 
 
+bool Board::isDisplay(bool status) {
+	return PMU.isEnableDC3() == status;
+}
+
+
 void Board::displayOn() {
 	PMU.enableDC3();
 	g_gui.writecommand(0x11);

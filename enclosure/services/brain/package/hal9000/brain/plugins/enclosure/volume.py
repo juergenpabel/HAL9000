@@ -38,13 +38,13 @@ class Volume(EnclosureComponent):
 				self.daemon.queue_signal('kalliope', {'volume': {'mute': mute}})
 				match mute:
 					case True:
-						self.daemon.queue_signal('kalliope', {'status': KALLIOPE_STATUS.SLEEPING})
+						self.daemon.queue_signal('kalliope', {'status': str(KALLIOPE_STATUS.SLEEPING)})
 						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'volume', \
 						                                                          'parameter': {'name': 'mute', \
 						                                                                        'level': volume, \
 						                                                                        'mute': mute}}}})
 					case False:
-						self.daemon.queue_signal('kalliope', {'status': KALLIOPE_STATUS.WAITING})
+						self.daemon.queue_signal('kalliope', {'status': str(KALLIOPE_STATUS.WAITING)})
 						self.daemon.queue_signal('frontend', {'gui': {'overlay': {'name': 'volume', \
 						                                                          'parameter': {'name': str(volume), \
 						                                                                        'level': volume, \

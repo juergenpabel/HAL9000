@@ -5,7 +5,7 @@ from logging import getLogger as logging_getLogger
 
 class RUNLEVEL(enum_StrEnum):
 	STARTING = 'starting'
-	READY    = 'ready'
+	SYNCING  = 'syncing'
 	RUNNING  = 'running'
 	DEAD     = 'dead'
 
@@ -32,7 +32,7 @@ class Frontend:
 
 
 	async def configure(self, configuration) -> bool:
-		self.runlevel = RUNLEVEL.READY
+		self.runlevel = RUNLEVEL.SYNCING
 		return True
 
 

@@ -8,7 +8,8 @@
 
 
 Board::Board()
-      :AbstractBoard("waveshare-rp2040_lcd128") {
+      :AbstractBoard("waveshare-rp2040_lcd128")
+      ,displayStatus(true) {
 }
 
 
@@ -40,9 +41,15 @@ void Board::halt() {
 }
 
 
+bool Board::isDisplay(bool status) {
+	return this->displayStatus == status;
+}
+
+
 void Board::displayOn() {
 	if(TFT_BL >= 0) {
 		digitalWrite(TFT_BL, HIGH);
+		this->displayStatus = true;
 	}
 }
 
@@ -50,6 +57,7 @@ void Board::displayOn() {
 void Board::displayOff() {
 	if(TFT_BL >= 0) {
 		digitalWrite(TFT_BL, LOW);
+		this->displayStatus = false;
 	}
 }
 

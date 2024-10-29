@@ -49,7 +49,7 @@ class HAL9000(Frontend):
 					self.logger.info(f"[frontend:arduino] identified /dev/ttyHAL9000 as '{arduino_name}'")
 				else:
 					self.logger.warning(f"[frontend:arduino] unidentified board on /dev/ttyHAL9000 (configuration will be loaded from littlefs)")
-				self.serial = serial_Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate,
+				self.serial = serial_Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate, \
 				                            bytesize=serial_EIGHTBITS, parity=serial_PARITY_NONE, stopbits=serial_STOPBITS_ONE)
 				self.logger.debug(f"[frontend:arduino] opened '{arduino_device}'")
 				arduino_runlevel = await self.serial_await_runlevel_change('starting')
@@ -210,8 +210,8 @@ class HAL9000(Frontend):
 					try:
 						event = json_loads(line)
 						if isinstance(event, list) and len(event) == 2:
-							self.logger.debug(f"[frontend:arduino] device2host reads message: " + \
-							                                   str({'topic': event[0], 'payload': event[1]}))
+							self.logger.debug(f"[frontend:arduino] device2host reads message: " \
+							                  f"{json_dumps({'topic': event[0], 'payload': event[1]})}")
 							if event[0] == 'ping':
 								self.commands.put_nowait({'topic': 'pong', 'payload': ''})
 								event[0] = ''

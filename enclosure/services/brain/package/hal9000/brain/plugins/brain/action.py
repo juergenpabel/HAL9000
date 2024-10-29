@@ -21,53 +21,49 @@ class Action(HAL9000_Action):
 
 	def __init__(self, action_instance: str, **kwargs) -> None:
 		super().__init__('brain', **kwargs)
-		self.module.daemon.plugins['brain'].addLocalNames(['time'])
-		self.module.daemon.plugins['brain'].runlevel = RUNLEVEL.STARTING, CommitPhase.COMMIT
-		self.module.daemon.plugins['brain'].status = STATUS.LAUNCHING, CommitPhase.COMMIT
+		self.addLocalNames(['time'])
+		self.time = DataInvalid.UNKNOWN, CommitPhase.COMMIT
+		self.runlevel = RUNLEVEL.STARTING, CommitPhase.COMMIT
+		self.status = STATUS.LAUNCHING, CommitPhase.COMMIT
 
 
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		super().configure(configuration, section_name)
-		self.module.daemon.plugins['brain'].addSignalHandler(self.on_brain_signal)
-		self.module.daemon.plugins['brain'].addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
-		self.module.daemon.plugins['brain'].addNameCallback(self.on_brain_status_callback, 'status')
-		self.module.daemon.plugins['brain'].addNameCallback(self.on_brain_time_callback, 'time')
-		self.module.daemon.add_runlevel_inhibitor(RUNLEVEL.READY, 'brain:time', self.runlevel_inhibitor_ready_time)
+		self.addSignalHandler(self.on_brain_signal)
+		self.addNameCallback(self.on_brain_runlevel_callback, 'runlevel')
+		self.addNameCallback(self.on_brain_status_callback, 'status')
+		self.addNameCallback(self.on_brain_time_callback, 'time')
+		self.module.daemon.add_runlevel_inhibitor(RUNLEVEL.SYNCING, 'brain: brain.time==unknown', self.runlevel_inhibitor_syncing_time)
 
 
-	def runlevel_inhibitor_ready_time(self) -> bool:
-		if self.module.daemon.plugins['brain'].time in list(DataInvalid):
+	async def runlevel_inhibitor_syncing_time(self) -> bool:
+		if self.time in list(DataInvalid):
 			return False
 		return True
 
 
 	async def on_brain_signal(self, plugin: HAL9000_Plugin, signal: dict) -> None:
 		if 'runlevel' in signal:
-			match self.module.daemon.plugins['brain'].runlevel:
-				case RUNLEVEL.STARTING:
-					if signal['runlevel'] == RUNLEVEL.READY:
-						self.module.daemon.plugins['brain'].runlevel = RUNLEVEL.READY
-				case RUNLEVEL.READY:
-					if signal['runlevel'] == RUNLEVEL.RUNNING:
-						self.module.daemon.plugins['brain'].runlevel = RUNLEVEL.RUNNING
+			match self.runlevel:
+				case RUNLEVEL.STARTING | RUNLEVEL.SYNCING | RUNLEVEL.PREPARING:
+					self.runlevel = signal['runlevel']
 				case RUNLEVEL.RUNNING:
 					self.module.daemon.logger.error(f"[brain] signal with unexpected new runlevel '{signal['runlevel']}' " \
 					                                f"(current runlevel='{RUNLEVEL.RUNNING}')")
 				case other:
-					self.module.daemon.logger.error(f"[brain] unexpected current runlevel '{self.module.daemon.plugins['brain'].runlevel}'")
+					self.module.daemon.logger.error(f"[brain] unexpected current runlevel '{self.runlevel}'")
 		if 'status' in signal:
-			match self.module.daemon.plugins['brain'].status:
+			match self.status:
 				case STATUS.LAUNCHING | STATUS.AWAKE | STATUS.ASLEEP:
-					if signal['status'] in [STATUS.AWAKE, STATUS.ASLEEP, STATUS.DYING]:
-						self.module.daemon.plugins['brain'].status = signal['status']
+					self.status = signal['status']
 				case STATUS.DYING:
 					pass
-		if 'time:sync' in signal:
+		if 'time' in signal:
 			match os_path_exists('/run/systemd/timesync/synchronized'):
 				case True:
-					self.module.daemon.plugins['brain'].time = Action.TIME_SYNCHRONIZED
+					self.time = Action.TIME_SYNCHRONIZED
 				case False:
-					self.module.daemon.plugins['brain'].time = Action.TIME_UNSYNCHRONIZED
+					self.time = Action.TIME_UNSYNCHRONIZED
 
 
 	def on_brain_runlevel_callback(self, plugin: HAL9000_Plugin, key: str, old_runlevel: str, new_runlevel: str, phase: CommitPhase) -> bool:
@@ -75,10 +71,14 @@ class Action(HAL9000_Action):
 			case CommitPhase.LOCAL_REQUESTED:
 				match old_runlevel:
 					case RUNLEVEL.STARTING:
-						if new_runlevel != RUNLEVEL.READY:
+						if new_runlevel != RUNLEVEL.SYNCING:
 							self.module.daemon.logger.info(f"[brain] preventing (invalid) change of runlevel from '{old_runlevel}' to '{new_runlevel}'")
 							return False
-					case RUNLEVEL.READY:
+					case RUNLEVEL.SYNCING:
+						if new_runlevel != RUNLEVEL.PREPARING:
+							self.module.daemon.logger.info(f"[brain] preventing (invalid) change of runlevel from '{old_runlevel}' to '{new_runlevel}'")
+							return False
+					case RUNLEVEL.PREPARING:
 						if new_runlevel != RUNLEVEL.RUNNING:
 							self.module.daemon.logger.info(f"[brain] preventing (invalid) change of runlevel from '{old_runlevel}' to '{new_runlevel}'")
 							return False
@@ -112,8 +112,8 @@ class Action(HAL9000_Action):
 			case CommitPhase.COMMIT:
 				match new_time:
 					case Action.TIME_UNSYNCHRONIZED:
-						self.module.daemon.create_scheduled_signal(   1, 'brain', {'time:sync': {}}, 'scheduler://brain/time:sync', 'interval')
+						self.module.daemon.create_scheduled_signal(   1, 'brain', {'time': {}}, 'scheduler://brain/time', 'interval')
 					case Action.TIME_SYNCHRONIZED:
-						self.module.daemon.create_scheduled_signal(3600, 'brain', {'time:sync': {}}, 'scheduler://brain/time:sync', 'interval')
+						self.module.daemon.create_scheduled_signal(3600, 'brain', {'time': {}}, 'scheduler://brain/time', 'interval')
 		return True
 

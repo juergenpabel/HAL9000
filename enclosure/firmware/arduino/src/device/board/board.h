@@ -17,6 +17,7 @@ class AbstractBoard {
 		virtual void reset();
 		virtual void halt();
 
+		virtual bool isDisplay(bool on) = 0;
 		virtual void displayOn() = 0;
 		virtual void displayOff() = 0;
 };
