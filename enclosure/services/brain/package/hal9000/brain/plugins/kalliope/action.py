@@ -17,7 +17,7 @@ class Action(HAL9000_Action):
 
 	def __init__(self, action_instance: str, **kwargs) -> None:
 		super().__init__('kalliope', **kwargs)
-		self.addLocalNames(['audio_in', 'audio_out', 'mute'])
+		self.addLocalNames(['mute'])
 		self.addRemoteNames(['volume'])
 		self.runlevel = DataInvalid.UNKNOWN, CommitPhase.COMMIT
 		self.status = DataInvalid.UNKNOWN, CommitPhase.COMMIT
@@ -100,8 +100,6 @@ class Action(HAL9000_Action):
 					self.module.daemon.queue_signal('mqtt', {'topic': f'{self.module.mqtt_prefix}/status', 'payload': None})
 				if new_runlevel == RUNLEVEL.KILLED:
 					self.status = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
-					self.audio_in = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
-					self.audio_out = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
 					self.mute = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
 					self.volume = DataInvalid.UNINITIALIZED, CommitPhase.COMMIT
 					self.module.daemon.process_error('critical', '300', "System offline", f"Service 'kalliope' unavailable")
@@ -121,24 +119,11 @@ class Action(HAL9000_Action):
 					self.volume = str(self.module.config['initial-volume'])
 				match new_status:
 					case STATUS.SLEEPING:
-						self.audio_in = 'none', CommitPhase.COMMIT
-						self.audio_out = 'none', CommitPhase.COMMIT
 						if self.module.config['trigger-mqtt-topic'] is not None:
 							self.module.daemon.queue_signal('mqtt', {'topic': self.module.config['trigger-mqtt-topic'], 'payload': 'pause'})
 					case STATUS.WAITING:
-						self.audio_in = 'wake-word-detector', CommitPhase.COMMIT
-						self.audio_out = 'none', CommitPhase.COMMIT
 						if self.module.config['trigger-mqtt-topic'] is not None:
 							self.module.daemon.queue_signal('mqtt', {'topic': self.module.config['trigger-mqtt-topic'], 'payload': 'unpause'})
-					case STATUS.LISTENING:
-						self.audio_in = 'speech-to-text', CommitPhase.COMMIT
-						self.audio_out = 'none', CommitPhase.COMMIT
-					case STATUS.THINKING:
-						self.audio_in = 'none', CommitPhase.COMMIT
-						self.audio_out = 'none', CommitPhase.COMMIT
-					case STATUS.SPEAKING:
-						self.audio_in = 'none', CommitPhase.COMMIT
-						self.audio_out = 'text-to-speech', CommitPhase.COMMIT
 		return True
 
 

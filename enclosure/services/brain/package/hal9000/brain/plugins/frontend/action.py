@@ -104,6 +104,13 @@ class Action(HAL9000_Action):
 					self.module.daemon.queue_signal('mqtt', {'topic': f'{self.module.mqtt_prefix}/status', 'payload': None})
 				case other:
 					self.status = signal['status']
+		if 'error' in signal:
+			if self.status == STATUS.ONLINE:
+				error = {'level': 'error', 'id': '000', 'title': 'UNEXPECTED ERROR', 'details': ''}
+				for field in error.keys():
+					if field in signal['error']:
+						error[field] = signal['error'][field]
+				await self.module.daemon.plugins['frontend'].signal({'gui': {'screen': {'name': 'error', 'parameter': error}}})
 		if 'system' in signal:
 			if 'environment' in signal['system']:
 				if self.status == STATUS.ONLINE:
@@ -305,9 +312,9 @@ class Action(HAL9000_Action):
 			return True
 		if phase == CommitPhase.COMMIT:
 			if self.status == STATUS.ONLINE:
-				if old_status == KALLIOPE_STATUS.WAITING and new_status == KALLIOPE_STATUS.LISTENING:
+				if old_status == KALLIOPE_STATUS.WAITING and new_status in [KALLIOPE_STATUS.LISTENING, KALLIOPE_STATUS.SPEAKING]:
 					self.module.daemon.queue_signal('frontend', {'gui': {'screen': {'name': 'animations', 'parameter': {'name': 'hal9000'}}}})
-				if old_status == KALLIOPE_STATUS.SPEAKING and new_status == KALLIOPE_STATUS.WAITING:
+				if self.screen == 'animations:hal9000' and new_status == KALLIOPE_STATUS.WAITING:
 					self.module.daemon.queue_signal('frontend', {'system': {'environment': {'set': {'key': 'gui/screen:animations/loop', \
 					                                                                                'value': 'hal9000'}}}})
 		return True
