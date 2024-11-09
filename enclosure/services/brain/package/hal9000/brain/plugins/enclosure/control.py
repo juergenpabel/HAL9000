@@ -1,9 +1,13 @@
-from os.path import dirname as os_path_dirname, \
+from os.path import basename as os_path_basename, \
+                    dirname as os_path_dirname, \
                     abspath as os_path_abspath
 from configparser import ConfigParser as configparser_ConfigParser
 from json import load as json_load, \
                  loads as json_loads
 from requests import get as requests_get
+from jinja2 import Environment as jinja2_Environment, \
+                   FileSystemLoader as jinja2_FileSystemLoader, \
+                   select_autoescape as jinja2_select_autoescape
 
 from hal9000.brain.plugin import HAL9000_Plugin, DataInvalid, CommitPhase
 from hal9000.brain.plugins.enclosure import EnclosureComponent
@@ -26,6 +30,7 @@ class Control(EnclosureComponent):
 
 
 	def menu_load(self, loader: str, loader_source: str, processor: str, processor_source: str) -> bool:
+		menu = {}
 		if loader_source is None:
 			self.daemon.logger.error(f"[enclosure:control] no source for loading the menu configured (missing key " \
 			                         f"'{self.config['menu:loader']}' in section 'enclosure:control')")
@@ -36,32 +41,39 @@ class Control(EnclosureComponent):
 					if loader_source.startswith('/') is False and loader_source != self.config['menu:loader-source']:
 						loader_source = f'{os_path_dirname(os_path_abspath(self.config["menu:loader-source"]))}/{loader_source}'
 					with open(loader_source) as file:
-						self.menu = json_load(file)
+						menu = json_load(file)
 				except Exception as e:
 					self.daemon.logger.error(f"[enclosure:control] error while loading file '{loader_source}': {e}")
 					return False
 			case 'url':
 				try:
-					json = requests_get(loader_source)
-					self.menu = json_load(json)
+					response = requests_get(loader_source)
+					if response.ok is True:
+						menu = response.json()
 				except Exception as e:
 					self.daemon.logger.error(f"[enclosure:control] error while loading url '{loader_source}': {e}")
 					return False
 			case other:
 				self.daemon.logger.error(f"[enclosure:control] invalid menu loader '{loader}' for '{loader_source}'")
 				return False
-		if 'id' not in self.menu or 'text' not in self.menu or 'items' not in self.menu or len(self.menu['items']) == 0:
-			self.menu = None
-			self.daemon.logger.error(f"[enclosure:control] invalid menu loaded from {loader}='{loader_source}'")
-			return False
 		match processor:
 			case 'none' | None:
-				pass
+				self.menu = menu
 			case 'jinja2':
-				pass # TODO
+				try:
+					processor_source_dir = os_path_dirname(os_path_abspath('menus/'+processor_source))
+					jinja2_env = jinja2_Environment(loader=jinja2_FileSystemLoader(processor_source_dir), autoescape=jinja2_select_autoescape())
+					jinja2_tmpl = jinja2_env.get_template(os_path_basename(processor_source))
+					self.menu = json_loads(jinja2_tmpl.render(json=menu))
+				except Exception as e:
+					self.daemon.logger.error(f"[enclosure:control] exception in processor 'jinja2' while loading menu '{loader_source}': {e}")
 			case other:
 				self.daemon.logger.error(f"[enclosure:control] invalid menu processor '{processor}' for '{self.menu['id']}'='{self.menu['text']}'")
 				return False
+		if 'id' not in self.menu or 'text' not in self.menu or 'items' not in self.menu or len(self.menu['items']) == 0:
+			self.daemon.logger.error(f"[enclosure:control] invalid menu loaded from {loader}='{loader_source}'")
+			self.menu_exit()
+			return False
 		return True
 
 
