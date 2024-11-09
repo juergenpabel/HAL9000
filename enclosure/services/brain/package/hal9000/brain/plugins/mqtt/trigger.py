@@ -28,11 +28,9 @@ class Trigger(HAL9000_Trigger):
 
 
 	def callbacks(self) -> dict:
-		result = {}
-		topics = []
+		result = {'mqtt': []}
 		if self.module.config['topic'] is not None:
-			topics.append(self.module.config['topic'])
-		result['mqtt'] = topics
+			result['mqtt'].append(self.module.config['topic'])
 		return result
 
 
