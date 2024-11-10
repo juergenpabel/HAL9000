@@ -64,7 +64,7 @@ class Control(EnclosureComponent):
 					processor_source_dir = os_path_dirname(os_path_abspath('menus/'+processor_source))
 					jinja2_env = jinja2_Environment(loader=jinja2_FileSystemLoader(processor_source_dir), autoescape=jinja2_select_autoescape())
 					jinja2_tmpl = jinja2_env.get_template(os_path_basename(processor_source))
-					self.menu = json_loads(jinja2_tmpl.render(json=menu))
+					self.menu = json_loads(jinja2_tmpl.render(menu))
 				except Exception as e:
 					self.daemon.logger.error(f"[enclosure:control] exception in processor 'jinja2' while loading menu '{loader_source}': {e}")
 			case other:
