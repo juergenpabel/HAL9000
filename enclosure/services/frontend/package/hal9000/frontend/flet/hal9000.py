@@ -311,11 +311,12 @@ class HAL9000(Frontend):
 		self.gui_screen = f'menu:{data["name"]}'
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
 		display.content.shapes.append(flet.canvas.Text(text=data['title'], \
-		                                               x=int(display.radius), y=int(0.5*display.radius), \
+		                                               x=int(display.radius), y=int(2*display.radius/8*2), \
 		                                               style=flet.TextStyle(size=int(display.page.scale*18), color='white'), \
 		                                               alignment=flet_core_alignment.center))
 		display.content.shapes.append(flet.canvas.Text(text=data['text'], \
-		                                               x=int(display.radius), y=int(display.radius), \
+		                                               x=int(display.radius), y=int(2*display.radius/8*4), \
+		                                               max_width=int(2*display.radius*0.9), \
 		                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'), \
 		                                               alignment=flet_core_alignment.center))
 		display.content.update()
