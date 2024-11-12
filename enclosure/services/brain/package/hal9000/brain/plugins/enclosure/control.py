@@ -4,6 +4,7 @@ from os.path import basename as os_path_basename, \
 from configparser import ConfigParser as configparser_ConfigParser
 from json import load as json_load, \
                  loads as json_loads
+from subprocess import run as subprocess_run
 from requests import get as requests_get
 from jinja2 import Environment as jinja2_Environment, \
                    FileSystemLoader as jinja2_FileSystemLoader, \
@@ -22,24 +23,31 @@ class Control(EnclosureComponent):
 	def configure(self, configuration: configparser_ConfigParser, section_name: str) -> None:
 		super().configure(configuration, section_name)
 		self.config['menu:timeout'] = configuration.getint('enclosure:control', 'timeout', fallback=30)
-		self.config['menu:loader'] = configuration.get('enclosure:control', 'loader', fallback='file')
-		self.config['menu:loader-source'] = configuration.get('enclosure:control', self.config['menu:loader'], fallback=None)
-		self.config['menu:processor'] = configuration.get('enclosure:control', 'processor', fallback='none')
-		self.config['menu:processor-source'] = configuration.get('enclosure:control', self.config['menu:processor'], fallback=None)
+		self.config['menu:default-loader'] = configuration.get('enclosure:control', 'default-loader', fallback='file')
+		self.config['menu:default-loader-source'] = configuration.get('enclosure:control', self.config['menu:default-loader'], fallback=None)
+		self.config['menu:default-processor'] = configuration.get('enclosure:control', 'processor', fallback='none')
+		self.config['menu:default-processor-source'] = configuration.get('enclosure:control', self.config['menu:default-processor'], fallback=None)
 		self.daemon.plugins['enclosure'].addSignalHandler(self.on_enclosure_signal)
 
 
-	def menu_load(self, loader: str, loader_source: str, processor: str, processor_source: str) -> bool:
+	def menu_load(self, id: str, loader: str = None, loader_source: str = None, processor: str = None, processor_source: str = None) -> bool:
 		menu = {}
-		if loader_source is None:
-			self.daemon.logger.error(f"[enclosure:control] no source for loading the menu configured (missing key " \
-			                         f"'{self.config['menu:loader']}' in section 'enclosure:control')")
+		if loader_source is None and self.config['menu:default-loader-source'] is None:
+			self.daemon.logger.error(f"[enclosure:control] no loader-source provided for menu '{id}' and no default value configured (missing key " \
+			                         f"'{self.config['menu:default-loader']}' in section 'enclosure:control')")
 			return False
+		if processor is not None or self.config['menu:default-processor'] != 'none':
+			if processor_source is None and self.config['menu:default-processor-source'] is None:
+				self.daemon.logger.error(f"[enclosure:control] no processor-source provided for menu '{id}' and no default value configured (missing key " \
+				                         f"'{self.config['menu:default-processor']}' in section 'enclosure:control')")
+			return False
+		loader = loader if loader is not None else self.config['menu:default-loader']
+		loader_source = loader_source.format(id=id) if loader_source is not None else self.config['menu:default-loader-source'].format(id=id) if self.config['menu:default-loader-source'] is not None else None
+		processor = processor if processor is not None else self.config['menu:default-processor']
+		processor_source = processor_source.format(id=id) if processor_source is not None else self.config['menu:default-processor-source'].format(id=id) if self.config['menu:default-processor-source'] is not None else None
 		match loader:
 			case 'file':
 				try:
-					if loader_source.startswith('/') is False and loader_source != self.config['menu:loader-source']:
-						loader_source = f'{os_path_dirname(os_path_abspath(self.config["menu:loader-source"]))}/{loader_source}'
 					with open(loader_source) as file:
 						menu = json_load(file)
 				except Exception as e:
@@ -47,11 +55,17 @@ class Control(EnclosureComponent):
 					return False
 			case 'url':
 				try:
-					response = requests_get(loader_source)
+					response = requests_get(loader_source, timeout=5)
 					if response.ok is True:
 						menu = response.json()
 				except Exception as e:
 					self.daemon.logger.error(f"[enclosure:control] error while loading url '{loader_source}': {e}")
+					return False
+			case 'command':
+				try:
+					menu = subprocess_run(loader_source, check=True, capture_output=True, text=True, timeout=5).stdout
+				except Exception as e:
+					self.daemon.logger.error(f"[enclosure:control] error trying to execute command '{loader_source}': {e}")
 					return False
 			case other:
 				self.daemon.logger.error(f"[enclosure:control] invalid menu loader '{loader}' for '{loader_source}'")
@@ -61,7 +75,7 @@ class Control(EnclosureComponent):
 				self.menu = menu
 			case 'jinja2':
 				try:
-					processor_source_dir = os_path_dirname(os_path_abspath('menus/'+processor_source))
+					processor_source_dir = os_path_dirname(os_path_abspath(processor_source))
 					jinja2_env = jinja2_Environment(loader=jinja2_FileSystemLoader(processor_source_dir), autoescape=jinja2_select_autoescape())
 					jinja2_tmpl = jinja2_env.get_template(os_path_basename(processor_source))
 					self.menu = json_loads(jinja2_tmpl.render(menu))
@@ -71,9 +85,21 @@ class Control(EnclosureComponent):
 				self.daemon.logger.error(f"[enclosure:control] invalid menu processor '{processor}' for '{self.menu['id']}'='{self.menu['text']}'")
 				return False
 		if 'id' not in self.menu or 'text' not in self.menu or 'items' not in self.menu or len(self.menu['items']) == 0:
-			self.daemon.logger.error(f"[enclosure:control] invalid menu loaded from {loader}='{loader_source}'")
+			self.daemon.logger.error(f"[enclosure:control] invalid menu loaded from {loader}='{loader_source.format(id=id)}'")
 			self.menu_exit()
 			return False
+		for item_index, item in enumerate(self.menu['items'].copy()):
+			if 'actions' not in item:
+				self.daemon.logger.error(f"[enclosure:control] removing invalid menu item '{item['id']}' (missing 'actions') " \
+			                         f"in menu '{id}' (loaded from {loader}='{loader_source.format(id=id)}')")
+				self.menu['items'].remove(item)
+		for item_index, item in enumerate(self.menu['items']):
+			for action_index, action in enumerate(item['actions'].copy()):
+				if 'handler' not in action or 'data' not in action:
+					if item in self.menu['items']:
+						self.daemon.logger.error(f"[enclosure:control] removing invalid menu item '{item['id']}' (invalid 'actions') " \
+					                         f"in menu '{id}' (loaded from {loader}='{loader_source.format(id=id)}')")
+						self.menu['items'].remove(item)
 		return True
 
 
@@ -98,8 +124,7 @@ class Control(EnclosureComponent):
 			match self.daemon.plugins['frontend'].screen.split(':', 1).pop(0):
 				case 'idle':
 					if 'delta' in signal['control']:
-						match self.menu_load(self.config['menu:loader'], self.config['menu:loader-source'], \
-						                     self.config['menu:processor'], self.config['menu:processor-source']):
+						match self.menu_load('main'):
 							case True:
 								self.menu_update_frontend(0)
 							case False:
@@ -123,14 +148,15 @@ class Control(EnclosureComponent):
 					if 'select' in signal['control']:
 						self.daemon.remove_scheduled_signal('scheduler://enclosure:control/menu:timeout')
 						item = list(filter(lambda item: item['id'] == item_id, self.menu['items'])).pop(0)
-						for action in item['actions'].copy():
+						for action in item['actions']:
 							match action['handler']:
 								case 'menu':
-									menu_loader = action['data']['loader'] if 'loader' in action['data'] else 'file'
-									menu_loader_source = action['data'][menu_loader] if menu_loader in action['data'] else None
-									menu_processor = action['data']['processor'] if 'processor' in action['data'] else None
-									menu_processor_source = action['data'][menu_processor] if menu_processor in action['data'] else None
-									match self.menu_load(menu_loader, menu_loader_source, menu_processor, menu_processor_source):
+									id = action['data']['id'] if 'id' in action['data'] else item['id']
+									loader = action['data']['loader'] if 'loader' in action['data'] else None
+									loader_source = action['data'][loader] if loader in action['data'] else None
+									processor = action['data']['processor'] if 'processor' in action['data'] else None
+									processor_source = action['data'][processor] if processor in action['data'] else None
+									match self.menu_load(id, loader, loader_source, processor, processor_source):
 										case True:
 											self.menu_update_frontend(0) #TODO iterating after menu reload?
 										case False: #TODO
