@@ -40,7 +40,7 @@ class Control(EnclosureComponent):
 			if processor_source is None and self.config['menu:default-processor-source'] is None:
 				self.daemon.logger.error(f"[enclosure:control] no processor-source provided for menu '{id}' and no default value configured (missing key " \
 				                         f"'{self.config['menu:default-processor']}' in section 'enclosure:control')")
-			return False
+				return False
 		loader = loader if loader is not None else self.config['menu:default-loader']
 		loader_source = loader_source.format(id=id) if loader_source is not None else self.config['menu:default-loader-source'].format(id=id) if self.config['menu:default-loader-source'] is not None else None
 		processor = processor if processor is not None else self.config['menu:default-processor']
@@ -160,6 +160,7 @@ class Control(EnclosureComponent):
 										case True:
 											self.menu_update_frontend(0) #TODO iterating after menu reload?
 										case False: #TODO
+											self.daemon.logger.error(f"[enclosure:control] menu_load({id},{loader},{loader_source},{processor},{processor_source}) failed")
 											self.menu_exit()
 											return
 								case 'signal':

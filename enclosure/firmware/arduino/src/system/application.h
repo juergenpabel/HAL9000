@@ -9,19 +9,16 @@
 #include "system/settings.h"
 #include "system/environment.h"
 
+
 typedef etl::list<etl::string<GLOBAL_VALUE_SIZE>, APPLICATION_ERROR_MAX> ErrorContext;
-typedef StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2>              Configuration;
 
 typedef enum {
-	RunlevelUnknown      = 0x00,
-	RunlevelStarting     = 0x01,
-	RunlevelConfiguring  = 0x02,
-	RunlevelReady        = 0x03,
-	RunlevelRunning      = 0x04,
-	RunlevelRestarting   = 0x05,
-	RunlevelHalting      = 0x06,
-	RunlevelPanicing     = 0x07,
-	RunlevelMAX          = 0x07
+	RunlevelStarting     = 0x00,
+	RunlevelConfiguring  = 0x01,
+	RunlevelRunning      = 0x02,
+	RunlevelRestarting   = 0x03,
+	RunlevelHalting      = 0x04,
+	RunlevelPanicing     = 0x05
 } Runlevel;
 
 
@@ -31,17 +28,15 @@ class Application {
 		time_t        time_offset;
 	protected:
 		ErrorContext  error_context;
-		Configuration configuration;
 		Environment   environment;
 		Settings      settings;
 		void          setTime(time_t time);
 	public:
 		Application();
 
-		bool loadSettings();
-		bool saveSettings();
+		bool loadSettings(const etl::string<GLOBAL_FILENAME_SIZE>& filename);
+		bool saveSettings(const etl::string<GLOBAL_FILENAME_SIZE>& filename);
 		bool resetSettings();
-
 
 		void                                  setRunlevel(Runlevel runlevel);
 		Runlevel                              getRunlevel();
@@ -62,12 +57,8 @@ class Application {
 		                 const etl::string<GLOBAL_VALUE_SIZE>& message, const etl::string<GLOBAL_VALUE_SIZE>& details);
 
 	static time_t getTime();
-
-	static void addConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
-	       bool loadConfiguration();
-	       bool applyConfiguration();
-
 	static const etl::string<GLOBAL_VALUE_SIZE> Null;
+
 	friend class EnvironmentWriter;
 	friend void on_system_runlevel(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);
 	friend void on_system_features(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data);

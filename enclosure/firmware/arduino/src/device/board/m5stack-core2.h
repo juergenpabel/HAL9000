@@ -3,9 +3,15 @@
 
 #ifdef ARDUINO_M5STACK_Core2
 
+#define XPOWERS_CHIP_AXP2101
+#include <XPowersLib.h>
+
 #include "device/board/board.h"
 
+
 class Board : public AbstractBoard {
+	private:
+		XPowersAXP2101 m_PMU;
 	public:
 		Board();
 		virtual bool start();

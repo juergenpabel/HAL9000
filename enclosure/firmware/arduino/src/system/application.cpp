@@ -12,22 +12,21 @@
 
 
        const etl::string<GLOBAL_VALUE_SIZE> Application::Null;
-static const etl::string<GLOBAL_KEY_SIZE>   ApplicationRunlevelNames[] = { "unknown", "starting", "configuring", "ready",
-                                                                           "running", "restarting", "halting", "panicing" };
+static const etl::string<GLOBAL_KEY_SIZE>   ApplicationRunlevelNames[] = { "starting", "configuring", "running",
+                                                                           "restarting", "halting", "panicing" };
 
 
 Application::Application() 
             :runlevel(RunlevelStarting)
             ,time_offset(0)
             ,error_context()
-            ,configuration()
             ,environment()
-            ,settings("/system/settings.ini") {
+            ,settings() {
 }
 
 
 void Application::setRunlevel(Runlevel runlevel) {
-	if(runlevel > this->runlevel && runlevel <= RunlevelMAX) {
+	if(runlevel > this->runlevel && runlevel <= RunlevelPanicing) {
 		this->runlevel = runlevel;
 	}
 }
@@ -58,14 +57,14 @@ time_t Application::getTime() {
 }
 
 
-bool Application::loadSettings() {
+bool Application::loadSettings(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
 	this->settings.reset();
-	return this->settings.load();
+	return this->settings.load(filename);
 }
 
 
-bool Application::saveSettings() {
-	return this->settings.save();
+bool Application::saveSettings(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
+	return this->settings.save(filename);
 }
 
 
@@ -149,86 +148,6 @@ void Application::setSetting(const etl::string<GLOBAL_KEY_SIZE>& key, const etl:
 
 void Application::delSetting(const etl::string<GLOBAL_KEY_SIZE>& key) {
 	this->settings.erase(key);
-}
-
-
-void Application::addConfiguration(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-	JsonObject current;
-
-	if(g_system_application.getRunlevel() != RunlevelConfiguring) {
-		static etl::string<GLOBAL_VALUE_SIZE> log_message;
-
-		log_message  = "Application::addConfiguration() called in unexpected system-runlevel: ";
-		log_message += g_system_application.getRunlevelName();
-		log_message += " (only valid in 'configuring')";
-		g_util_webserial.send("syslog/warn", log_message);
-		return;
-	}
-	if(command.empty() == true) {
-		g_util_webserial.send("syslog/warn", "imcompatible (old) frontend running on linux, as it sent an empty command for end-of-configuration ," \
-		                                     "this has been deprecated (for backwards-compatibility, runlevel is now set to 'ready'); " \
-		                                     "please upgrade hal9000-frontend (and others?)");
-		g_system_application.setRunlevel(RunlevelReady);
-		return;
-	}
-	if(g_util_webserial.hasCommand(command) == false) {
-		static etl::string<GLOBAL_VALUE_SIZE> log_message;
-
-		log_message  = "Application::addConfiguration() called with unsupported command '";
-		log_message += command;
-		log_message += "', please investigate your hal9000-frontend configuration (frontend.ini)";
-		g_util_webserial.send("syslog/warn", log_message);
-		return;
-	}
-	current = g_system_application.configuration.createNestedObject();
-	current["command"] = command;
-	current["data"] = data;
-}
-
-
-bool Application::loadConfiguration() {
-	File file;
-
-	this->configuration.clear();
-	if(LittleFS.exists("/system/configuration.json") == false) {
-		this->processError("warn", "215", "Application error", "system configuration file not found: '(littlefs:)/system/configuration.json'");
-		return false;
-	}
-	file = LittleFS.open("/system/configuration.json", "r");
-	if(static_cast<bool>(file) == false) {
-		this->processError("panic", "212", "Filesystem error", "failed to open *supposedly existing* '(littlefs:)/system/configuration.json' in " \
-		                                                       "read-mode (probably need to reflash littlefs)");
-		return false;
-	}
-	if(deserializeJson(this->configuration, file) != DeserializationError::Ok) {
-		this->processError("panic", "215", "Application error", "INI syntax error in (littlefs:)" \
-		                                   "'/system/configuration.json'");
-		this->configuration.clear();
-		file.close();
-		return false;
-	}
-	g_util_webserial.send("syslog/debug", "system configuration loaded from (littlefs:)'/system/configuration.json'");
-	return true;
-}
-
-
-bool Application::applyConfiguration() {
-	if(this->configuration.size() == 0) {
-		if(this->loadConfiguration() == false) {
-			return false;
-		}
-	}
-	if(this->configuration.size() > 0) {
-		g_util_webserial.send("syslog/debug", "activating application configuration...");
-		for(JsonObject item : this->configuration.as<JsonArray>()) {
-			if(item.containsKey("command") == true && item.containsKey("data") == true) {
-				g_util_webserial.handle(item["command"].as<const char*>(), item["data"].as<JsonVariant>());
-			}
-		}
-		this->configuration.clear();
-		g_util_webserial.send("syslog/debug", "...application configuration activated");
-	}
-	return true;
 }
 
 

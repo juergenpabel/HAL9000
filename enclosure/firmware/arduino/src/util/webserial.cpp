@@ -265,25 +265,20 @@ void WebSerial::handle(const etl::string<WEBSERIAL_LINE_SIZE>& line) {
 
 
 void WebSerial::handle(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonVariant& data) {
-	webserial_command_func handler = nullptr;
+	static StaticJsonDocument<WEBSERIAL_LINE_SIZE*2> response;
 
-	if(this->commands.count(command) == 1) {
-		handler = this->commands[command];
-		if(handler == nullptr) {
-			if(this->commands.count("*") == 1) {
-				handler = this->commands["*"];
-			}
-		}
-	} else {
-		if(command.compare("") == 0) {
-			if(this->commands.count("*") == 1) {
-				handler = this->commands["*"];
-			}
-		}
+	if(this->commands.count(command) == 0) {
+		response.clear();
+		response["result"] = "error";
+		response["error"] = JsonObject();
+		response["error"]["id"] = "216";
+		response["error"]["level"] = "warn";
+		response["error"]["title"] = "Invalid request";
+		response["error"]["data"] = data;
+		this->send(command, response);
+		return;
 	}
-	if(handler != nullptr) {
-		handler(command, data);
-	}
+	this->commands[command](command, data);
 }
 
 

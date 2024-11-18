@@ -83,7 +83,7 @@ class HAL9000(Frontend):
 							case 'restarting':
 								self.show_animations(display, {'name': 'system-terminating'})
 							case other:
-								self.logger.warning(f"[frontend:flet] unsupported shutdown target '{target}' " \
+								self.logger.warning(f"[frontend:flet] unsupported runlevel '{target}' " \
 									            f"in command 'system/runlevel'")
 					case 'system/features':
 						if command['payload'] in [None, '']:

@@ -10,13 +10,12 @@
 typedef etl::string<GLOBAL_VALUE_SIZE> LogString;
 
 
-Settings::Settings(const etl::string<GLOBAL_FILENAME_SIZE>& filename)
-         : SettingsMap()
-         , filename(filename) {
+Settings::Settings()
+         : SettingsMap() {
 }
 
 
-bool Settings::load() {
+bool Settings::load(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
 	static char                      line_buffer[LINE_SIZE+1] = {0};
                int                       line_buffer_pos = 0;
 	       etl::string<LINE_SIZE+1>  line;
@@ -25,7 +24,7 @@ bool Settings::load() {
 	       File                      file;
 
 	this->clear();
-	file = LittleFS.open(this->filename.c_str(), "r");
+	file = LittleFS.open(filename.c_str(), "r");
 	if(static_cast<bool>(file) == false) {
 		g_system_application.processError("215", "warn", "Application error", "LittleFS.open() failed in Settings::load()");
 		return false;
@@ -63,10 +62,10 @@ bool Settings::load() {
 }
 
 
-bool Settings::save() {
+bool Settings::save(const etl::string<GLOBAL_FILENAME_SIZE>& filename) {
 	File    file;
 
-	file = LittleFS.open(this->filename.c_str(), "w");
+	file = LittleFS.open(filename.c_str(), "w");
 	if(static_cast<bool>(file) == false) {
 		g_system_application.processError("215", "warn", "Application error", "LittleFS.open() failed in Settings::save()");
 		return false;

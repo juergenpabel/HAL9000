@@ -54,7 +54,7 @@ class Action(HAL9000_Action):
 					self.module.daemon.logger.critical(f"[startup] Startup failed (plugins that haven't reached runlevel '{RUNLEVEL.RUNNING}' " \
 					                                   f"before startup timeout):")
 					for plugin in starting_plugins:
-						self.module.daemon.logger.critical(f"[startup] - Plugin '{plugin.name}'")
+						self.module.daemon.logger.critical(f"[startup] - Plugin '{plugin.module.id}'")
 				self.module.daemon.logger.debug(f"[startup] STATUS at startup-timeout = {self.module.daemon}")
 				self.module.daemon.plugins['brain'].status = BRAIN_STATUS.DYING, CommitPhase.COMMIT
 

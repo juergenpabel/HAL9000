@@ -1,7 +1,5 @@
-[ {"title": "Starting...", "duration":  400, "directory": "/images/animations/startup/system-starting/fade-in",  "frames":  8, "loop": false,
-                           "on:next": {"gui/overlay:message/text": "HAL9000"}},
-  {"title": "Starting...", "duration":  500, "directory": "/images/animations/startup/system-starting/loop",     "frames": 10, "loop": true,
-                           "on:next": {"util/webserial:handle": "[\"gui/overlay\", {\"none\": {}}]"}},
-  {"title": "Starting...", "duration":  500, "directory": "/images/animations/startup/system-starting/fade-out", "frames": 10, "loop": false,
-                           "on:next": {"util/webserial:handle": "[\"gui/screen\", {\"none\": {}}]"}} ]
+[ {"title": "Power-on...", "duration":   750, "directory": "/images/animations/startup/power-on",        "frames": 15, "loop": false},
+  {"title": "Starting...", "duration": 16000, "directory": "/images/animations/startup/system-starting", "frames": 32, "loop": false,
+                           "on:next": {"util/webserial:handle": "[\"system/runlevel\", \"configuring\"]"}}
+]
 

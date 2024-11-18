@@ -1,0 +1,7 @@
+[ {"title": "Configuring...", "duration":  400, "directory": "/images/animations/startup/system-configuring/fade-in",  "frames":  8, "loop": false,
+                              "on:next": {"gui/overlay:message/text": "HAL9000"}},
+  {"title": "Configuring...", "duration":  500, "directory": "/images/animations/startup/system-configuring/loop",     "frames": 10, "loop": true,
+                              "on:next": {"util/webserial:handle": "[\"gui/overlay\", {\"none\": {}}]"}},
+  {"title": "Configuring...", "duration":  500, "directory": "/images/animations/startup/system-configuring/fade-out", "frames": 10, "loop": false,
+                              "on:next": {"util/webserial:handle": "[\"gui/screen\", {\"none\": {}}]"}} ]
+

@@ -74,11 +74,6 @@ void on_system_runlevel(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 			}
 			break;
 		case RunlevelConfiguring:
-			if(etl::string<GLOBAL_KEY_SIZE>("ready").compare(payload.as<const char*>()) == 0) {
-				g_system_application.setRunlevel(RunlevelReady);
-			}
-			break;
-		case RunlevelReady:
 			if(etl::string<GLOBAL_KEY_SIZE>("running").compare(payload.as<const char*>()) == 0) {
 				g_system_application.setRunlevel(RunlevelRunning);
 			}
@@ -314,32 +309,52 @@ void on_system_settings(const etl::string<GLOBAL_KEY_SIZE>& command, const JsonV
 	}
 	if(data.containsKey("load") == true) {
 		response["load"] = JsonObject();
-		if(g_system_application.loadSettings() == true) {
-			response["result"] = "OK";
-			response["load"]["size"] = g_system_application.settings.size();
+		if(data["load"].containsKey("filename") == true && data["load"]["filename"].is<const char*>() == true) {
+			if(g_system_application.loadSettings(data["load"]["filename"].as<const char*>()) == true) {
+				response["result"] = "OK";
+				response["load"]["size"] = g_system_application.settings.size();
+			} else {
+				response["result"] = "error";
+				response["error"] = JsonObject();
+				response["error"]["id"] = "215";
+				response["error"]["level"] = "warn";
+				response["error"]["title"] = "Application error";
+				response["error"]["details"] = "request for topic 'system/settings' with operation 'load': Application::loadSettings() failed";
+				response["error"]["data"] = JsonObject();
+			}
 		} else {
 			response["result"] = "error";
-			response["error"] = JsonObject();
-			response["error"]["id"] = "215";
+			response["error"]["id"] = "216";
 			response["error"]["level"] = "warn";
-			response["error"]["title"] = "Application error";
-			response["error"]["details"] = "request for topic 'system/settings' with operation 'load': Application::loadSettings() failed";
+			response["error"]["title"] = "Invalid request";
+			response["error"]["details"] = "request for topic 'system/settings' with operation 'load' is missing parameter 'filename' (or not a string)";
 			response["error"]["data"] = JsonObject();
+			response["error"]["data"]["load"] = data["load"];
 		}
 	}
 	if(data.containsKey("save") == true) {
 		response["save"] = JsonObject();
-		if(g_system_application.saveSettings() == true) {
-			response["result"] = "OK";
-			response["save"]["size"] = g_system_application.settings.size();
+		if(data["save"].containsKey("filename") == true && data["save"]["filename"].is<const char*>() == true) {
+			if(g_system_application.saveSettings(data["save"]["filename"].as<const char*>()) == true) {
+				response["result"] = "OK";
+				response["save"]["size"] = g_system_application.settings.size();
+			} else {
+				response["result"] = "error";
+				response["error"] = JsonObject();
+				response["error"]["id"] = "215";
+				response["error"]["level"] = "warn";
+				response["error"]["title"] = "Application error";
+				response["error"]["details"] = "request for topic 'system/settings' with operation 'save': Application::saveSettings() failed";
+				response["error"]["data"] = JsonObject();
+			}
 		} else {
 			response["result"] = "error";
-			response["error"] = JsonObject();
-			response["error"]["id"] = "215";
+			response["error"]["id"] = "216";
 			response["error"]["level"] = "warn";
-			response["error"]["title"] = "Application error";
-			response["error"]["details"] = "request for topic 'system/settings' with operation 'save': Application::saveSettings() failed";
+			response["error"]["title"] = "Invalid request";
+			response["error"]["details"] = "request for topic 'system/settings' with operation 'save' is missing parameter 'filename' (or not a string)";
 			response["error"]["data"] = JsonObject();
+			response["error"]["data"]["save"] = data["save"];
 		}
 	}
 	if(data.containsKey("reset") == true) {

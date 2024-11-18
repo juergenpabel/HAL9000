@@ -27,39 +27,39 @@ class HAL9000(Frontend):
 		arduino_device   = configuration.getstring('frontend:arduino', 'device',   fallback=None)
 		arduino_baudrate = configuration.getint   ('frontend:arduino', 'baudrate', fallback=115200)
 		arduino_timeout  = configuration.getfloat ('frontend:arduino', 'timeout',  fallback=0.01)
-		arduino_config   = configuration.getstring('frontend:arduino', 'configuration', fallback='littlefs')
 		if arduino_device is None:
 			self.logger.info(f"[frontend:arduino] no device configured (section 'frontend:arduino', option 'device' in frontend.ini)")
 			return None
 		if os_path_exists(arduino_device) is False:
 			self.logger.error(f"[frontend:arduino] configured device '{arduino_device}' does not exist")
 			return None
-		if arduino_config in ['littlefs', 'frontend']:
-			self.logger.info(f"[frontend:arduino] using '{arduino_config}' as configuration-source for arduino")
-		else:
-			self.logger.warning(f"[frontend:arduino] unsupported value for 'configuration' in section 'frontend:arduino': " \
-			                    f"'{arduino_config}' (falling back to 'littlefs')")
 		while self.serial is None:
 			try:
 				arduino_name = None
 				for bus in usb_busses():
 					for device in bus.devices:
 						arduino_name = configuration.get('arduino:devices', f'{device.idVendor:04x}:{device.idProduct:04x}', fallback=arduino_name)
-				if arduino_name is not None:
-					self.logger.info(f"[frontend:arduino] identified /dev/ttyHAL9000 as '{arduino_name}'")
-				else:
-					self.logger.warning(f"[frontend:arduino] unidentified board on /dev/ttyHAL9000 (configuration will be loaded from littlefs)")
+				if arduino_name is None:
+					error = 'no error details provided' #TODO
+					self.logger.critical(f"[frontend:arduino] no (known/configured) arduino found via USB: {error}")
+					self.serial.close()
+					self.serial = None
+					return False
+				self.logger.info(f"[frontend:arduino] identified /dev/ttyHAL9000 as '{arduino_name}'")
 				self.serial = serial_Serial(port=arduino_device, timeout=arduino_timeout, baudrate=arduino_baudrate, \
 				                            bytesize=serial_EIGHTBITS, parity=serial_PARITY_NONE, stopbits=serial_STOPBITS_ONE)
 				self.logger.debug(f"[frontend:arduino] opened '{arduino_device}'")
 				arduino_runlevel = await self.serial_await_runlevel_change('starting')
 				if arduino_runlevel == 'configuring':
 					self.logger.debug(f"[frontend:arduino] arduino status is now 'configuring'")
-					if arduino_config == 'frontend' and arduino_name is not None:
-						i2c_bus = configuration.getint(f'arduino:{arduino_name}', 'i2c-bus', fallback=0)
-						i2c_addr = configuration.getint(f'arduino:{arduino_name}', 'i2c-address', fallback=32)
-						await self.serial_writeline('["device/mcp23X17", {"init":{"i2c-bus":%d,"i2c-address":%d}}]' % (i2c_bus, i2c_addr))
-						await asyncio_sleep(0.5)
+					i2c_bus = configuration.getint(f'arduino:{arduino_name}', 'i2c-bus', fallback=None)
+					i2c_addr = configuration.getint(f'arduino:{arduino_name}', 'i2c-address', fallback=None)
+					if i2c_bus is None or i2c_addr is None:
+#TODO
+						return False
+					await self.serial_writeline(json_dumps(['peripherals/mcp23X17', {'init': {'i2c-bus': i2c_bus, 'i2c-address': i2c_addr}}]))
+					await asyncio_sleep(0.5)
+					if f'arduino:{arduino_name}:mcp23X17' in configuration.sections(): #TODO
 						for key in configuration.options(f'arduino:{arduino_name}:mcp23X17'):
 							if ':' in key:
 								input_type, input_name = key.split(':', 1)
@@ -74,14 +74,14 @@ class HAL9000(Frontend):
 										mcp23X17_data['config']['device']['inputs'].append({'pin': pin, 'label': label})
 									else:
 										raise configparser_ParsingError(f"Unknown prefix '{input_type}' in '{arduino_name}:mcp23X17')")
-								await self.serial_writeline('["device/mcp23X17", ' + json_dumps(mcp23X17_data) + ']')
+								await self.serial_writeline(json_dumps(['peripherals/mcp23X17', mcp23X17_data]))
 								await asyncio_sleep(0.5)
 							else:
 								raise configparser_ParsingError(f"Unsupported item '{key}' in section '{arduino_name}:mcp23X17')")
-						await self.serial_writeline('["device/mcp23X17", {"start":true}]')
+						await self.serial_writeline(json_dumps(['peripherals/mcp23X17', {'start': True}]))
 						await asyncio_sleep(0.5)
-						self.logger.debug(f"[frontend:arduino] '{arduino_device}' is now configured via frontend-configuration")
-					await self.serial_writeline('["system/runlevel", "ready"]')
+					self.logger.debug(f"[frontend:arduino] '{arduino_device}' is now configured")
+					await self.serial_writeline(json_dumps(['system/runlevel', 'running']))
 					arduino_runlevel = await self.serial_await_runlevel_change('configuring')
 				if arduino_runlevel == 'panicing':
 					error = 'no error details provided' #TODO
@@ -89,8 +89,6 @@ class HAL9000(Frontend):
 					self.serial.close()
 					self.serial = None
 					return False
-				while arduino_runlevel != 'running':
-					arduino_runlevel = await self.serial_await_runlevel_change(arduino_runlevel)
 				self.logger.debug(f"[frontend:arduino] arduino status is now 'running'")
 			except (configparser_ParsingError, serial_SerialException) as e:
 				self.logger.error(f"[frontend:arduino] {e}")
@@ -152,18 +150,17 @@ class HAL9000(Frontend):
 
 
 	async def serial_await_runlevel_change(self, runlevel: str, timeout: float = 1.0) -> str:
-		await self.serial_writeline('["system/runlevel", ""]')
+		await self.serial_writeline(json_dumps(['system/runlevel', '']))
 		line = None
 		response = ['system/runlevel', runlevel]
-		while response[0] != 'system/runlevel' \
-		   or response[1] == runlevel:
+		while response[0] != 'system/runlevel' or response[1] == runlevel:
 			line = None
 			while line is None:
 				line = await self.serial_readline(timeout=1.0)
 			try:
 				response = json_loads(line)
 				if response[0] == 'ping':
-					await self.serial_writeline('["pong", ""]')
+					await self.serial_writeline(json_dumps(['pong', '']))
 			except Exception as e:
 				self.logger.info(f"[frontend:arduino] ignoring line with unexpected format: {line}")
 		return response[1]
@@ -180,13 +177,10 @@ class HAL9000(Frontend):
 					self.status = STATUS.ONLINE
 					command = await self.commands.get()
 					if isinstance(command, dict) and 'topic' in command and 'payload' in command:
-						self.logger.debug(f"[frontend:arduino] host2device sends command: {command}")
-						topic = command['topic']
-						payload = command['payload']
-						if isinstance(payload, str) is True:
-							await self.serial_writeline(f'["{topic}", "{payload}"]')
-						else:
-							await self.serial_writeline(f'["{topic}", {json_dumps(payload)}]')
+						if command['topic'] != 'pong':
+							self.logger.debug(f"[frontend:arduino] host2device sends message: {command}")
+						command = json_dumps([command['topic'], command['payload']])
+						await self.serial_writeline(command)
 				self.logger.warning(f"[frontend:arduino] serial device '{self.serial.port}' (unexpectedly) closed")
 			except Exception as e:
 				self.logger.error(f"[frontend:arduino] exception in task_host2device(): {e}")
@@ -210,11 +204,12 @@ class HAL9000(Frontend):
 					try:
 						event = json_loads(line)
 						if isinstance(event, list) and len(event) == 2:
-							self.logger.debug(f"[frontend:arduino] device2host reads message: " \
-							                  f"{json_dumps({'topic': event[0], 'payload': event[1]})}")
 							if event[0] == 'ping':
 								self.commands.put_nowait({'topic': 'pong', 'payload': ''})
 								event[0] = ''
+							else:
+								self.logger.debug(f"[frontend:arduino] device2host reads message: " \
+								                  f"{json_dumps({'topic': event[0], 'payload': event[1]})}")
 							if event[0].startswith('syslog/'):
 								log_level = event[0][7:].upper()
 								if hasattr(logging, log_level) is True:

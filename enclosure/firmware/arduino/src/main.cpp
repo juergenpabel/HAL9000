@@ -19,10 +19,10 @@
 
 
 void setup() {
-	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2> json;
-	static etl::string<GLOBAL_VALUE_SIZE>    error_details;
-	static etl::string<GLOBAL_FILENAME_SIZE> filename;
-	       File                              file;
+	static StaticJsonDocument<APPLICATION_JSON_FILESIZE_MAX*2>  json;
+	static etl::string<GLOBAL_VALUE_SIZE>                       error_details;
+	static etl::string<GLOBAL_FILENAME_SIZE>                    filename;
+	       File                                                 file;
 
 	if(g_device_board.start() == false) { //TODO: what to do??
 		g_system_application.setRunlevel(RunlevelPanicing); //TODO: what to do??
@@ -40,7 +40,7 @@ void setup() {
 	filename += g_device_board.getIdentifier();
 	filename += ".json";
 	if(LittleFS.exists(filename.c_str()) == false) {
-		error_details  = "board configuration file '(littlefs:)";
+		error_details  = "board configuration file (littlefs:)'";
 		error_details += filename;
 		error_details += "' not found";
 		g_system_application.processError("panic", "213", "Board error", error_details);
@@ -48,14 +48,14 @@ void setup() {
 	}
 	file = LittleFS.open(filename.c_str(), "r");
 	if(static_cast<bool>(file) == false) {
-		error_details  = "failed to open *supposedly existing* '(littlefs:)";
+		error_details  = "failed to open *supposedly existing* (littlefs:)'";
 		error_details += filename;
 		error_details += "' in read-mode";
 		g_system_application.processError("panic", "212", "Filesystem error", error_details);
 		return;
 	}
 	if(deserializeJson(json, file) != DeserializationError::Ok) {
-		error_details  = "JSON (syntax) error in board configuration in '(littlefs:)";
+		error_details  = "JSON (syntax) error in board configuration in (littlefs:)'";
 		error_details += filename;
 		error_details += "'";
 		g_system_application.processError("panic", "213", "Board error", error_details);
@@ -66,67 +66,49 @@ void setup() {
 	if(g_device_board.configure(json) == false) {
 		error_details  = "board '";
 		error_details += g_device_board.getIdentifier();
-		error_details += "' reported an error applying config from '(littlefs:)";
+		error_details += "' reported an error applying config from (littlefs:)'";
 		error_details += filename;
 		error_details += "'";
 		g_system_application.processError("panic", "213", "Board error", error_details);
 		return;
 	}
-	if(g_system_application.loadSettings() == false) {
-		error_details  = "system failed to load persisted settings from '(littlefs:)";
-		error_details += filename;
-		error_details += "' (just reflashing littlefs might solve this issue...but not the root cause)";
-		g_system_application.processError("panic", "214", "Application error", error_details);
-		return;
-	}
 	g_util_webserial.addCommand("system/runlevel", on_system_runlevel);
-	gui_screen_set("animations:system-booting", gui_screen_animations);
+	gui_screen_set("animations:system-starting", gui_screen_animations);
 }
 
 
 void loop() {
-	static Runlevel      previousRunlevel = RunlevelStarting;
-	       Runlevel      currentRunlevel = RunlevelUnknown;
+	static Runlevel  previousRunlevel = RunlevelStarting;
+	       Runlevel  currentRunlevel;
 
 	currentRunlevel = g_system_application.getRunlevel();
 	if(currentRunlevel != previousRunlevel) {
 		g_util_webserial.send("system/runlevel", g_system_application.getRunlevelName());
 		switch(currentRunlevel) {
 			case RunlevelConfiguring:
-				g_util_webserial.clearCommands();
-				g_util_webserial.addCommand("system/runlevel", on_system_runlevel);
-				g_util_webserial.addCommand("system/environment", nullptr);
-				g_util_webserial.addCommand("system/settings", nullptr);
-				g_util_webserial.addCommand("system/features", nullptr);
-				g_util_webserial.addCommand("device/microcontroller", nullptr);
-				g_util_webserial.addCommand("device/board", nullptr);
-				g_util_webserial.addCommand("device/display", nullptr);
-				g_util_webserial.addCommand("peripherals/mcp23X17", nullptr);
-				g_util_webserial.addCommand("gui/screen", nullptr);
-				g_util_webserial.addCommand("gui/overlay", nullptr);
-				g_util_webserial.addCommand("*", Application::addConfiguration);
-				gui_screen_set("animations:system-starting", gui_screen_animations);
-				break;
-			case RunlevelReady:
-				g_util_webserial.clearCommands();
-				g_util_webserial.addCommand("system/runlevel", on_system_runlevel);
+				if(g_system_application.loadSettings("/system/settings.ini") == false) {
+					g_system_application.processError("panic", "214", "Application error", "system failed to load persisted settings " \
+					                                                                       "from (littlefs:)'/system/settings.ini' " \
+					                                                                       "(reflashing littlefs might solve this issue..." \
+					                                                                       "but not the root cause)");
+					return;
+				}
 				g_util_webserial.addCommand("system/environment", on_system_environment);
 				g_util_webserial.addCommand("system/settings", on_system_settings);
 				g_util_webserial.addCommand("system/features", on_system_features);
-				g_util_webserial.addCommand("gui/screen", on_gui_screen);
-				g_util_webserial.addCommand("gui/overlay", on_gui_overlay);
 				g_util_webserial.addCommand("device/microcontroller", on_device_microcontroller);
 				g_util_webserial.addCommand("device/board", on_device_board);
 				g_util_webserial.addCommand("device/display", on_device_display);
 				g_util_webserial.addCommand("peripherals/mcp23X17", on_peripherals_mcp23X17);
-				g_system_application.applyConfiguration();
-				g_system_application.setRunlevel(RunlevelRunning);
+				gui_screen_set("animations:system-configuring", gui_screen_animations);
 				break;
 			case RunlevelRunning:
 				g_util_webserial.delCommand("device/microcontroller", on_device_microcontroller);
 				g_util_webserial.delCommand("device/board", on_device_board);
 				g_util_webserial.delCommand("device/display", on_device_display);
 				g_util_webserial.delCommand("peripherals/mcp23X17", on_peripherals_mcp23X17);
+				g_util_webserial.addCommand("gui/screen", on_gui_screen);
+				g_util_webserial.addCommand("gui/overlay", on_gui_overlay);
 				break;
 			case RunlevelRestarting:
 				g_util_webserial.clearCommands();

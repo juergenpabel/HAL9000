@@ -8,13 +8,11 @@ typedef etl::map<etl::string<GLOBAL_KEY_SIZE>, etl::string<GLOBAL_VALUE_SIZE>, A
 class Application;
 
 class Settings : public SettingsMap {
-	private:
-		etl::string<GLOBAL_FILENAME_SIZE> filename;
 	protected:
-		Settings(const etl::string<GLOBAL_FILENAME_SIZE>& filename);
+		Settings();
 
-		bool load();
-		bool save();
+		bool load(const etl::string<GLOBAL_FILENAME_SIZE>& filename);
+		bool save(const etl::string<GLOBAL_FILENAME_SIZE>& filename);
 		bool reset();
 
 	friend class Application;
