@@ -11,8 +11,8 @@
 - CNC cutout: Black acryl faceplate 185x90x3mm with 50mm cutout (resources/openscad/acryl-faceplate.scad)
 
 # Required hardware, dependant on build variant (choose one only, both work just as well)
-### Variant m5stack Core2 (recommended, due to better availabily)
-- M5Stack Core2 ([m5stack.com](https://docs.m5stack.com/en/core/core2))
+### Variant m5stack Core2 (recommended, due to better availabily and ease of assembly)
+- M5Stack Core2 **v1.1** ([m5stack.com](https://docs.m5stack.com/en/core/Core2%20v1.1)) (previous firmware versions implemented support for v1.0 but v1.1 is now more common)
 - USB OTG cable Micro-USB->USB-C, 15-25cm with both connectors in 90° angle (for the Pi0: right-angled when looking from the Pi0)
 - Cable: Grove->Qwiic/Stemma, 15-20cm (I couldn't find one with >10cm online, so I made on myself)
 ### Variant RoundyPI
