@@ -28,16 +28,16 @@ services:
       - kalliope
     restart: unless-stopped
 
-  console:
-    container_name: hal9000-console
-    image: ghcr.io/juergenpabel/hal9000-console:development
-    hostname: console
+  dashboard:
+    container_name: hal9000-dashboard
+    image: ghcr.io/juergenpabel/hal9000-dashboard:development
+    hostname: dashboard
     environment:
       - MQTT_SERVER=mosquitto
       - MQTT_PORT=1883
       - KALLIOPE_SERVER=kalliope
       - KALLIOPE_PORT=5000
-    command: /bin/sh -c 'socat TCP4-LISTEN:1883,bind=127.0.0.1,reuseaddr,nodelay,fork TCP4:mosquitto:1883 & python3 console.py console.ini'
+    command: /bin/sh -c 'socat TCP4-LISTEN:1883,bind=127.0.0.1,reuseaddr,nodelay,fork TCP4:mosquitto:1883 & python3 dashboard.py dashboard.ini'
     ports:
       - "127.0.0.1:8080:8080"
     networks:

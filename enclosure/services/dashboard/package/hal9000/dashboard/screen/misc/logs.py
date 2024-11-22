@@ -1,14 +1,10 @@
 import flet
 import flet_core.icons
 
-from hal9000.console.screen import Screen
+from hal9000.dashboard.screen import Screen
 
 
 system_logs = {
-               "HAL9000: Kalliope": "/var/log/uwsgi/app/kalliope.log",
-                "HAL9000: Enclosure - Brain": "/var/log/uwsgi/app/enclosure-brain.log",
-                "HAL9000: Enclosure - Arduino": "/var/log/uwsgi/app/enclosure-arduino.log",
-                "HAL9000: Enclosure - Console": "/var/log/uwsgi/app/enclosure-console.log",
                 "Linux: syslog": "/var/log/syslog",
                 "Linux: messages": "/var/log/messages",
               }

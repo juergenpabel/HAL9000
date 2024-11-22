@@ -7,7 +7,7 @@ if [ $? -eq 0 ]; then
 fi
 
 HAL9000_CONTAINERS=0
-for NAME in mosquitto kalliope frontend console brain ; do
+for NAME in mosquitto kalliope frontend dashboard brain ; do
 	podman container exists "hal9000-${NAME}"
 	if [ $? -eq 0 ]; then
 		echo "ERROR: container 'hal9000-${NAME}' exists, aborting script (remove container and start script again:"
@@ -69,14 +69,14 @@ podman create --pod=hal9000 --name=hal9000-frontend \
               --pull=never \
               localhost/hal9000-frontend:latest
 
-echo -n "Creating container 'hal9000-console':   "
-podman create --pod=hal9000 --name=hal9000-console \
+echo -n "Creating container 'hal9000-dashboard':   "
+podman create --pod=hal9000 --name=hal9000-dashboard \
               --requires hal9000-mosquitto \
               --group-add=keep-groups \
-              -v "${GIT_REPODIR}"/enclosure/services/console/:/console/:ro \
+              -v "${GIT_REPODIR}"/enclosure/services/dashboard/:/dashboard/:ro \
               --tz=local \
               --pull=never \
-              localhost/hal9000-console:latest
+              localhost/hal9000-dashboard:latest
 
 echo -n "Creating container 'hal9000-brain':     "
 podman create --pod=hal9000 --name=hal9000-brain \

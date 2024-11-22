@@ -1,4 +1,4 @@
-from hal9000.console.screen import Screen
+from hal9000.dashboard.screen import Screen
 
 import os
 import signal

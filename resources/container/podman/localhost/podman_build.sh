@@ -61,17 +61,17 @@ if [ $? -eq 0 ]; then
 fi
 podman build --platform "${BUILD_PLATFORMS}" --build-arg DATA_DIRECTORY="${DATA_DIRECTORY}" --manifest "localhost/hal9000-brain:latest" -f Containerfile .
 
-echo "Building image 'hal9000-console'..."
-cd "${GIT_REPODIR}/enclosure/services/console/"
+echo "Building image 'hal9000-dashboard'..."
+cd "${GIT_REPODIR}/enclosure/services/dashboard/"
 git submodule update --recursive "${DATA_DIRECTORY}"
 if [ -L "${DATA_DIRECTORY}/resources" ]; then
 	rm "${DATA_DIRECTORY}/resources"
 fi
-podman manifest exists "localhost/hal9000-console:latest"
+podman manifest exists "localhost/hal9000-dashboard:latest"
 if [ $? -eq 0 ]; then
-	podman manifest rm "localhost/hal9000-console:latest"
+	podman manifest rm "localhost/hal9000-dashboard:latest"
 fi
-podman build --platform "${BUILD_PLATFORMS}" --build-arg DATA_DIRECTORY="${DATA_DIRECTORY}" --manifest "localhost/hal9000-console:latest" -f Containerfile .
+podman build --platform "${BUILD_PLATFORMS}" --build-arg DATA_DIRECTORY="${DATA_DIRECTORY}" --manifest "localhost/hal9000-dashboard:latest" -f Containerfile .
 
 echo "Building image 'hal9000-frontend'..."
 cd "${GIT_REPODIR}/enclosure/services/frontend/"

@@ -8,10 +8,10 @@
 	url = https://github.com/juergenpabel/HAL9000-demo-en_US
 	branch = brain
 	update = rebase
-[submodule "console-en_US"]
-	path = enclosure/services/console/demo-en_US
+[submodule "dashboard-en_US"]
+	path = enclosure/services/dashboard/demo-en_US
 	url = https://github.com/juergenpabel/HAL9000-demo-en_US
-	branch = console
+	branch = dashboard
 	update = rebase
 [submodule "frontend-en_US"]
 	path = enclosure/services/frontend/demo-en_US

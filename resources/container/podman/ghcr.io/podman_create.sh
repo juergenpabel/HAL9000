@@ -33,7 +33,7 @@ if [ $? -ne 0 ]; then
 fi
 
 MISSING_IMAGES=0
-for NAME in mosquitto kalliope frontend console brain ; do
+for NAME in mosquitto kalliope frontend dashboard brain ; do
 	podman image exists "ghcr.io/juergenpabel/hal9000-${NAME}:${TARGET_TAG}"
 	if [ $? -ne 0 ]; then
 		echo "ERROR:  image 'ghcr.io/juergenpabel/hal9000-${NAME}:${TARGET_TAG}' not found"
@@ -89,13 +89,13 @@ podman create --pod=hal9000 --name=hal9000-frontend \
               --pull=never \
               "ghcr.io/juergenpabel/hal9000-frontend:${TARGET_TAG}"
 
-echo -n "Creating container 'hal9000-console':   "
-podman create --pod=hal9000 --name=hal9000-console \
+echo -n "Creating container 'hal9000-dashboard':   "
+podman create --pod=hal9000 --name=hal9000-dashboard \
               --requires hal9000-mosquitto \
               --group-add=keep-groups \
               --tz=local \
               --pull=never \
-              "ghcr.io/juergenpabel/hal9000-console:${TARGET_TAG}"
+              "ghcr.io/juergenpabel/hal9000-dashboard:${TARGET_TAG}"
 
 echo -n "Creating container 'hal9000-brain':     "
 podman create --pod=hal9000 --name=hal9000-brain \

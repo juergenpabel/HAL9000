@@ -6,10 +6,10 @@ RUN apt update
 RUN apt upgrade -y
 RUN apt install -y $EXTRA_APT_INSTALL_PKGS
 
-WORKDIR /console
+WORKDIR /dashboard
 
 COPY ./requirements.txt  ./
-COPY ./console.py        ./
+COPY ./dashboard.py      ./
 COPY ./package/          ./package/
 COPY ./resources/        ./resources/
 COPY ./$DATA_DIRECTORY/  ./data/
@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt -r data/requirements.txt
 
 EXPOSE 2001
 
-ENV PYTHONPATH=/console/package
-WORKDIR /console/data/
-CMD python3 /console/console.py console.ini
+ENV PYTHONPATH=/dashboard/package
+WORKDIR /dashboard/data/
+CMD python3 /dashboard/dashboard.py dashboard.ini
 

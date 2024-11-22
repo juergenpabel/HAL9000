@@ -5,7 +5,7 @@ import jsonpath_ng.ext
 import flet
 import flet_core
 
-from hal9000.console.screen import Screen
+from hal9000.dashboard.screen import Screen
 
 
 class ScreenKalliope(Screen):

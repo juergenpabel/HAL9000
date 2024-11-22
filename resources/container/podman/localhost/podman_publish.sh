@@ -27,7 +27,7 @@ echo "INFO:  login successful"
 
 echo "Publishing images to '${CONTAINER_REGISTRY}/${CONTAINER_REPOSITORY}/...' (with tag '${CONTAINER_TAG}')..."
 UPLOAD_FAILED=""
-for NAME in mosquitto kalliope frontend console brain ; do
+for NAME in mosquitto kalliope frontend dashboard brain ; do
 	echo "Publishing 'localhost/hal9000-${NAME}:latest' to '${CONTAINER_REGISTRY}/${CONTAINER_REPOSITORY}/hal9000-${NAME}:${CONTAINER_TAG}'..."
 	podman manifest push "localhost/hal9000-${NAME}:latest" "${CONTAINER_REGISTRY}/${CONTAINER_REPOSITORY}/hal9000-${NAME}:${CONTAINER_TAG}"
 	if [ $? -ne 0 ]; then

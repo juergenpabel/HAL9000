@@ -27,7 +27,7 @@ if [ $? -eq 0 ]; then
 fi
 
 HAL9000_CONTAINERS=0
-for NAME in mosquitto kalliope frontend console brain ; do
+for NAME in mosquitto kalliope frontend dashboard brain ; do
 	podman container exists "hal9000-${NAME}"
 	if [ $? -eq 0 ]; then
 		echo "ERROR: container 'hal9000-${NAME}' exists, aborting script"
@@ -39,7 +39,7 @@ if [ ${HAL9000_CONTAINERS} -ne 0 ]; then
 	exit 1
 fi
 
-for NAME in mosquitto kalliope frontend console brain ; do
+for NAME in mosquitto kalliope frontend dashboard brain ; do
 	echo "Downloading image 'hal9000-${NAME}:${TARGET_TAG}'...."
 	podman pull -q "ghcr.io/juergenpabel/hal9000-${NAME}:${TARGET_TAG}"
 	if [ $? -ne 0 ]; then
