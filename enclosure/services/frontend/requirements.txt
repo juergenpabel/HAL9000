@@ -1,6 +1,6 @@
+fastapi
 flet>=0.23.0
 segno>=1.6
 paho-mqtt>=2.0.0
 pyserial
 pyusb
-
