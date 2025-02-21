@@ -18,7 +18,7 @@ from segno import make as segno_make
 
 import flet
 import flet.fastapi as flet_fastapi
-import flet_core.alignment as flet_core_alignment
+import flet.core.alignment as flet_core_alignment
 from fastapi import FastAPI as fastapi_FastAPI
 from fastapi.staticfiles import StaticFiles as fastapi_staticfiles_StaticFiles
 
