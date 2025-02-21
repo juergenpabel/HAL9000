@@ -1,6 +1,6 @@
 uvicorn>=0.34.0
 fastapi>=0.115.8
-flet[web]>=0.23.0
+flet[core,web]>=0.23.0
 segno>=1.6
 paho-mqtt>=2.0.0
 pyserial
