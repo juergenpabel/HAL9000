@@ -67,7 +67,7 @@ class HAL9000(Frontend):
 			return # ignore exception (return in finally block)
 
 
-	async def run_command_session_listener(self, page: flet.page, display: flet.CircleAvatar) -> None:
+	async def run_command_session_listener(self, page: flet.Page, display: flet.CircleAvatar) -> None:
 		self.logger.debug(f"[frontend:flet] starting command-listener for session '{page.session_id}'")
 		try:
 			command_session_queue = self.command_session_queues[page.session_id]
@@ -209,7 +209,7 @@ class HAL9000(Frontend):
 		self.logger.debug(f"[frontend:flet] exiting command-listener for session '{page.session_id}'")
 
 
-	async def run_gui_screen_idle(self, page: flet.page, display: flet.CircleAvatar) -> None:
+	async def run_gui_screen_idle(self, page: flet.Page, display: flet.CircleAvatar) -> None:
 		while page.session_id in self.command_session_queues:
 			if display.visible is True:
 				if self.gui_screen == 'idle':
@@ -229,7 +229,7 @@ class HAL9000(Frontend):
 			await asyncio_sleep(0.1)
 
 
-	async def run_gui_screen_animations(self, page: flet.page, display: flet.CircleAvatar) -> None:
+	async def run_gui_screen_animations(self, page: flet.Page, display: flet.CircleAvatar) -> None:
 		while page.session_id in self.command_session_queues:
 			if display.visible is True:
 				if self.gui_screen.startswith('animations:') is True:
