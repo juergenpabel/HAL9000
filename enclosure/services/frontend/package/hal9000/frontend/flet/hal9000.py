@@ -17,8 +17,9 @@ from asyncio import Queue as asyncio_Queue, \
 from segno import make as segno_make
 
 import flet
-import flet.fastapi as flet_fastapi
 import flet.core.alignment as flet_core_alignment
+import flet.canvas as flet_canvas
+import flet.fastapi as flet_fastapi
 from fastapi import FastAPI as fastapi_FastAPI
 from fastapi.staticfiles import StaticFiles as fastapi_staticfiles_StaticFiles
 
@@ -185,7 +186,7 @@ class HAL9000(Frontend):
 												y1 = radius+(dy*radius*0.9)
 												x2 = radius+(dx*radius*0.99)
 												y2 = radius+(dy*radius*0.99)
-												display.content.shapes.append(flet.canvas.Line(x1, y1, x2, y2, \
+												display.content.shapes.append(flet_canvas.Line(x1, y1, x2, y2, \
 												                                               paint=flet.Paint(color=color), \
 												                                               data='overlay'))
 											display.content.update()
@@ -285,7 +286,7 @@ class HAL9000(Frontend):
 	def show_idle(self, display: flet.CircleAvatar) -> None:
 		self.gui_screen = 'idle'
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-		display.content.shapes.append(flet.canvas.Text(ref=display.data['idle_clock'], \
+		display.content.shapes.append(flet_canvas.Text(ref=display.data['idle_clock'], \
 		                                               x=int(display.radius), y=int(display.radius), \
 		                                               style=flet.TextStyle(size=int(display.page.scale*22)+2), \
 		                                               alignment=flet_core_alignment.center))
@@ -310,11 +311,11 @@ class HAL9000(Frontend):
 	def show_menu(self, display: flet.CircleAvatar, data: dict) -> None:
 		self.gui_screen = f'menu:{data["name"]}'
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-		display.content.shapes.append(flet.canvas.Text(text=data['title'], \
+		display.content.shapes.append(flet_canvas.Text(text=data['title'], \
 		                                               x=int(display.radius), y=int(2*display.radius/8*2), \
 		                                               style=flet.TextStyle(size=int(display.page.scale*18), color='white'), \
 		                                               alignment=flet_core_alignment.center))
-		display.content.shapes.append(flet.canvas.Text(text=data['text'], \
+		display.content.shapes.append(flet_canvas.Text(text=data['text'], \
 		                                               x=int(display.radius), y=int(2*display.radius/8*4), \
 		                                               max_width=int(2*display.radius*0.9), \
 		                                               style=flet.TextStyle(size=int(display.page.scale*18)+4, color='white'), \
@@ -347,9 +348,9 @@ class HAL9000(Frontend):
 
 	def render_qrcode(self, display: flet.CircleAvatar, data: dict) -> None:
 		display.content.shapes = list(filter(lambda shape: shape.data=='overlay', display.content.shapes))
-		display.content.shapes.append(flet.canvas.Circle(x=display.radius, y=display.radius, radius=display.radius, \
+		display.content.shapes.append(flet_canvas.Circle(x=display.radius, y=display.radius, radius=display.radius, \
 		                                                 paint=flet.Paint(color=data['bg-color'] if 'bg-color' in data else 'black')))
-		display.content.shapes.append(flet.canvas.Text(text=data['title'], \
+		display.content.shapes.append(flet_canvas.Text(text=data['title'], \
 		                                               x=display.radius, y=int(0.5*display.radius)-int((data['title-size'] if 'title-size' in data else 18)/2), \
 		                                               style=flet.TextStyle(color=data['title-color'] if 'title-color' in data else 'white', \
 		                                                                    size=int(display.page.scale*(data['title-size'] if 'title-size' in data else 18))), \
@@ -361,10 +362,10 @@ class HAL9000(Frontend):
 		box_offset = (display.radius-(37+2)*box_size)/2
 		for y, line in enumerate(qrcode.readlines()):
 			for x, value in enumerate(line.strip()):
-				display.content.shapes.append(flet.canvas.Rect(x=box_offset+x*box_size+display.radius/2, y=box_offset+y*box_size+display.radius/2, \
+				display.content.shapes.append(flet_canvas.Rect(x=box_offset+x*box_size+display.radius/2, y=box_offset+y*box_size+display.radius/2, \
 				                                               width=box_size, height=box_size, \
 				                                               paint=flet.Paint(color='white' if value == '0' else 'black')))
-		display.content.shapes.append(flet.canvas.Text(text=data['hint'],
+		display.content.shapes.append(flet_canvas.Text(text=data['hint'],
 		                                               x=int(display.radius), y=int(1.75*display.radius)-int((data['hint-size'] if 'hint-size' in data else 14)/2), \
 		                                               style=flet.TextStyle(color=data['hint-color'] if 'hint-color' in data else 'white', \
 		                                                                    size=int(display.page.scale*(data['hint-size'] if 'hint-size' in data else 14))), \
@@ -418,10 +419,10 @@ class HAL9000(Frontend):
 		page.data['button_sleep'] = flet.Ref[flet.TextButton]()
 		page.data['button_wakeup'] = flet.Ref[flet.TextButton]()
 		display = flet.CircleAvatar(radius=int(page.scale*120), bgcolor='black')
-		display.content = flet.canvas.Canvas(width=display.radius*2, height=display.radius*2)
+		display.content = flet_canvas.Canvas(width=display.radius*2, height=display.radius*2)
 		display.background_image_src = '/resources/images/display.jpg'
 		display.data = {}
-		display.data['idle_clock'] = flet.Ref[flet.canvas.Text]()
+		display.data['idle_clock'] = flet.Ref[flet_canvas.Text]()
 		display.data['animations'] = []
 		display.page = page
 		page.add(flet.Row(controls=[flet.Column(controls=[ \
